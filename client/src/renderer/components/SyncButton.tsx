@@ -1,16 +1,18 @@
 import { useState } from "react";
 import { Button } from "@chakra-ui/react";
 import { FaSyncAlt } from "react-icons/fa";
+import useAdminUser from "../../store/auth.store";
 
 export default function SyncButton() {
   const [loading, setLoading] = useState(false);
+  const user = useAdminUser((store) => store.adminUser);
 
   const handleSync = async () => {
     try {
       setLoading(true);
-      const result = await window.electron.sync();
+      const result = await window.electron.sync(user.companyId);
       if (result.success) {
-        console.log("Sync completed");
+        console.log("SYNC COMPLETED");
       } else {
         console.error(result.message);
       }

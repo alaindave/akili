@@ -30,18 +30,12 @@ interface SignUpCredentials {
   lastName: string;
   email: string;
   password: string;
+  signUpCode: string;
 }
 
 interface LoggedUser {
-  companyId: string;
-  _id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  role: "MANAGER" | "ADMIN";
-  notes?: string;
-  createdAt: string;
-  updatedAt: string;
+  company: Company;
+  admin: OfflineUser;
 }
 
 interface Reminder {
@@ -97,7 +91,7 @@ declare global {
       };
 
       adminUsers: {
-        getAll: () => Promise<AdminUser[]>;
+        getAll: (companyId: string) => Promise<AdminUser[]>;
       };
 
       employees: {
@@ -146,54 +140,86 @@ declare global {
 
       attendanceDailyCheck: {
         create(
+          companyId: string,
           data: CreateAttendanceDailyCheckInput
         ): Promise<AttendanceDailyCheck>;
-        getById(_id: string): Promise<AttendanceDailyCheck | null>;
-        getByDate(date: string): Promise<AttendanceDailyCheck | null>;
-        getAll(): Promise<AttendanceDailyCheck[]>;
+        getById(
+          companyId: string,
+          _id: string
+        ): Promise<AttendanceDailyCheck | null>;
+        getByDate(
+          companyId: string,
+          date: string
+        ): Promise<AttendanceDailyCheck | null>;
+        getAll(companyId: string): Promise<AttendanceDailyCheck[]>;
         verify(
+          companyId: string,
           input: VerifyAttendanceDailyCheckInput
         ): Promise<VerifyDailyAttendanceResult>;
         notifyManager: (
+          companyId: string,
           input: MarkManagerNotifiedInput
         ) => Promise<AttendanceDailyCheck>;
         lock(
+          companyId: string,
           input: LockAttendanceDailyCheckInput
         ): Promise<AttendanceDailyCheck>;
       };
 
       attendance: {
-        create: (input: CreateAttendanceDto) => Promise<Attendance>;
+        create: (
+          companyId: string,
+          input: CreateAttendanceDto
+        ) => Promise<Attendance>;
         createAbsenceLeave: (
+          companyId: string,
           employeeID: string,
           status: "CONGÉ" | "ABSENT",
           date: string
         ) => Promise<Attendance>;
-        getAll: () => Promise<AttendanceWithEmployee[]>;
-        getById: (_id: string) => Promise<AttendanceWithEmployee | null>;
-        getByEmployee: (employeeId: string) => Promise<Attendance[]>;
-        getByDate: (date: string) => Promise<AttendanceWithEmployee[]>;
+        getAll: (companyId: string) => Promise<AttendanceWithEmployee[]>;
+        getById: (
+          companyId: string,
+          _id: string
+        ) => Promise<AttendanceWithEmployee | null>;
+        getByEmployee: (
+          companyId: string,
+          employeeId: string
+        ) => Promise<Attendance[]>;
+        getByDate: (
+          companyId: string,
+          date: string
+        ) => Promise<AttendanceWithEmployee[]>;
         getEmployeesWithoutAttendance: (
+          companyId: string,
           date: string
         ) => romise<AttendanceWithEmployee[]>;
         getAttendanceRecord: (
+          companyId: string,
           employeeId: string,
           date: string
         ) => Promise<AttendanceWithEmployee>;
         update: (
+          companyId: string,
           _id: string,
           date: String,
           updates: Partial<AttendanceWithEmployee>
         ) => Promise<AttendanceWithEmployee>;
 
-        markAbsent: (date: string) => Promise<{
+        markAbsent: (
+          companyId: string,
+          date: string
+        ) => Promise<{
           absentAttendance: any;
           source: "AUTO_SERVER" | "LOCAL" | "SKIPPED";
           completed: boolean;
           timestamp: string;
         }>;
 
-        delete: (_id: string) => Promise<AttendanceWithEmployee>;
+        delete: (
+          companyId: string,
+          _id: string
+        ) => Promise<AttendanceWithEmployee>;
       };
 
       attendanceReports: {
@@ -210,13 +236,29 @@ declare global {
       };
 
       leave: {
-        create: (leave: Partial<Leave>) => Promise<LeaveWithEmployee>;
-        getLeaveByEmployeeId: (employeeId: string) => Promise<Leave[]>;
-        getLeaveById: (_id: string) => Promise<LeaveWithEmployee>;
-        getOngoingLeaves: (date: string) => Promise<LeaveWithEmployee[]>;
-        getLeaveByMonth: (month: string) => Promise<LeaveWithEmployee[]>;
-        cancel: (_id: string) => Promise<LeaveWithEmployee>;
+        create: (
+          companyId: string,
+          leave: Partial<Leave>
+        ) => Promise<LeaveWithEmployee>;
+        getLeaveByEmployeeId: (
+          companyId: string,
+          employeeId: string
+        ) => Promise<Leave[]>;
+        getLeaveById: (
+          companyId: string,
+          _id: string
+        ) => Promise<LeaveWithEmployee>;
+        getOngoingLeaves: (
+          companyId: string,
+          date: string
+        ) => Promise<LeaveWithEmployee[]>;
+        getLeaveByMonth: (
+          companyId: string,
+          month: string
+        ) => Promise<LeaveWithEmployee[]>;
+        cancel: (companyId: string, _id: string) => Promise<LeaveWithEmployee>;
         update: (
+          companyId: string,
           _id: string,
           updates: {
             subject?: string;
@@ -226,7 +268,7 @@ declare global {
             status?: string;
           }
         ) => Promise<LeaveWithEmployee>;
-        delete: (_id: string) => Promise<LeaveWithEmployee>;
+        delete: (companyId: string, _id: string) => Promise<LeaveWithEmployee>;
       };
 
       payrollSettings: {
@@ -364,7 +406,7 @@ declare global {
         deletePayrollRun(payrollResultId: string): Promise<void>;
       };
 
-      sync: () => Promise<{
+      sync: (companyId: string) => Promise<{
         success: boolean;
         message: string;
       }>;

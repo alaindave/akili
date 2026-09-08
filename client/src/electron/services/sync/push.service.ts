@@ -4,11 +4,14 @@ import FormData from "form-data";
 import fs from "fs";
 import path from "path";
 
+import { getToken } from "../../auth.js";
+
 import {
   getUnsyncedItems,
   markManySynced,
 } from "../../database/repositories/sync.repository.js";
 
+import { markCompanySynced } from "../../database/repositories/companies.repository.js";
 import { markEmployeeSynced } from "../../database/repositories/employees.repository.js";
 import { markAttendanceSynced } from "../../database/repositories/attendances.repository.js";
 import { markLeaveSynced } from "../../database/repositories/leaves.repository.js";
@@ -18,11 +21,13 @@ import { markEmployeePhotoSynced } from "../../database/repositories/employees_p
 import { markEmployeeDocumentSynced } from "../../database/repositories/employees_documents.repository.js";
 import { markPayrollComponentSynced } from "../../database/repositories/payroll_components.repository.js";
 import { markPayrollEmployeeProfileSynced } from "../../database/repositories/payroll_employee_profile.repository.js";
+
 import {
   markPayrollItemSynced,
   markPayrollResultSynced,
   markPayrollRunSynced,
 } from "../../database/repositories/payroll_run.repository.js";
+
 import { markPayrollSettingsSynced } from "../../database/repositories/payroll_settings.repository.js";
 import { markAttendanceDailyCheckSynced } from "../../database/repositories/attendanceDailyCheck.repository.js";
 
@@ -35,13 +40,40 @@ interface PushPendingChangesResult {
   syncedCount: number;
 }
 
-export async function pushPendingChanges(): Promise<PushPendingChangesResult> {
-  console.log("PUSH SERVICE API URL:", API_URL);
+export async function pushPendingChanges(
+  companyId: string
+): Promise<PushPendingChangesResult> {
+  if (!companyId) {
+    throw new Error("PUSH SYNC: companyId is required");
+  }
 
-  const pending = await getUnsyncedItems();
+  console.log("PUSH SERVICE API URL:", API_URL);
+  console.log("PUSH SERVICE COMPANY ID:", companyId);
+
+  /*
+   * ---------------------------------------------------------
+   * GET AUTH TOKEN
+   * ---------------------------------------------------------
+   */
+
+  const token = await getToken();
+
+  if (!token) {
+    throw new Error("PUSH SYNC: authentication token is missing");
+  }
+
+  /*
+   * ---------------------------------------------------------
+   * GET PENDING ITEMS FOR THIS COMPANY ONLY
+   * ---------------------------------------------------------
+   */
+
+  const pending = await getUnsyncedItems(companyId);
 
   if (!pending.length) {
-    console.log("NO PENDING CHANGES TO PUSH.");
+    console.log("NO PENDING CHANGES TO PUSH.", {
+      companyId,
+    });
 
     return {
       pendingChanges: 0,
@@ -49,25 +81,53 @@ export async function pushPendingChanges(): Promise<PushPendingChangesResult> {
     };
   }
 
-  console.log("ITEMS TO PUSH SYNC:", pending);
+  console.log("ITEMS TO PUSH SYNC:", {
+    companyId,
+    count: pending.length,
+    items: pending,
+  });
 
   /*
    * ---------------------------------------------------------
    * VALIDATE COMPANY IDS
    * ---------------------------------------------------------
-   *
-   * Every tenant-owned sync item must contain companyId.
-   *
-   * The payload should also contain companyId because the
-   * backend needs to know which company owns the record.
    */
+
   for (const item of pending) {
-    const data = JSON.parse(item.payload);
+    if (item.companyId !== companyId) {
+      throw new Error(
+        `SYNC QUEUE COMPANY MISMATCH: ` +
+          `item ${item._id} belongs to ${item.companyId}, ` +
+          `but current company is ${companyId}`
+      );
+    }
+
+    let data: any;
+
+    try {
+      data = JSON.parse(item.payload);
+    } catch {
+      throw new Error(`INVALID SYNC PAYLOAD FOR ITEM ${item._id}`);
+    }
 
     if (!data.companyId) {
       throw new Error(`Cannot push sync item ${item._id}: missing companyId`);
     }
+
+    if (data.companyId !== companyId) {
+      throw new Error(
+        `SYNC PAYLOAD COMPANY MISMATCH: ` +
+          `item ${item._id} belongs to ${data.companyId}, ` +
+          `but current company is ${companyId}`
+      );
+    }
   }
+
+  /*
+   * ---------------------------------------------------------
+   * CREATE FORM DATA
+   * ---------------------------------------------------------
+   */
 
   const form = new FormData();
 
@@ -76,22 +136,26 @@ export async function pushPendingChanges(): Promise<PushPendingChangesResult> {
 
     return {
       queueId: item._id,
-      companyId: data.companyId,
+      companyId: item.companyId,
       entity: item.entity,
       operation: item.operation,
       data,
     };
   });
 
-  // ---------------------------------------------------------
-  // SYNC METADATA
-  // ---------------------------------------------------------
+  /*
+   * ---------------------------------------------------------
+   * SYNC METADATA
+   * ---------------------------------------------------------
+   */
 
   form.append("items", JSON.stringify(items));
 
-  // ---------------------------------------------------------
-  // ATTACH FILES
-  // ---------------------------------------------------------
+  /*
+   * ---------------------------------------------------------
+   * ATTACH FILES
+   * ---------------------------------------------------------
+   */
 
   for (const item of pending) {
     const data = JSON.parse(item.payload);
@@ -106,7 +170,11 @@ export async function pushPendingChanges(): Promise<PushPendingChangesResult> {
             contentType: data.photo_mime_type,
           });
         } else {
-          console.error("PHOTO FILE MISSING:", photoPath);
+          console.error("PHOTO FILE MISSING:", {
+            companyId,
+            employeeId: data.employeeId,
+            photoPath,
+          });
         }
 
         break;
@@ -123,7 +191,11 @@ export async function pushPendingChanges(): Promise<PushPendingChangesResult> {
             }
           );
         } else {
-          console.error("DOCUMENT FILE MISSING:", data.localPath);
+          console.error("DOCUMENT FILE MISSING:", {
+            companyId,
+            employeeId: data.employeeId,
+            localPath: data.localPath,
+          });
         }
 
         break;
@@ -131,27 +203,47 @@ export async function pushPendingChanges(): Promise<PushPendingChangesResult> {
     }
   }
 
-  console.log("FORM TO SEND TO BACKEND:", form);
+  /*
+   * ---------------------------------------------------------
+   * SEND TO BACKEND
+   * ---------------------------------------------------------
+   */
 
-  const response = await axios.post(`${API_URL}/sync/push`, form, {
-    headers: form.getHeaders(),
+  console.log("FORM TO SEND TO BACKEND:", {
+    companyId,
+    itemCount: pending.length,
   });
 
-  console.log("SYNC PUSH RESULT:", response.status);
+  const response = await axios.post(`${API_URL}/sync/push`, form, {
+    headers: {
+      ...form.getHeaders(),
+      "x-auth-token": token,
+      "x-company-id": companyId,
+    },
+  });
+
+  console.log("SYNC PUSH RESULT:", {
+    companyId,
+    status: response.status,
+  });
 
   const syncedIds: string[] = response.data.synced ?? [];
 
-  // ---------------------------------------------------------
-  // MARK SYNC QUEUE ITEMS AS SYNCED
-  // ---------------------------------------------------------
+  /*
+   * ---------------------------------------------------------
+   * MARK SYNC QUEUE ITEMS AS SYNCED
+   * ---------------------------------------------------------
+   */
 
   if (syncedIds.length > 0) {
-    await markManySynced(syncedIds);
+    await markManySynced(companyId, syncedIds);
   }
 
-  // ---------------------------------------------------------
-  // MARK LOCAL ENTITIES AS SYNCED
-  // ---------------------------------------------------------
+  /*
+   * ---------------------------------------------------------
+   * MARK LOCAL ENTITIES AS SYNCED
+   * ---------------------------------------------------------
+   */
 
   for (const item of pending) {
     if (!syncedIds.includes(item._id)) {
@@ -160,15 +252,11 @@ export async function pushPendingChanges(): Promise<PushPendingChangesResult> {
 
     const data = JSON.parse(item.payload);
 
-    const companyId = data.companyId;
-
-    if (!companyId) {
-      console.error(`SYNCED ITEM ${item._id} HAS NO COMPANY ID`);
-
-      continue;
-    }
-
     switch (item.entity) {
+      case "company":
+        await markCompanySynced(companyId, data.serverVersion);
+        break;
+
       case "employee":
         await markEmployeeSynced(companyId, data._id);
         break;
@@ -231,21 +319,21 @@ export async function pushPendingChanges(): Promise<PushPendingChangesResult> {
     }
   }
 
-  // ---------------------------------------------------------
-  // CHECK WHAT IS STILL PENDING
-  // ---------------------------------------------------------
+  /*
+   * ---------------------------------------------------------
+   * CHECK WHAT IS STILL PENDING
+   * ---------------------------------------------------------
+   */
 
-  const remainingPending = await getUnsyncedItems();
+  const remainingPending = await getUnsyncedItems(companyId);
 
   const pendingChanges = remainingPending.length;
 
-  console.log(
-    "PUSH COMPLETE:",
-    syncedIds.length,
-    "SYNCED;",
-    pendingChanges,
-    "STILL PENDING."
-  );
+  console.log("PUSH COMPLETE:", {
+    companyId,
+    synced: syncedIds.length,
+    stillPending: pendingChanges,
+  });
 
   return {
     pendingChanges,

@@ -35,6 +35,7 @@ export async function initializeEmployeePayrollProfilesForEmployee(
     }
 
     return {
+      companyId,
       _id: randomUUID(),
       employeeId,
       componentId: component._id,

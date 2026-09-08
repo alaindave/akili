@@ -22,7 +22,6 @@ import { GiClockwork } from "react-icons/gi";
 import { GoDotFill } from "react-icons/go";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { Link } from "react-router-dom";
-import type { Attendance } from "../../../../../common/types/Attendance";
 import type Employee from "../../../../../common/types/Employee";
 import Leave from "../../../../../common/types/Leave";
 import "../../../../styles/App.css";
@@ -37,6 +36,7 @@ import {
   useUpdateAttendance,
 } from "../../attendance/hooks/useAttendance";
 import { useUpdateEmployee } from "../hooks/useEmployees";
+import useAdminUser from "../../../../../store/auth.store";
 
 interface Props {
   employee: Employee;
@@ -111,12 +111,6 @@ const formattedDate = formatter.format(date);
 ========================================================= */
 
 const EmployeeCard = ({ employee }: Props) => {
-  /* =======================================================
-     LOCAL UI STATE
-
-     Attendance data itself is now owned by React Query.
-  ======================================================= */
-
   const [_clockIn, setClockIn] = useState("");
 
   const [isClockingIn, setIsClockingIn] = useState(false);
@@ -126,6 +120,8 @@ const EmployeeCard = ({ employee }: Props) => {
   const [showEditable, setShowEditable] = useState(false);
 
   const [photo_url, setPhotoUrl] = useState("");
+
+  const user = useAdminUser((store) => store.adminUser);
 
   /* =======================================================
      TOASTS
@@ -143,20 +139,20 @@ const EmployeeCard = ({ employee }: Props) => {
     data: attendance = null,
     isLoading: loadingAttendance,
     refetch: refetchAttendance,
-  } = useAttendanceRecord(employee._id, formattedDate);
+  } = useAttendanceRecord(user.companyId, employee._id, formattedDate);
 
   /* =======================================================
      ATTENDANCE MUTATIONS
   ======================================================= */
 
   const { mutateAsync: createAttendance, isPending: isCreatingAttendance } =
-    useCreateAttendance();
+    useCreateAttendance(user.companyId);
 
   const { mutateAsync: updateAttendance, isPending: isUpdatingAttendance } =
-    useUpdateAttendance();
+    useUpdateAttendance(user.companyId);
 
   const { mutateAsync: createAbsenceLeave, isPending: isCreatingAbsenceLeave } =
-    useCreateAbsenceLeave();
+    useCreateAbsenceLeave(user.companyId);
 
   /* =======================================================
      EMPLOYEE MUTATION
@@ -246,6 +242,7 @@ const EmployeeCard = ({ employee }: Props) => {
 
     try {
       const createdAttendance = await createAttendance({
+        companyId: user.companyId,
         employeeId: employee._id,
         date: attendanceDate,
         clockIn: clockIn.toISOString(),
@@ -284,6 +281,7 @@ const EmployeeCard = ({ employee }: Props) => {
 
       await updateAttendance({
         _id: attendance._id,
+        employeeId: attendance.employeeId,
         date: formattedDate,
         updates: {
           notes,
@@ -361,7 +359,10 @@ const EmployeeCard = ({ employee }: Props) => {
           status: "APPROUVÉ",
         };
 
-        const savedLeave = await window.electron.leave.create(leave);
+        const savedLeave = await window.electron.leave.create(
+          user.companyId,
+          leave
+        );
 
         console.log("LEAVE SUCCESSFULLY SAVED:", savedLeave);
 
@@ -370,6 +371,7 @@ const EmployeeCard = ({ employee }: Props) => {
         ================================================= */
 
         const updatedEmployee = await updateEmployee({
+          companyId: user.companyId,
           _id: employee._id,
           data: {
             remainingLeave: remainingLeave - leaveDays,
@@ -430,6 +432,14 @@ const EmployeeCard = ({ employee }: Props) => {
         );
       }
     }
+  };
+
+  const formatDepartment = (department: string) => {
+    if (department === "ADMINISTRATION") return "Administration";
+    if (department === "ATELIER") return "Atelier";
+    if (department === "USINE") return "Usine";
+    if (department === "MAGASIN") return "Magasin";
+    return "Sentinelle";
   };
 
   /* =======================================================
@@ -588,7 +598,7 @@ const EmployeeCard = ({ employee }: Props) => {
               lg: "240px",
             }}
           >
-            {employee.department}
+            {formatDepartment(employee.department)}
           </Text>
         </Flex>
       </Box>

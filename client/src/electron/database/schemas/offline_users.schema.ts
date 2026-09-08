@@ -3,6 +3,7 @@ import { run } from "../db.js";
 export async function createOfflineUsersTable() {
   await run(`
   CREATE TABLE IF NOT EXISTS offline_users (
+   companyId TEXT NOT NULL,
     _id TEXT PRIMARY KEY,
     email TEXT NOT NULL UNIQUE,
     password TEXT NOT NULL,

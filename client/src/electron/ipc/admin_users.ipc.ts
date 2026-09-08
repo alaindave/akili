@@ -3,9 +3,9 @@ import { getAllAdminUsers } from "../database/repositories/admin_users.repositor
 
 export function registerAdminUsersIPC() {
   console.log("REGISTERING ADMIN USERS IPC");
-  ipcMain.handle("adminUsers:getAll", async () => {
+  ipcMain.handle("adminUsers:getAll", async (_, companyId) => {
     try {
-      const adminUsers = await getAllAdminUsers();
+      const adminUsers = await getAllAdminUsers(companyId);
       console.log("RETRIEVED ADMIN USERS:", adminUsers);
       return adminUsers;
     } catch (error) {

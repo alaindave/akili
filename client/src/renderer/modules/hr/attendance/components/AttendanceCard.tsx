@@ -20,6 +20,7 @@ import type { AttendanceWithEmployee } from "../../../../../common/types/Attenda
 import defaultAvatar from "../../../../assets/default-avatar.jpeg";
 import { useUpdateAttendance } from "../hooks/useAttendance";
 import { useEmployee } from "../../employees/hooks/useEmployees";
+import useAdminUser from "../../../../../store/auth.store";
 
 interface Props {
   attendance: AttendanceWithEmployee | null;
@@ -127,6 +128,8 @@ const EmployeeAttendanceCard = ({
   isUnlocked,
   toggleOff,
 }: Props) => {
+  const user = useAdminUser((store) => store.adminUser);
+
   /*
    * Hooks MUST be called before any conditional return.
    */
@@ -140,7 +143,7 @@ const EmployeeAttendanceCard = ({
 
   const { data: employee } = useEmployee(employeeId);
 
-  const updateAttendanceMutation = useUpdateAttendance();
+  const updateAttendanceMutation = useUpdateAttendance(user.companyId);
 
   /* =========================================================
      LOCAL ATTENDANCE STATE
@@ -351,6 +354,7 @@ const EmployeeAttendanceCard = ({
        */
       const updated = await updateAttendanceMutation.mutateAsync({
         _id: attendanceId,
+        employeeId: attendance.employeeId,
         date: selectedDate,
         updates: {
           clockOut: clockOutISO,
@@ -457,6 +461,7 @@ const EmployeeAttendanceCard = ({
 
       const updatedAttendance = await updateAttendanceMutation.mutateAsync({
         _id: attendanceId,
+        employeeId: attendance.employeeId,
         date: selectedDate,
         updates: {
           clockOut: clockOutISO,
@@ -501,12 +506,16 @@ const EmployeeAttendanceCard = ({
   ========================================================= */
 
   const refreshAttendance = () => {
-    /*
-     * No manual fetch is needed.
-     *
-     * React Query handles cache updates/invalidation.
-     */
     toggleOff?.();
+  };
+
+  const formatDepartment = (department: string | null | undefined) => {
+    if (!department) return null;
+    if (department === "ADMINISTRATION") return "Administration";
+    if (department === "ATELIER") return "Atelier";
+    if (department === "USINE") return "Usine";
+    if (department === "MAGASIN") return "Magasin";
+    return "Sentinelle";
   };
 
   /* =========================================================
@@ -575,7 +584,8 @@ const EmployeeAttendanceCard = ({
       ====================================================== */}
 
       <Text color="gray.600" fontWeight="500" fontSize="1.1rem">
-        {employee?.department ?? attendance.department}
+        {formatDepartment(employee?.department) ??
+          formatDepartment(attendance.department)}
       </Text>
 
       {/* =====================================================
@@ -706,7 +716,6 @@ const EmployeeAttendanceCard = ({
                 width="80px"
                 onFocus={() => {
                   setErrorMessage("");
-
                   setDraftClockOut(formatTime(draftClockOut));
                 }}
                 onBlur={() => {

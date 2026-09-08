@@ -1,8 +1,4 @@
-import PayrollComponent from "../models/payrollComponent.model.js";
-import { randomUUID } from "crypto";
-import { getNextSyncVersion } from "../utils/syncVersion.js";
-
-const defaultPayrollComponents = [
+export const defaultPayrollComponents = [
   // ==========================
   // Earnings
   // ==========================
@@ -17,6 +13,7 @@ const defaultPayrollComponents = [
     displayOrder: 1,
     requiresHRApproval: 0,
     taxable: 1,
+    enabled: 1,
   },
   {
     name: "HOUSING_ALLOWANCE",
@@ -27,6 +24,7 @@ const defaultPayrollComponents = [
     displayOrder: 2,
     requiresHRApproval: 0,
     taxable: 0,
+    enabled: 1,
   },
   {
     name: "TRANSPORT_ALLOWANCE",
@@ -37,6 +35,7 @@ const defaultPayrollComponents = [
     displayOrder: 3,
     requiresHRApproval: 0,
     taxable: 0,
+    enabled: 1,
   },
   {
     name: "BONUS",
@@ -47,6 +46,7 @@ const defaultPayrollComponents = [
     displayOrder: 4,
     requiresHRApproval: 1,
     taxable: 1,
+    enabled: 1,
   },
   {
     name: "OVERTIME",
@@ -57,6 +57,7 @@ const defaultPayrollComponents = [
     displayOrder: 5,
     requiresHRApproval: 1,
     taxable: 1,
+    enabled: 1,
   },
   {
     name: "MEAL_ALLOWANCE",
@@ -67,6 +68,7 @@ const defaultPayrollComponents = [
     displayOrder: 6,
     requiresHRApproval: 0,
     taxable: 0,
+    enabled: 1,
   },
   {
     name: "COMMISSION",
@@ -77,6 +79,7 @@ const defaultPayrollComponents = [
     displayOrder: 7,
     requiresHRApproval: 1,
     taxable: 1,
+    enabled: 1,
   },
 
   // ==========================
@@ -94,6 +97,7 @@ const defaultPayrollComponents = [
     displayOrder: 101,
     requiresHRApproval: 0,
     taxable: 0,
+    enabled: 1,
   },
   {
     name: "TAX",
@@ -105,6 +109,7 @@ const defaultPayrollComponents = [
     displayOrder: 102,
     requiresHRApproval: 0,
     taxable: 0,
+    enabled: 1,
   },
   {
     name: "LOAN",
@@ -115,6 +120,7 @@ const defaultPayrollComponents = [
     displayOrder: 103,
     requiresHRApproval: 1,
     taxable: 0,
+    enabled: 1,
   },
   {
     name: "ABSENCE",
@@ -126,6 +132,7 @@ const defaultPayrollComponents = [
     displayOrder: 104,
     requiresHRApproval: 1,
     taxable: 0,
+    enabled: 1,
   },
   {
     name: "LATE_PENALTY",
@@ -137,48 +144,6 @@ const defaultPayrollComponents = [
     displayOrder: 105,
     requiresHRApproval: 1,
     taxable: 0,
+    enabled: 1,
   },
 ];
-
-async function seedPayrollComponents() {
-  for (const component of defaultPayrollComponents) {
-    const exists = await PayrollComponent.findOne({
-      name: component.name,
-    });
-
-    if (exists) {
-      console.log(
-        `PAYROLL COMPONENT ALREADY EXISTS: ${component.name} ` +
-          `(serverVersion: ${exists.serverVersion ?? "missing"})`
-      );
-
-      continue;
-    }
-
-    const _id = randomUUID();
-    const now = new Date();
-
-    /*
-     * Allocate the serverVersion through the same global
-     * sync-version mechanism used by normal synchronization.
-     */
-    const serverVersion = await getNextSyncVersion("payroll_component");
-
-    await PayrollComponent.create({
-      ...component,
-      _id,
-      createdAt: now,
-      updatedAt: now,
-      serverVersion,
-      lastSyncedAt: now,
-      isDeleted: 0,
-    });
-
-    console.log(
-      `CREATED PAYROLL COMPONENT: ${component.name} ` +
-        `(serverVersion: ${serverVersion})`
-    );
-  }
-}
-
-export default seedPayrollComponents;

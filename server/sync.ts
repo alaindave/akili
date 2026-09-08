@@ -6,6 +6,7 @@ import EmployeesDocuments from "./models/employeesDocuments.model.js";
 import PayrollComponent from "./models/payrollComponent.model.js";
 import AdminUser from "./models/adminUser.model.js";
 import EmployeePayrollProfile from "./models/payrollEmployeeProfile.model.js";
+import Company from "./models/company.model.js";
 import supabase from "./services/supabase.service.js";
 import PayrollRun from "./models/payrollRun.model.js";
 import PayrollResult from "./models/payrollResult.model.js";
@@ -14,12 +15,22 @@ import PayrollSettings from "./models/payrollSettings.model.js";
 import AttendanceDailyCheck from "./models/attendanceDailyCheck.model.js";
 import { getNextSyncVersion } from "./utils/syncVersion.js";
 
-export type SyncOperation = "create" | "update" | "delete";
+export type SyncOperation = "CREATE" | "UPDATE" | "DELETE";
 
 interface SyncData {
   _id: string;
   serverVersion: number;
   [key: string]: any;
+}
+
+function requireCompanyId(data: SyncData): string {
+  if (!data.companyId || typeof data.companyId !== "string") {
+    throw new Error(
+      `SYNC FAILED: companyId is required for entity ${data._id ?? "unknown"}`
+    );
+  }
+
+  return data.companyId;
 }
 
 interface UploadedFile {
@@ -69,19 +80,133 @@ async function getServerVersion(entity: string): Promise<number> {
 }
 
 // ============================================================
+// COMPANY
+// ============================================================
+
+export async function syncCompany(operation: SyncOperation, data: SyncData) {
+  const companyId = requireCompanyId(data);
+  requireUpdatedAt(data);
+
+  const { fields } = cleanSyncFields(data);
+
+  fields.companyId = companyId;
+
+  const serverVersion = await getServerVersion("company");
+
+  /*
+   * ------------------------------------------------------------
+   * DELETE
+   * ------------------------------------------------------------
+   */
+
+  if (operation === "DELETE") {
+    await Company.updateOne(
+      {
+        companyId,
+      },
+      {
+        $set: {
+          isDeleted: 1,
+          updatedAt: new Date(data.updatedAt as string),
+          serverVersion,
+        },
+      }
+    );
+
+    const company = await Company.findOne({
+      companyId,
+    }).lean();
+
+    console.log("SYNCED DELETE COMPANY:", {
+      companyId,
+      updatedAt: data.updatedAt,
+      serverVersion,
+    });
+
+    return {
+      success: true,
+      companyId,
+      serverVersion,
+      company,
+    };
+  }
+
+  /*
+   * ------------------------------------------------------------
+   * CREATE / UPDATE
+   * ------------------------------------------------------------
+   */
+
+  delete fields._id;
+
+  /*
+   * The company document should not contain client-only
+   * synchronization fields.
+   */
+  fields.serverVersion = serverVersion;
+
+  await Company.updateOne(
+    {
+      companyId,
+    },
+    {
+      $set: {
+        ...fields,
+        companyId,
+        serverVersion,
+      },
+      $setOnInsert: {
+        _id: data._id,
+        companyId,
+      },
+    },
+    {
+      upsert: true,
+      timestamps: false,
+    }
+  );
+
+  const company = await Company.findOne({
+    companyId,
+  }).lean();
+
+  if (!company) {
+    throw new Error(
+      `COMPANY SYNC FAILED: COMPANY NOT FOUND AFTER UPSERT: ${companyId}`
+    );
+  }
+
+  console.log(`SYNCED ${operation.toUpperCase()} COMPANY:`, {
+    companyId,
+    updatedAt: data.updatedAt,
+    serverVersion,
+  });
+
+  return {
+    success: true,
+    companyId,
+    serverVersion,
+    company,
+  };
+}
+
+// ============================================================
 // EMPLOYEE
 // ============================================================
 
 export async function syncEmployee(operation: SyncOperation, data: SyncData) {
+  const companyId = requireCompanyId(data);
   requireUpdatedAt(data);
 
   const { _id, fields } = cleanSyncFields(data);
+  fields.companyId = companyId;
 
   const serverVersion = await getServerVersion("employee");
 
   await Employee.updateOne(
     {
       _id,
+      companyId,
     },
     {
       $set: {
@@ -97,7 +222,7 @@ export async function syncEmployee(operation: SyncOperation, data: SyncData) {
     }
   );
 
-  const employee = await Employee.findById(_id).lean();
+  const employee = await Employee.findOne({ _id, companyId }).lean();
 
   console.log(`SYNCED ${operation.toUpperCase()} EMPLOYEE:`, {
     _id,
@@ -114,10 +239,242 @@ export async function syncEmployee(operation: SyncOperation, data: SyncData) {
 }
 
 // ============================================================
+// EMPLOYEE PHOTO
+// ============================================================
+
+export async function syncEmployeePhoto(data: SyncData, file?: UploadedFile) {
+  const companyId = requireCompanyId(data);
+  requireUpdatedAt(data);
+
+  const employee = await Employee.findOne({
+    _id: data.employeeId,
+    companyId,
+  });
+
+  if (!employee) {
+    throw new Error(`EMPLOYEE ${data.employeeId} NOT FOUND`);
+  }
+
+  if (!file) {
+    throw new Error("PHOTO FILE MISSING");
+  }
+
+  const sanitizeFolderPart = (value: string) =>
+    value.replace(/[<>:"/\\|?*\x00-\x1F]/g, "").replace(/\s+/g, "_");
+
+  const employeeFolderName = [
+    companyId,
+    employee.firstName,
+    employee.lastName,
+    employee._id,
+  ]
+    .map((value) => sanitizeFolderPart(String(value)))
+    .join("_");
+
+  const photoVersion = Number(data.photo_version ?? 1);
+
+  if (!Number.isFinite(photoVersion) || photoVersion < 1) {
+    throw new Error(`INVALID PHOTO VERSION: ${data.photo_version}`);
+  }
+
+  const objectPath = `${employeeFolderName}/photo_v${photoVersion}`;
+
+  const previousObjectPath = employee.photo_path;
+
+  console.log("UPLOADING EMPLOYEE PHOTO:", {
+    companyId,
+    employeeId: employee._id,
+    previousObjectPath,
+    newObjectPath: objectPath,
+    photoVersion,
+    mimeType: data.photo_mime_type,
+    hash: data.photo_hash,
+  });
+
+  const { error: uploadError } = await supabase.storage
+    .from("afritan_employees_photos")
+    .upload(objectPath, file.buffer, {
+      contentType: data.photo_mime_type,
+      upsert: true,
+      cacheControl: "0",
+    });
+
+  if (uploadError) {
+    throw new Error(`FAILED TO UPLOAD EMPLOYEE PHOTO: ${uploadError.message}`);
+  }
+
+  console.log("NEW EMPLOYEE PHOTO UPLOADED:", {
+    companyId,
+    employeeId: employee._id,
+    objectPath,
+  });
+
+  if (previousObjectPath && previousObjectPath !== objectPath) {
+    const { error: deleteError } = await supabase.storage
+      .from("afritan_employees_photos")
+      .remove([previousObjectPath]);
+
+    if (deleteError) {
+      throw new Error(
+        `NEW PHOTO UPLOADED BUT FAILED TO DELETE OLD PHOTO: ` +
+          deleteError.message
+      );
+    }
+
+    console.log("OLD EMPLOYEE PHOTO DELETED:", {
+      companyId,
+      employeeId: employee._id,
+      previousObjectPath,
+    });
+  }
+
+  const serverVersion = await getServerVersion("employee");
+
+  Object.assign(employee, {
+    companyId,
+
+    photo_filename: data.photo_filename,
+    photo_path: objectPath,
+    photo_hash: data.photo_hash,
+    photo_mime_type: data.photo_mime_type,
+
+    photo_last_modified: data.photo_last_modified
+      ? new Date(data.photo_last_modified)
+      : new Date(data.updatedAt as string),
+
+    photo_version: photoVersion,
+
+    updatedAt: new Date(data.updatedAt as string),
+    serverVersion,
+  });
+
+  await employee.save();
+
+  console.log("EMPLOYEE PHOTO SYNCED SUCCESSFULLY:", {
+    companyId,
+    employeeId: employee._id,
+    photoVersion,
+    photoPath: objectPath,
+    serverVersion,
+  });
+
+  return {
+    success: true,
+    companyId,
+    employeeId: employee._id,
+    serverVersion,
+    updatedAt: employee.updatedAt,
+    photoVersion,
+    photoPath: objectPath,
+  };
+}
+
+// ============================================================
+// EMPLOYEE DOCUMENTS
+// ============================================================
+
+export async function syncEmployeeDocument(
+  operation: SyncOperation,
+  data: SyncData,
+  file?: UploadedFile
+) {
+  const companyId = requireCompanyId(data);
+  requireUpdatedAt(data);
+
+  const employee = await Employee.findOne({ _id: data.employeeId, companyId });
+
+  if (!employee) {
+    throw new Error("EMPLOYEE NOT FOUND");
+  }
+
+  const serverVersion = await getServerVersion("employee_document");
+
+  switch (operation) {
+    case "CREATE":
+    case "UPDATE": {
+      if (!file) {
+        throw new Error("DOCUMENT FILE MISSING");
+      }
+
+      const objectPath = `${employee.firstName}_${employee.lastName}_${employee._id}/${data.documentType}`;
+
+      const { error } = await supabase.storage
+        .from("afritan_employees_documents")
+        .upload(objectPath, file.buffer, {
+          contentType: data.mimeType,
+          upsert: true,
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      const { _id, fields } = cleanSyncFields(data);
+      fields.companyId = companyId;
+
+      await EmployeesDocuments.updateOne(
+        {
+          _id,
+          companyId,
+        },
+        {
+          $set: {
+            ...fields,
+            storagePath: objectPath,
+            updatedAt: new Date(data.updatedAt as string),
+            serverVersion,
+          },
+
+          $setOnInsert: {
+            _id,
+          },
+        },
+        {
+          upsert: true,
+        }
+      );
+
+      return {
+        success: true,
+        _id,
+        serverVersion,
+        updatedAt: data.updatedAt,
+      };
+    }
+
+    case "DELETE": {
+      await EmployeesDocuments.updateOne(
+        {
+          _id: data._id,
+          companyId,
+        },
+        {
+          $set: {
+            isDeleted: 1,
+            updatedAt: new Date(data.updatedAt as string),
+            serverVersion,
+          },
+        }
+      );
+
+      return {
+        success: true,
+        _id: data._id,
+        serverVersion,
+        updatedAt: data.updatedAt,
+      };
+    }
+  }
+}
+
+// ============================================================
 // ATTENDANCE
 // ============================================================
+
 export async function syncAttendance(operation: SyncOperation, data: SyncData) {
+  const companyId = requireCompanyId(data);
   const { _id, fields } = cleanSyncFields(data);
+  fields.companyId = companyId;
 
   if (!_id) {
     throw new Error("ATTENDANCE SYNC FAILED: MISSING _id");
@@ -137,12 +494,14 @@ export async function syncAttendance(operation: SyncOperation, data: SyncData) {
     employeeId: fields.employeeId,
     date: fields.date,
     isDeleted: 0,
+    companyId,
   });
-  // Check if attendance record exist but with different _id
+
   if (existingAttendance && existingAttendance._id.toString() !== _id) {
     await Attendance.updateOne(
       {
         _id: existingAttendance._id,
+        companyId,
       },
       {
         $set: {
@@ -152,13 +511,17 @@ export async function syncAttendance(operation: SyncOperation, data: SyncData) {
       }
     );
 
-    const attendance = await Attendance.findById(existingAttendance._id).lean();
+    const attendance = await Attendance.findOne({
+      _id: existingAttendance._id,
+      companyId,
+    }).lean();
 
     console.log("ATTENDANCE MERGED BY EMPLOYEE + DATE:", {
       clientId: _id,
       serverId: existingAttendance._id,
       employeeId: fields.employeeId,
       date: fields.date,
+      companyId,
       serverVersion,
     });
 
@@ -175,6 +538,7 @@ export async function syncAttendance(operation: SyncOperation, data: SyncData) {
   await Attendance.updateOne(
     {
       _id,
+      companyId,
     },
     {
       $set: {
@@ -190,10 +554,14 @@ export async function syncAttendance(operation: SyncOperation, data: SyncData) {
     }
   );
 
-  const attendance = await Attendance.findById(_id).lean();
+  const attendance = await Attendance.findOne({
+    _id,
+    companyId,
+  }).lean();
 
   console.log(`SYNCED ${operation.toUpperCase()} ATTENDANCE:`, {
     _id,
+    companyId,
     serverVersion,
   });
 
@@ -214,15 +582,18 @@ export async function syncAttendanceDailyCheck(
   operation: SyncOperation,
   data: SyncData
 ) {
+  const companyId = requireCompanyId(data);
   requireUpdatedAt(data);
 
   const { _id, fields } = cleanSyncFields(data);
+  fields.companyId = companyId;
 
   const serverVersion = await getServerVersion("attendance_daily_check");
 
   await AttendanceDailyCheck.updateOne(
     {
       _id,
+      companyId,
     },
     {
       $set: {
@@ -238,7 +609,10 @@ export async function syncAttendanceDailyCheck(
     }
   );
 
-  const attendanceDailyCheck = await AttendanceDailyCheck.findById(_id).lean();
+  const attendanceDailyCheck = await AttendanceDailyCheck.findOne({
+    _id,
+    companyId,
+  }).lean();
 
   console.log(`SYNCED ${operation.toUpperCase()} ATTENDANCE DAILY CHECK:`, {
     _id,
@@ -259,15 +633,18 @@ export async function syncAttendanceDailyCheck(
 // ============================================================
 
 export async function syncLeave(operation: SyncOperation, data: SyncData) {
+  const companyId = requireCompanyId(data);
   requireUpdatedAt(data);
 
   const { _id, fields } = cleanSyncFields(data);
+  fields.companyId = companyId;
 
   const serverVersion = await getServerVersion("leave");
 
   await Leave.updateOne(
     {
       _id,
+      companyId,
     },
     {
       $set: {
@@ -283,7 +660,7 @@ export async function syncLeave(operation: SyncOperation, data: SyncData) {
     }
   );
 
-  const leave = await Leave.findById(_id).lean();
+  const leave = await Leave.findOne({ _id, companyId }).lean();
 
   console.log(`SYNCED ${operation.toUpperCase()} LEAVE:`, {
     _id,
@@ -304,10 +681,16 @@ export async function syncLeave(operation: SyncOperation, data: SyncData) {
 // ============================================================
 
 export async function syncTask(operation: SyncOperation, data: SyncData) {
+  const companyId = requireCompanyId(data);
   requireUpdatedAt(data);
+
   const { _id, fields } = cleanSyncFields(data);
+  fields.companyId = companyId;
+
   console.log("FIELDS BEFORE", fields);
+
   delete fields.comments;
+
   console.log("FIELDS AFTER", fields);
 
   const serverVersion = await getServerVersion("task");
@@ -315,6 +698,7 @@ export async function syncTask(operation: SyncOperation, data: SyncData) {
   await Task.updateOne(
     {
       _id,
+      companyId,
     },
     {
       $set: {
@@ -332,7 +716,7 @@ export async function syncTask(operation: SyncOperation, data: SyncData) {
     }
   );
 
-  const task = await Task.findById(_id).lean();
+  const task = await Task.findOne({ _id, companyId }).lean();
 
   console.log(`SYNCED ${operation.toUpperCase()} TASK:`, {
     _id,
@@ -356,6 +740,8 @@ export async function syncTaskComment(
   operation: SyncOperation,
   data: SyncData
 ) {
+  const companyId = requireCompanyId(data);
+
   if (!data._id) {
     throw new Error("TASK COMMENT SYNC FAILED: MISSING _id");
   }
@@ -366,7 +752,10 @@ export async function syncTaskComment(
 
   requireUpdatedAt(data);
 
-  const task = await Task.findById(data.taskId);
+  const task = await Task.findOne({
+    _id: data.taskId,
+    companyId,
+  });
 
   if (!task) {
     throw new Error(`TASK ${data.taskId} NOT FOUND`);
@@ -377,11 +766,7 @@ export async function syncTaskComment(
   const commentServerVersion = await getServerVersion("task_comment");
 
   switch (operation) {
-    // --------------------------------------------------------
-    // CREATE
-    // --------------------------------------------------------
-
-    case "create": {
+    case "CREATE": {
       const existingComment = task.comments.find(
         (comment) => comment._id === data._id
       );
@@ -418,11 +803,7 @@ export async function syncTaskComment(
       break;
     }
 
-    // --------------------------------------------------------
-    // UPDATE
-    // --------------------------------------------------------
-
-    case "update": {
+    case "UPDATE": {
       const comment = task.comments.find((c) => c._id === data._id);
 
       if (!comment) {
@@ -435,9 +816,6 @@ export async function syncTaskComment(
 
       const incomingUpdatedAt = new Date(data.updatedAt as string).getTime();
 
-      /*
-       * Only apply the incoming version if it is newer.
-       */
       if (incomingUpdatedAt >= existingUpdatedAt) {
         Object.assign(comment, {
           comment: data.comment,
@@ -451,11 +829,7 @@ export async function syncTaskComment(
       break;
     }
 
-    // --------------------------------------------------------
-    // DELETE
-    // --------------------------------------------------------
-
-    case "delete": {
+    case "DELETE": {
       const deletedComment = task.comments.find((c) => c._id === data._id);
 
       if (!deletedComment) {
@@ -468,18 +842,9 @@ export async function syncTaskComment(
 
       const incomingUpdatedAt = new Date(data.updatedAt as string).getTime();
 
-      /*
-       * Only apply the delete if this delete represents a newer
-       * version of the comment.
-       */
       if (incomingUpdatedAt >= existingUpdatedAt) {
         deletedComment.isDeleted = 1;
-
-        /*
-         * Preserve the client's delete timestamp.
-         */
         deletedComment.updatedAt = new Date(data.updatedAt as string);
-
         (deletedComment as any).serverVersion = commentServerVersion;
       }
 
@@ -493,7 +858,10 @@ export async function syncTaskComment(
 
   await task.save();
 
-  const savedTask = await Task.findById(data.taskId);
+  const savedTask = await Task.findOne({
+    _id: data.taskId,
+    companyId,
+  });
 
   const savedComment = savedTask?.comments.find(
     (comment) => comment._id === data._id
@@ -522,15 +890,18 @@ export async function syncTaskComment(
 // ============================================================
 
 export async function syncUserNotes(data: SyncData) {
+  const companyId = requireCompanyId(data);
   requireUpdatedAt(data);
 
   const { _id, fields } = cleanSyncFields(data);
+  fields.companyId = companyId;
 
   const serverVersion = await getServerVersion("admin_user");
 
   await AdminUser.updateOne(
     {
       _id,
+      companyId,
     },
     {
       $set: {
@@ -560,285 +931,6 @@ export async function syncUserNotes(data: SyncData) {
 }
 
 // ============================================================
-// EMPLOYEE PHOTO
-// ============================================================
-
-export async function syncEmployeePhoto(data: SyncData, file?: UploadedFile) {
-  requireUpdatedAt(data);
-
-  const employee = await Employee.findById(data.employeeId);
-
-  if (!employee) {
-    throw new Error(`EMPLOYEE ${data.employeeId} NOT FOUND`);
-  }
-
-  if (!file) {
-    throw new Error("PHOTO FILE MISSING");
-  }
-
-  const employeeFolderName =
-    `${employee.firstName}_${employee.lastName}_${employee._id}`
-      .replace(/[<>:"/\\|?*\x00-\x1F]/g, "")
-      .replace(/\s+/g, "_");
-
-  /*
-   * ============================================================
-   * PHOTO VERSION
-   * ============================================================
-   */
-
-  const photoVersion = Number(data.photo_version ?? 1);
-
-  if (!Number.isFinite(photoVersion) || photoVersion < 1) {
-    throw new Error(`INVALID PHOTO VERSION: ${data.photo_version}`);
-  }
-
-  /*
-   * ============================================================
-   * NEW PHOTO PATH
-   * ============================================================
-   *
-   */
-
-  const objectPath = `${employeeFolderName}/photo_v${photoVersion}`;
-
-  /*
-   * ============================================================
-   * PREVIOUS PHOTO PATH
-   * ============================================================
-   */
-
-  const previousObjectPath = employee.photo_path;
-
-  console.log("UPLOADING EMPLOYEE PHOTO:", {
-    employeeId: employee._id,
-    previousObjectPath,
-    newObjectPath: objectPath,
-    photoVersion,
-    mimeType: data.photo_mime_type,
-    hash: data.photo_hash,
-  });
-
-  /*
-   * ============================================================
-   * UPLOAD NEW PHOTO
-   * ============================================================
-   */
-
-  const { error: uploadError } = await supabase.storage
-    .from("afritan_employees_photos")
-    .upload(objectPath, file.buffer, {
-      contentType: data.photo_mime_type,
-      upsert: true,
-      cacheControl: "0",
-    });
-
-  if (uploadError) {
-    throw new Error(`FAILED TO UPLOAD EMPLOYEE PHOTO: ${uploadError.message}`);
-  }
-
-  console.log("NEW EMPLOYEE PHOTO UPLOADED:", {
-    employeeId: employee._id,
-    objectPath,
-  });
-
-  /*
-   * ============================================================
-   * DELETE PREVIOUS PHOTO
-   * ============================================================
-   */
-
-  if (previousObjectPath && previousObjectPath !== objectPath) {
-    const { error: deleteError } = await supabase.storage
-      .from("afritan_employees_photos")
-      .remove([previousObjectPath]);
-
-    if (deleteError) {
-      /*
-       * The new photo exists, but the old one could not be
-       * deleted.
-       */
-      throw new Error(
-        `NEW PHOTO UPLOADED BUT FAILED TO DELETE OLD PHOTO: ` +
-          deleteError.message
-      );
-    }
-
-    console.log("OLD EMPLOYEE PHOTO DELETED:", {
-      employeeId: employee._id,
-      previousObjectPath,
-    });
-  }
-
-  /*
-   * ============================================================
-   * SERVER VERSION
-   * ============================================================
-   */
-
-  const serverVersion = await getServerVersion("employee");
-
-  /*
-   * ============================================================
-   * UPDATE MONGODB
-   * ============================================================
-   */
-
-  Object.assign(employee, {
-    photo_filename: data.photo_filename,
-    photo_path: objectPath,
-    photo_hash: data.photo_hash,
-    photo_mime_type: data.photo_mime_type,
-    photo_last_modified: data.photo_last_modified
-      ? new Date(data.photo_last_modified)
-      : new Date(data.updatedAt as string),
-    photo_version: photoVersion,
-    updatedAt: new Date(data.updatedAt as string),
-    serverVersion,
-  });
-
-  await employee.save();
-
-  /*
-   * ============================================================
-   * SUCCESS
-   * ============================================================
-   */
-
-  console.log("EMPLOYEE PHOTO SYNCED SUCCESSFULLY:", {
-    employeeId: employee._id,
-    photoVersion,
-    photoPath: objectPath,
-    serverVersion,
-  });
-
-  return {
-    success: true,
-    employeeId: employee._id,
-    serverVersion,
-    updatedAt: employee.updatedAt,
-    photoVersion,
-    photoPath: objectPath,
-  };
-}
-
-// ============================================================
-// EMPLOYEE DOCUMENTS
-// ============================================================
-
-export async function syncEmployeeDocument(
-  operation: SyncOperation,
-  data: SyncData,
-  file?: UploadedFile
-) {
-  requireUpdatedAt(data);
-
-  const employee = await Employee.findById(data.employeeId);
-
-  if (!employee) {
-    throw new Error("EMPLOYEE NOT FOUND");
-  }
-
-  const serverVersion = await getServerVersion("employee_document");
-
-  switch (operation) {
-    // --------------------------------------------------------
-    // CREATE / UPDATE
-    // --------------------------------------------------------
-
-    case "create":
-    case "update": {
-      if (!file) {
-        throw new Error("DOCUMENT FILE MISSING");
-      }
-
-      const objectPath = `${employee.firstName}_${employee.lastName}_${employee._id}/${data.documentType}`;
-
-      const { error } = await supabase.storage
-        .from("afritan_employees_documents")
-        .upload(objectPath, file.buffer, {
-          contentType: data.mimeType,
-          upsert: true,
-        });
-
-      if (error) {
-        throw error;
-      }
-
-      const { _id, fields } = cleanSyncFields(data);
-
-      await EmployeesDocuments.updateOne(
-        {
-          _id,
-        },
-        {
-          $set: {
-            ...fields,
-
-            storagePath: objectPath,
-
-            /*
-             * Preserve client-side entity timestamp.
-             */
-            updatedAt: new Date(data.updatedAt as string),
-
-            /*
-             * Server-owned version.
-             */
-            serverVersion,
-          },
-
-          $setOnInsert: {
-            _id,
-          },
-        },
-        {
-          upsert: true,
-        }
-      );
-
-      return {
-        success: true,
-        _id,
-        serverVersion,
-        updatedAt: data.updatedAt,
-      };
-    }
-
-    // --------------------------------------------------------
-    // DELETE
-    // --------------------------------------------------------
-
-    case "delete": {
-      await EmployeesDocuments.updateOne(
-        {
-          _id: data._id,
-        },
-        {
-          $set: {
-            isDeleted: 1,
-
-            /*
-             * Preserve client-side delete timestamp.
-             */
-            updatedAt: new Date(data.updatedAt as string),
-
-            serverVersion,
-          },
-        }
-      );
-
-      return {
-        success: true,
-        _id: data._id,
-        serverVersion,
-        updatedAt: data.updatedAt,
-      };
-    }
-  }
-}
-
-// ============================================================
 // PAYROLL SETTINGS
 // ============================================================
 
@@ -846,15 +938,18 @@ export async function syncPayrollSettings(
   operation: SyncOperation,
   data: SyncData
 ) {
+  const companyId = requireCompanyId(data);
   requireUpdatedAt(data);
 
   const { _id, fields } = cleanSyncFields(data);
+  fields.companyId = companyId;
 
   const serverVersion = await getServerVersion("payroll_settings");
 
   await PayrollSettings.updateOne(
     {
       _id,
+      companyId,
     },
     {
       $set: {
@@ -870,7 +965,10 @@ export async function syncPayrollSettings(
     }
   );
 
-  const settings = await PayrollSettings.findById(_id).lean();
+  const settings = await PayrollSettings.findOne({
+    _id,
+    companyId,
+  }).lean();
 
   console.log(`SYNCED ${operation.toUpperCase()} PAYROLL SETTINGS:`, {
     _id,
@@ -894,15 +992,18 @@ export async function syncPayrollComponent(
   operation: SyncOperation,
   data: SyncData
 ) {
+  const companyId = requireCompanyId(data);
   requireUpdatedAt(data);
 
   const { _id, fields } = cleanSyncFields(data);
+  fields.companyId = companyId;
 
   const serverVersion = await getServerVersion("payroll_component");
 
   await PayrollComponent.updateOne(
     {
       _id,
+      companyId,
     },
     {
       $set: {
@@ -918,7 +1019,10 @@ export async function syncPayrollComponent(
     }
   );
 
-  const component = await PayrollComponent.findById(_id).lean();
+  const component = await PayrollComponent.findOne({
+    _id,
+    companyId,
+  }).lean();
 
   console.log(`SYNCED ${operation.toUpperCase()} PAYROLL COMPONENT:`, {
     _id,
@@ -942,9 +1046,11 @@ export async function syncPayrollProfile(
   operation: SyncOperation,
   data: SyncData
 ) {
+  const companyId = requireCompanyId(data);
   requireUpdatedAt(data);
 
   const { _id, fields } = cleanSyncFields(data);
+  fields.companyId = companyId;
 
   if (!_id) {
     throw new Error("PAYROLL PROFILE SYNC FAILED: MISSING _id");
@@ -955,6 +1061,7 @@ export async function syncPayrollProfile(
   await EmployeePayrollProfile.updateOne(
     {
       _id,
+      companyId,
     },
     {
       $set: {
@@ -970,7 +1077,10 @@ export async function syncPayrollProfile(
     }
   );
 
-  const profile = await EmployeePayrollProfile.findById(_id);
+  const profile = await EmployeePayrollProfile.findOne({
+    _id,
+    companyId,
+  });
 
   if (!profile) {
     throw new Error(`PAYROLL PROFILE WAS NOT FOUND AFTER UPSERT: ${_id}`);
@@ -995,15 +1105,18 @@ export async function syncPayrollProfile(
 // ============================================================
 
 export async function syncPayrollRun(operation: SyncOperation, data: SyncData) {
+  const companyId = requireCompanyId(data);
   requireUpdatedAt(data);
 
   const { _id, fields } = cleanSyncFields(data);
+  fields.companyId = companyId;
 
   const serverVersion = await getServerVersion("payroll_run");
 
   await PayrollRun.updateOne(
     {
       _id,
+      companyId,
     },
     {
       $set: {
@@ -1019,7 +1132,10 @@ export async function syncPayrollRun(operation: SyncOperation, data: SyncData) {
     }
   );
 
-  const payrollRun = await PayrollRun.findById(_id).lean();
+  const payrollRun = await PayrollRun.findOne({
+    _id,
+    companyId,
+  }).lean();
 
   console.log(`SYNCED ${operation.toUpperCase()} PAYROLL RUN:`, {
     _id,
@@ -1043,15 +1159,18 @@ export async function syncPayrollResult(
   operation: SyncOperation,
   data: SyncData
 ) {
+  const companyId = requireCompanyId(data);
   requireUpdatedAt(data);
 
   const { _id, fields } = cleanSyncFields(data);
+  fields.companyId = companyId;
 
   const serverVersion = await getServerVersion("payroll_result");
 
   await PayrollResult.updateOne(
     {
       _id,
+      companyId,
     },
     {
       $set: {
@@ -1067,7 +1186,10 @@ export async function syncPayrollResult(
     }
   );
 
-  const result = await PayrollResult.findById(_id).lean();
+  const result = await PayrollResult.findOne({
+    _id,
+    companyId,
+  }).lean();
 
   console.log(`SYNCED ${operation.toUpperCase()} PAYROLL RESULT:`, {
     _id,
@@ -1091,15 +1213,18 @@ export async function syncPayrollItem(
   operation: SyncOperation,
   data: SyncData
 ) {
+  const companyId = requireCompanyId(data);
   requireUpdatedAt(data);
 
   const { _id, fields } = cleanSyncFields(data);
+  fields.companyId = companyId;
 
   const serverVersion = await getServerVersion("payroll_item");
 
   await PayrollItem.updateOne(
     {
       _id,
+      companyId,
     },
     {
       $set: {
@@ -1115,7 +1240,10 @@ export async function syncPayrollItem(
     }
   );
 
-  const item = await PayrollItem.findById(_id).lean();
+  const item = await PayrollItem.findOne({
+    _id,
+    companyId,
+  }).lean();
 
   console.log(`SYNCED ${operation.toUpperCase()} PAYROLL ITEM:`, {
     _id,

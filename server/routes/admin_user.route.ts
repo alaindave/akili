@@ -23,30 +23,25 @@ interface AdminParams {
 // Create new admin user
 router.post("/", async (req: Request, res: Response) => {
   try {
-    /*
-     * Get signup code from request header.
-     *
-     * Expected header:
-     * x-signup-code: ABC123
-     */
-    const signupCode = req.header("x-signup-code")?.trim();
+    const signUpCode = req.header("x-signup-code")?.trim();
 
-    if (!signupCode) {
+    if (!signUpCode) {
       return res.status(400).send("Signup code is required.");
     }
 
-    console.log("SIGNUP CODE:", signupCode);
+    console.log("SIGNUP CODE:", signUpCode);
+    console.log("SIGN UP DATA", req.body);
 
     /*
      * Find the company associated with the signup code.
      */
     const company = await Company.findOne({
-      signupCode,
+      signUpCode,
       isDeleted: { $ne: 1 },
     });
 
     if (!company) {
-      console.log("INVALID SIGNUP CODE:", signupCode);
+      console.log("INVALID SIGNUP CODE:", signUpCode);
 
       return res.status(400).send("Invalid signup code.");
     }
@@ -54,6 +49,7 @@ router.post("/", async (req: Request, res: Response) => {
     console.log("COMPANY FOUND:", {
       companyId: company.companyId,
       name: company.name,
+      legalName: company.legalName,
     });
 
     /*
@@ -69,7 +65,6 @@ router.post("/", async (req: Request, res: Response) => {
 
     /*
      * Check whether this email is already registered.
-     *
      */
     let adminUser = await getAdminUserByEmail(req.body.email);
 
@@ -84,7 +79,7 @@ router.post("/", async (req: Request, res: Response) => {
      */
     const salt = await bcrypt.genSalt(10);
 
-    const hashedPassword = await bcrypt.hash(req.body.password, salt);
+    const passwordHash = await bcrypt.hash(req.body.password, salt);
 
     /*
      * Create the admin user with the companyId
@@ -93,7 +88,7 @@ router.post("/", async (req: Request, res: Response) => {
     adminUser = await createAdminUser({
       companyId: company.companyId,
       ..._.pick(req.body, ["firstName", "lastName", "email"]),
-      password: hashedPassword,
+      passwordHash,
     });
 
     console.log("REGISTERED ADMIN USER:", adminUser);
@@ -104,21 +99,44 @@ router.post("/", async (req: Request, res: Response) => {
     const token = adminUser.generateAuthToken();
 
     /*
-     * Return companyId to the client.
+     * Return authenticated admin + complete company data.
      */
     return res
       .set("Access-Control-Expose-Headers", "X-auth-token")
       .header("x-auth-token", token)
       .status(201)
       .send({
-        _id: adminUser._id,
-        companyId: company.companyId,
-        firstName: adminUser.firstName,
-        lastName: adminUser.lastName,
-        email: adminUser.email,
+        admin: {
+          _id: adminUser._id,
+          companyId: adminUser.companyId,
+          firstName: adminUser.firstName,
+          lastName: adminUser.lastName,
+          email: adminUser.email,
+          role: adminUser.role,
+          notes: adminUser.notes,
+          createdAt: adminUser.createdAt,
+          updatedAt: adminUser.updatedAt,
+        },
+
+        company: {
+          companyId: company.companyId,
+          name: company.name,
+          legalName: company.legalName,
+          logoPath: company.logoPath,
+          address: company.address,
+          city: company.city,
+          country: company.country,
+          phone: company.phone,
+          email: company.email,
+          website: company.website,
+          createdAt: company.createdAt,
+          updatedAt: company.updatedAt,
+          serverVersion: company.serverVersion,
+        },
       });
   } catch (error) {
     console.error("ERROR CREATING ADMIN USER:", error);
+
     return res.status(500).send("Internal server error.");
   }
 });

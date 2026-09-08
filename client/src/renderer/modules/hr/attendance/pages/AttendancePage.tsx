@@ -11,29 +11,27 @@ import {
   useToast,
   VStack,
 } from "@chakra-ui/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { FaCheckDouble, FaDownload, FaLock, FaSyncAlt } from "react-icons/fa";
 import { FaCirclePlus } from "react-icons/fa6";
 import { GiConfirmed } from "react-icons/gi";
-import { MdAutoDelete } from "react-icons/md";
 import { PiSealCheck } from "react-icons/pi";
 import { RiPresentationFill } from "react-icons/ri";
-import { RxCrossCircled } from "react-icons/rx";
-import { AttendanceDailyCheck } from "../../../../../common/types/AttendanceDailyCheck";
 import { AttendanceWithEmployee } from "../../../../../common/types/Attendance";
+import { AttendanceDailyCheck } from "../../../../../common/types/AttendanceDailyCheck";
 import useAdminUser from "../../../../../store/auth.store";
-import AddAttendanceModal from "../components/AttendanceAddModal";
-import EmployeeAttendanceCard from "../components/AttendanceCard";
 import DateDropdown from "../../../../components/DateDropdown";
 import DateRangePicker, { DateRange } from "../../../../components/DatePicker";
-import EmployeeFilterMenu from "../../employees/components/EmployeeFilterMenu";
+import DeletionDialog from "../../../../components/DeletionDialog";
 import SearchBar from "../../../../components/SearchBar";
+import EmployeeFilterMenu from "../../employees/components/EmployeeFilterMenu";
+import AddAttendanceModal from "../components/AttendanceAddModal";
+import EmployeeAttendanceCard from "../components/AttendanceCard";
 import {
   useAttendanceByDate,
   useDeleteAttendance,
   useMarkAbsent,
 } from "../hooks/useAttendance";
-import DeletionDialog from "../../../../components/DeletionDialog";
 
 /* ================= SHIMMER ================= */
 
@@ -152,19 +150,19 @@ const EmployeeAttendancePage = () => {
     isLoading: attendanceLoading,
     isFetching: attendanceFetching,
     refetch: refetchAttendance,
-  } = useAttendanceByDate(selectedDate);
+  } = useAttendanceByDate(user.companyId, selectedDate);
 
   /*
    * Delete attendance mutation.
    */
   const { mutateAsync: deleteAttendance, isPending: isDeleting } =
-    useDeleteAttendance();
+    useDeleteAttendance(user.companyId);
 
   /*
    * Mark absent mutation.
    */
   const { mutateAsync: markAbsentMutation, isPending: isMarkingAbsent } =
-    useMarkAbsent();
+    useMarkAbsent(user.companyId);
 
   const loading = attendanceLoading || attendanceFetching;
 
@@ -223,7 +221,10 @@ const EmployeeAttendancePage = () => {
   const loadDailyCheck = async () => {
     try {
       const dailyCheck: AttendanceDailyCheck | null =
-        await window.electron.attendanceDailyCheck.getByDate(selectedDate);
+        await window.electron.attendanceDailyCheck.getByDate(
+          user.companyId,
+          selectedDate
+        );
 
       console.log("DAILY CHECK RETRIEVED", dailyCheck);
 
@@ -263,7 +264,7 @@ const EmployeeAttendancePage = () => {
 
   const attendanceDailyCheckSync = async () => {
     try {
-      const result = await window.electron.sync();
+      const result = await window.electron.sync(user.companyId);
 
       if (!result.success) {
         console.error(result.message);
@@ -321,7 +322,7 @@ const EmployeeAttendancePage = () => {
 
   const markAbsent = async () => {
     try {
-      window.electron.sync().catch((error) => {
+      window.electron.sync(user.companyId).catch((error) => {
         console.error("IMMEDIATE SYNC FAILED:", error);
       });
 
@@ -370,10 +371,13 @@ const EmployeeAttendancePage = () => {
     try {
       setCheckLoading(true);
 
-      const result = await window.electron.attendanceDailyCheck.verify({
-        date: selectedDate,
-        verifiedBy: user._id,
-      });
+      const result = await window.electron.attendanceDailyCheck.verify(
+        user.companyId,
+        {
+          date: selectedDate,
+          verifiedBy: user._id,
+        }
+      );
 
       console.log("VERIFIED ATTENDANCES", result);
 
@@ -406,9 +410,12 @@ const EmployeeAttendancePage = () => {
     try {
       setCheckLoading(true);
 
-      const result = await window.electron.attendanceDailyCheck.notifyManager({
-        date: selectedDate,
-      });
+      const result = await window.electron.attendanceDailyCheck.notifyManager(
+        user.companyId,
+        {
+          date: selectedDate,
+        }
+      );
 
       console.log("NOTIFIED MANAGER ATTENDANCES", result);
 
@@ -442,11 +449,14 @@ const EmployeeAttendancePage = () => {
     try {
       setCheckLoading(true);
 
-      const result = await window.electron.attendanceDailyCheck.lock({
-        date: selectedDate,
-        lockedBy: user._id,
-        lockedByRole: user.role,
-      });
+      const result = await window.electron.attendanceDailyCheck.lock(
+        user.companyId,
+        {
+          date: selectedDate,
+          lockedBy: user._id,
+          lockedByRole: user.role,
+        }
+      );
 
       console.log("LOCKED ATTENDANCE", result);
 
@@ -537,7 +547,6 @@ const EmployeeAttendancePage = () => {
       {/* =====================================================
           HEADER
       ===================================================== */}
-
       <Flex direction="column" bg="#F8F9FB" height="10rem" width="80vw">
         <Flex>
           <Box>
@@ -713,20 +722,6 @@ const EmployeeAttendancePage = () => {
             ) : null}
 
             {/* DOWNLOAD */}
-
-            <Button
-              position="absolute"
-              top="1rem"
-              right="0.5rem"
-              fontSize="1.3rem"
-              bg="transparent"
-              onClick={download}
-              _hover={{
-                bg: "transparent",
-              }}
-            >
-              <FaDownload />
-            </Button>
           </Box>
         </Flex>
 
@@ -747,54 +742,54 @@ const EmployeeAttendancePage = () => {
           </Box>
         </Flex>
       </Flex>
-
       {/* =====================================================
           TABLE HEADER
       ===================================================== */}
+      {attendances.length !== 0 && (
+        <Grid
+          templateColumns={gridTemplate}
+          px={10}
+          fontWeight="600"
+          bg="#F8F9FB"
+          borderWidth="0.3px"
+          border="1px solid #E2E8F0"
+          boxShadow="0 2px 10px rgba(15,23,42,.06)"
+          height="4.7rem"
+          width="78.5vw"
+          overflowY="hidden"
+          overflowX="hidden"
+          mt="1rem"
+          ml="0.5rem"
+        >
+          <Text color="gray.800" fontSize="1.1rem" mt="0.7rem">
+            Employé
+          </Text>
 
-      <Grid
-        templateColumns={gridTemplate}
-        px={10}
-        fontWeight="600"
-        bg="#F8F9FB"
-        borderWidth="0.3px"
-        border="1px solid #E2E8F0"
-        boxShadow="0 2px 10px rgba(15,23,42,.06)"
-        height="4.7rem"
-        width="78.5vw"
-        overflowY="hidden"
-        overflowX="hidden"
-        mt="1rem"
-        ml="0.5rem"
-      >
-        <Text color="gray.800" fontSize="1.1rem" mt="0.7rem">
-          Employé
-        </Text>
+          <Text color="gray.800" fontSize="1.1rem" mt="0.7rem">
+            ID
+          </Text>
 
-        <Text color="gray.800" fontSize="1.1rem" mt="0.7rem">
-          ID
-        </Text>
+          <Text color="gray.800" fontSize="1.1rem" mt="0.7rem">
+            Poste
+          </Text>
 
-        <Text color="gray.800" fontSize="1.1rem" mt="0.7rem">
-          Poste
-        </Text>
+          <Text color="gray.800" fontSize="1.1rem" mt="0.7rem">
+            Departement
+          </Text>
 
-        <Text color="gray.800" fontSize="1.1rem" mt="0.7rem">
-          Departement
-        </Text>
+          <Text color="gray.800" fontSize="1.1rem" mt="0.7rem">
+            Arrivée
+          </Text>
 
-        <Text color="gray.800" fontSize="1.1rem" mt="0.7rem">
-          Arrivée
-        </Text>
+          <Text color="gray.800" fontSize="1.1rem" mt="0.7rem">
+            Départ
+          </Text>
 
-        <Text color="gray.800" fontSize="1.1rem" mt="0.7rem">
-          Départ
-        </Text>
-
-        <Text color="gray.800" fontSize="1.1rem" mt="0.7rem">
-          Actions
-        </Text>
-      </Grid>
+          <Text color="gray.800" fontSize="1.1rem" mt="0.7rem">
+            Actions
+          </Text>
+        </Grid>
+      )}
 
       {/* =====================================================
           BODY
@@ -811,16 +806,47 @@ const EmployeeAttendancePage = () => {
             </VStack>
           </>
         ) : attendances.length === 0 ? (
-          <Text
-            position="relative"
-            top="12rem"
-            left="20rem"
-            color="gray.700"
-            fontSize="2.1rem"
-            fontWeight="500"
+          <Flex
+            ml="0.5rem"
+            mt="4rem"
+            width="78vw"
+            minHeight={{
+              base: "180px",
+              md: "220px",
+            }}
+            align="center"
+            justify="center"
+            bg="#ffffff"
+            border="1px solid #E2E8F0"
+            borderRadius="8px"
+            px="20px"
+            flexShrink={0}
           >
-            Pas de présence enregistrée
-          </Text>
+            <VStack spacing="6px">
+              <Text
+                fontSize={{
+                  base: "1rem",
+                  md: "1.1rem",
+                }}
+                fontWeight="600"
+                color="gray.700"
+                textAlign="center"
+              >
+                Aucun employé trouvé
+              </Text>
+
+              <Text
+                fontSize={{
+                  base: "0.85rem",
+                  md: "0.9rem",
+                }}
+                color="gray.500"
+                textAlign="center"
+              >
+                Essayez de modifier votre recherche ou votre filtre.
+              </Text>
+            </VStack>
+          </Flex>
         ) : (
           attendances
             .filter((a) => !filter || a.department === filter)
@@ -845,13 +871,16 @@ const EmployeeAttendancePage = () => {
             ))
         )}
       </Box>
-
       {/* =====================================================
           FOOTER
       ===================================================== */}
-
-      <Flex width="75vw" height="5rem" justify="space-between">
-        <Box ml="2.5rem">
+      <Flex
+        position="relative"
+        width="80vw"
+        height="5rem"
+        justify="space-evenly"
+      >
+        <Box>
           <DateRangePicker value={dateRange} onChange={setDateRange} />
         </Box>
 
@@ -864,7 +893,7 @@ const EmployeeAttendancePage = () => {
         </Box>
 
         {(!dailyCheck || dailyCheck.status !== "LOCKED") && (
-          <Box mt="0.2rem" mr="1rem">
+          <Box mt="0.2rem">
             <Switch
               colorScheme="blue"
               size="lg"
@@ -873,12 +902,22 @@ const EmployeeAttendancePage = () => {
             />
           </Box>
         )}
+        <Button
+          position="absolute"
+          right="0.1rem"
+          fontSize="1.3rem"
+          bg="transparent"
+          onClick={download}
+          _hover={{
+            bg: "transparent",
+          }}
+        >
+          <FaDownload />
+        </Button>
       </Flex>
-
       {/* =====================================================
           ADD ATTENDANCE
       ===================================================== */}
-
       <AddAttendanceModal
         date={selectedDate}
         isOpen={isAddAttendanceOpen}

@@ -18,6 +18,7 @@ import {
 import { useEffect, useState } from "react";
 import type { AttendanceWithEmployee } from "../../../../../common/types/Attendance";
 import { useUpdateAttendance } from "../hooks/useAttendance";
+import useAdminUser from "../../../../../store/auth.store";
 
 interface Props {
   attendance?: AttendanceWithEmployee | null;
@@ -154,7 +155,9 @@ const ClockIn = ({
   isUnlocked,
   awayStatus,
 }: Props) => {
-  const updateAttendanceMutation = useUpdateAttendance();
+  const user = useAdminUser((store) => store.adminUser);
+
+  const updateAttendanceMutation = useUpdateAttendance(user.companyId);
 
   /* =====================================================
      LOCAL STATE
@@ -268,7 +271,7 @@ const ClockIn = ({
 
       await updateAttendanceMutation.mutateAsync({
         _id: attendance._id,
-
+        employeeId: attendance.employeeId,
         date,
 
         updates: {

@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "nodemon --watch . --ignore dist --ext ts --exec \"npm run build && node dist/index.js\"",
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json --pretty",
     "start": "node dist/index.js",
     "create-company": "npm run build && node dist/scripts/createCompany.js"
   },

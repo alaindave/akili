@@ -9,6 +9,7 @@ export async function createAttendancesTable() {
 
   await run(`
     CREATE TABLE IF NOT EXISTS attendance_daily_checks (
+      companyId TEXT NOT NULL,
       _id TEXT PRIMARY KEY,
       date TEXT NOT NULL UNIQUE,
       status TEXT NOT NULL DEFAULT 'PREPARING'
@@ -51,6 +52,7 @@ export async function createAttendancesTable() {
 
   await run(`
     CREATE TABLE IF NOT EXISTS attendances (
+      companyId TEXT NOT NULL,
       _id TEXT PRIMARY KEY,
       employeeId TEXT NOT NULL,
       date TEXT NOT NULL,
@@ -111,7 +113,7 @@ export async function createAttendancesTable() {
 
   await run(`
     CREATE UNIQUE INDEX IF NOT EXISTS idx_attendance_employee_date
-    ON attendances(employeeId, date)
+    ON attendances(employeeId,date)
     WHERE isDeleted = 0;
   `);
 

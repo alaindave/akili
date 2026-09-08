@@ -9,6 +9,7 @@ import {
   getAllOfflineUsers,
   deleteOfflineUser,
 } from "../database/repositories/offline_users.repository.js";
+import User from "../../common/types/User.js";
 
 export function registerOfflineUsersIPC() {
   console.log("REGISTERING OFFLINE USERS IPC");
@@ -16,16 +17,17 @@ export function registerOfflineUsersIPC() {
   /**
    * Create or update an offline user.
    */
-  ipcMain.handle("offline-users:save", async (_, companyId: string, user) => {
+  ipcMain.handle("offline-users:save", async (_, user: User) => {
     try {
+      console.log("OFFLINE USER", user);
       if (!user.password) {
         throw new Error("Password missing");
       }
 
       const password = await bcrypt.hash(user.password, 12);
 
-      const offline_user = await createOrUpdateOfflineUser(companyId, {
-        companyId,
+      const offline_user = await createOrUpdateOfflineUser({
+        companyId: user.companyId,
         _id: user._id,
         email: user.email,
         password,

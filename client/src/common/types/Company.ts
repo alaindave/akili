@@ -1,6 +1,8 @@
 export default interface Company {
+  _id: string;
   companyId: string;
   name: string;
+  legalName: string;
   signupCode?: string | null;
   logoPath?: string | null;
   address?: string | null;

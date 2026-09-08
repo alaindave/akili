@@ -31,6 +31,7 @@ import { RxCrossCircled } from "react-icons/rx";
 import { MdFactory, MdPerson2, MdWork } from "react-icons/md";
 import { FaCalendarDays } from "react-icons/fa6";
 import { FaRegNoteSticky } from "react-icons/fa6";
+import useAdminUser from "../../../../../store/auth.store";
 
 interface Props {
   isOpen: boolean;
@@ -59,6 +60,7 @@ const LeaveSubmissionModal = ({
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const user = useAdminUser((store) => store.adminUser);
 
   const {
     register,
@@ -69,7 +71,7 @@ const LeaveSubmissionModal = ({
   } = useForm<LeaveData>({ resolver: zodResolver(schema) });
 
   const handleMenuClick = (employee: Employee) => {
-    console.log("Employee selected: ", employee);
+    console.log("EMPLOYEE SELECTED: ", employee);
     setEmployee(employee);
   };
 
@@ -84,15 +86,15 @@ const LeaveSubmissionModal = ({
   const onSubmit = async (leaveData: LeaveData) => {
     setIsSubmitting(true);
     if (!employee?._id) {
-      console.error("No employee selected");
+      console.error("NO EMPLOYEE SELECTED");
       return;
     }
     try {
-      const leave = await window.electron.leave.create({
+      const leave = await window.electron.leave.create(user.companyId, {
         employeeId: employee._id,
         ...leaveData,
       });
-      console.log("Leave successfully saved:", leave);
+      console.log("LEAVE CREATION SUCCESS:", leave);
       setEmployee(null);
       setErrorMessage("");
       onRefresh();

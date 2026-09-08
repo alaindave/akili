@@ -2,24 +2,19 @@ import {
   Badge,
   Box,
   Button,
-  Divider,
   HStack,
-  Icon,
   Popover,
   PopoverArrow,
   PopoverBody,
   PopoverContent,
-  PopoverHeader,
   PopoverTrigger,
-  Spinner,
   Text,
   VStack,
   useDisclosure,
   useToast,
 } from "@chakra-ui/react";
-import { FiRefreshCw, FiUploadCloud } from "react-icons/fi";
-import { PiClockClockwiseBold } from "react-icons/pi";
 import { FaSyncAlt } from "react-icons/fa";
+import { PiClockClockwiseBold } from "react-icons/pi";
 import useSyncStore from "../../store/sync.store";
 
 interface SyncStatusProps {
@@ -34,9 +29,9 @@ const SyncStatus = ({ onSync }: SyncStatusProps) => {
 
   const { isOpen, onOpen, onClose } = useDisclosure();
 
-  const status = useSyncStore((state) => state.status);
-  const pendingChanges = useSyncStore((state) => state.pendingChanges);
-  const lastSyncAt = useSyncStore((state) => state.lastSyncAt);
+  const status = useSyncStore((store) => store.status);
+  const pendingChanges = useSyncStore((store) => store.pendingChanges);
+  const lastSyncAt = useSyncStore((store) => store.lastSyncAt);
 
   const isSyncing = status === "SYNCING";
 
@@ -156,6 +151,7 @@ const SyncStatus = ({ onSync }: SyncStatusProps) => {
     }
   };
 
+  // console.log("SYNC STORE", store);
   return (
     <Popover
       isOpen={isOpen}

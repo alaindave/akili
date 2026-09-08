@@ -8,6 +8,7 @@ export type AttendanceDailyCheckStatus =
   | "LOCKED";
 
 export interface AttendanceDailyCheck extends Document {
+  companyId: string;
   _id: string;
   date: string;
   status: AttendanceDailyCheckStatus;
@@ -32,6 +33,12 @@ export interface AttendanceDailyCheck extends Document {
 }
 
 const attendanceDailyCheckSchema = new Schema<AttendanceDailyCheck>({
+  companyId: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+
   _id: {
     type: String,
     required: true,

@@ -3,6 +3,7 @@ import { run } from "../db.js";
 export async function createLeavesTable() {
   await run(`
     CREATE TABLE IF NOT EXISTS leaves (
+      companyId TEXT NOT NULL,
       _id TEXT PRIMARY KEY,
       employeeId TEXT NOT NULL,
       submittedAt TEXT NOT NULL,

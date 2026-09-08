@@ -26,11 +26,23 @@ async function main() {
     console.log("");
     console.log("=================================");
     console.log("       AKILI SETUP");
-    console.log("       Create New Company");
+    console.log("        New Company");
     console.log("=================================");
     console.log("");
 
     const companyName = await askQuestion(rl, "Company name: ");
+
+    const companyLegalName = await askQuestion(rl, "Company legal name: ");
+
+    const address = await askQuestion(rl, "Company address: ");
+
+    const city = await askQuestion(rl, "City: ");
+
+    const country = await askQuestion(rl, "Country: ");
+
+    const phone = await askQuestion(rl, "Phone: ");
+
+    const email = await askQuestion(rl, "Email: ");
 
     const adminFirstName = await askQuestion(rl, "Admin first name: ");
 
@@ -42,6 +54,12 @@ async function main() {
 
     if (
       !companyName ||
+      !companyLegalName ||
+      !address ||
+      !city ||
+      !country ||
+      !phone ||
+      !email ||
       !adminFirstName ||
       !adminLastName ||
       !adminEmail ||
@@ -53,12 +71,16 @@ async function main() {
     console.log("");
     await connectDatabase();
 
-    console.log("Creating company...");
-
-    console.log("Creating company...");
+    console.log("CREATING COMPANY...");
 
     const result = await createCompany({
       companyName,
+      companyLegalName,
+      address,
+      city,
+      country,
+      phone,
+      email,
       adminFirstName,
       adminLastName,
       adminEmail,
@@ -67,7 +89,7 @@ async function main() {
 
     console.log("");
     console.log("=================================");
-    console.log("      Company created!");
+    console.log("      COMPANY CREATED!");
     console.log("=================================");
     console.log("");
 
@@ -84,7 +106,7 @@ async function main() {
     console.log("");
   } catch (error) {
     console.error("");
-    console.error("Failed to create company:");
+    console.error("FAILED TO CREATE COMPANY:");
     console.error(error);
     console.error("");
     process.exitCode = 1;

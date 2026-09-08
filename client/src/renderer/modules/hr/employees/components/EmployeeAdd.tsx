@@ -35,8 +35,8 @@ import { MdFactory, MdOutlineNumbers, MdPerson2, MdWork } from "react-icons/md";
 import { RxCrossCircled } from "react-icons/rx";
 import { z } from "zod";
 import "../../../../styles/App.css";
-import { employeeQueryKeys } from "../queries/employee.queries";
 import useAdminUser from "../../../../../store/auth.store";
+import { employeeKeys } from "../hooks/useEmployees";
 registerLocale("fr", fr);
 const errorMessage = "Ce champ est obligatoire";
 
@@ -90,7 +90,7 @@ const AddEmployee = () => {
       );
       console.log("Employee successfully saved", employee);
       await queryClient.invalidateQueries({
-        queryKey: employeeQueryKeys.all,
+        queryKey: employeeKeys.all,
       });
 
       reset();
@@ -488,23 +488,23 @@ const AddEmployee = () => {
                       placeholder="Choisissez un departement"
                       {...register("department")}
                     >
-                      <option value="Administration" style={{ color: "black" }}>
+                      <option value="ADMINISTRATION" style={{ color: "black" }}>
                         Administration
                       </option>
 
-                      <option value="Atelier" style={{ color: "black" }}>
+                      <option value="ATELIER" style={{ color: "black" }}>
                         Atelier
                       </option>
 
-                      <option value="Usine" style={{ color: "black" }}>
+                      <option value="USINE" style={{ color: "black" }}>
                         Usine
                       </option>
 
-                      <option value="Magasin" style={{ color: "black" }}>
+                      <option value="MAGASIN" style={{ color: "black" }}>
                         Magasin
                       </option>
 
-                      <option value="Sentinelle" style={{ color: "black" }}>
+                      <option value="SENTINELLE" style={{ color: "black" }}>
                         Sentinelle
                       </option>
                     </Select>

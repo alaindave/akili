@@ -5,10 +5,7 @@ import { addToSyncQueue } from "./sync.repository.js";
 /**
  * Create or update an offline user for a specific company.
  */
-export async function createOrUpdateOfflineUser(
-  companyId: string,
-  user: OfflineUser
-) {
+export async function createOrUpdateOfflineUser(user: OfflineUser) {
   console.log("OFFLINE USER TO CREATE OR UPDATE: ", user);
 
   await run(
@@ -28,7 +25,6 @@ export async function createOrUpdateOfflineUser(
 
     ON CONFLICT(email)
     DO UPDATE SET
-      companyId = excluded.companyId,
       password = excluded.password,
       role = excluded.role,
       firstName = excluded.firstName,
@@ -38,7 +34,7 @@ export async function createOrUpdateOfflineUser(
       lastVerifiedAt = excluded.lastVerifiedAt
     `,
     [
-      companyId,
+      user.companyId,
       user._id,
       user.email,
       user.password,
@@ -50,7 +46,7 @@ export async function createOrUpdateOfflineUser(
     ]
   );
 
-  return getOfflineUserByEmail(companyId, user.email);
+  return getOfflineUserByEmail(user.companyId, user.email);
 }
 
 /**

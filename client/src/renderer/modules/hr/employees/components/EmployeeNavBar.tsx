@@ -2,34 +2,37 @@ import {
   Box,
   Flex,
   HStack,
-  Text,
-  MenuList,
-  MenuItem,
-  Menu,
-  Button,
   List,
   ListItem,
-  useBreakpointValue,
+  Menu,
   MenuButton,
+  MenuItem,
+  MenuList,
+  Text,
+  useBreakpointValue,
 } from "@chakra-ui/react";
-import { FaHome, FaRegCalendarAlt } from "react-icons/fa";
+import { useEffect, useState } from "react";
+import { ErrorBoundary } from "react-error-boundary";
+import { CiCalendarDate, CiClock2 } from "react-icons/ci";
+import {
+  FaHome,
+  FaRegCalendarAlt,
+  FaSignOutAlt,
+  FaTasks,
+} from "react-icons/fa";
 import { FaFileSignature, FaRegClock } from "react-icons/fa6";
 import { IoPeopleSharp } from "react-icons/io5";
 import { MdPersonOutline } from "react-icons/md";
-import { CiCalendarDate, CiClock2 } from "react-icons/ci";
-import { FaSignOutAlt, FaTasks } from "react-icons/fa";
 import { NavLink, useNavigate } from "react-router-dom";
-import "../../../../styles/App.css";
-import Logo from "../../../../components/Logo";
 import useAdminUser from "../../../../../store/auth.store";
-import { ErrorBoundary } from "react-error-boundary";
-import PageErrorFallback from "../../../../components/PageErrorFallback";
 import useTaskStore from "../../../../../store/task.store";
+import Logo from "../../../../components/Logo";
+import PageErrorFallback from "../../../../components/PageErrorFallback";
 import SyncStatus from "../../../../components/SyncStatus";
-import { useEffect, useState } from "react";
+import "../../../../styles/App.css";
 
 const EmployeeNavBar = () => {
-  const adminUser = useAdminUser((store) => store.adminUser);
+  const user = useAdminUser((store) => store.adminUser);
   const setLogOut = useAdminUser((store) => store.logout);
   const clearTasks = useTaskStore((store) => store.clearTasks);
   const [time, setTime] = useState<Date>(new Date());
@@ -491,7 +494,7 @@ const EmployeeNavBar = () => {
                 overflow="hidden"
                 textOverflow="ellipsis"
               >
-                {adminUser?.firstName} {adminUser?.lastName}
+                {user?.firstName} {user?.lastName}
               </Text>
 
               <Text
@@ -504,7 +507,7 @@ const EmployeeNavBar = () => {
                 overflow="hidden"
                 textOverflow="ellipsis"
               >
-                {adminUser?.email}
+                {user?.email}
               </Text>
             </Box>
           </Flex>
@@ -548,7 +551,9 @@ const EmployeeNavBar = () => {
       CENTER: SYNC STATUS
   ================================================= */}
         <Flex justifySelf="center" align="center" minWidth="0">
-          <SyncStatus onSync={async () => await window.electron.sync()} />
+          <SyncStatus
+            onSync={async () => await window.electron.sync(user.companyId)}
+          />
         </Flex>
 
         {/* =================================================

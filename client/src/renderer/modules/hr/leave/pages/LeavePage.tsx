@@ -19,6 +19,10 @@ import DeletionDialog from "../../../../components/DeletionDialog";
 import { useLeavesByMonth, useDeleteLeave } from "../hooks/useLeave";
 import { useEmployees } from "../../employees/hooks/useEmployees";
 import useSyncStore from "../../../../../store/sync.store";
+import EmployeeFilterMenu from "../../employees/components/EmployeeFilterMenu";
+import SearchBar from "../../../../components/SearchBar";
+import useAdminUser from "../../../../../store/auth.store";
+import { LeaveWithEmployee } from "../../../../../common/types/LeaveWithEmployee";
 
 const shimmerKeyframes = `
 @keyframes shimmer {
@@ -56,6 +60,9 @@ const EmployeeLeavePage = () => {
     onOpen: onConfirmationOpen,
     onClose: onConfirmationClose,
   } = useDisclosure();
+  const [searchText, setSearchText] = useState("");
+  const [filter, setFilter] = useState("");
+  const user = useAdminUser((store) => store.adminUser);
 
   const syncVersion = useSyncStore((store) => store.syncVersion);
 
@@ -74,11 +81,11 @@ const EmployeeLeavePage = () => {
     isLoading,
     isFetching,
     refetch,
-  } = useLeavesByMonth(submissionMonth);
+  } = useLeavesByMonth(user.companyId, submissionMonth);
 
   const { data: employees = [] } = useEmployees();
 
-  const deleteLeaveMutation = useDeleteLeave();
+  const deleteLeaveMutation = useDeleteLeave(user.companyId);
 
   useEffect(() => {
     if (syncVersion === undefined) return;
@@ -112,6 +119,7 @@ const EmployeeLeavePage = () => {
     onConfirmationOpen();
   };
 
+  console.log("LEAVES ARRAY", leaves);
   /* =========================================================
      LOADING UI
   ========================================================= */
@@ -197,67 +205,67 @@ const EmployeeLeavePage = () => {
   }
 
   return (
-    <>
-      <Flex
-        direction="column"
-        bg="#F8FAFC"
-        justify="space-between"
-        width="100%"
-        height="100%"
-      >
-        {/* =====================================================
+    <Flex
+      position="relative"
+      direction="column"
+      bg="#F8FAFC"
+      width="100%"
+      height="100%"
+    >
+      {/* =====================================================
             HEADER
         ===================================================== */}
-
-        <Flex ml="0.05rem" height="10rem" width="80vw">
-          <Box>
-            <HStack>
-              <Text
-                color="#1F2937"
-                fontSize="clamp(1.3rem, 1vw + 0.8rem, 1.4rem)"
-                fontWeight="700"
-                ml="0.5rem"
-                mt="1.3rem"
-              >
-                Congés
-              </Text>
-
-              <Button
-                bg="transparent"
-                isLoading={isFetching}
-                color="gray.800"
-                _hover={{ bg: "transparent" }}
-                fontSize="1rem"
-                position="relative"
-                top="0.7rem"
-                right="1rem"
-                onClick={() => refetch()}
-              >
-                <FaSyncAlt />
-              </Button>
-            </HStack>
-
+      <Flex ml="0.05rem" width="80vw">
+        <Box>
+          <HStack>
             <Text
-              fontWeight="500"
-              left="0.45rem"
-              fontSize="clamp(1rem, 1vw + 0.8rem, 1rem)"
-              color="gray.500"
-              position="relative"
-              bottom="0.5rem"
+              color="#1F2937"
+              fontSize="clamp(1.3rem, 1vw + 0.8rem, 1.4rem)"
+              fontWeight="700"
+              ml="0.5rem"
+              mt="1.3rem"
             >
-              Gérez les demandes de congés
+              Congés
             </Text>
+
+            <Button
+              bg="transparent"
+              isLoading={isFetching}
+              color="gray.800"
+              _hover={{ bg: "transparent" }}
+              fontSize="1rem"
+              position="relative"
+              top="0.7rem"
+              right="1rem"
+              onClick={() => refetch()}
+            >
+              <FaSyncAlt />
+            </Button>
+          </HStack>
+
+          <Text
+            fontWeight="500"
+            left="0.45rem"
+            fontSize="clamp(1rem, 1vw + 0.8rem, 1rem)"
+            color="gray.500"
+            position="relative"
+            bottom="0.5rem"
+          >
+            Gérez les demandes de congés
+          </Text>
+          <Box mt="2rem" ml="0.5rem">
+            <EmployeeFilterMenu onFilterClicked={setFilter} />
           </Box>
+        </Box>
 
-          <Spacer />
-
+        <Spacer />
+        <Box mt="1.5rem">
           <Button
+            position="absolute"
+            right="3rem"
             colorScheme="blue"
             size="md"
             onClick={onOpen}
-            zIndex="1"
-            mt="1rem"
-            mr="1rem"
             _hover={{
               backgroundColor: "#4F46E5",
             }}
@@ -268,116 +276,150 @@ const EmployeeLeavePage = () => {
 
             <Text>Soumettre une demande</Text>
           </Button>
-        </Flex>
+          <Box mt="5rem">
+            <SearchBar
+              placeholderText="Rechercher un employé"
+              onSearch={setSearchText}
+            />
+          </Box>
+        </Box>
+      </Flex>
 
-        {/* =====================================================
+      {/* =====================================================
             MAIN AREA
         ===================================================== */}
 
-        {leaves.length === 0 ? (
-          <Box>
+      {leaves.length === 0 ? (
+        <Flex
+          ml="0.5rem"
+          mt="3rem"
+          width="80vw"
+          minHeight={{
+            base: "180px",
+            md: "220px",
+          }}
+          align="center"
+          justify="center"
+          bg="#ffffff"
+          border="1px solid #E2E8F0"
+          borderRadius="8px"
+          px="20px"
+          flexShrink={0}
+        >
+          <VStack spacing="6px">
             <Text
-              fontSize="2rem"
-              fontStyle="revert"
+              fontSize={{
+                base: "1rem",
+                md: "1.1rem",
+              }}
               fontWeight="600"
-              color="gray.600"
-              position="relative"
-              left="20rem"
+              color="gray.700"
+              textAlign="center"
             >
-              Aucune demande de congé retrouvée
+              Aucune demande de congé retrouvé
             </Text>
-          </Box>
-        ) : (
-          <>
-            {/* TABLE HEADER */}
 
-            <Grid
-              templateColumns={gridTemplate}
-              fontWeight="600"
-              bg="#F8F9FB"
-              borderWidth="0.3px"
-              border="1px solid #E2E8F0"
-              boxShadow="0 2px 10px rgba(15,23,42,.06)"
-              height="4.7rem"
-              width="78.5vw"
-              overflowY="hidden"
-              overflowX="hidden"
-              mt="0.3rem"
-              ml="0.4rem"
+            <Text
+              fontSize={{
+                base: "0.85rem",
+                md: "0.9rem",
+              }}
+              color="gray.500"
+              textAlign="center"
             >
-              <Text color="gray.800" fontSize="1.1rem" ml={8} mt={4}>
-                Employé
+              Essayez de modifier votre recherche ou votre filtre.
+            </Text>
+          </VStack>
+        </Flex>
+      ) : (
+        <>
+          {/* TABLE HEADER */}
+
+          <Grid
+            templateColumns={gridTemplate}
+            fontWeight="600"
+            bg="#F8F9FB"
+            borderWidth="0.3px"
+            border="1px solid #E2E8F0"
+            boxShadow="0 2px 10px rgba(15,23,42,.06)"
+            height="4.7rem"
+            width="80vw"
+            overflowY="hidden"
+            overflowX="hidden"
+            mt="1rem"
+            ml="0.4rem"
+          >
+            <Text color="gray.800" fontSize="1.1rem" ml={8} mt={4}>
+              Employé
+            </Text>
+
+            <Text color="gray.800" fontSize="1.1rem" mt={4}>
+              Debut de congé
+            </Text>
+
+            <Text color="gray.800" fontSize="1.1rem" mt={4}>
+              Fin de congé
+            </Text>
+
+            <Text mt={4} ml={2} color="gray.800" fontSize="1.1rem">
+              Motif
+            </Text>
+
+            <Text color="gray.800" fontSize="1.1rem" mt={4}>
+              Statut
+            </Text>
+
+            <Box mt="0.4rem" position="relative" right="1rem">
+              <Text color="gray.800" fontSize="1.1rem">
+                Congés
               </Text>
 
-              <Text color="gray.800" fontSize="1.1rem" mt={4}>
-                Debut de congé
+              <Text color="gray.800" fontSize="1.1rem">
+                restants
               </Text>
+            </Box>
 
-              <Text color="gray.800" fontSize="1.1rem" mt={4}>
-                Fin de congé
-              </Text>
+            <Text color="gray.800" fontSize="1.1rem" mt={4}>
+              Actions
+            </Text>
+          </Grid>
 
-              <Text mt={4} ml={2} color="gray.800" fontSize="1.1rem">
-                Motif
-              </Text>
-
-              <Text color="gray.800" fontSize="1.1rem" mt={4}>
-                Statut
-              </Text>
-
-              <Box mt="0.4rem" position="relative" right="1rem">
-                <Text color="gray.800" fontSize="1.1rem">
-                  Congés
-                </Text>
-
-                <Text color="gray.800" fontSize="1.1rem">
-                  restants
-                </Text>
-              </Box>
-
-              <Text color="gray.800" fontSize="1.1rem" mt={4}>
-                Actions
-              </Text>
-            </Grid>
-
-            {/* =================================================
+          {/* =================================================
                 LEAVE ROWS
             ================================================= */}
 
-            <Box height="80vh" overflowX="hidden" overflowY="auto">
-              {leaves.map((leave: any) => (
-                <EmployeeLeaveCard
-                  key={leave._id}
-                  leave={leave}
-                  gridTemplate={gridTemplate}
-                  onDelete={() => handleDeleteConfirmation(leave)}
-                />
-              ))}
-            </Box>
-          </>
-        )}
+          <Box height="80vh" overflowX="hidden" overflowY="auto">
+            {leaves.map((leave: LeaveWithEmployee) => (
+              <EmployeeLeaveCard
+                key={leave._id}
+                leave={leave}
+                gridTemplate={gridTemplate}
+                onDelete={() => handleDeleteConfirmation(leave)}
+              />
+            ))}
+          </Box>
+        </>
+      )}
 
-        {/* =====================================================
+      {/* =====================================================
             FOOTER
         ===================================================== */}
 
-        <Flex
-          mb="3.2rem"
-          ml="0.01rem"
-          height="4rem"
-          width="80vw"
-          justify="space-between"
+      <Flex
+        position="absolute"
+        bottom="2rem"
+        height="4rem"
+        width="80vw"
+        justify="space-between"
+      >
+        <Box
+          ml="1rem"
+          fontSize="1.2rem"
+          fontFamily="monospace"
+          fontWeight="600"
         >
-          <Box
-            mt="0.47rem"
-            ml="1rem"
-            fontSize="1.2rem"
-            fontFamily="monospace"
-            fontWeight="600"
-          >
-            <MonthDropDown onChange={(month) => setSubmissionMonth(month)} />
-          </Box>
-        </Flex>
+          <MonthDropDown onChange={(month) => setSubmissionMonth(month)} />
+        </Box>
       </Flex>
 
       {/* =======================================================
@@ -402,7 +444,7 @@ const EmployeeLeavePage = () => {
         header="Supprimer"
         body="Êtes vous sur de vouloir supprimer cette demande?"
       />
-    </>
+    </Flex>
   );
 };
 

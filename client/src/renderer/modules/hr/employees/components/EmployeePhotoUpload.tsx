@@ -1,6 +1,7 @@
 import { Box, Image } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import defaultAvatar from "../../../../assets/default-avatar.jpeg";
+import useAdminUser from "../../../../../store/auth.store";
 
 interface Props {
   employeeId: string;
@@ -15,6 +16,7 @@ export default function EmployeePhotoUpload({
 }: Props) {
   const [preview, setPreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const user = useAdminUser((store) => store.adminUser);
 
   useEffect(() => {
     if (currentPhoto) {
@@ -24,7 +26,7 @@ export default function EmployeePhotoUpload({
 
   async function upload(file: File) {
     const arrayBuffer = await file.arrayBuffer();
-    await window.electron.employees.uploadPhoto(employeeId, {
+    await window.electron.employees.uploadPhoto(user.companyId, employeeId, {
       name: file.name,
       buffer: arrayBuffer,
     });

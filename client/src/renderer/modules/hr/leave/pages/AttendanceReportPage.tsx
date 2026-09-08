@@ -11,11 +11,12 @@ import {
 import type Employee from "../../../../../common/types/Employee";
 import { FaArrowLeftLong } from "react-icons/fa6";
 import { MdOutlineChevronRight } from "react-icons/md";
-import Attendance from "../../../../../common/types/Attendance";
+import { Attendance } from "../../../../../common/types/Attendance";
 import { GoDotFill } from "react-icons/go";
 import defaultAvatar from "../assets/default-avatar.jpeg";
 import AttendanceTable from "../../attendance/components/AttendanceRecordTable";
 import { useEffect, useState } from "react";
+import useAdminUser from "../../../../../store/auth.store";
 
 type EmployeeState = {
   employee?: Employee;
@@ -35,6 +36,7 @@ const EmployeeAttendanceReport = () => {
   const { photo_url } = (location.state as PhotoState) || "";
   const { attendance } = (location.state as AttendanceState) || {};
   const [attendances, setAttendances] = useState<Attendance[]>([]);
+  const user = useAdminUser((store) => store.adminUser);
 
   const statusColor = {
     PONCTUEL: "green",
@@ -47,6 +49,7 @@ const EmployeeAttendanceReport = () => {
     async function getAttendanceHistory() {
       if (!employee?._id) return;
       const attendances = await window.electron.attendance.getByEmployee(
+        user.companyId,
         employee?._id
       );
       setAttendances(attendances);

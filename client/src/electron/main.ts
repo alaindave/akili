@@ -354,18 +354,29 @@ async function initializeAttendance(): Promise<void> {
    BACKGROUND SERVICES
 ========================================================= */
 
-function startBackgroundServices(): void {
+/* =========================================================
+   BACKGROUND SERVICES
+========================================================= */
+
+async function startBackgroundServices(): Promise<void> {
   console.log("STARTING BACKGROUND SERVICES...");
 
   try {
-    startBackgroundSync();
+    const companyId = await getCompanyId();
 
-    console.log("BACKGROUND SERVICES STARTED.");
+    if (companyId) {
+      console.log(`STARTING BACKGROUND SYNC FOR COMPANY: ${companyId}`);
+
+      startBackgroundSync(companyId);
+
+      console.log(`BACKGROUND SERVICES STARTED FOR COMPANY: ${companyId}`);
+    } else {
+      console.log("NO COMPANY ID FOUND. BACKGROUND SYNC WILL NOT START.");
+    }
   } catch (error) {
     console.error("FAILED TO START BACKGROUND SERVICES:", error);
   }
 }
-
 /* =========================================================
    APPLICATION BOOTSTRAP
 ========================================================= */
@@ -445,8 +456,7 @@ async function bootstrap(): Promise<void> {
      * -----------------------------------------------------
      */
 
-    startBackgroundServices();
-
+    await startBackgroundServices();
     /*
      * -----------------------------------------------------
      * STARTUP COMPLETE

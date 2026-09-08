@@ -29,7 +29,7 @@ const EmployeeListPage = () => {
   const [searchText, setSearchText] = useState("");
   const [filter, setFilter] = useState("");
 
-  const adminUser = useAdminUser((store) => store.adminUser);
+  const user = useAdminUser((store) => store.adminUser);
 
   const {
     data: employees = [],
@@ -167,7 +167,7 @@ const EmployeeListPage = () => {
             <Box>
               {/* ADD EMPLOYEE */}
               <Box flexShrink={0} display="flex" justifyContent="flex-end">
-                {adminUser?.role === "MANAGER" ? (
+                {user?.role === "MANAGER" || user?.role === "ADMIN" ? (
                   <AddEmployee />
                 ) : (
                   <NotAuthorized
@@ -333,6 +333,7 @@ const EmployeeListPage = () => {
               ================================================= */}
               {filteredEmployees.length === 0 && (
                 <Flex
+                  mt="4rem"
                   width="100%"
                   minHeight={{
                     base: "180px",

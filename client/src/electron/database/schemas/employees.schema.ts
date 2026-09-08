@@ -21,11 +21,11 @@ export async function createEmployeesTable() {
       dateHired TEXT NOT NULL,
       department TEXT NOT NULL
         CHECK(department IN (
-          'Administration',
-          'Atelier',
-          'Usine',
-          'Magasin',
-          'Sentinelle'
+          'ADMINISTRATION',
+          'ATELIER',
+          'USINE',
+          'MAGASIN',
+          'SENTINELLE'
         )),
       telephone TEXT NOT NULL,
       address TEXT NOT NULL,

@@ -56,7 +56,9 @@ const TaskPage = () => {
 
   const loadAdminUsers = async () => {
     try {
-      const admin_users = await window.electron.adminUsers.getAll();
+      const admin_users = await window.electron.adminUsers.getAll(
+        user.companyId
+      );
       setAdminUsersList(admin_users);
     } catch (error) {
       console.log("AN ERROR OCCURED WHILE FETCHING ADMIN USERS:", error);

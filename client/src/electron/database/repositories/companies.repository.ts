@@ -3,65 +3,8 @@ import { addToSyncQueue } from "./sync.repository.js";
 import Company from "../../../common/types/company.js";
 
 /* =========================================================
-   CREATE
-========================================================= */
-
-export async function createCompany(company: Company): Promise<void> {
-  await run(
-    `
-    INSERT INTO companies (
-      companyId,
-      name,
-      signupCode,
-      logoPath,
-      address,
-      city,
-      country,
-      phone,
-      email,
-      website,
-      createdAt,
-      updatedAt,
-      serverVersion,
-      lastSyncedAt,
-      synced,
-      isDeleted
-    )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `,
-    [
-      company.companyId,
-      company.name,
-      company.signupCode ?? null,
-      company.logoPath ?? null,
-      company.address ?? null,
-      company.city ?? null,
-      company.country ?? null,
-      company.phone ?? null,
-      company.email ?? null,
-      company.website ?? null,
-      company.createdAt,
-      company.updatedAt,
-      company.serverVersion ?? 0,
-      company.lastSyncedAt ?? null,
-      company.synced ?? 0,
-      company.isDeleted ?? 0,
-    ]
-  );
-
-  await addToSyncQueue({
-    companyId: company.companyId,
-    entity: "company",
-    entityId: company.companyId,
-    operation: "create",
-    payload: JSON.stringify(company),
-  });
-}
-
-/* =========================================================
    UPSERT
 ========================================================= */
-
 /**
  * Used primarily when pulling a company from the server.
  */
@@ -93,9 +36,10 @@ export async function upsertCompany(company: Company): Promise<void> {
   await run(
     `
     INSERT INTO companies (
+      _id,
       companyId,
       name,
-      signupCode,
+      legalName,
       logoPath,
       address,
       city,
@@ -110,12 +54,12 @@ export async function upsertCompany(company: Company): Promise<void> {
       synced,
       isDeleted
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 
-    ON CONFLICT(companyId)
+    ON CONFLICT(_id)
     DO UPDATE SET
       name = excluded.name,
-      signupCode = excluded.signupCode,
+      legalName=excluded.legalName,
       logoPath = excluded.logoPath,
       address = excluded.address,
       city = excluded.city,
@@ -131,9 +75,10 @@ export async function upsertCompany(company: Company): Promise<void> {
       isDeleted = excluded.isDeleted
     `,
     [
+      company._id,
       company.companyId,
       company.name,
-      company.signupCode ?? null,
+      company.legalName,
       company.logoPath ?? null,
       company.address ?? null,
       company.city ?? null,
@@ -162,80 +107,90 @@ export async function upsertCompany(company: Company): Promise<void> {
  * Electron installation belongs to.
  */
 export async function upsertCompanyId(company: Company): Promise<void> {
+  console.log("NEW COMPANY TO UPSERT", company);
   const existing = await get<Company>(
     `
     SELECT *
     FROM companies
+    WHERE companyId=?
     LIMIT 1
-    `
+    `,
+    [company.companyId]
   );
 
-  /*
-   * No company exists yet.
-   *.
-   */
-  if (!existing) {
-    const now = new Date().toISOString();
+  const now = new Date().toISOString();
 
+  if (!existing) {
     await run(
       `
       INSERT INTO companies (
+        _id,
         companyId,
         name,
+        legalName,
+        logoPath,
+        address,
+        city,
+        country,
+        phone,
+        email,
+        website,
         createdAt,
         updatedAt,
         serverVersion,
+        lastSyncedAt,
         synced,
         isDeleted
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
       `,
-      [company.companyId, company.name, now, now, 0, 0, 0]
+      [
+        company._id,
+        company.companyId,
+        company.name,
+        company.legalName ?? null,
+        company.logoPath ?? null,
+        company.address ?? null,
+        company.city ?? null,
+        company.country ?? null,
+        company.phone ?? null,
+        company.email ?? null,
+        company.website ?? null,
+        company.createdAt ?? now,
+        company.updatedAt ?? now,
+        company.serverVersion ?? 0,
+        company.lastSyncedAt ?? null,
+        1,
+        0,
+      ]
     );
 
     return;
   }
 
-  /*
-   * Already belongs to this company.
-   */
-  if (existing.companyId === company.companyId) {
-    return;
-  }
+  // if (existing.companyId === company.companyId) {
+  //   return;
+  // }
 
-  /*
-   * The installation previously belonged to another
-   * company.
-   *
-   * This should normally only happen if the application
-   * supports changing the company associated with the
-   * installation.
-   */
-  await run(
-    `
-    UPDATE companies
-    SET
-      companyId = ?,
-      updatedAt = ?,
-      synced = 0
-    WHERE companyId = ?
-    `,
-    [company.companyId, new Date().toISOString(), existing.companyId]
-  );
+  // throw new Error(
+  //   `This installation is already associated with company ${existing.companyId}`
+  // );
 }
 
 /* =========================================================
    GET COMPANY
 ========================================================= */
 
-export async function getCompany(): Promise<Company | null> {
+export async function getCompany(companyId: string): Promise<Company | null> {
   return await get<Company>(
     `
     SELECT *
     FROM companies
-    WHERE isDeleted = 0
+    WHERE companyID=? 
+    AND isDeleted = 0
     LIMIT 1
-    `
+    `,
+    [companyId]
   );
 }
 
@@ -266,6 +221,7 @@ export async function updateCompany(company: Company): Promise<void> {
     UPDATE companies
     SET
       name = ?,
+      legalName=?,
       logoPath = ?,
       address = ?,
       city = ?,
@@ -279,6 +235,7 @@ export async function updateCompany(company: Company): Promise<void> {
     `,
     [
       company.name,
+      company.legalName,
       company.logoPath ?? null,
       company.address ?? null,
       company.city ?? null,

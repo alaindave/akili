@@ -1,10 +1,13 @@
 import { run } from "../db.js";
 
 export async function createPayrollTables() {
-  //Creating tables
+  /* =========================================================
+     PAYROLL SETTINGS
+  ========================================================= */
 
   await run(`
     CREATE TABLE IF NOT EXISTS payroll_settings (
+      companyId TEXT NOT NULL,
       _id TEXT PRIMARY KEY,
       currency TEXT NOT NULL,
       workingDays REAL NOT NULL DEFAULT 25,
@@ -19,18 +22,41 @@ export async function createPayrollTables() {
     );
   `);
 
+  /* =========================================================
+     PAYROLL COMPONENTS
+  ========================================================= */
+
   await run(`
     CREATE TABLE IF NOT EXISTS payroll_components (
+      companyId TEXT NOT NULL,
       _id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
       displayName TEXT NOT NULL,
       type TEXT NOT NULL
         CHECK(type IN ('EARNING','DEDUCTION')),
       calculationType TEXT NOT NULL
-        CHECK(calculationType IN ('FIXE','MANUEL','POURCENTAGE_BASE','POURCENTAGE_BRUT','POURCENTAGE_IMPOSABLE','FORMULE_IPR','FORMULE_ABSENCE','FORMULE_RETARD'))
+        CHECK(
+          calculationType IN (
+            'FIXE',
+            'MANUEL',
+            'POURCENTAGE_BASE',
+            'POURCENTAGE_BRUT',
+            'POURCENTAGE_IMPOSABLE',
+            'FORMULE_IPR',
+            'FORMULE_ABSENCE',
+            'FORMULE_RETARD'
+          )
+        )
         DEFAULT 'MANUEL',
       calculationBase TEXT
-        CHECK(calculationBase IN ('BASE_SALARY', 'GROSS_SALARY', 'TOTAL_EARNINGS', 'TAXABLE_SALARY')),
+        CHECK(
+          calculationBase IN (
+            'BASE_SALARY',
+            'GROSS_SALARY',
+            'TOTAL_EARNINGS',
+            'TAXABLE_SALARY'
+          )
+        ),
       defaultValue REAL DEFAULT 0,
       displayOrder INTEGER NOT NULL,
       isSystem INTEGER NOT NULL DEFAULT 1,
@@ -40,14 +66,20 @@ export async function createPayrollTables() {
       serverVersion INTEGER NOT NULL DEFAULT 0,
       createdAt TEXT NOT NULL,
       updatedAt TEXT NOT NULL,
-      synced INTEGER DEFAULT 0,
-      isDeleted INTEGER NOT NULL DEFAULT 0,
-      lastSyncedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+      synced INTEGER NOT NULL DEFAULT 0,
+      lastSyncedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+      isDeleted INTEGER NOT NULL DEFAULT 0
+
     );
   `);
 
+  /* =========================================================
+     EMPLOYEE PAYROLL PROFILES
+  ========================================================= */
+
   await run(`
     CREATE TABLE IF NOT EXISTS payroll_employee_profiles (
+      companyId TEXT NOT NULL,
       _id TEXT PRIMARY KEY,
       employeeId TEXT NOT NULL,
       componentId TEXT,
@@ -56,21 +88,39 @@ export async function createPayrollTables() {
       displayOrder INTEGER NOT NULL,
       type TEXT NOT NULL,
       calculationType TEXT NOT NULL
-        CHECK(calculationType IN ('FIXE','MANUEL','POURCENTAGE_BASE','POURCENTAGE_BRUT','POURCENTAGE_IMPOSABLE','FORMULE_IPR','FORMULE_ABSENCE','FORMULE_RETARD'))
+        CHECK(
+          calculationType IN (
+            'FIXE',
+            'MANUEL',
+            'POURCENTAGE_BASE',
+            'POURCENTAGE_BRUT',
+            'POURCENTAGE_IMPOSABLE',
+            'FORMULE_IPR',
+            'FORMULE_ABSENCE',
+            'FORMULE_RETARD'
+          )
+        )
         DEFAULT 'MANUEL',
       value REAL,
       taxable INTEGER NOT NULL DEFAULT 1,
-      isOverridden INTEGER DEFAULT 0,
+      isOverridden INTEGER NOT NULL DEFAULT 0,
       requiresHRApproval INTEGER NOT NULL DEFAULT 0,
       calculationBase TEXT
-        CHECK(calculationBase IN ('BASE_SALARY', 'GROSS_SALARY', 'TOTAL_EARNINGS', 'TAXABLE_SALARY')),
-      enabled INTEGER DEFAULT 1,
+        CHECK(
+          calculationBase IN (
+            'BASE_SALARY',
+            'GROSS_SALARY',
+            'TOTAL_EARNINGS',
+            'TAXABLE_SALARY'
+          )
+        ),
+      enabled INTEGER NOT NULL DEFAULT 1,
       serverVersion INTEGER NOT NULL DEFAULT 0,
-      createdAt TEXT,
-      updatedAt TEXT,
-      lastSyncedAt Text,
-      synced INTEGER DEFAULT 0,
-      isDeleted INTEGER DEFAULT 0,
+      createdAt TEXT NOT NULL,
+      updatedAt TEXT NOT NULL,
+      lastSyncedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+      synced INTEGER NOT NULL DEFAULT 0,
+      isDeleted INTEGER NOT NULL DEFAULT 0,
 
       FOREIGN KEY(employeeId)
         REFERENCES employees(_id)
@@ -82,8 +132,13 @@ export async function createPayrollTables() {
     );
   `);
 
+  /* =========================================================
+     PAYROLL RUNS
+  ========================================================= */
+
   await run(`
     CREATE TABLE IF NOT EXISTS payroll_runs (
+      companyId TEXT NOT NULL,
       _id TEXT PRIMARY KEY,
       month INTEGER NOT NULL,
       year INTEGER NOT NULL,
@@ -93,7 +148,15 @@ export async function createPayrollTables() {
       totalDeductions REAL NOT NULL DEFAULT 0,
       totalNetSalary REAL NOT NULL DEFAULT 0,
       status TEXT NOT NULL
-        CHECK(status IN ('BROUILLON','VERIFICATION','APPROUVÉ','PAYÉ','ANNULÉ'))
+        CHECK(
+          status IN (
+            'BROUILLON',
+            'VERIFICATION',
+            'APPROUVÉ',
+            'PAYÉ',
+            'ANNULÉ'
+          )
+        )
         DEFAULT 'BROUILLON',
       generatedBy TEXT NOT NULL,
       submittedForVerificationAt TEXT,
@@ -112,24 +175,39 @@ export async function createPayrollTables() {
       updatedAt TEXT NOT NULL,
       lastSyncedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
 
-      FOREIGN KEY (generatedBy) REFERENCES admin_users(_id)
+      FOREIGN KEY(generatedBy)
+        REFERENCES admin_users(_id)
         ON DELETE RESTRICT,
-      FOREIGN KEY(submittedForVerificationBy) REFERENCES admin_users(_id)
-        ON DELETE RESTRICT,
-      FOREIGN KEY(approvedBy) REFERENCES admin_users(_id)
-        ON DELETE RESTRICT,
-      FOREIGN KEY(paidBy) REFERENCES admin_users(_id)
-        ON DELETE RESTRICT,
-      FOREIGN KEY(cancelledBy) REFERENCES admin_users(_id)
-        ON DELETE RESTRICT,
-      FOREIGN KEY(deletedBy) REFERENCES admin_users(_id)
-        ON DELETE RESTRICT
 
+      FOREIGN KEY(submittedForVerificationBy)
+        REFERENCES admin_users(_id)
+        ON DELETE RESTRICT,
+
+      FOREIGN KEY(approvedBy)
+        REFERENCES admin_users(_id)
+        ON DELETE RESTRICT,
+
+      FOREIGN KEY(paidBy)
+        REFERENCES admin_users(_id)
+        ON DELETE RESTRICT,
+
+      FOREIGN KEY(cancelledBy)
+        REFERENCES admin_users(_id)
+        ON DELETE RESTRICT,
+
+      FOREIGN KEY(deletedBy)
+        REFERENCES admin_users(_id)
+        ON DELETE RESTRICT
     );
   `);
 
+  /* =========================================================
+     PAYROLL RESULTS
+  ========================================================= */
+
   await run(`
     CREATE TABLE IF NOT EXISTS payroll_results (
+      companyId TEXT NOT NULL,
       _id TEXT PRIMARY KEY,
       payrollRunId TEXT NOT NULL,
       employeeId TEXT NOT NULL,
@@ -141,7 +219,15 @@ export async function createPayrollTables() {
       totalDeductions REAL NOT NULL DEFAULT 0,
       netSalary REAL NOT NULL DEFAULT 0,
       status TEXT NOT NULL
-        CHECK(status IN ('BROUILLON','VERIFICATION','APPROUVÉ','PAYÉ','ANNULÉ'))
+        CHECK(
+          status IN (
+            'BROUILLON',
+            'VERIFICATION',
+            'APPROUVÉ',
+            'PAYÉ',
+            'ANNULÉ'
+          )
+        )
         DEFAULT 'BROUILLON',
       cancelledAt TEXT,
       verifiedAt TEXT,
@@ -154,18 +240,22 @@ export async function createPayrollTables() {
       lastSyncedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
       isDeleted INTEGER NOT NULL DEFAULT 0,
 
-
       FOREIGN KEY(payrollRunId)
         REFERENCES payroll_runs(_id)
         ON DELETE CASCADE,
 
       FOREIGN KEY(employeeId)
         REFERENCES employees(_id)
-   );
-`);
+    );
+  `);
+
+  /* =========================================================
+     PAYROLL ITEMS
+  ========================================================= */
 
   await run(`
     CREATE TABLE IF NOT EXISTS payroll_items (
+      companyId TEXT NOT NULL,
       _id TEXT PRIMARY KEY,
       employeeId TEXT NOT NULL,
       payrollResultId TEXT NOT NULL,
@@ -174,7 +264,7 @@ export async function createPayrollTables() {
       displayName TEXT NOT NULL,
       type TEXT NOT NULL
         CHECK(type IN ('EARNING','DEDUCTION')),
-      amount REAL NOT NULL,   
+      amount REAL NOT NULL,
       synced INTEGER NOT NULL DEFAULT 0,
       serverVersion INTEGER NOT NULL DEFAULT 0,
       createdAt TEXT NOT NULL,
@@ -182,76 +272,216 @@ export async function createPayrollTables() {
       lastSyncedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
       isDeleted INTEGER NOT NULL DEFAULT 0,
 
-      FOREIGN KEY (employeeId)
-         REFERENCES employees(_id),
-      FOREIGN KEY (payrollResultId)
-         REFERENCES payroll_results(_id)
-         ON DELETE CASCADE,
+      FOREIGN KEY(employeeId)
+        REFERENCES employees(_id),
+
+      FOREIGN KEY(payrollResultId)
+        REFERENCES payroll_results(_id)
+        ON DELETE CASCADE,
+
       FOREIGN KEY(componentId)
         REFERENCES payroll_components(_id)
     );
   `);
 
-  // Creating Indexes
+  /* =========================================================
+     INDEXES
+  ========================================================= */
+
+  /* ---------------------------------------------------------
+     PAYROLL SETTINGS
+  --------------------------------------------------------- */
 
   await run(`
-    CREATE INDEX IF NOT EXISTS idx_payroll_settings_synced
-      ON payroll_settings(synced);
+    CREATE INDEX IF NOT EXISTS idx_payroll_settings_company_synced
+      ON payroll_settings(companyId, synced);
+  `);
+
+  /* ---------------------------------------------------------
+     PAYROLL COMPONENTS
+  --------------------------------------------------------- */
+
+  await run(`
+    CREATE INDEX IF NOT EXISTS idx_payroll_components_company_type
+      ON payroll_components(companyId, type);
   `);
 
   await run(`
-    CREATE INDEX IF NOT EXISTS idx_payroll_components_type
-      ON payroll_components(type);
+    CREATE INDEX IF NOT EXISTS idx_payroll_components_company_synced
+      ON payroll_components(companyId, synced);
+  `);
+
+  /*
+   * Prevent duplicate component names inside the same company.
+   */
+  await run(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_payroll_components_company_name
+      ON payroll_components(companyId, name)
+      WHERE isDeleted = 0;
+  `);
+
+  /* ---------------------------------------------------------
+     EMPLOYEE PAYROLL PROFILES
+  --------------------------------------------------------- */
+
+  await run(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_payroll_profile_company_employee_component
+      ON payroll_employee_profiles(
+        companyId,
+        employeeId,
+        componentId
+      )
+      WHERE isDeleted = 0;
   `);
 
   await run(`
-    CREATE INDEX IF NOT EXISTS idx_payroll_components_synced
-      ON payroll_components(synced);
+    CREATE INDEX IF NOT EXISTS idx_payroll_profile_company_employee
+      ON payroll_employee_profiles(
+        companyId,
+        employeeId
+      );
   `);
 
   await run(`
-   CREATE UNIQUE INDEX IF NOT EXISTS idx_payroll_profile_employee_component
-    ON payroll_employee_profiles(employeeId, componentId)
-   WHERE isDeleted = 0;
+    CREATE INDEX IF NOT EXISTS idx_payroll_profile_company_synced
+      ON payroll_employee_profiles(
+        companyId,
+        synced
+      );
+  `);
+
+  /* ---------------------------------------------------------
+     PAYROLL RUNS
+  --------------------------------------------------------- */
+
+  /*
+   * Only ONE active payroll run for a company/month/year.
+   *
+   * ANNULÉ runs are excluded, meaning a cancelled payroll
+   * can be regenerated for the same period.
+   */
+  await run(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_payroll_company_period
+      ON payroll_runs(
+        companyId,
+        month,
+        year
+      )
+      WHERE isDeleted = 0
+        AND status <> 'ANNULÉ';
   `);
 
   await run(`
-  CREATE UNIQUE INDEX IF NOT EXISTS idx_payroll_period
-  ON payroll_runs(month, year)
-  WHERE isDeleted = 0
-    AND status <> 'ANNULÉ';
-`);
-
-  await run(`
-  CREATE UNIQUE INDEX IF NOT EXISTS idx_payroll_result_employee_period
-  ON payroll_results(employeeId, month, year)
-  WHERE isDeleted = 0
-    AND status <> 'ANNULÉ';
-`);
-
-  await run(`
-    CREATE INDEX IF NOT EXISTS idx_payroll_synced
-      ON payroll_runs(synced);
+    CREATE INDEX IF NOT EXISTS idx_payroll_company_synced
+      ON payroll_runs(
+        companyId,
+        synced
+      );
   `);
 
   await run(`
-    CREATE INDEX IF NOT EXISTS idx_payroll_items_payroll
-      ON payroll_items(payrollResultId);
+    CREATE INDEX IF NOT EXISTS idx_payroll_company_status
+      ON payroll_runs(
+        companyId,
+        status
+      );
   `);
 
   await run(`
-    CREATE INDEX IF NOT EXISTS idx_payroll_items_component
-      ON payroll_items(componentId);
+    CREATE INDEX IF NOT EXISTS idx_payroll_company_period_lookup
+      ON payroll_runs(
+        companyId,
+        year,
+        month
+      );
+  `);
+
+  /* ---------------------------------------------------------
+     PAYROLL RESULTS
+  --------------------------------------------------------- */
+
+  /*
+   * One active payroll result per employee,
+   * per company, per payroll period.
+   */
+  await run(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_payroll_result_company_employee_period
+      ON payroll_results(
+        companyId,
+        employeeId,
+        month,
+        year
+      )
+      WHERE isDeleted = 0
+        AND status <> 'ANNULÉ';
   `);
 
   await run(`
-    CREATE INDEX IF NOT EXISTS idx_payroll_items_type
-      ON payroll_items(type);
+    CREATE INDEX IF NOT EXISTS idx_payroll_results_company_run
+      ON payroll_results(
+        companyId,
+        payrollRunId
+      );
   `);
 
   await run(`
-    CREATE INDEX IF NOT EXISTS idx_payroll_items_synced
-      ON payroll_items(synced);
+    CREATE INDEX IF NOT EXISTS idx_payroll_results_company_employee
+      ON payroll_results(
+        companyId,
+        employeeId
+      );
+  `);
+
+  await run(`
+    CREATE INDEX IF NOT EXISTS idx_payroll_results_company_synced
+      ON payroll_results(
+        companyId,
+        synced
+      );
+  `);
+
+  /* ---------------------------------------------------------
+     PAYROLL ITEMS
+  --------------------------------------------------------- */
+
+  await run(`
+    CREATE INDEX IF NOT EXISTS idx_payroll_items_company_payroll
+      ON payroll_items(
+        companyId,
+        payrollResultId
+      );
+  `);
+
+  await run(`
+    CREATE INDEX IF NOT EXISTS idx_payroll_items_company_employee
+      ON payroll_items(
+        companyId,
+        employeeId
+      );
+  `);
+
+  await run(`
+    CREATE INDEX IF NOT EXISTS idx_payroll_items_company_component
+      ON payroll_items(
+        companyId,
+        componentId
+      );
+  `);
+
+  await run(`
+    CREATE INDEX IF NOT EXISTS idx_payroll_items_company_type
+      ON payroll_items(
+        companyId,
+        type
+      );
+  `);
+
+  await run(`
+    CREATE INDEX IF NOT EXISTS idx_payroll_items_company_synced
+      ON payroll_items(
+        companyId,
+        synced
+      );
   `);
 
   console.log("PAYROLL TABLES INITIALIZED");

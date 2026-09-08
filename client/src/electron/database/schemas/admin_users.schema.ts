@@ -8,7 +8,8 @@ export async function createAdminUsersTable() {
       firstName TEXT NOT NULL,
       lastName TEXT NOT NULL,
       email TEXT NOT NULL,
-      role TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'ADMIN'
+        CHECK (role IN ('MANAGER', 'ADMIN','VIEWER')),
       serverVersion INTEGER NOT NULL DEFAULT 0,
       createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
       updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,

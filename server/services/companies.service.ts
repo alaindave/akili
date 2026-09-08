@@ -8,9 +8,17 @@ import Company from "../models/company.model.js";
 import Role from "../models/role.model.js";
 import AdminUser from "../models/adminUser.model.js";
 import { defaultRoles } from "../permissions/defaultRole.js";
+import { createDefaultPayrollComponents } from "../utils/createDefaultPayrollComponent.js";
+import { getNextSyncVersion } from "../utils/syncVersion.js";
 
 interface CreateCompanyInput {
   companyName: string;
+  companyLegalName: string;
+  address: string;
+  city: string;
+  country: string;
+  phone: string;
+  email: string;
   adminFirstName: string;
   adminLastName: string;
   adminEmail: string;
@@ -29,12 +37,27 @@ function generateSignUpCode(): string {
   return `AKL-${numbers}`;
 }
 
-function isDuplicateKeyError(error: unknown): boolean {
-  return (
-    error instanceof Error &&
-    "code" in error &&
-    (error as { code?: number }).code === 11000
-  );
+function getDuplicateKeyInfo(error: unknown) {
+  if (!(error instanceof Error) || !("code" in error)) {
+    return null;
+  }
+
+  const mongoError = error as {
+    code?: number;
+    keyPattern?: Record<string, unknown>;
+    keyValue?: Record<string, unknown>;
+    message?: string;
+  };
+
+  if (mongoError.code !== 11000) {
+    return null;
+  }
+
+  return {
+    keyPattern: mongoError.keyPattern,
+    keyValue: mongoError.keyValue,
+    message: mongoError.message,
+  };
 }
 
 export async function createCompany(
@@ -50,16 +73,36 @@ export async function createCompany(
 
       try {
         await session.withTransaction(async () => {
-          const companyId = randomUUID();
+          const _id = randomUUID();
           const now = new Date();
           const signUpCode = generateSignUpCode();
+
+          // ==========================================
+          // Get sync versions
+          // ==========================================
+
+          const companyServerVersion = await getNextSyncVersion("company");
+
+          const adminUserServerVersion = await getNextSyncVersion("admin_user");
+
+          // ==========================================
           // Create company
+          // ==========================================
+
           const company = await Company.create(
             [
               {
-                _id: companyId,
+                _id,
+                companyId: _id,
                 name: input.companyName.trim(),
+                legalName: input.companyLegalName,
+                address: input.address,
+                city: input.city,
+                country: input.country,
+                phone: input.phone,
+                email: input.email,
                 signUpCode,
+                serverVersion: companyServerVersion,
                 createdAt: now,
                 updatedAt: now,
                 isDeleted: 0,
@@ -67,7 +110,11 @@ export async function createCompany(
             ],
             { session }
           );
-          // Create role
+
+          // ==========================================
+          // Create default roles
+          // ==========================================
+
           const roles = [];
 
           for (const defaultRole of defaultRoles) {
@@ -75,7 +122,7 @@ export async function createCompany(
               [
                 {
                   _id: randomUUID(),
-                  companyId,
+                  companyId: _id,
                   name: defaultRole.name,
                   permissions: defaultRole.permissions,
                   createdAt: now,
@@ -94,27 +141,41 @@ export async function createCompany(
           if (!adminRole) {
             throw new Error("Default ADMIN role was not created");
           }
+
+          // ==========================================
+          // Create default payroll components
+          // ==========================================
+
+          await createDefaultPayrollComponents(_id, now, session);
+
+          // ==========================================
           // Create admin user
+          // ==========================================
+
           const passwordHash = await bcrypt.hash(input.adminPassword, 12);
 
           const adminUser = await AdminUser.create(
             [
               {
                 _id: randomUUID(),
-                companyId,
+                companyId: _id,
                 firstName: input.adminFirstName.trim(),
                 lastName: input.adminLastName.trim(),
                 email: input.adminEmail.toLowerCase().trim(),
                 passwordHash,
-                roleId: adminRole._id,
+                role: adminRole.name,
+                serverVersion: adminUserServerVersion,
                 createdAt: now,
                 updatedAt: now,
-                serverVersion: 0,
                 isDeleted: 0,
               },
             ],
             { session }
           );
+
+          // ==========================================
+          // Transaction result
+          // ==========================================
 
           result = {
             company: company[0],
@@ -123,7 +184,15 @@ export async function createCompany(
           };
         });
       } catch (error) {
-        if (isDuplicateKeyError(error) && attempt < maxAttempts) {
+        const duplicate = getDuplicateKeyInfo(error);
+
+        console.error("DUPLICATE KEY ERROR:", duplicate);
+
+        if (
+          duplicate?.keyPattern &&
+          "signUpCode" in duplicate.keyPattern &&
+          attempt < maxAttempts
+        ) {
           console.warn(
             `Signup code collision detected. Retrying (${attempt}/${maxAttempts})...`
           );
@@ -141,6 +210,10 @@ export async function createCompany(
       console.log("COMPANY CREATED SUCCESSFULLY.");
 
       console.log("COMPANY SIGN UP CODE:", result.company.signUpCode);
+
+      console.log("COMPANY SERVER VERSION:", result.company.serverVersion);
+
+      console.log("ADMIN USER SERVER VERSION:", result.adminUser.serverVersion);
 
       return result;
     } finally {

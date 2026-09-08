@@ -7,10 +7,13 @@ import { BsFillPeopleFill, BsBoxSeamFill } from "react-icons/bs";
 import Logo from "../../../components/Logo";
 import { useEffect } from "react";
 import { checkOnline } from "../../../services/connectivity_check.service";
+import useAdminUser from "../../../../store/auth.store";
 
 const AdminPage = () => {
+  const user = useAdminUser((store) => store.adminUser);
+
   useEffect(() => {
-    void syncOnLogin();
+    syncOnLogin();
   }, []);
 
   const syncOnLogin = async () => {
@@ -22,7 +25,7 @@ const AdminPage = () => {
 
     try {
       console.log("SYNCING AFTER LOGIN...");
-      const results = await window.electron.sync();
+      const results = await window.electron.sync(user.companyId);
       console.log("LOGIN SYNC COMPLETE", results);
     } catch (error) {
       console.error("LOGIN SYNC FAILED:", error);

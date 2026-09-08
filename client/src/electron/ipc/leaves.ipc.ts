@@ -15,11 +15,14 @@ import Leave from "../../common/types/Leave.js";
 export function registerLeaveIPC() {
   console.log("REGISTERING LEAVES IPC");
 
-  ipcMain.handle("leave:create", async (_, leave: Partial<Leave>) => {
-    console.log("LEAVE IPC RECEIVED FOR EMPLOYEE:", leave.employeeId);
+  ipcMain.handle(
+    "leave:create",
+    async (_, companyId: string, leave: Partial<Leave>) => {
+      console.log("LEAVE IPC RECEIVED:", companyId, leave);
 
-    return createLeave(leave);
-  });
+      return createLeave(companyId, leave);
+    }
+  );
 
   ipcMain.handle(
     "leave:getLeaveByEmployeeId",

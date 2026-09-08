@@ -1,12 +1,30 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { employeeQueryKeys } from "../queries/employee.queries";
 import useAdminUser from "../../../../../store/auth.store";
 
 type UpdateEmployeeInput = {
   companyId: string;
   _id: string;
   data: Parameters<typeof window.electron.employees.update>[2];
+};
+
+export const employeeKeys = {
+  all: ["employees"] as const,
+
+  list: (companyId: string) => ["employees", "list", { companyId }] as const,
+
+  details: (companyId: string) =>
+    ["employees", "detail", { companyId }] as const,
+
+  detail: (companyId: string, employeeId: string) =>
+    [
+      "employees",
+      "detail",
+      {
+        companyId,
+        employeeId,
+      },
+    ] as const,
 };
 
 /**
@@ -30,7 +48,7 @@ export function useCreateEmployee() {
 
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: employeeQueryKeys.list(companyId),
+        queryKey: employeeKeys.list(companyId),
       });
     },
   });
@@ -43,7 +61,7 @@ export function useEmployees() {
   const companyId = useAdminUser((store) => store.adminUser.companyId);
 
   return useQuery({
-    queryKey: employeeQueryKeys.list(companyId),
+    queryKey: employeeKeys.list(companyId),
 
     queryFn: () => {
       if (!companyId) {
@@ -66,8 +84,8 @@ export function useEmployee(employeeId?: string) {
   return useQuery({
     queryKey:
       employeeId && companyId
-        ? employeeQueryKeys.detail(companyId, employeeId)
-        : employeeQueryKeys.details(companyId),
+        ? employeeKeys.detail(companyId, employeeId)
+        : employeeKeys.details(companyId),
 
     queryFn: () => {
       if (!companyId) {
@@ -111,13 +129,13 @@ export function useUpdateEmployee() {
 
       // Update individual employee cache immediately
       queryClient.setQueryData(
-        employeeQueryKeys.detail(companyId, variables._id),
+        employeeKeys.detail(companyId, variables._id),
         updatedEmployee
       );
 
       // Update employee list cache immediately
       queryClient.setQueryData(
-        employeeQueryKeys.list(companyId),
+        employeeKeys.list(companyId),
         (oldEmployees: (typeof updatedEmployee)[] | undefined) => {
           if (!oldEmployees) return oldEmployees;
 
@@ -151,11 +169,11 @@ export function useDeleteEmployee() {
       if (!companyId) return;
 
       queryClient.removeQueries({
-        queryKey: employeeQueryKeys.detail(companyId, employeeId),
+        queryKey: employeeKeys.detail(companyId, employeeId),
       });
 
       queryClient.invalidateQueries({
-        queryKey: employeeQueryKeys.list(companyId),
+        queryKey: employeeKeys.list(companyId),
       });
     },
   });

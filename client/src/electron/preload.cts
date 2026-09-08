@@ -106,6 +106,7 @@ interface SignUpCredentials {
   lastName: string;
   email: string;
   password: string;
+  signUpCode:string;
 }
 
 console.log("PRELOAD LOADED!!!");
@@ -133,6 +134,20 @@ contextBridge.exposeInMainWorld("electron", {
 
     logout: () =>
       ipcRenderer.invoke("auth:logout"),
+  },
+
+   // ============================================================
+  // ADMIN USERS
+  // ============================================================
+
+  adminUsers: {
+    getAll: (
+      companyId: string
+    ) =>
+      ipcRenderer.invoke(
+        "adminUsers:getAll",
+        companyId
+      ),
   },
 
   // ============================================================
@@ -867,19 +882,7 @@ contextBridge.exposeInMainWorld("electron", {
       ),
   },
 
-  // ============================================================
-  // ADMIN USERS
-  // ============================================================
-
-  adminUsers: {
-    getAll: (
-      companyId: string
-    ) =>
-      ipcRenderer.invoke(
-        "adminUsers:getAll",
-        companyId
-      ),
-  },
+ 
 
   // ============================================================
   // FILE

@@ -21,7 +21,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useForm, type FieldValues } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import useAdminUser from "../../../../store/auth.store";
 import { MdAlternateEmail, MdPerson2, MdBusiness } from "react-icons/md";
 import { FaSave } from "react-icons/fa";
@@ -33,22 +33,15 @@ import { useState } from "react";
 const schema = z
   .object({
     firstName: z.string().min(3, { message: "Minimum de 3 caractères requis" }),
-
     lastName: z.string().min(3, { message: "Minimum de 3 caractères requis" }),
-
     email: z.string().email("Addresse email non valide."),
-
-    // Dummy field.
-    // This is collected by the form but is NOT sent to the backend.
-    department: z.string(),
-
+    signUpCode: z.string(),
     password: z
       .string()
       .min(8, { message: "Minimum de 8 caractères requis" })
       .regex(/[a-z]/, "Incluez au moins une lettre minuscule.")
       .regex(/[A-Z]/, "Incluez au moins une lettre majuscule.")
       .regex(/[0-9]/, "Incluez au moins un chiffre."),
-
     confirmPassword: z.string(),
   })
   .superRefine(({ confirmPassword, password }, ctx) => {
@@ -61,7 +54,7 @@ const schema = z
     }
   });
 
-type UserData = z.infer<typeof schema>;
+type SignUpData = z.infer<typeof schema>;
 
 const labelColor = "#374151";
 
@@ -101,35 +94,36 @@ const SignUp = () => {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<UserData>({
+  } = useForm<SignUpData>({
     resolver: zodResolver(schema),
   });
 
-  const onSubmit = async (data: FieldValues) => {
+  const onSubmit = async (data: SignUpData) => {
     setIsLoggingIn(true);
     setErrorMessage("");
 
     console.log("FORM SUBMITTED:", data);
 
     try {
-      // Department is intentionally NOT sent to the backend.
       const res = await window.electron.auth.sign_up({
         firstName: data.firstName,
         lastName: data.lastName,
         email: data.email,
         password: data.password,
+        signUpCode: data.signUpCode,
       });
 
       console.log("USER SIGN UP SUCCESS: ", res);
 
-      setAuth(
-        res._id,
-        res.firstName,
-        res.lastName,
-        res.email,
-        res.role,
-        res.notes ?? ""
-      );
+      setAuth({
+        _id: res._id,
+        companyId: res.companyId,
+        firstName: res.firstName,
+        lastName: res.lastName,
+        email: res.email,
+        role: res.role,
+        notes: res.notes ?? "",
+      });
 
       navigate("/admin");
     } catch (error) {
@@ -339,7 +333,6 @@ const SignUp = () => {
                     <Input
                       {...inputStyle}
                       type="text"
-                      placeholder="Code d'acces"
                       {...register("signUpCode")}
                     />
                   </FormField>

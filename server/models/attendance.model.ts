@@ -97,7 +97,11 @@ const attendanceSchema = new Schema<AttendanceDocument>(
 );
 
 attendanceSchema.index(
-  { employeeId: 1, date: 1 },
+  {
+    companyId: 1,
+    employeeId: 1,
+    date: 1,
+  },
   {
     unique: true,
     partialFilterExpression: { isDeleted: 0 },

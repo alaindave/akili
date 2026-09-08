@@ -16,8 +16,6 @@ import tasks from "./routes/task.route.js";
 import employee_photos from "./routes/employees_photos.route.js";
 import employee_documents from "./routes/employees_documents.route.js";
 import jobsRouter from "./routes/jobs.route.js";
-
-import seedPayrollComponents from "./seeds/payroll-component.seed.js";
 import { initializeSocketService } from "./services/socket.service.js";
 
 const app = express();
@@ -168,23 +166,7 @@ async function startServer() {
 
     /*
      * ----------------------------------------------------------
-     * 3. SEED PAYROLL COMPONENTS
-     * ----------------------------------------------------------
-     *
-     */
-
-    console.log("========================================");
-    console.log("ABOUT TO SEED PAYROLL COMPONENTS");
-    console.log("========================================");
-
-    await seedPayrollComponents();
-
-    console.log("PAYROLL COMPONENTS SEEDED");
-    console.log("");
-
-    /*
-     * ----------------------------------------------------------
-     * 4. START CRON JOBS
+     * 3. START CRON JOBS
      * ----------------------------------------------------------
      
      */
@@ -198,7 +180,7 @@ async function startServer() {
 
     /*
      * ----------------------------------------------------------
-     * 5. START HTTP SERVER
+     * 4. START HTTP SERVER
      * ----------------------------------------------------------
      */
 

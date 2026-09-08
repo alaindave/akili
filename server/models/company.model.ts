@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document } from "mongoose";
 
 export interface CompanyDocument extends Document {
+  _id: string;
   companyId: string;
   name: string;
   legalName: string | null;
@@ -12,7 +13,7 @@ export interface CompanyDocument extends Document {
   phone: string | null;
   email: string | null;
   website: string | null;
-  serverVersion: string;
+  serverVersion: number;
   createdAt: string;
   updatedAt: string;
   isDeleted: number;
@@ -20,6 +21,10 @@ export interface CompanyDocument extends Document {
 
 const CompanySchema = new Schema<CompanyDocument>(
   {
+    _id: {
+      type: String,
+      required: true,
+    },
     companyId: {
       type: String,
       required: true,
@@ -77,6 +82,13 @@ const CompanySchema = new Schema<CompanyDocument>(
       type: String,
       default: null,
       trim: true,
+    },
+
+    serverVersion: {
+      type: Number,
+      required: true,
+      default: 0,
+      min: 0,
     },
 
     createdAt: {

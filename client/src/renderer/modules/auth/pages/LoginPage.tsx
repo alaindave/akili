@@ -67,16 +67,16 @@ const LoginPage = () => {
         console.log("OFFLINE LOGIN SUCCESS: ", offlineUser);
 
         setLogIn({
-          companyId: offlineUser.companyId,
-          _id: offlineUser._id,
-          firstName: offlineUser.firstName,
-          lastName: offlineUser.lastName,
-          email: offlineUser.email,
-          role: offlineUser.role,
-          notes: offlineUser.notes ?? "",
+          companyId: offlineUser.company.companyId,
+          _id: offlineUser.admin._id,
+          firstName: offlineUser.admin.firstName,
+          lastName: offlineUser.admin.lastName,
+          email: offlineUser.admin.email,
+          role: offlineUser.admin.role,
+          notes: offlineUser.admin.notes ?? "",
         });
 
-        await loadTopTasks(offlineUser._id);
+        await loadTopTasks(offlineUser.admin._id);
         navigate("/admin", { replace: true });
 
         return;
@@ -84,32 +84,35 @@ const LoginPage = () => {
 
       const adminUser = await window.electron.auth.login(credentials);
 
-      console.log("ADMIN USER:", adminUser);
+      console.log("ADMIN USER AFTER LOGIN", adminUser);
+
+      console.log("CREDS:", credentials);
 
       if (adminUser) {
         const offlineUser = await window.electron.offlineUsers.save({
-          _id: adminUser._id,
-          email: adminUser.email,
+          companyId: adminUser.company.companyId,
+          _id: adminUser.admin._id,
+          email: adminUser.admin.email,
           password: credentials.password,
-          firstName: adminUser.firstName,
-          lastName: adminUser.lastName,
-          role: adminUser.role,
-          notes: adminUser.notes,
+          firstName: adminUser.admin.firstName,
+          lastName: adminUser.admin.lastName,
+          role: adminUser.admin.role,
+          notes: adminUser.admin.notes,
         });
 
         console.log("OFFLINE USER SUCCESSFULLY SAVED: ", offlineUser);
 
         setLogIn({
-          companyId: adminUser.companyId,
-          _id: adminUser._id,
-          firstName: adminUser.firstName,
-          lastName: adminUser.lastName,
-          email: adminUser.email,
-          role: adminUser.role,
-          notes: adminUser.notes ?? "",
+          companyId: adminUser.admin.companyId,
+          _id: adminUser.admin._id,
+          firstName: adminUser.admin.firstName,
+          lastName: adminUser.admin.lastName,
+          email: adminUser.admin.email,
+          role: adminUser.admin.role,
+          notes: adminUser.admin.notes ?? "",
         });
 
-        await loadTopTasks(adminUser._id);
+        await loadTopTasks(adminUser.admin._id);
         navigate("/admin", { replace: true });
       }
     } catch (error) {

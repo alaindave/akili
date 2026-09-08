@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
 import type Leave from "../../../../../common/types/Leave";
 
 /* =========================================================
@@ -8,37 +9,47 @@ import type Leave from "../../../../../common/types/Leave";
 export const leaveKeys = {
   all: ["leaves"] as const,
 
-  lists: () => [...leaveKeys.all, "list"] as const,
+  lists: (companyId: string) => [...leaveKeys.all, "list", companyId] as const,
 
-  details: () => [...leaveKeys.all, "detail"] as const,
+  details: (companyId: string) =>
+    [...leaveKeys.all, "detail", companyId] as const,
 
-  detail: (_id: string) => [...leaveKeys.details(), _id] as const,
+  detail: (companyId: string, leaveId: string) =>
+    [...leaveKeys.details(companyId), leaveId] as const,
 
-  byEmployee: (employeeId: string) =>
-    [...leaveKeys.all, "employee", employeeId] as const,
+  byEmployee: (companyId: string, employeeId: string) =>
+    [...leaveKeys.all, "employee", companyId, employeeId] as const,
 
-  ongoing: (date: string) => [...leaveKeys.all, "ongoing", date] as const,
+  ongoing: (companyId: string, date: string) =>
+    [...leaveKeys.all, "ongoing", companyId, date] as const,
 
-  byMonth: (month: string) => [...leaveKeys.all, "month", month] as const,
+  byMonth: (companyId: string, month: string) =>
+    [...leaveKeys.all, "month", companyId, month] as const,
 };
 
 /* =========================================================
    GET LEAVE BY ID
 ========================================================= */
 
-export const useLeave = (_id?: string) => {
+export const useLeave = (companyId: string, leaveId: string) => {
   return useQuery({
-    queryKey: leaveKeys.detail(_id ?? ""),
+    queryKey: leaveKeys.detail(companyId, leaveId),
 
-    queryFn: () => {
-      if (!_id) {
+    queryFn: async () => {
+      if (!companyId) {
+        throw new Error("Company ID is required");
+      }
+
+      if (!leaveId) {
         throw new Error("Leave ID is required");
       }
 
-      return window.electron.leave.getLeaveById(_id);
+      return window.electron.leave.getLeaveById(companyId, leaveId);
     },
 
-    enabled: Boolean(_id),
+    enabled: Boolean(companyId && leaveId),
+
+    staleTime: 30_000,
   });
 };
 
@@ -46,19 +57,25 @@ export const useLeave = (_id?: string) => {
    GET LEAVES BY EMPLOYEE
 ========================================================= */
 
-export const useEmployeeLeaves = (employeeId?: string) => {
+export const useEmployeeLeaves = (companyId: string, employeeId: string) => {
   return useQuery({
-    queryKey: leaveKeys.byEmployee(employeeId ?? ""),
+    queryKey: leaveKeys.byEmployee(companyId, employeeId),
 
-    queryFn: () => {
+    queryFn: async () => {
+      if (!companyId) {
+        throw new Error("Company ID is required");
+      }
+
       if (!employeeId) {
         throw new Error("Employee ID is required");
       }
 
-      return window.electron.leave.getLeaveByEmployeeId(employeeId);
+      return window.electron.leave.getLeaveByEmployeeId(companyId, employeeId);
     },
 
-    enabled: Boolean(employeeId),
+    enabled: Boolean(companyId && employeeId),
+
+    staleTime: 30_000,
   });
 };
 
@@ -66,19 +83,25 @@ export const useEmployeeLeaves = (employeeId?: string) => {
    GET ONGOING LEAVES
 ========================================================= */
 
-export const useOngoingLeaves = (date?: string) => {
+export const useOngoingLeaves = (companyId: string, date: string) => {
   return useQuery({
-    queryKey: leaveKeys.ongoing(date ?? ""),
+    queryKey: leaveKeys.ongoing(companyId, date),
 
-    queryFn: () => {
+    queryFn: async () => {
+      if (!companyId) {
+        throw new Error("Company ID is required");
+      }
+
       if (!date) {
         throw new Error("Date is required");
       }
 
-      return window.electron.leave.getOngoingLeaves(date);
+      return window.electron.leave.getOngoingLeaves(companyId, date);
     },
 
-    enabled: Boolean(date),
+    enabled: Boolean(companyId && date),
+
+    staleTime: 15_000,
   });
 };
 
@@ -86,19 +109,25 @@ export const useOngoingLeaves = (date?: string) => {
    GET LEAVES BY MONTH
 ========================================================= */
 
-export const useLeavesByMonth = (month?: string) => {
+export const useLeavesByMonth = (companyId: string, month: string) => {
   return useQuery({
-    queryKey: leaveKeys.byMonth(month ?? ""),
+    queryKey: leaveKeys.byMonth(companyId, month),
 
-    queryFn: () => {
+    queryFn: async () => {
+      if (!companyId) {
+        throw new Error("Company ID is required");
+      }
+
       if (!month) {
         throw new Error("Month is required");
       }
 
-      return window.electron.leave.getLeaveByMonth(month);
+      return window.electron.leave.getLeaveByMonth(companyId, month);
     },
 
-    enabled: Boolean(month),
+    enabled: Boolean(companyId && month),
+
+    staleTime: 30_000,
   });
 };
 
@@ -106,40 +135,67 @@ export const useLeavesByMonth = (month?: string) => {
    CREATE LEAVE
 ========================================================= */
 
-export const useCreateLeave = () => {
+export const useCreateLeave = (companyId: string) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (leave: Partial<Leave>) => window.electron.leave.create(leave),
+    mutationFn: async (leave: Partial<Leave>) => {
+      if (!companyId) {
+        throw new Error("Company ID is required");
+      }
 
-    onSuccess: (createdLeave) => {
+      return window.electron.leave.create(companyId, leave);
+    },
+
+    onSuccess: async (createdLeave) => {
+      if (!createdLeave) {
+        return;
+      }
+
       /*
-       * Add the newly created leave directly to the
-       * relevant employee cache when possible.
+       * Cache the newly created leave.
        */
-
-      if (createdLeave?.employeeId) {
-        queryClient.invalidateQueries({
-          queryKey: leaveKeys.byEmployee(createdLeave.employeeId),
-        });
-      }
-
-      if (createdLeave?.date) {
-        queryClient.invalidateQueries({
-          queryKey: leaveKeys.ongoing(createdLeave.date),
-        });
-      }
-
-      queryClient.invalidateQueries({
-        queryKey: [...leaveKeys.all, "month"],
-      });
-
-      if (createdLeave?._id) {
+      if (createdLeave._id) {
         queryClient.setQueryData(
-          leaveKeys.detail(createdLeave._id),
+          leaveKeys.detail(companyId, createdLeave._id),
           createdLeave
         );
       }
+
+      /*
+       * Refresh employee-specific leaves.
+       */
+      if (createdLeave.employeeId) {
+        await queryClient.invalidateQueries({
+          queryKey: leaveKeys.byEmployee(companyId, createdLeave.employeeId),
+        });
+      }
+
+      /*
+       * Refresh ongoing leaves.
+       */
+      if (createdLeave.date) {
+        await queryClient.invalidateQueries({
+          queryKey: leaveKeys.ongoing(companyId, createdLeave.date),
+        });
+      }
+
+      /*
+       * Refresh monthly leaves.
+       *
+       * Using the prefix means this works regardless
+       * of which month is currently cached.
+       */
+      await queryClient.invalidateQueries({
+        queryKey: [...leaveKeys.all, "month", companyId],
+      });
+
+      /*
+       * Refresh general leave lists.
+       */
+      await queryClient.invalidateQueries({
+        queryKey: leaveKeys.lists(companyId),
+      });
     },
   });
 };
@@ -148,49 +204,72 @@ export const useCreateLeave = () => {
    UPDATE LEAVE
 ========================================================= */
 
-export const useUpdateLeave = () => {
+export const useUpdateLeave = (companyId: string) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ _id, updates }: { _id: string; updates: Partial<Leave> }) =>
-      window.electron.leave.update(_id, updates),
+    mutationFn: async ({
+      _id,
+      updates,
+    }: {
+      _id: string;
+      updates: Partial<Leave>;
+    }) => {
+      if (!companyId) {
+        throw new Error("Company ID is required");
+      }
 
-    onSuccess: (updatedLeave, variables) => {
-      if (!updatedLeave) return;
+      if (!_id) {
+        throw new Error("Leave ID is required");
+      }
+
+      return window.electron.leave.update(companyId, _id, updates);
+    },
+
+    onSuccess: async (updatedLeave, variables) => {
+      if (!updatedLeave) {
+        return;
+      }
 
       /*
-       * Update individual leave immediately.
+       * Update the individual leave immediately.
        */
-
-      queryClient.setQueryData(leaveKeys.detail(variables._id), updatedLeave);
+      queryClient.setQueryData(
+        leaveKeys.detail(companyId, variables._id),
+        updatedLeave
+      );
 
       /*
        * Refresh employee leaves.
        */
-
       if (updatedLeave.employeeId) {
-        queryClient.invalidateQueries({
-          queryKey: leaveKeys.byEmployee(updatedLeave.employeeId),
+        await queryClient.invalidateQueries({
+          queryKey: leaveKeys.byEmployee(companyId, updatedLeave.employeeId),
         });
       }
-
-      /*
-       * Refresh month data.
-       */
-
-      queryClient.invalidateQueries({
-        queryKey: [...leaveKeys.all, "month"],
-      });
 
       /*
        * Refresh ongoing leaves.
        */
-
       if (updatedLeave.date) {
-        queryClient.invalidateQueries({
-          queryKey: leaveKeys.ongoing(updatedLeave.date),
+        await queryClient.invalidateQueries({
+          queryKey: leaveKeys.ongoing(companyId, updatedLeave.date),
         });
       }
+
+      /*
+       * Refresh monthly leaves.
+       */
+      await queryClient.invalidateQueries({
+        queryKey: [...leaveKeys.all, "month", companyId],
+      });
+
+      /*
+       * Refresh general lists.
+       */
+      await queryClient.invalidateQueries({
+        queryKey: leaveKeys.lists(companyId),
+      });
     },
   });
 };
@@ -199,39 +278,66 @@ export const useUpdateLeave = () => {
    CANCEL LEAVE
 ========================================================= */
 
-export const useCancelLeave = () => {
+export const useCancelLeave = (companyId: string) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (_id: string) => window.electron.leave.cancel(_id),
+    mutationFn: async (leaveId: string) => {
+      if (!companyId) {
+        throw new Error("Company ID is required");
+      }
 
-    onSuccess: (cancelledLeave, _id) => {
+      if (!leaveId) {
+        throw new Error("Leave ID is required");
+      }
+
+      return window.electron.leave.cancel(companyId, leaveId);
+    },
+
+    onSuccess: async (cancelledLeave, leaveId) => {
       /*
-       * Update the individual leave immediately.
+       * Update individual leave cache.
        */
-
       if (cancelledLeave) {
-        queryClient.setQueryData(leaveKeys.detail(_id), cancelledLeave);
+        queryClient.setQueryData(
+          leaveKeys.detail(companyId, leaveId),
+          cancelledLeave
+        );
 
+        /*
+         * Refresh employee leaves.
+         */
         if (cancelledLeave.employeeId) {
-          queryClient.invalidateQueries({
-            queryKey: leaveKeys.byEmployee(cancelledLeave.employeeId),
+          await queryClient.invalidateQueries({
+            queryKey: leaveKeys.byEmployee(
+              companyId,
+              cancelledLeave.employeeId
+            ),
           });
         }
 
+        /*
+         * Refresh ongoing leaves.
+         */
         if (cancelledLeave.date) {
-          queryClient.invalidateQueries({
-            queryKey: leaveKeys.ongoing(cancelledLeave.date),
+          await queryClient.invalidateQueries({
+            queryKey: leaveKeys.ongoing(companyId, cancelledLeave.date),
           });
         }
       }
 
       /*
-       * Cancellation can change monthly results.
+       * Cancellation changes monthly results.
        */
+      await queryClient.invalidateQueries({
+        queryKey: [...leaveKeys.all, "month", companyId],
+      });
 
-      queryClient.invalidateQueries({
-        queryKey: [...leaveKeys.all, "month"],
+      /*
+       * Refresh general lists.
+       */
+      await queryClient.invalidateQueries({
+        queryKey: leaveKeys.lists(companyId),
       });
     },
   });
@@ -241,27 +347,55 @@ export const useCancelLeave = () => {
    DELETE LEAVE
 ========================================================= */
 
-export const useDeleteLeave = () => {
+export const useDeleteLeave = (companyId: string) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (_id: string) => window.electron.leave.delete(_id),
+    mutationFn: async (leaveId: string) => {
+      if (!companyId) {
+        throw new Error("Company ID is required");
+      }
 
-    onSuccess: (_result, _id) => {
+      if (!leaveId) {
+        throw new Error("Leave ID is required");
+      }
+
+      return window.electron.leave.delete(companyId, leaveId);
+    },
+
+    onSuccess: async (_result, leaveId) => {
       /*
-       * Remove the individual cached leave.
+       * Remove the deleted leave from its
+       * individual cache.
        */
-
       queryClient.removeQueries({
-        queryKey: leaveKeys.detail(_id),
+        queryKey: leaveKeys.detail(companyId, leaveId),
       });
 
       /*
-       * Refresh lists that may contain the deleted leave.
+       * Delete can affect:
+       * - employee leaves
+       * - monthly leaves
+       * - ongoing leaves
+       * - general lists
+       *
+       * Therefore invalidate all leave queries
+       * belonging to this company.
        */
+      await queryClient.invalidateQueries({
+        queryKey: leaveKeys.lists(companyId),
+      });
 
-      queryClient.invalidateQueries({
-        queryKey: leaveKeys.all,
+      await queryClient.invalidateQueries({
+        queryKey: [...leaveKeys.all, "employee", companyId],
+      });
+
+      await queryClient.invalidateQueries({
+        queryKey: [...leaveKeys.all, "ongoing", companyId],
+      });
+
+      await queryClient.invalidateQueries({
+        queryKey: [...leaveKeys.all, "month", companyId],
       });
     },
   });

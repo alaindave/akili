@@ -3,6 +3,7 @@ import { run } from "../db.js";
 export async function createTasksTables() {
   await run(`
     CREATE TABLE IF NOT EXISTS tasks (
+      companyId TEXT NOT NULL,
       _id TEXT PRIMARY KEY,
       taskNumber TEXT NOT NULL,
       author TEXT NOT NULL,
@@ -28,6 +29,7 @@ export async function createTasksTables() {
 
   await run(`
     CREATE TABLE IF NOT EXISTS task_recipients (
+      companyId TEXT NOT NULL,
       taskId TEXT NOT NULL,
       recipient TEXT NOT NULL,
       PRIMARY KEY (taskId, recipient),
@@ -38,6 +40,7 @@ export async function createTasksTables() {
 
   await run(`
   CREATE TABLE IF NOT EXISTS task_comments (
+    companyId TEXT NOT NULL,
     _id TEXT PRIMARY KEY,
     taskId TEXT NOT NULL,
     author TEXT NOT NULL,

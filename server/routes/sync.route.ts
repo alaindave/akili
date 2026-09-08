@@ -1,5 +1,6 @@
 import express, { Request, Response } from "express";
 
+import authorize from "../middlewares/authorize.js";
 import upload from "../middlewares/sync_upload.js";
 
 import {
@@ -14,13 +15,16 @@ import {
   syncEmployeeDocument,
   syncPayrollComponent,
   syncPayrollProfile,
-  SyncOperation,
   syncPayrollRun,
   syncPayrollResult,
   syncPayrollItem,
   syncPayrollSettings,
+  syncCompany,
 } from "../sync.js";
 
+import type { SyncOperation } from "../sync.js";
+
+import Company from "../models/company.model.js";
 import Employee from "../models/employee.model.js";
 import Attendance from "../models/attendance.model.js";
 import Leave from "../models/leave.model.js";
@@ -43,12 +47,25 @@ const router = express.Router();
  * ============================================================
  */
 
+interface AuthenticatedUser {
+  _id?: string;
+  id?: string;
+  email?: string;
+  role?: string;
+  companyId?: string;
+}
+
+type AuthenticatedRequest = Request & {
+  user?: AuthenticatedUser;
+};
+
 interface PushSyncRequest {
   items: string;
 }
 
 interface SyncItem {
   queueId: string;
+  companyId: string;
   entity: string;
   operation: SyncOperation;
   data: any;
@@ -62,33 +79,95 @@ interface PullQuery {
 
 /*
  * ============================================================
- * VERSIONED PULL HELPER
- * ============================================================
- *
- * Every entity uses the exact same synchronization strategy:
- *
- *   serverVersion > afterVersion
- *
- * Results are ordered by serverVersion so the client can
- * safely advance its cursor.
- *
- * IMPORTANT:
- *
- * We intentionally DO NOT filter isDeleted here.
- *
- * A deleted document must still reach the client so the local
- * database can perform the corresponding soft delete.
+ * COMPANY ID HELPERS
  * ============================================================
  */
 
-async function pullVersionedCollection<T extends { serverVersion?: number }>(
+function requireAuthenticatedCompanyId(req: AuthenticatedRequest): string {
+  const companyId = req.user?.companyId;
+
+  if (!companyId || typeof companyId !== "string") {
+    throw new Error("SYNC: authenticated user has no companyId");
+  }
+
+  return companyId;
+}
+
+/**
+ * Validate the optional x-company-id header.
+ *
+ * The JWT remains the authoritative company identity.
+ */
+function validateCompanyHeader(
+  req: AuthenticatedRequest,
+  companyId: string
+): void {
+  const headerCompanyId = req.headers["x-company-id"];
+
+  if (headerCompanyId === undefined) {
+    return;
+  }
+
+  const receivedCompanyId = Array.isArray(headerCompanyId)
+    ? headerCompanyId[0]
+    : headerCompanyId;
+
+  if (receivedCompanyId !== companyId) {
+    throw new Error("SYNC: x-company-id does not match authenticated company");
+  }
+}
+
+/**
+ * Validate that a pushed item belongs to the authenticated company.
+ */
+function validateSyncItemCompany(
+  item: SyncItem,
+  authenticatedCompanyId: string
+): void {
+  if (!item.companyId) {
+    throw new Error(`SYNC: companyId is required for entity ${item.entity}`);
+  }
+
+  if (item.companyId !== authenticatedCompanyId) {
+    throw new Error(`SYNC: companyId mismatch for entity ${item.entity}`);
+  }
+
+  if (!item.data?.companyId) {
+    throw new Error(
+      `SYNC: data.companyId is required for entity ${item.entity}`
+    );
+  }
+
+  if (item.data.companyId !== authenticatedCompanyId) {
+    throw new Error(`SYNC: data.companyId mismatch for entity ${item.entity}`);
+  }
+}
+
+/*
+ * ============================================================
+ * VERSIONED PULL HELPER
+ * ============================================================
+ */
+
+async function pullVersionedCollection<
+  T extends {
+    serverVersion?: number;
+    companyId?: string;
+  }
+>(
   model: any,
+  companyId: string,
   afterVersion: number,
   limit: number,
   select?: string
 ) {
+  if (!companyId) {
+    throw new Error("SYNC PULL: companyId is required");
+  }
+
   let query = model
     .find({
+      companyId,
       serverVersion: {
         $gt: afterVersion,
       },
@@ -111,9 +190,11 @@ async function pullVersionedCollection<T extends { serverVersion?: number }>(
       : afterVersion;
 
   const moreChanges = await model.exists({
+    companyId,
     serverVersion: {
       $gt: nextVersion,
     },
+    isDeleted: 0,
   });
 
   return {
@@ -131,6 +212,7 @@ async function pullVersionedCollection<T extends { serverVersion?: number }>(
 
 router.post(
   "/push",
+  authorize,
   upload.fields([
     {
       name: "employees_photos",
@@ -139,9 +221,64 @@ router.post(
       name: "employees_documents",
     },
   ]),
-  async (req: Request<{}, {}, PushSyncRequest>, res: Response) => {
+  async (
+    req: AuthenticatedRequest & {
+      body: PushSyncRequest;
+    },
+    res: Response
+  ) => {
     try {
-      const items: SyncItem[] = JSON.parse(req.body.items);
+      /*
+       * --------------------------------------------------------
+       * AUTHENTICATED COMPANY
+       * --------------------------------------------------------
+       */
+
+      const companyId = requireAuthenticatedCompanyId(req);
+
+      validateCompanyHeader(req, companyId);
+
+      /*
+       * --------------------------------------------------------
+       * PARSE ITEMS
+       * --------------------------------------------------------
+       */
+
+      if (!req.body?.items) {
+        return res.status(400).json({
+          success: false,
+          message: "Missing sync items",
+        });
+      }
+
+      let items: SyncItem[];
+
+      try {
+        items = JSON.parse(req.body.items);
+      } catch (error) {
+        console.error("INVALID SYNC ITEMS JSON:", error);
+
+        return res.status(400).json({
+          success: false,
+          message: "Invalid sync items JSON",
+        });
+      }
+
+      if (!Array.isArray(items)) {
+        return res.status(400).json({
+          success: false,
+          message: "Sync items must be an array",
+        });
+      }
+
+      console.log("SYNC PUSH COMPANY:", companyId);
+      console.log("SYNC PUSH ITEM COUNT:", items.length);
+
+      /*
+       * --------------------------------------------------------
+       * FILES
+       * --------------------------------------------------------
+       */
 
       console.log("REQ FILES:", req.files);
 
@@ -154,86 +291,180 @@ router.post(
       const photoFiles = files?.employees_photos || [];
       const documentFiles = files?.employees_documents || [];
 
+      /*
+       * --------------------------------------------------------
+       * SYNC RESULTS
+       * --------------------------------------------------------
+       */
+
       const synced: string[] = [];
+
+      /*
+       * --------------------------------------------------------
+       * PROCESS ITEMS
+       * --------------------------------------------------------
+       */
 
       for (const item of items) {
         const { queueId, entity, operation, data } = item;
 
         try {
+          /*
+           * ------------------------------------------------------
+           * TENANT VALIDATION
+           * ------------------------------------------------------
+           */
+
+          validateSyncItemCompany(item, companyId);
+
           switch (entity) {
+            /*
+             * ====================================================
+             * COMPANY
+             * ====================================================
+             */
+
+            case "company": {
+              /*
+               * Company is the tenant root.
+               *
+               * The companyId has already been verified against
+               * the authenticated JWT above.
+               */
+              const result = await syncCompany(operation, data);
+
+              console.log(
+                `COMPANY ${data.companyId} SERVER VERSION:`,
+                result?.serverVersion
+              );
+
+              break;
+            }
+
+            /*
+             * ====================================================
+             * EMPLOYEE
+             * ====================================================
+             */
+
             case "employee": {
               const result = await syncEmployee(operation, data);
 
               console.log(
-                `EMPLOYEE ${data._id} SERVER VERSION:`,
+                `EMPLOYEE ${data._id} COMPANY ${companyId} SERVER VERSION:`,
                 result.serverVersion
               );
 
               break;
             }
 
+            /*
+             * ====================================================
+             * ATTENDANCE
+             * ====================================================
+             */
+
             case "attendance": {
               const result = await syncAttendance(operation, data);
 
               console.log(
-                `ATTENDANCE ${data._id} SERVER VERSION:`,
+                `ATTENDANCE ${data._id} COMPANY ${companyId} SERVER VERSION:`,
                 result?.serverVersion
               );
 
               break;
             }
+
+            /*
+             * ====================================================
+             * ATTENDANCE DAILY CHECK
+             * ====================================================
+             */
 
             case "attendance_daily_check": {
               const result = await syncAttendanceDailyCheck(operation, data);
 
               console.log(
-                `ATTENDANCE DAILY CHECK ${data._id} SERVER VERSION:`,
+                `ATTENDANCE DAILY CHECK ${data._id} COMPANY ${companyId} SERVER VERSION:`,
                 result?.serverVersion
               );
 
               break;
             }
+
+            /*
+             * ====================================================
+             * LEAVE
+             * ====================================================
+             */
 
             case "leave": {
               const result = await syncLeave(operation, data);
 
               console.log(
-                `LEAVE ${data._id} SERVER VERSION:`,
+                `LEAVE ${data._id} COMPANY ${companyId} SERVER VERSION:`,
                 result?.serverVersion
               );
 
               break;
             }
+
+            /*
+             * ====================================================
+             * TASK
+             * ====================================================
+             */
 
             case "task": {
               const result = await syncTask(operation, data);
 
               console.log(
-                `TASK ${data._id} SERVER VERSION:`,
+                `TASK ${data._id} COMPANY ${companyId} SERVER VERSION:`,
                 result?.serverVersion
               );
 
               break;
             }
+
+            /*
+             * ====================================================
+             * TASK COMMENT
+             * ====================================================
+             */
 
             case "task_comment": {
               const result = await syncTaskComment(operation, data);
 
               console.log(
-                `TASK COMMENT ${data._id} SERVER VERSION:`,
+                `TASK COMMENT ${data._id} COMPANY ${companyId} SERVER VERSION:`,
                 result?.serverVersion
               );
 
               break;
             }
 
-            case "user_notes":
+            /*
+             * ====================================================
+             * USER NOTES
+             * ====================================================
+             */
+
+            case "user_notes": {
               const result = await syncUserNotes(data);
+
               console.log(
-                `User notes ${data._id} SERVER VERSION:`,
+                `USER NOTES ${data._id} COMPANY ${companyId} SERVER VERSION:`,
                 result?.serverVersion
               );
+
               break;
+            }
+
+            /*
+             * ====================================================
+             * EMPLOYEE PHOTO
+             * ====================================================
+             */
 
             case "employee_photo": {
               const file = photoFiles.find(
@@ -241,13 +472,22 @@ router.post(
               );
 
               console.log("EMPLOYEE PHOTO TO UPDATE:", file);
+
               const result = await syncEmployeePhoto(data, file);
+
               console.log(
-                `EMPLOYEE PHOTOS ${data._id} SERVER VERSION:`,
+                `EMPLOYEE PHOTO ${data._id} COMPANY ${companyId} SERVER VERSION:`,
                 result?.serverVersion
               );
+
               break;
             }
+
+            /*
+             * ====================================================
+             * EMPLOYEE DOCUMENT
+             * ====================================================
+             */
 
             case "employee_document": {
               const file = documentFiles.find(
@@ -257,100 +497,158 @@ router.post(
               const result = await syncEmployeeDocument(operation, data, file);
 
               console.log(
-                `EMPLOYEE DOCUMENT ${data._id} SERVER VERSION:`,
+                `EMPLOYEE DOCUMENT ${data._id} COMPANY ${companyId} SERVER VERSION:`,
                 result?.serverVersion
               );
 
               break;
             }
+
+            /*
+             * ====================================================
+             * PAYROLL SETTINGS
+             * ====================================================
+             */
 
             case "payroll_settings": {
               const result = await syncPayrollSettings(operation, data);
 
               console.log(
-                `PAYROLL SETTINGS ${data._id} SERVER VERSION:`,
+                `PAYROLL SETTINGS ${data._id} COMPANY ${companyId} SERVER VERSION:`,
                 result?.serverVersion
               );
 
               break;
             }
+
+            /*
+             * ====================================================
+             * PAYROLL COMPONENT
+             * ====================================================
+             */
 
             case "payroll_component": {
               const result = await syncPayrollComponent(operation, data);
 
               console.log(
-                `PAYROLL COMPONENT ${data._id} SERVER VERSION:`,
+                `PAYROLL COMPONENT ${data._id} COMPANY ${companyId} SERVER VERSION:`,
                 result?.serverVersion
               );
 
               break;
             }
+
+            /*
+             * ====================================================
+             * PAYROLL PROFILE
+             * ====================================================
+             */
 
             case "payroll_profile": {
               const result = await syncPayrollProfile(operation, data);
 
               console.log(
-                `PAYROLL PROFILE ${data._id} SERVER VERSION:`,
+                `PAYROLL PROFILE ${data._id} COMPANY ${companyId} SERVER VERSION:`,
                 result?.serverVersion
               );
 
               break;
             }
+
+            /*
+             * ====================================================
+             * PAYROLL RUN
+             * ====================================================
+             */
 
             case "payroll_run": {
               const result = await syncPayrollRun(operation, data);
 
               console.log(
-                `PAYROLL RUN ${data._id} SERVER VERSION:`,
+                `PAYROLL RUN ${data._id} COMPANY ${companyId} SERVER VERSION:`,
                 result?.serverVersion
               );
 
               break;
             }
+
+            /*
+             * ====================================================
+             * PAYROLL RESULT
+             * ====================================================
+             */
 
             case "payroll_result": {
               const result = await syncPayrollResult(operation, data);
 
               console.log(
-                `PAYROLL RESULT ${data._id} SERVER VERSION:`,
+                `PAYROLL RESULT ${data._id} COMPANY ${companyId} SERVER VERSION:`,
                 result?.serverVersion
               );
 
               break;
             }
+
+            /*
+             * ====================================================
+             * PAYROLL ITEM
+             * ====================================================
+             */
 
             case "payroll_item": {
               const result = await syncPayrollItem(operation, data);
 
               console.log(
-                `PAYROLL ITEM ${data._id} SERVER VERSION:`,
+                `PAYROLL ITEM ${data._id} COMPANY ${companyId} SERVER VERSION:`,
                 result?.serverVersion
               );
 
               break;
             }
 
-            default:
+            /*
+             * ====================================================
+             * UNKNOWN ENTITY
+             * ====================================================
+             */
+
+            default: {
               console.warn(`UNKNOWN SYNC ENTITY: ${entity}`);
+
               continue;
+            }
           }
 
           /*
-           * Queue item is only considered synced after the
-           * server operation completed successfully.
+           * ------------------------------------------------------
+           * ONLY MARK QUEUE ITEM AS SYNCED AFTER SUCCESS
+           * ------------------------------------------------------
            */
+
           synced.push(queueId);
         } catch (error) {
           console.error(`PUSH FAILED FOR ${entity}`, {
+            companyId,
             queueId,
             entityId: data?._id,
             error,
           });
+
+          /*
+           * Continue processing the other queue items.
+           */
         }
       }
 
+      /*
+       * --------------------------------------------------------
+       * RESPONSE
+       * --------------------------------------------------------
+       */
+
       return res.json({
         success: true,
+        companyId,
         synced,
       });
     } catch (error) {
@@ -372,9 +670,27 @@ router.post(
 
 router.get(
   "/pull",
-  async (req: Request<{}, {}, {}, PullQuery>, res: Response) => {
+  authorize,
+  async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { entity, afterVersion = "0", limit = "500" } = req.query;
+      /*
+       * --------------------------------------------------------
+       * AUTHENTICATED COMPANY
+       * --------------------------------------------------------
+       */
+
+      const companyId = requireAuthenticatedCompanyId(req);
+
+      validateCompanyHeader(req, companyId);
+
+      const {
+        entity,
+        afterVersion = "0",
+        limit = "500",
+      } = req.query as PullQuery;
+
+      console.log("SYNC PULL COMPANY:", companyId);
+      console.log("SYNC PULL USER:", req.user);
 
       /*
        * --------------------------------------------------------
@@ -401,7 +717,7 @@ router.get(
 
       /*
        * --------------------------------------------------------
-       * ENTITY IS REQUIRED
+       * ENTITY REQUIRED
        * --------------------------------------------------------
        */
 
@@ -413,28 +729,70 @@ router.get(
       }
 
       /*
-       * --------------------------------------------------------
-       * EMPLOYEES
-       * --------------------------------------------------------
+       * ========================================================
+       * COMPANY
+       * ========================================================
        */
 
-      if (entity === "employee") {
-        const result = await pullVersionedCollection(Employee, version, max);
+      if (entity === "company") {
+        const result = await pullVersionedCollection(
+          Company,
+          companyId,
+          version,
+          max
+        );
 
-        console.log("EMPLOYEE VERSION PULL:", {
+        console.log("COMPANY VERSION PULL:", {
+          companyId,
           afterVersion: version,
           nextVersion: result.nextVersion,
           count: result.items.length,
           hasMore: result.hasMore,
         });
 
-        console.log(
-          "EMPLOYEE PULL FROM MONGO:",
-          JSON.stringify(result.items[0], null, 2)
+        return res.json({
+          success: true,
+          companyId,
+          entity: "company",
+          items: result.items,
+          nextVersion: result.nextVersion,
+          hasMore: result.hasMore,
+          serverTime: new Date().toISOString(),
+        });
+      }
+
+      /*
+       * ========================================================
+       * EMPLOYEES
+       * ========================================================
+       */
+
+      if (entity === "employee") {
+        const result = await pullVersionedCollection(
+          Employee,
+          companyId,
+          version,
+          max
         );
+
+        console.log("EMPLOYEE VERSION PULL:", {
+          companyId,
+          afterVersion: version,
+          nextVersion: result.nextVersion,
+          count: result.items.length,
+          hasMore: result.hasMore,
+        });
+
+        if (result.items.length > 0) {
+          console.log(
+            "EMPLOYEE PULL FROM MONGO:",
+            JSON.stringify(result.items[0], null, 2)
+          );
+        }
 
         return res.json({
           success: true,
+          companyId,
           entity: "employee",
           items: result.items,
           nextVersion: result.nextVersion,
@@ -444,14 +802,15 @@ router.get(
       }
 
       /*
-       * --------------------------------------------------------
+       * ========================================================
        * ADMIN USERS
-       * --------------------------------------------------------
+       * ========================================================
        */
 
       if (entity === "admin_user") {
         const result = await pullVersionedCollection(
           AdminUser,
+          companyId,
           version,
           max,
           "-password -notes"
@@ -459,6 +818,7 @@ router.get(
 
         return res.json({
           success: true,
+          companyId,
           entity: "admin_user",
           items: result.items,
           nextVersion: result.nextVersion,
@@ -468,20 +828,22 @@ router.get(
       }
 
       /*
-       * --------------------------------------------------------
+       * ========================================================
        * EMPLOYEE DOCUMENTS
-       * --------------------------------------------------------
+       * ========================================================
        */
 
       if (entity === "employee_document") {
         const result = await pullVersionedCollection(
           EmployeeDocuments,
+          companyId,
           version,
           max
         );
 
         return res.json({
           success: true,
+          companyId,
           entity: "employee_document",
           items: result.items,
           nextVersion: result.nextVersion,
@@ -491,16 +853,22 @@ router.get(
       }
 
       /*
-       * --------------------------------------------------------
+       * ========================================================
        * ATTENDANCE
-       * --------------------------------------------------------
+       * ========================================================
        */
 
       if (entity === "attendance") {
-        const result = await pullVersionedCollection(Attendance, version, max);
+        const result = await pullVersionedCollection(
+          Attendance,
+          companyId,
+          version,
+          max
+        );
 
         return res.json({
           success: true,
+          companyId,
           entity: "attendance",
           items: result.items,
           nextVersion: result.nextVersion,
@@ -510,20 +878,22 @@ router.get(
       }
 
       /*
-       * --------------------------------------------------------
+       * ========================================================
        * ATTENDANCE DAILY CHECK
-       * --------------------------------------------------------
+       * ========================================================
        */
 
       if (entity === "attendance_daily_check") {
         const result = await pullVersionedCollection(
           AttendanceDailyCheck,
+          companyId,
           version,
           max
         );
 
         return res.json({
           success: true,
+          companyId,
           entity: "attendance_daily_check",
           items: result.items,
           nextVersion: result.nextVersion,
@@ -533,16 +903,22 @@ router.get(
       }
 
       /*
-       * --------------------------------------------------------
+       * ========================================================
        * LEAVE
-       * --------------------------------------------------------
+       * ========================================================
        */
 
       if (entity === "leave") {
-        const result = await pullVersionedCollection(Leave, version, max);
+        const result = await pullVersionedCollection(
+          Leave,
+          companyId,
+          version,
+          max
+        );
 
         return res.json({
           success: true,
+          companyId,
           entity: "leave",
           items: result.items,
           nextVersion: result.nextVersion,
@@ -552,16 +928,22 @@ router.get(
       }
 
       /*
-       * --------------------------------------------------------
+       * ========================================================
        * TASK
-       * --------------------------------------------------------
+       * ========================================================
        */
 
       if (entity === "task") {
-        const result = await pullVersionedCollection(Task, version, max);
+        const result = await pullVersionedCollection(
+          Task,
+          companyId,
+          version,
+          max
+        );
 
         return res.json({
           success: true,
+          companyId,
           entity: "task",
           items: result.items,
           nextVersion: result.nextVersion,
@@ -571,24 +953,22 @@ router.get(
       }
 
       /*
-       * --------------------------------------------------------
+       * ========================================================
        * PAYROLL SETTINGS
-       * --------------------------------------------------------
-       *
-       * Although this is currently effectively a singleton,
-       * we still use the same version cursor.
-       * --------------------------------------------------------
+       * ========================================================
        */
 
       if (entity === "payroll_settings") {
         const result = await pullVersionedCollection(
           PayrollSettings,
+          companyId,
           version,
           max
         );
 
         return res.json({
           success: true,
+          companyId,
           entity: "payroll_settings",
           items: result.items,
           nextVersion: result.nextVersion,
@@ -598,20 +978,22 @@ router.get(
       }
 
       /*
-       * --------------------------------------------------------
+       * ========================================================
        * PAYROLL COMPONENT
-       * --------------------------------------------------------
+       * ========================================================
        */
 
       if (entity === "payroll_component") {
         const result = await pullVersionedCollection(
           PayrollComponent,
+          companyId,
           version,
           max
         );
 
         return res.json({
           success: true,
+          companyId,
           entity: "payroll_component",
           items: result.items,
           nextVersion: result.nextVersion,
@@ -621,20 +1003,22 @@ router.get(
       }
 
       /*
-       * --------------------------------------------------------
+       * ========================================================
        * PAYROLL PROFILE
-       * --------------------------------------------------------
+       * ========================================================
        */
 
       if (entity === "payroll_profile") {
         const result = await pullVersionedCollection(
           PayrollEmployeeProfile,
+          companyId,
           version,
           max
         );
 
         return res.json({
           success: true,
+          companyId,
           entity: "payroll_profile",
           items: result.items,
           nextVersion: result.nextVersion,
@@ -644,16 +1028,22 @@ router.get(
       }
 
       /*
-       * --------------------------------------------------------
+       * ========================================================
        * PAYROLL RUN
-       * --------------------------------------------------------
+       * ========================================================
        */
 
       if (entity === "payroll_run") {
-        const result = await pullVersionedCollection(PayrollRun, version, max);
+        const result = await pullVersionedCollection(
+          PayrollRun,
+          companyId,
+          version,
+          max
+        );
 
         return res.json({
           success: true,
+          companyId,
           entity: "payroll_run",
           items: result.items,
           nextVersion: result.nextVersion,
@@ -663,20 +1053,22 @@ router.get(
       }
 
       /*
-       * --------------------------------------------------------
+       * ========================================================
        * PAYROLL RESULT
-       * --------------------------------------------------------
+       * ========================================================
        */
 
       if (entity === "payroll_result") {
         const result = await pullVersionedCollection(
           PayrollResult,
+          companyId,
           version,
           max
         );
 
         return res.json({
           success: true,
+          companyId,
           entity: "payroll_result",
           items: result.items,
           nextVersion: result.nextVersion,
@@ -686,16 +1078,22 @@ router.get(
       }
 
       /*
-       * --------------------------------------------------------
+       * ========================================================
        * PAYROLL ITEM
-       * --------------------------------------------------------
+       * ========================================================
        */
 
       if (entity === "payroll_item") {
-        const result = await pullVersionedCollection(PayrollItem, version, max);
+        const result = await pullVersionedCollection(
+          PayrollItem,
+          companyId,
+          version,
+          max
+        );
 
         return res.json({
           success: true,
+          companyId,
           entity: "payroll_item",
           items: result.items,
           nextVersion: result.nextVersion,
@@ -705,9 +1103,9 @@ router.get(
       }
 
       /*
-       * --------------------------------------------------------
+       * ========================================================
        * UNKNOWN ENTITY
-       * --------------------------------------------------------
+       * ========================================================
        */
 
       return res.status(400).json({

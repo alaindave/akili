@@ -4,12 +4,16 @@ import { all, get, run } from "../db.js";
 import { getEmployeeById } from "./employees.repository.js";
 import { addToSyncQueue } from "./sync.repository.js";
 
-export async function createLeave(leave: Partial<Leave>) {
-  if (!leave.companyId) {
+export async function createLeave(companyId: string, leave: Partial<Leave>) {
+  if (!companyId) {
     throw new Error("COMPANY ID IS REQUIRED");
   }
 
-  const employee = await getEmployeeById(leave.companyId, leave.employeeId!);
+  if (!leave.employeeId) {
+    throw new Error("EMPLOYEE ID IS REQUIRED");
+  }
+
+  const employee = await getEmployeeById(companyId, leave.employeeId);
 
   if (!employee) {
     throw new Error("No employee found with the given ID");
@@ -57,7 +61,7 @@ export async function createLeave(leave: Partial<Leave>) {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?)
     `,
     [
-      leave.companyId,
+      companyId,
       _id,
       leave.employeeId,
       submittedAt,
@@ -74,7 +78,7 @@ export async function createLeave(leave: Partial<Leave>) {
   );
 
   const savedLeave = {
-    companyId: leave.companyId,
+    companyId,
     _id,
     ...leave,
     employeeId: leave.employeeId,
@@ -90,14 +94,14 @@ export async function createLeave(leave: Partial<Leave>) {
   console.log("LEAVE TO SAVE TO SYNC QUEUE", savedLeave);
 
   await addToSyncQueue({
-    companyId: leave.companyId,
+    companyId,
     entity: "leave",
     entityId: _id,
     operation: "create",
     payload: JSON.stringify(savedLeave),
   });
 
-  return getLeaveById(leave.companyId, _id);
+  return getLeaveById(companyId, _id);
 }
 
 export async function getLeaveById(

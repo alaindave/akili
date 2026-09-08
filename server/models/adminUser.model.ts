@@ -9,7 +9,7 @@ export interface AdminUser {
   lastName: string;
   email: string;
   passwordHash: string;
-  roleId: string;
+  role: string;
   notes?: string;
   serverVersion: number;
   createdAt: Date;
@@ -66,9 +66,11 @@ const AdminUserSchema = new Schema<AdminUser, AdminUserModel, AdminUserMethods>(
       maxlength: 1024,
     },
 
-    roleId: {
+    role: {
       type: String,
+      enum: ["MANAGER", "ADMIN", "VIEWER"],
       required: true,
+      default: "ADMIN",
     },
 
     notes: {
@@ -153,8 +155,9 @@ AdminUserSchema.method(
     return jwt.sign(
       {
         _id: this._id,
+        email: this.email,
+        role: this.role,
         companyId: this.companyId,
-        roleId: this.roleId,
       },
       process.env.JWT_PRIVATE_KEY as string,
       {
@@ -174,7 +177,7 @@ export function validateAdminUser(adminUser: Partial<AdminUser>) {
 
     password: Joi.string().min(8).max(255).required(),
 
-    roleId: Joi.string().required(),
+    role: Joi.string(),
   });
 
   return schema.validate(adminUser);

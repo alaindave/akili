@@ -37,7 +37,6 @@ const NotAuthorized = ({
           color="#ffffff"
           bg={buttonClicked ? "red" : color}
           w={width}
-          mt={4}
           _hover={{
             bg: "red",
           }}

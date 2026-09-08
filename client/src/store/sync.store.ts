@@ -31,10 +31,10 @@ const useSyncStore = create<SyncStore>()(
         }),
 
       setSyncCompleted: (timestamp) =>
-        set((state) => ({
+        set((store) => ({
           status: "IDLE",
           lastSyncAt: timestamp,
-          syncVersion: state.syncVersion + 1,
+          syncVersion: store.syncVersion + 1,
         })),
 
       setPendingChanges: (count) =>
@@ -60,8 +60,8 @@ const useSyncStore = create<SyncStore>()(
     {
       name: "sync-store",
 
-      partialize: (state) => ({
-        lastSyncAt: state.lastSyncAt,
+      partialize: (store) => ({
+        lastSyncAt: store.lastSyncAt,
       }),
     }
   )

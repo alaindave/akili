@@ -12,24 +12,28 @@ import type {
 export const attendanceKeys = {
   all: ["attendance"] as const,
 
-  lists: () => [...attendanceKeys.all, "list"] as const,
+  lists: (companyId: string) =>
+    [...attendanceKeys.all, "list", companyId] as const,
 
-  list: () => [...attendanceKeys.lists()] as const,
+  list: (companyId: string) => [...attendanceKeys.lists(companyId)] as const,
 
-  details: () => [...attendanceKeys.all, "detail"] as const,
+  details: (companyId: string) =>
+    [...attendanceKeys.all, "detail", companyId] as const,
 
-  detail: (_id: string) => [...attendanceKeys.details(), _id] as const,
+  detail: (companyId: string, _id: string) =>
+    [...attendanceKeys.details(companyId), _id] as const,
 
-  byEmployee: (employeeId: string) =>
-    [...attendanceKeys.all, "employee", employeeId] as const,
+  byEmployee: (companyId: string, employeeId: string) =>
+    [...attendanceKeys.all, "employee", companyId, employeeId] as const,
 
-  byDate: (date: string) => [...attendanceKeys.all, "date", date] as const,
+  byDate: (companyId: string, date: string) =>
+    [...attendanceKeys.all, "date", companyId, date] as const,
 
-  record: (employeeId: string, date: string) =>
-    [...attendanceKeys.all, "record", employeeId, date] as const,
+  record: (companyId: string, employeeId: string, date: string) =>
+    [...attendanceKeys.all, "record", companyId, employeeId, date] as const,
 
-  employeesWithoutAttendance: (date: string) =>
-    [...attendanceKeys.all, "without-attendance", date] as const,
+  employeesWithoutAttendance: (companyId: string, date: string) =>
+    [...attendanceKeys.all, "without-attendance", companyId, date] as const,
 };
 
 /* =========================================================
@@ -39,22 +43,22 @@ export const attendanceKeys = {
 /**
  * Get all attendance records
  */
-export const useAttendance = () => {
+export const useAttendance = (companyId: string) => {
   return useQuery({
-    queryKey: attendanceKeys.list(),
+    queryKey: attendanceKeys.list(companyId),
 
-    queryFn: () => window.electron.attendance.getAll(),
+    queryFn: () => window.electron.attendance.getAll(companyId),
   });
 };
 
 /**
  * Get attendance record by ID
  */
-export const useAttendanceById = (_id?: string) => {
+export const useAttendanceById = (companyId: string, _id: string) => {
   return useQuery({
-    queryKey: attendanceKeys.detail(_id ?? ""),
+    queryKey: attendanceKeys.detail(companyId, _id),
 
-    queryFn: () => window.electron.attendance.getById(_id!),
+    queryFn: () => window.electron.attendance.getById(companyId, _id!),
 
     enabled: !!_id,
   });
@@ -63,11 +67,15 @@ export const useAttendanceById = (_id?: string) => {
 /**
  * Get attendance records for an employee
  */
-export const useEmployeeAttendance = (employeeId?: string) => {
+export const useEmployeeAttendance = (
+  companyId: string,
+  employeeId: string
+) => {
   return useQuery({
-    queryKey: attendanceKeys.byEmployee(employeeId ?? ""),
+    queryKey: attendanceKeys.byEmployee(companyId, employeeId),
 
-    queryFn: () => window.electron.attendance.getByEmployee(employeeId!),
+    queryFn: () =>
+      window.electron.attendance.getByEmployee(companyId, employeeId!),
 
     enabled: !!employeeId,
   });
@@ -76,12 +84,18 @@ export const useEmployeeAttendance = (employeeId?: string) => {
 /**
  * Get employees without attendance for a specific date
  */
-export const useEmployeesWithoutAttendance = (date?: string) => {
+export const useEmployeesWithoutAttendance = (
+  companyId: string,
+  date: string
+) => {
   return useQuery({
-    queryKey: attendanceKeys.employeesWithoutAttendance(date ?? ""),
+    queryKey: attendanceKeys.employeesWithoutAttendance(companyId, date),
 
     queryFn: () =>
-      window.electron.attendance.getEmployeesWithoutAttendance(date!),
+      window.electron.attendance.getEmployeesWithoutAttendance(
+        companyId,
+        date!
+      ),
 
     enabled: !!date,
   });
@@ -90,11 +104,11 @@ export const useEmployeesWithoutAttendance = (date?: string) => {
 /**
  * Get attendance records for a specific date
  */
-export const useAttendanceByDate = (date?: string) => {
+export const useAttendanceByDate = (companyId: string, date: string) => {
   return useQuery({
-    queryKey: attendanceKeys.byDate(date ?? ""),
+    queryKey: attendanceKeys.byDate(companyId, date),
 
-    queryFn: () => window.electron.attendance.getByDate(date!),
+    queryFn: () => window.electron.attendance.getByDate(companyId, date!),
 
     enabled: !!date,
   });
@@ -103,12 +117,20 @@ export const useAttendanceByDate = (date?: string) => {
 /**
  * Get a specific employee's attendance record for a date
  */
-export const useAttendanceRecord = (employeeId?: string, date?: string) => {
+export const useAttendanceRecord = (
+  companyId: string,
+  employeeId: string,
+  date: string
+) => {
   return useQuery({
-    queryKey: attendanceKeys.record(employeeId ?? "", date ?? ""),
+    queryKey: attendanceKeys.record(companyId, employeeId, date),
 
     queryFn: () =>
-      window.electron.attendance.getAttendanceRecord(employeeId!, date!),
+      window.electron.attendance.getAttendanceRecord(
+        companyId,
+        employeeId!,
+        date!
+      ),
 
     enabled: !!employeeId && !!date,
   });
@@ -121,12 +143,12 @@ export const useAttendanceRecord = (employeeId?: string, date?: string) => {
 /**
  * Create normal attendance
  */
-export const useCreateAttendance = () => {
+export const useCreateAttendance = (companyId: string) => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (input: CreateAttendanceDto) =>
-      window.electron.attendance.create(input),
+      window.electron.attendance.create(companyId, input),
 
     onSuccess: (createdAttendance, input) => {
       /*
@@ -134,7 +156,7 @@ export const useCreateAttendance = () => {
        */
       if (input.employeeId && input.date) {
         queryClient.setQueryData(
-          attendanceKeys.record(input.employeeId, input.date),
+          attendanceKeys.record(companyId, input.employeeId, input.date),
           createdAttendance
         );
       }
@@ -152,7 +174,7 @@ export const useCreateAttendance = () => {
 /**
  * Create ABSENT / CONGÉ attendance
  */
-export const useCreateAbsenceLeave = () => {
+export const useCreateAbsenceLeave = (companyId: string) => {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -165,14 +187,19 @@ export const useCreateAbsenceLeave = () => {
       status: "CONGÉ" | "ABSENT";
       date: string;
     }) =>
-      window.electron.attendance.createAbsenceLeave(employeeId, status, date),
+      window.electron.attendance.createAbsenceLeave(
+        companyId,
+        employeeId,
+        status,
+        date
+      ),
 
     onSuccess: (createdAttendance, variables) => {
       /*
        * Immediately update the employee/date record.
        */
       queryClient.setQueryData(
-        attendanceKeys.record(variables.employeeId, variables.date),
+        attendanceKeys.record(companyId, variables.employeeId, variables.date),
         createdAttendance
       );
 
@@ -184,7 +211,10 @@ export const useCreateAbsenceLeave = () => {
       });
 
       queryClient.invalidateQueries({
-        queryKey: attendanceKeys.employeesWithoutAttendance(variables.date),
+        queryKey: attendanceKeys.employeesWithoutAttendance(
+          companyId,
+          variables.date
+        ),
       });
     },
   });
@@ -201,21 +231,20 @@ export const useCreateAbsenceLeave = () => {
  * This makes clock-in / clock-out / notes updates appear
  * immediately across the application.
  */
-export const useUpdateAttendance = () => {
+export const useUpdateAttendance = (companyId: string) => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: ({
       _id,
       date,
-      employeeId,
       updates,
     }: {
       _id: string;
+      employeeId: string;
       date: string;
-      employeeId?: string;
       updates: Partial<AttendanceWithEmployee>;
-    }) => window.electron.attendance.update(_id, date, updates),
+    }) => window.electron.attendance.update(companyId, _id, date, updates),
 
     onSuccess: (updatedAttendance, variables) => {
       if (!updatedAttendance) return;
@@ -229,7 +258,7 @@ export const useUpdateAttendance = () => {
        */
 
       queryClient.setQueryData(
-        attendanceKeys.detail(variables._id),
+        attendanceKeys.detail(companyId, variables._id),
         updatedAttendance
       );
 
@@ -241,7 +270,7 @@ export const useUpdateAttendance = () => {
 
       if (employeeId) {
         queryClient.setQueryData(
-          attendanceKeys.record(employeeId, variables.date),
+          attendanceKeys.record(companyId, employeeId, variables.date),
           updatedAttendance
         );
       }
@@ -253,7 +282,7 @@ export const useUpdateAttendance = () => {
        */
 
       queryClient.setQueryData<AttendanceWithEmployee[]>(
-        attendanceKeys.byDate(variables.date),
+        attendanceKeys.byDate(companyId, variables.date),
         (old) => {
           if (!old) return old;
 
@@ -271,7 +300,7 @@ export const useUpdateAttendance = () => {
 
       if (employeeId) {
         queryClient.setQueryData<AttendanceWithEmployee[]>(
-          attendanceKeys.byEmployee(employeeId),
+          attendanceKeys.byEmployee(companyId, employeeId),
           (old) => {
             if (!old) return old;
 
@@ -289,7 +318,7 @@ export const useUpdateAttendance = () => {
        */
 
       queryClient.setQueryData<AttendanceWithEmployee[]>(
-        attendanceKeys.list(),
+        attendanceKeys.list(companyId),
         (old) => {
           if (!old) return old;
 
@@ -318,11 +347,12 @@ export const useUpdateAttendance = () => {
 /**
  * Mark employees absent for a date
  */
-export const useMarkAbsent = () => {
+export const useMarkAbsent = (companyId: string) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (date: string) => window.electron.attendance.markAbsent(date),
+    mutationFn: (date: string) =>
+      window.electron.attendance.markAbsent(companyId, date),
 
     onSuccess: (_, date) => {
       queryClient.invalidateQueries({
@@ -330,11 +360,11 @@ export const useMarkAbsent = () => {
       });
 
       queryClient.invalidateQueries({
-        queryKey: attendanceKeys.byDate(date),
+        queryKey: attendanceKeys.byDate(companyId, date),
       });
 
       queryClient.invalidateQueries({
-        queryKey: attendanceKeys.employeesWithoutAttendance(date),
+        queryKey: attendanceKeys.employeesWithoutAttendance(companyId, date),
       });
     },
   });
@@ -343,18 +373,19 @@ export const useMarkAbsent = () => {
 /**
  * Delete attendance
  */
-export const useDeleteAttendance = () => {
+export const useDeleteAttendance = (companyId: string) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (_id: string) => window.electron.attendance.delete(_id),
+    mutationFn: (_id: string) =>
+      window.electron.attendance.delete(companyId, _id),
 
     onSuccess: (_, _id) => {
       /*
        * Remove individual detail cache.
        */
       queryClient.removeQueries({
-        queryKey: attendanceKeys.detail(_id),
+        queryKey: attendanceKeys.detail(companyId, _id),
       });
 
       /*

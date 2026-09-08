@@ -3,7 +3,7 @@ export default interface OfflineUser {
   _id: string;
   email: string;
   password: string;
-  role: "admin" | "manager";
+  role: "ADMIN" | "MANAGER" | "VIEWER";
   firstName: string;
   lastName: string;
   notes?: string;

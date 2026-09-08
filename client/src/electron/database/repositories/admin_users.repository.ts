@@ -33,6 +33,7 @@ export async function upsertAdminUser(adminUser: Partial<AdminUser>) {
 
       `,
       [
+        adminUser.companyId,
         adminUser._id,
         adminUser.firstName,
         adminUser.lastName,
@@ -49,26 +50,32 @@ export async function upsertAdminUser(adminUser: Partial<AdminUser>) {
   }
 }
 
-export async function getAllAdminUsers(): Promise<AdminUser[] | null> {
+export async function getAllAdminUsers(
+  companyId: string
+): Promise<AdminUser[] | null> {
   return all(
     `
       SELECT *
       FROM admin_users
+      WHERE companyId=?
       ORDER BY lastName ASC
-    `
+    `,
+    [companyId]
   );
 }
 
 export async function getAdminUsersById(
+  companyId: string,
   _id: string
 ): Promise<AdminUser | null> {
   return get(
     ` 
       SELECT *
       FROM admin_users
-      WHERE _id = ?
+      WHERE companyId  = ?
+        AND _id=?
     
     `,
-    [_id]
+    [companyId, _id]
   );
 }

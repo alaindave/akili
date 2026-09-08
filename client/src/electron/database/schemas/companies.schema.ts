@@ -3,9 +3,10 @@ import { run } from "../db.js";
 export async function createCompanyTable() {
   await run(`
 CREATE TABLE IF NOT EXISTS companies (
-  companyId TEXT PRIMARY KEY,
+  _id TEXT PRIMARY KEY,
+  companyId TEXT NOT NULL,
   name TEXT NOT NULL,
-  signupCode TEXT,
+  legalName TEXT ,
   logoPath TEXT,
   address TEXT,
   city TEXT,

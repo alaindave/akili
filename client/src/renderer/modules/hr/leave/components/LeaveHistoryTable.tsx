@@ -17,7 +17,7 @@ const statusColor = (status: string) => {
       return "green";
     case "REFUSÉ":
       return "red";
-    case "EN ATTENTE D'APPROBATION":
+    case "ATTENTE_APPROBATION":
       return "orange";
     case "ANNULÉ":
       return "blue";

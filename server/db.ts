@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-
+import Company from "./models/company.model.js";
 import Employee from "./models/employee.model.js";
 import Attendance from "./models/attendance.model.js";
 import Leave from "./models/leave.model.js";
@@ -29,7 +29,7 @@ interface AdminUserInput {
   firstName: string;
   lastName: string;
   email: string;
-  password: string;
+  passwordHash: string;
 }
 
 interface TaskInput {
@@ -49,22 +49,32 @@ interface AttendanceUpdate {
   [key: string]: unknown;
 }
 
+// ================= COMPANY =================
+
+export const getCompanyById = async (companyId: string) => {
+  return Company.findOne({
+    companyId,
+  });
+};
+
 // ================= ADMIN =================
 
 export const createAdminUser = async ({
+  companyId,
   firstName,
   lastName,
   email,
-  password,
+  passwordHash,
 }: AdminUserInput) => {
   const serverVersion = await getNextSyncVersion("admin_user");
 
   const adminUser = new AdminUser({
+    companyId,
     _id: randomUUID(),
     firstName,
     lastName,
     email,
-    password,
+    passwordHash,
     serverVersion,
     createdAt: new Date(),
     updatedAt: new Date(),

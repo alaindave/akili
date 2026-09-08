@@ -1,5 +1,6 @@
 export interface Company {
   _id: string;
+  companyId: string;
   name: string;
   legalName: string | null;
   registrationNumber: string | null;

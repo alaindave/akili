@@ -7,7 +7,11 @@ const SYNC_INTERVAL = 2 * 60 * 1000;
 let syncInterval: NodeJS.Timeout | null = null;
 let syncing = false;
 
-export function startBackgroundSync() {
+export function startBackgroundSync(companyId: string) {
+  if (!companyId) {
+    console.log("NO COMPANY CONFIGURED. BACKGROUND SYNC WAITING.");
+    return;
+  }
   if (syncInterval) {
     console.log("BACKGROUND SYNC ALREADY STARTED");
     return;
@@ -16,10 +20,10 @@ export function startBackgroundSync() {
   console.log("STARTING BACKGROUND SYNC...");
 
   // Perform one immediately when Electron starts
-  runBackgroundSync();
+  runBackgroundSync(companyId);
 
   syncInterval = setInterval(() => {
-    runBackgroundSync();
+    runBackgroundSync(companyId);
   }, SYNC_INTERVAL);
 }
 
@@ -34,7 +38,7 @@ export function stopBackgroundSync() {
   console.log("BACKGROUND SYNC STOPPED");
 }
 
-async function runBackgroundSync() {
+async function runBackgroundSync(companyId: string) {
   if (syncing) {
     console.log("SYNC ALREADY IN PROGRESS. SKIPPING...");
     notifyRenderer({
@@ -62,7 +66,7 @@ async function runBackgroundSync() {
 
     console.log("BACKGROUND SYNC STARTED...");
 
-    await sync();
+    await sync(companyId);
 
     console.log("BACKGROUND SYNC COMPLETED");
   } catch (error) {

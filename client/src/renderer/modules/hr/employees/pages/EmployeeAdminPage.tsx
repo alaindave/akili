@@ -12,7 +12,7 @@ import { IoReloadOutline } from "react-icons/io5";
 import { useEffect, useRef, useState } from "react";
 import { FaBell } from "react-icons/fa";
 
-import type Attendance from "../../../../../common/types/Attendance";
+import type { Attendance } from "../../../../../common/types/Attendance";
 import type Employee from "../../../../../common/types/Employee";
 import type Leave from "../../../../../common/types/Leave";
 import type AdminUser from "../../../../../common/types/AdminUser";
@@ -91,7 +91,7 @@ const EmployeeAdminPage = () => {
     try {
       setLoading(true);
 
-      const employees = await window.electron.employees.getAll();
+      const employees = await window.electron.employees.getAll(user.companyId);
 
       setEmployees(employees);
 
@@ -99,19 +99,27 @@ const EmployeeAdminPage = () => {
 
       const today = new Date().toISOString().split("T")[0];
 
-      const attendances = await window.electron.attendance.getByDate(today);
+      const attendances = await window.electron.attendance.getByDate(
+        user.companyId,
+        today
+      );
 
       setAttendances(attendances);
 
       console.log("FETCHED ATTENDANCES:", attendances);
 
-      const leaves = await window.electron.leave.getOngoingLeaves(today);
+      const leaves = await window.electron.leave.getOngoingLeaves(
+        user.companyId,
+        today
+      );
 
       setLeaves(leaves);
 
       console.log("FETCHED ONGOING LEAVES:", leaves);
 
-      const admin_users = await window.electron.adminUsers.getAll();
+      const admin_users = await window.electron.adminUsers.getAll(
+        user.companyId
+      );
 
       setAdminUsersList(admin_users);
 

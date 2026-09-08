@@ -1,4 +1,4 @@
-import { Box, Flex, HStack, Text } from "@chakra-ui/react";
+import { Box, Flex, HStack, Text, VStack } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import LeaveHistoryTable from "../components/LeaveHistoryTable";
 import { Link, useLocation } from "react-router-dom";
@@ -6,6 +6,7 @@ import Employee from "../../../../../common/types/Employee";
 import Leave from "../../../../../common/types/Leave";
 import { MdOutlineChevronRight } from "react-icons/md";
 import { FaArrowLeftLong } from "react-icons/fa6";
+import useAdminUser from "../../../../../store/auth.store";
 
 type EmployeeState = {
   employee?: Employee;
@@ -20,11 +21,13 @@ const EmployeeLeaveReport = () => {
   const { employee } = (location.state as EmployeeState) || {};
   const { photo_url } = (location.state as PhotoState) || "";
   const [leaves, setLeaves] = useState<Leave[]>([]);
+  const user = useAdminUser((store) => store.adminUser);
 
   useEffect(() => {
     async function getLeaveHistory() {
       if (!employee?._id) return;
       const leaves = await window.electron.leave.getLeaveByEmployeeId(
+        user.companyId,
         employee?._id
       );
       console.log("Leave history fetched:", leaves);
@@ -76,15 +79,34 @@ const EmployeeLeaveReport = () => {
       {leaves.length != 0 ? (
         <LeaveHistoryTable leaves={leaves} />
       ) : (
-        <Text
-          fontSize="1.7rem"
-          color="gray.800"
-          position="relative"
-          left="20rem"
-          top="15rem"
+        <Flex
+          ml="0.5rem"
+          mt="3rem"
+          width="80vw"
+          minHeight={{
+            base: "180px",
+            md: "220px",
+          }}
+          align="center"
+          justify="center"
+          bg="#ffffff"
+          border="1px solid #E2E8F0"
+          borderRadius="8px"
+          px="20px"
+          flexShrink={0}
         >
-          Pas de congés à afficher
-        </Text>
+          <Text
+            fontSize={{
+              base: "1rem",
+              md: "1.1rem",
+            }}
+            fontWeight="600"
+            color="gray.700"
+            textAlign="center"
+          >
+            Aucune demande de congé retrouvée
+          </Text>
+        </Flex>
       )}
     </Flex>
   );

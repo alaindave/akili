@@ -18,7 +18,10 @@ export function registerEmployeeIPC() {
 
   // Create employee
   ipcMain.handle("employees:create", async (_, companyId, employee) => {
-    console.log("EMPLOYEE CREATE IPC RECEIVED");
+    console.log(
+      `EMPLOYEE CREATE IPC RECEIVED for employee: ${employee}.Company: ${companyId}`,
+      employee
+    );
 
     return createEmployee(companyId, employee);
   });

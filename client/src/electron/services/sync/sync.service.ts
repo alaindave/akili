@@ -14,7 +14,7 @@ const API_URL = app.isPackaged
 
 let syncing = false;
 
-export default async function sync() {
+export default async function sync(companyId: string) {
   console.log("SYNC SERVICE API URL:", API_URL);
 
   if (syncing) {
@@ -49,7 +49,7 @@ export default async function sync() {
     if (!backendAvailable) {
       console.log("BACKEND UNAVAILABLE. SYNC SKIPPED.");
 
-      const pendingChanges = await getPendingChangesCount();
+      const pendingChanges = await getPendingChangesCount(companyId);
 
       notifyRenderer({
         status: "OFFLINE",
@@ -66,11 +66,12 @@ export default async function sync() {
      * ---------------------------------------------------------
      */
     try {
-      const pushResult = await pushPendingChanges();
+      const pushResult = await pushPendingChanges(companyId);
       console.log("PUSH RESULTS:", pushResult);
+      console.log("COMPANY ID", companyId);
     } catch (error) {
       console.error("PUSH FAILED:", error);
-      const pendingChanges = await getPendingChangesCount();
+      const pendingChanges = await getPendingChangesCount(companyId);
 
       notifyRenderer({
         status: "ERROR",
@@ -87,7 +88,7 @@ export default async function sync() {
      * GET CURRENT PENDING COUNT
      * ---------------------------------------------------------
      */
-    const pendingAfterPush = await getPendingChangesCount();
+    const pendingAfterPush = await getPendingChangesCount(companyId);
 
     console.log("PENDING CHANGES AFTER PUSH:", pendingAfterPush);
 
@@ -107,7 +108,7 @@ export default async function sync() {
        * Even if pull fails, report the current SQLite queue
        * count so the renderer has accurate pending information.
        */
-      const pendingChanges = await getPendingChangesCount();
+      const pendingChanges = await getPendingChangesCount(companyId);
 
       notifyRenderer({
         status: "ERROR",
@@ -125,7 +126,7 @@ export default async function sync() {
      * ---------------------------------------------------------
    
      */
-    const pendingChanges = await getPendingChangesCount();
+    const pendingChanges = await getPendingChangesCount(companyId);
 
     console.log("FINAL PENDING CHANGES:", pendingChanges);
 
@@ -134,16 +135,18 @@ export default async function sync() {
      * SYNC COMPLETE
      * ---------------------------------------------------------
      */
+    console.log("TIMESTAMP:", new Date().toISOString());
+
     notifyRenderer({
       status: "IDLE",
       timestamp: new Date().toISOString(),
       pendingChanges,
     });
-    await notifyPendingChanges();
+    await notifyPendingChanges(companyId);
   } catch (error) {
     console.error("SYNC FAILED:", error);
 
-    const pendingChanges = await getPendingChangesCount();
+    const pendingChanges = await getPendingChangesCount(companyId);
 
     notifyRenderer({
       status: "ERROR",
@@ -161,9 +164,9 @@ export default async function sync() {
  * GET CURRENT PENDING CHANGES
  * ---------------------------------------------------------
  */
-async function getPendingChangesCount(): Promise<number> {
+async function getPendingChangesCount(companyId: string): Promise<number> {
   try {
-    const pending = await getUnsyncedItems();
+    const pending = await getUnsyncedItems(companyId);
     return pending.length;
   } catch (error) {
     console.error("FAILED TO GET PENDING CHANGES:", error);

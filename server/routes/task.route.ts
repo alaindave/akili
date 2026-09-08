@@ -5,6 +5,7 @@ import { saveTask, getTasks } from "../db.js";
 const router = express.Router();
 
 interface CreateTaskBody {
+  companyId: string;
   author: string;
   recipients: string[];
   message: string;
@@ -26,6 +27,7 @@ router.post(
       const io = req.app.get("io");
 
       const task = {
+        companyId: req.body.companyId,
         author: req.body.author,
         recipients: req.body.recipients,
         message: req.body.message,

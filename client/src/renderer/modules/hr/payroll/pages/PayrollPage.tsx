@@ -18,6 +18,7 @@ import {
   Thead,
   Tr,
   useToast,
+  VStack,
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { FaSyncAlt } from "react-icons/fa";
@@ -176,7 +177,7 @@ export default function PayrollPage() {
   const handlePayrollSync = async () => {
     try {
       setLoading(true);
-      const result = await window.electron.sync();
+      const result = await window.electron.sync(user.companyId);
       if (result.success) {
         console.log("SYNC COMPLETED");
         loadPayrollRun();
@@ -270,7 +271,13 @@ export default function PayrollPage() {
   } as const;
 
   return (
-    <Flex direction="column" justify="space-between" height="93vh" width="100%">
+    <Flex
+      bg="#F8F9FB"
+      direction="column"
+      justify="space-between"
+      height="93vh"
+      width="100%"
+    >
       <Box>
         <Flex width="100%" justify="space-between">
           <Box>
@@ -326,18 +333,49 @@ export default function PayrollPage() {
           </Box>
         </Flex>
 
-        <Box mt="4rem" ml="5rem">
+        <Box mt="5rem" ml="1rem">
           {payrollRuns.length === 0 ? (
-            <Text
-              position="relative"
-              top="14rem"
-              left="15rem"
-              color="gray.700"
-              fontSize="2rem"
-              fontWeight="500"
+            <Flex
+              ml="0.5rem"
+              mt="4rem"
+              width="78vw"
+              minHeight={{
+                base: "180px",
+                md: "220px",
+              }}
+              align="center"
+              justify="center"
+              bg="#ffffff"
+              border="1px solid #E2E8F0"
+              borderRadius="8px"
+              px="20px"
+              flexShrink={0}
             >
-              Pas de fiches de payes à afficher.
-            </Text>
+              <VStack spacing="6px">
+                <Text
+                  fontSize={{
+                    base: "1rem",
+                    md: "1.1rem",
+                  }}
+                  fontWeight="600"
+                  color="gray.700"
+                  textAlign="center"
+                >
+                  Pas de fiches de paye a afficher.
+                </Text>
+
+                <Text
+                  fontSize={{
+                    base: "0.85rem",
+                    md: "0.9rem",
+                  }}
+                  color="gray.500"
+                  textAlign="center"
+                >
+                  Essayez de modifier votre recherche ou votre filtre.
+                </Text>
+              </VStack>
+            </Flex>
           ) : (
             <Box mb="2rem" ml="2rem">
               <Box mb="0.7rem">

@@ -64,7 +64,7 @@ const EmployeeLeaveCard = ({ leave, onDelete, gridTemplate }: Props) => {
 
   const [photoUrl, setPhotoUrl] = useState("");
 
-  const adminUser = useAdminUser((store) => store.adminUser);
+  const user = useAdminUser((store) => store.adminUser);
 
   /* =======================================================
      REACT QUERY
@@ -74,9 +74,9 @@ const EmployeeLeaveCard = ({ leave, onDelete, gridTemplate }: Props) => {
 
   const updateEmployeeMutation = useUpdateEmployee();
 
-  const updateLeaveMutation = useUpdateLeave();
+  const updateLeaveMutation = useUpdateLeave(user.companyId);
 
-  const cancelLeaveMutation = useCancelLeave();
+  const cancelLeaveMutation = useCancelLeave(user.companyId);
 
   /* =======================================================
      LEAVE DATA
@@ -241,6 +241,7 @@ const EmployeeLeaveCard = ({ leave, onDelete, gridTemplate }: Props) => {
       --------------------------------------------------- */
 
       await updateEmployeeMutation.mutateAsync({
+        companyId: user.companyId,
         _id: employeeId,
         data: {
           remainingLeave: updatedRemainingLeave,
@@ -379,6 +380,7 @@ const EmployeeLeaveCard = ({ leave, onDelete, gridTemplate }: Props) => {
         ------------------------------------------------- */
 
       await updateEmployeeMutation.mutateAsync({
+        companyId: user.companyId,
         _id: employeeId,
         data: {
           remainingLeave: restoredRemainingLeave,
@@ -443,7 +445,7 @@ const EmployeeLeaveCard = ({ leave, onDelete, gridTemplate }: Props) => {
       borderWidth="0.3px"
       boxShadow="0 2px 10px rgba(15,23,42,.06)"
       minH="6.3rem"
-      width="78.5vw"
+      width="80vw"
       marginBottom="0.8px"
     >
       {/* ===================================================
@@ -550,7 +552,7 @@ const EmployeeLeaveCard = ({ leave, onDelete, gridTemplate }: Props) => {
           ACTIONS
       =================================================== */}
 
-      {adminUser?.role === "MANAGER" ? (
+      {user.role === "MANAGER" ? (
         <Box>
           <Text color="gray.200" fontSize="1.1rem">
             <Menu placement="left">
@@ -643,9 +645,7 @@ const EmployeeLeaveCard = ({ leave, onDelete, gridTemplate }: Props) => {
                       }}
                       onClick={onOpen}
                     >
-                      <Text fontWeight="600" position="relative" top="8px">
-                        Modifier
-                      </Text>
+                      <Text fontWeight="600">Modifier</Text>
 
                       <LeaveEdit
                         leave={leave}
@@ -776,12 +776,7 @@ const EmployeeLeaveCard = ({ leave, onDelete, gridTemplate }: Props) => {
                       <MdOutlineDeleteForever color="red.300" size="1.2rem" />
                     }
                   >
-                    <Text
-                      fontWeight="600"
-                      fontSize="1.1rem"
-                      position="relative"
-                      top="0.5rem"
-                    >
+                    <Text fontWeight="600" fontSize="1.1rem">
                       Annuler
                     </Text>
                   </MenuItem>
