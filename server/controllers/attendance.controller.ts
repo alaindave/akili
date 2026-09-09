@@ -2,10 +2,19 @@ import type { Request, Response } from "express";
 import { markAbsentEmployees } from "../services/markEmployeeAbsent.service.js";
 
 export async function markAbsentEmployeesHandler(req: Request, res: Response) {
-  console.log("ABSENCE SERVICE ROUTE HIT");
   const { date } = req.body;
+  const companyId = req.headers["x-company-id"];
+  console.log("ABSENCE SERVICE ROUTE HIT.CID:", companyId);
+
+  if (!companyId || typeof companyId !== "string") {
+    return res.status(400).json({
+      success: false,
+      message: "Company ID is required",
+    });
+  }
+
   try {
-    const result = await markAbsentEmployees(date);
+    const result = await markAbsentEmployees(companyId, date);
 
     console.log("MARK ABSENT SUCCESS", result);
 

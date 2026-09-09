@@ -259,17 +259,13 @@ export async function syncEmployeePhoto(data: SyncData, file?: UploadedFile) {
     throw new Error("PHOTO FILE MISSING");
   }
 
-  const sanitizeFolderPart = (value: string) =>
-    value.replace(/[<>:"/\\|?*\x00-\x1F]/g, "").replace(/\s+/g, "_");
+  const employeeId = employee._id.toString();
 
-  const employeeFolderName = [
-    companyId,
-    employee.firstName,
-    employee.lastName,
-    employee._id,
-  ]
-    .map((value) => sanitizeFolderPart(String(value)))
-    .join("_");
+  /*
+   * ---------------------------------------------------------
+   * PHOTO VERSION
+   * ---------------------------------------------------------
+   */
 
   const photoVersion = Number(data.photo_version ?? 1);
 
@@ -277,24 +273,68 @@ export async function syncEmployeePhoto(data: SyncData, file?: UploadedFile) {
     throw new Error(`INVALID PHOTO VERSION: ${data.photo_version}`);
   }
 
-  const objectPath = `${employeeFolderName}/photo_v${photoVersion}`;
+  /*
+   * ---------------------------------------------------------
+   * SUPABASE STORAGE PATH
+   * ---------------------------------------------------------
+   *
+   * employee-photos/
+   *   {companyId}/
+   *     {employeeId}/
+   *       photo_v{version}.jpg
+   *
+   * Example:
+   *
+   * employee-photos/
+   *   64abc123/
+   *     89xyz456/
+   *       photo_v3.jpg
+   *
+   * Only the newest photo is kept.
+   */
+
+  const extension = (() => {
+    const mimeType = data.photo_mime_type || file.mimetype;
+
+    switch (mimeType) {
+      case "image/png":
+        return ".png";
+
+      case "image/webp":
+        return ".webp";
+
+      case "image/jpeg":
+      case "image/jpg":
+      default:
+        return ".jpg";
+    }
+  })();
+
+  const objectPath = `${companyId}/${employeeId}/photo_v${photoVersion}${extension}`;
 
   const previousObjectPath = employee.photo_path;
 
   console.log("UPLOADING EMPLOYEE PHOTO:", {
     companyId,
-    employeeId: employee._id,
+    employeeId,
     previousObjectPath,
     newObjectPath: objectPath,
     photoVersion,
-    mimeType: data.photo_mime_type,
+    mimeType: data.photo_mime_type || file.mimetype,
     hash: data.photo_hash,
   });
 
+  /*
+   * ---------------------------------------------------------
+   * UPLOAD NEW PHOTO
+   * ---------------------------------------------------------
+   *
+   */
+
   const { error: uploadError } = await supabase.storage
-    .from("afritan_employees_photos")
+    .from("employees_photos")
     .upload(objectPath, file.buffer, {
-      contentType: data.photo_mime_type,
+      contentType: data.photo_mime_type || file.mimetype,
       upsert: true,
       cacheControl: "0",
     });
@@ -305,28 +345,53 @@ export async function syncEmployeePhoto(data: SyncData, file?: UploadedFile) {
 
   console.log("NEW EMPLOYEE PHOTO UPLOADED:", {
     companyId,
-    employeeId: employee._id,
+    employeeId,
     objectPath,
+    photoVersion,
   });
+
+  /*
+   * ---------------------------------------------------------
+   * DELETE PREVIOUS PHOTO
+   * ---------------------------------------------------------
+   *
+   * Because filenames contain the version, upsert alone would
+   * create multiple files:
+   *
+   * photo_v1.jpg
+   * photo_v2.jpg
+   * photo_v3.jpg
+   *
+   * Therefore we explicitly remove the previous photo.
+   */
 
   if (previousObjectPath && previousObjectPath !== objectPath) {
     const { error: deleteError } = await supabase.storage
-      .from("afritan_employees_photos")
+      .from("employees_photos")
       .remove([previousObjectPath]);
 
     if (deleteError) {
+      /*
+       * The new photo exists, but the old one could not be
+       * removed. Throw so the sync is NOT considered successful.
+       */
       throw new Error(
-        `NEW PHOTO UPLOADED BUT FAILED TO DELETE OLD PHOTO: ` +
-          deleteError.message
+        `NEW PHOTO UPLOADED BUT FAILED TO DELETE OLD PHOTO: ${deleteError.message}`
       );
     }
 
     console.log("OLD EMPLOYEE PHOTO DELETED:", {
       companyId,
-      employeeId: employee._id,
+      employeeId,
       previousObjectPath,
     });
   }
+
+  /*
+   * ---------------------------------------------------------
+   * UPDATE EMPLOYEE
+   * ---------------------------------------------------------
+   */
 
   const serverVersion = await getServerVersion("employee");
 
@@ -336,7 +401,7 @@ export async function syncEmployeePhoto(data: SyncData, file?: UploadedFile) {
     photo_filename: data.photo_filename,
     photo_path: objectPath,
     photo_hash: data.photo_hash,
-    photo_mime_type: data.photo_mime_type,
+    photo_mime_type: data.photo_mime_type || file.mimetype,
 
     photo_last_modified: data.photo_last_modified
       ? new Date(data.photo_last_modified)
@@ -352,22 +417,26 @@ export async function syncEmployeePhoto(data: SyncData, file?: UploadedFile) {
 
   console.log("EMPLOYEE PHOTO SYNCED SUCCESSFULLY:", {
     companyId,
-    employeeId: employee._id,
-    photoVersion,
+    employeeId,
     photoPath: objectPath,
+    photoVersion,
     serverVersion,
   });
 
   return {
     success: true,
     companyId,
-    employeeId: employee._id,
+    employeeId,
     serverVersion,
     updatedAt: employee.updatedAt,
     photoVersion,
     photoPath: objectPath,
   };
 }
+
+// ============================================================
+// EMPLOYEE DOCUMENTS
+// ============================================================
 
 // ============================================================
 // EMPLOYEE DOCUMENTS
@@ -381,10 +450,15 @@ export async function syncEmployeeDocument(
   const companyId = requireCompanyId(data);
   requireUpdatedAt(data);
 
-  const employee = await Employee.findOne({ _id: data.employeeId, companyId });
+  const employee = await Employee.findOne({
+    _id: data.employeeId,
+    companyId,
+  });
 
   if (!employee) {
-    throw new Error("EMPLOYEE NOT FOUND");
+    throw new Error(
+      `EMPLOYEE ${data.employeeId} NOT FOUND IN COMPANY ${companyId}`
+    );
   }
 
   const serverVersion = await getServerVersion("employee_document");
@@ -396,20 +470,53 @@ export async function syncEmployeeDocument(
         throw new Error("DOCUMENT FILE MISSING");
       }
 
-      const objectPath = `${employee.firstName}_${employee.lastName}_${employee._id}/${data.documentType}`;
+      const employeeId = employee._id.toString();
+
+      const sanitizePathPart = (value: string) =>
+        value
+          .replace(/[<>:"/\\|?*\x00-\x1F]/g, "")
+          .replace(/\s+/g, "_")
+          .trim();
+
+      const documentName = sanitizePathPart(
+        String(data.documentType || file.originalname)
+      );
+
+      const objectPath = `${companyId}/${employeeId}/${documentName}`;
+
+      console.log("UPLOADING EMPLOYEE DOCUMENT:", {
+        companyId,
+        employeeId,
+        documentName,
+        objectPath,
+      });
+
+      /*
+       * --------------------------------------------------------
+       * UPLOAD
+       * --------------------------------------------------------
+       */
 
       const { error } = await supabase.storage
-        .from("afritan_employees_documents")
+        .from("employees_documents")
         .upload(objectPath, file.buffer, {
-          contentType: data.mimeType,
+          contentType: data.mimeType || file.mimetype,
           upsert: true,
+          cacheControl: "0",
         });
 
       if (error) {
-        throw error;
+        throw new Error(`FAILED TO UPLOAD EMPLOYEE DOCUMENT: ${error.message}`);
       }
 
+      /*
+       * --------------------------------------------------------
+       * SAVE DOCUMENT METADATA
+       * --------------------------------------------------------
+       */
+
       const { _id, fields } = cleanSyncFields(data);
+
       fields.companyId = companyId;
 
       await EmployeesDocuments.updateOne(
@@ -434,15 +541,49 @@ export async function syncEmployeeDocument(
         }
       );
 
+      console.log("EMPLOYEE DOCUMENT SYNCED:", {
+        _id,
+        companyId,
+        employeeId,
+        storagePath: objectPath,
+        serverVersion,
+      });
+
       return {
         success: true,
         _id,
+        companyId,
+        employeeId,
         serverVersion,
         updatedAt: data.updatedAt,
+        storagePath: objectPath,
       };
     }
 
     case "DELETE": {
+      /*
+       * --------------------------------------------------------
+       * DELETE DOCUMENT
+       * --------------------------------------------------------
+       */
+
+      const document = await EmployeesDocuments.findOne({
+        _id: data._id,
+        companyId,
+      });
+
+      if (document?.storagePath) {
+        const { error: deleteError } = await supabase.storage
+          .from("employees_documents")
+          .remove([document.storagePath]);
+
+        if (deleteError) {
+          throw new Error(
+            `FAILED TO DELETE EMPLOYEE DOCUMENT: ${deleteError.message}`
+          );
+        }
+      }
+
       await EmployeesDocuments.updateOne(
         {
           _id: data._id,
@@ -457,9 +598,16 @@ export async function syncEmployeeDocument(
         }
       );
 
+      console.log("EMPLOYEE DOCUMENT DELETED:", {
+        _id: data._id,
+        companyId,
+        serverVersion,
+      });
+
       return {
         success: true,
         _id: data._id,
+        companyId,
         serverVersion,
         updatedAt: data.updatedAt,
       };

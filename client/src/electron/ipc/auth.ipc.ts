@@ -50,11 +50,11 @@ async function initializeLocalCompany(company: any): Promise<void> {
 
   console.log(`LOCAL COMPANY FOUND: ${localCompany.companyId}`);
 
-  // if (localCompany.companyId !== company.companyId) {
-  //   throw new Error(
-  //     `THIS INSTALLATION IS ALREADY ASSOCIATED WITH COMPANY ${localCompany.companyId}`
-  //   );
-  // }
+  if (localCompany.companyId !== company.companyId) {
+    throw new Error(
+      `THIS INSTALLATION IS ALREADY ASSOCIATED WITH COMPANY ${localCompany.companyId}`
+    );
+  }
 
   console.log("COMPANY ID VERIFIED.");
 }

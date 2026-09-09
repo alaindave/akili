@@ -1,7 +1,6 @@
 import axios from "axios";
 import { app } from "electron";
 import path from "path";
-import { getCompanyId } from "../../database/repositories/companies.repository.js";
 import { getEmployeeById } from "../../database/repositories/employees.repository.js";
 import { setSetting } from "../../database/repositories/settings.repository.js";
 import { upsertAdminUser } from "../../database/repositories/admin_users.repository.js";
@@ -97,12 +96,10 @@ interface VersionPullResult<T> {
   serverTime?: string;
 }
 
-export async function pullLatestChanges() {
+export async function pullLatestChanges(companyId: string) {
   console.log("PULL SERVICE API URL:", API_URL);
 
   try {
-    const companyId = await getCompanyId();
-
     if (!companyId) {
       throw new Error("CANNOT PULL CHANGES: NO LOCAL COMPANY ID FOUND.");
     }

@@ -8,26 +8,26 @@ import {
   Textarea,
   useDisclosure,
 } from "@chakra-ui/react";
-import { IoReloadOutline } from "react-icons/io5";
 import { useEffect, useRef, useState } from "react";
 import { FaBell } from "react-icons/fa";
+import { IoReloadOutline } from "react-icons/io5";
 
+import type AdminUser from "../../../../../common/types/AdminUser";
 import type { Attendance } from "../../../../../common/types/Attendance";
 import type Employee from "../../../../../common/types/Employee";
 import type Leave from "../../../../../common/types/Leave";
-import type AdminUser from "../../../../../common/types/AdminUser";
 import type Task from "../../../../../common/types/Task";
 
 import useAdminUser from "../../../../../store/auth.store";
-import useTaskStore from "../../../../../store/task.store";
 import useSyncStore from "../../../../../store/sync.store";
+import useTaskStore from "../../../../../store/task.store";
 
-import EmployeeDashboard from "../components/EmployeeDashboard";
-import TaskSubmissionModal from "../../../tasks/components/TaskSubmissionModal";
+import ReminderModal from "../../../../components/ReminderModal";
 import TaskCard from "../../../tasks/components/TaskCard";
 import TaskDetailsDrawer from "../../../tasks/components/TaskDetailsDrawer";
+import TaskSubmissionModal from "../../../tasks/components/TaskSubmissionModal";
+import EmployeeDashboard from "../components/EmployeeDashboard";
 import QuickActions from "../components/EmployeeQuickActions";
-import ReminderModal from "../../../../components/ReminderModal";
 
 const EmployeeAdminPage = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -38,7 +38,6 @@ const EmployeeAdminPage = () => {
   const [loading, setLoading] = useState(false);
   const user = useAdminUser((store) => store.adminUser);
   const [notes, setNotes] = useState(user.notes);
-
   const saveNotes = useAdminUser((store) => store.saveNotes);
   const loadTopTasks = useTaskStore((store) => store.loadTopTasks);
   const deleteTask = useTaskStore((store) => store.deleteTask);

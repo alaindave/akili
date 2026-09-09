@@ -253,7 +253,7 @@ const EmployeeLeavePage = () => {
           >
             Gérez les demandes de congés
           </Text>
-          <Box mt="2rem" ml="0.5rem">
+          <Box mt="2.5rem" ml="0.5rem">
             <EmployeeFilterMenu onFilterClicked={setFilter} />
           </Box>
         </Box>
@@ -276,7 +276,7 @@ const EmployeeLeavePage = () => {
 
             <Text>Soumettre une demande</Text>
           </Button>
-          <Box mt="5rem">
+          <Box mt="5.5rem">
             <SearchBar
               placeholderText="Rechercher un employé"
               onSearch={setSearchText}
@@ -292,7 +292,7 @@ const EmployeeLeavePage = () => {
       {leaves.length === 0 ? (
         <Flex
           ml="0.5rem"
-          mt="3rem"
+          mt="7rem"
           width="80vw"
           minHeight={{
             base: "180px",
@@ -312,22 +312,11 @@ const EmployeeLeavePage = () => {
                 base: "1rem",
                 md: "1.1rem",
               }}
-              fontWeight="600"
-              color="gray.700"
-              textAlign="center"
-            >
-              Aucune demande de congé retrouvé
-            </Text>
-
-            <Text
-              fontSize={{
-                base: "0.85rem",
-                md: "0.9rem",
-              }}
+              fontWeight="500"
               color="gray.500"
               textAlign="center"
             >
-              Essayez de modifier votre recherche ou votre filtre.
+              Aucune demande de congé retrouvée
             </Text>
           </VStack>
         </Flex>
@@ -346,40 +335,40 @@ const EmployeeLeavePage = () => {
             width="80vw"
             overflowY="hidden"
             overflowX="hidden"
-            mt="1rem"
+            mt="2.3rem"
             ml="0.4rem"
           >
-            <Text color="gray.800" fontSize="1.1rem" ml={8} mt={4}>
+            <Text color="gray.800" fontSize="1rem" ml={8} mt={4}>
               Employé
             </Text>
 
-            <Text color="gray.800" fontSize="1.1rem" mt={4}>
+            <Text color="gray.800" fontSize="1rem" mt={4}>
               Debut de congé
             </Text>
 
-            <Text color="gray.800" fontSize="1.1rem" mt={4}>
+            <Text color="gray.800" fontSize="1rem" mt={4}>
               Fin de congé
             </Text>
 
-            <Text mt={4} ml={2} color="gray.800" fontSize="1.1rem">
+            <Text mt={4} ml={2} color="gray.800" fontSize="1rem">
               Motif
             </Text>
 
-            <Text color="gray.800" fontSize="1.1rem" mt={4}>
+            <Text color="gray.800" fontSize="1rem" mt={4}>
               Statut
             </Text>
 
             <Box mt="0.4rem" position="relative" right="1rem">
-              <Text color="gray.800" fontSize="1.1rem">
+              <Text color="gray.800" fontSize="1rem">
                 Congés
               </Text>
 
-              <Text color="gray.800" fontSize="1.1rem">
+              <Text color="gray.800" fontSize="1rem">
                 restants
               </Text>
             </Box>
 
-            <Text color="gray.800" fontSize="1.1rem" mt={4}>
+            <Text color="gray.800" fontSize="1rem" mt={4}>
               Actions
             </Text>
           </Grid>

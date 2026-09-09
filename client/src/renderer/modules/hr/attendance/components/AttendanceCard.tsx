@@ -526,8 +526,8 @@ const EmployeeAttendanceCard = ({
     <Grid
       templateColumns={gridTemplate}
       alignItems="center"
-      px={4}
-      py={5}
+      px={2}
+      py={2}
       bg="#ffffff"
       borderWidth="0.3px"
       border="1px solid #E2E8F0"
@@ -552,7 +552,7 @@ const EmployeeAttendanceCard = ({
         <Text
           color="gray.800"
           fontWeight="600"
-          fontSize="1.3rem"
+          fontSize="1.1rem"
           whiteSpace="normal"
           wordBreak="break-word"
           maxW="7rem"

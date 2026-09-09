@@ -17,13 +17,15 @@ import {
   VStack,
 } from "@chakra-ui/react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
 import DatePicker from "react-datepicker";
 import { Controller, useForm } from "react-hook-form";
 import { FaSave } from "react-icons/fa";
 import { RxCrossCircled } from "react-icons/rx";
 import { z } from "zod";
 import { LeaveWithEmployee } from "../../../../../common/types/LeaveWithEmployee";
+import useAdminUser from "../../../../../store/auth.store";
+import { useEffect } from "react";
+import { useUpdateLeave } from "../hooks/useLeave";
 
 const errorMessage = "Ce champ est obligatoire";
 
@@ -44,14 +46,50 @@ interface Props {
 }
 
 const LeaveEdit = ({ leave, onUpdated, isOpen, onClose }: Props) => {
-  const [ServerErrorMessage, setServerErrorMessage] = useState("");
-  const [isUpdating, setIsUpdating] = useState(false);
+  const user = useAdminUser((store) => store.adminUser);
 
-  console.log("LEAVE TO UPDATE:", leave);
+  const companyId = user?.companyId ?? "";
+
+  const updateLeaveMutation = useUpdateLeave(companyId);
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    control,
+    formState: { errors },
+  } = useForm<LeaveData>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      startDate: leave?.startDate ?? "",
+      endDate: leave?.endDate ?? "",
+      subject: leave?.subject ?? "",
+      notes: leave?.notes ?? "",
+    },
+  });
+
+  /*
+   * Reset the form whenever a different leave is opened.
+   */
+  useEffect(() => {
+    if (!leave) {
+      return;
+    }
+
+    reset({
+      startDate: leave.startDate ?? "",
+      endDate: leave.endDate ?? "",
+      subject: leave.subject ?? "",
+      notes: leave.notes ?? "",
+    });
+
+    updateLeaveMutation.reset();
+  }, [leave, reset]);
+
   if (!leave) {
-    console.log("LEAVE IS UNDEFINED");
     return null;
   }
+
   const {
     firstName,
     lastName,
@@ -63,49 +101,57 @@ const LeaveEdit = ({ leave, onUpdated, isOpen, onClose }: Props) => {
     notes,
   } = leave;
 
-  const onSubmit = async (data: LeaveData) => {
-    setServerErrorMessage("");
-    setIsUpdating(true);
-    try {
-      console.log("Info to update:", data);
-      const updatedLeave = await window.electron.leave.update(leave._id, data);
-      console.log("Updated leave:", updatedLeave);
-      onUpdated?.();
-      onClose();
-    } catch (error) {
-      console.error("An error occurred while updating info:", error);
-      setServerErrorMessage(
-        "Une erreur s'est produite. Veuillez contacter ADB Tech."
-      );
-    } finally {
-      setIsUpdating(false);
+  const onSubmit = (data: LeaveData) => {
+    if (!companyId) {
+      console.error("COMPANY ID IS MISSING");
+      return;
     }
+
+    if (!leave._id) {
+      console.error("LEAVE ID IS MISSING");
+      return;
+    }
+
+    console.log("INFO TO UPDATE:", data);
+
+    updateLeaveMutation.mutate(
+      {
+        _id: leave._id,
+        updates: data,
+      },
+      {
+        onSuccess: (updatedLeave) => {
+          console.log("UPDATED LEAVE:", updatedLeave);
+
+          onUpdated?.();
+
+          onClose();
+        },
+      }
+    );
   };
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    control,
-    formState: { errors },
-  } = useForm<LeaveData>({
-    resolver: zodResolver(schema),
-    defaultValues: {
-      startDate: startDate,
-      endDate: endDate,
-      subject: subject,
-      notes: notes,
-    },
-  });
   const handleFormClose = () => {
-    reset();
+    if (updateLeaveMutation.isPending) {
+      return;
+    }
+
+    reset({
+      startDate,
+      endDate,
+      subject,
+      notes,
+    });
+
+    updateLeaveMutation.reset();
+
     onClose();
-    setServerErrorMessage("");
   };
 
   return (
-    <Modal size="5xl" isOpen={isOpen} onClose={onClose}>
+    <Modal size="5xl" isOpen={isOpen} onClose={handleFormClose}>
       <ModalOverlay backdropFilter="auto" backdropBlur="0.5rem" />
+
       <ModalContent bg="#08162b">
         <form onSubmit={handleSubmit(onSubmit)}>
           <ModalHeader color="#ffffff" position="relative" left="120px">
@@ -119,20 +165,29 @@ const LeaveEdit = ({ leave, onUpdated, isOpen, onClose }: Props) => {
               Modification de la demande de congé
             </Text>
           </ModalHeader>
-          <ModalCloseButton onClick={handleFormClose} />
+
+          <ModalCloseButton color="#ffffff" />
+
           <ModalBody bg="#08162b">
             <FormControl>
               <VStack spacing="10px">
+                {/* EMPLOYEE INFORMATION */}
                 <HStack>
                   <Box>
                     <HStack>
                       <FormLabel color="#C7D2FE" marginBottom="10px">
                         Nom
-                        <span style={{ color: "#F2B705", fontSize: "1rem" }}>
+                        <span
+                          style={{
+                            color: "#F2B705",
+                            fontSize: "1rem",
+                          }}
+                        >
                           *
                         </span>
                       </FormLabel>
                     </HStack>
+
                     <Input
                       type="text"
                       color="#e6ebfe"
@@ -141,15 +196,22 @@ const LeaveEdit = ({ leave, onUpdated, isOpen, onClose }: Props) => {
                       isReadOnly
                     />
                   </Box>
+
                   <Box>
                     <HStack>
                       <FormLabel color="#C7D2FE" marginBottom="10px">
                         Prenom
-                        <span style={{ color: "#F2B705", fontSize: "1rem" }}>
+                        <span
+                          style={{
+                            color: "#F2B705",
+                            fontSize: "1rem",
+                          }}
+                        >
                           *
                         </span>
                       </FormLabel>
                     </HStack>
+
                     <Input
                       type="text"
                       color="#e6ebfe"
@@ -158,15 +220,22 @@ const LeaveEdit = ({ leave, onUpdated, isOpen, onClose }: Props) => {
                       isReadOnly
                     />
                   </Box>
+
                   <Box>
                     <HStack>
                       <FormLabel color="#C7D2FE" marginBottom="10px">
                         Poste
-                        <span style={{ color: "#F2B705", fontSize: "1rem" }}>
+                        <span
+                          style={{
+                            color: "#F2B705",
+                            fontSize: "1rem",
+                          }}
+                        >
                           *
                         </span>
                       </FormLabel>
                     </HStack>
+
                     <Input
                       type="text"
                       color="#e6ebfe"
@@ -177,16 +246,23 @@ const LeaveEdit = ({ leave, onUpdated, isOpen, onClose }: Props) => {
                   </Box>
                 </HStack>
 
+                {/* DEPARTMENT + DATES */}
                 <HStack alignItems="flex-start">
                   <Box>
                     <HStack>
                       <FormLabel color="#C7D2FE" marginBottom="10px">
                         Departement
-                        <span style={{ color: "#F2B705", fontSize: "1rem" }}>
+                        <span
+                          style={{
+                            color: "#F2B705",
+                            fontSize: "1rem",
+                          }}
+                        >
                           *
                         </span>
                       </FormLabel>
                     </HStack>
+
                     <Input
                       type="text"
                       color="#e6ebfe"
@@ -195,22 +271,29 @@ const LeaveEdit = ({ leave, onUpdated, isOpen, onClose }: Props) => {
                       isReadOnly
                     />
                   </Box>
+
                   <Box>
                     <HStack>
                       <FormLabel color="#C7D2FE" marginBottom="10px">
                         Date de début de congé
-                        <span style={{ color: "#F2B705", fontSize: "1rem" }}>
+                        <span
+                          style={{
+                            color: "#F2B705",
+                            fontSize: "1rem",
+                          }}
+                        >
                           *
                         </span>
                       </FormLabel>
                     </HStack>
+
                     <Controller
                       control={control}
                       name="startDate"
                       render={({ field }) => (
                         <DatePicker
                           selected={field.value ? new Date(field.value) : null}
-                          onChange={(date: any) => {
+                          onChange={(date: Date | null) => {
                             field.onChange(
                               date ? date.toISOString().split("T")[0] : ""
                             );
@@ -227,36 +310,41 @@ const LeaveEdit = ({ leave, onUpdated, isOpen, onClose }: Props) => {
                               bg="#08162b"
                               borderColor="#ffffff"
                               borderWidth="1px"
-                              value={new Date(
-                                leave.startDate
-                              ).toLocaleDateString("fr-FR")}
                             />
                           }
                         />
                       )}
                     />
+
                     {errors.startDate && (
                       <Text className="text-danger">
                         {errors.startDate.message}
                       </Text>
                     )}
                   </Box>
+
                   <Box>
                     <HStack>
                       <FormLabel color="#C7D2FE" marginBottom="10px">
                         Date de fin de congé
-                        <span style={{ color: "#F2B705", fontSize: "1rem" }}>
+                        <span
+                          style={{
+                            color: "#F2B705",
+                            fontSize: "1rem",
+                          }}
+                        >
                           *
                         </span>
                       </FormLabel>
                     </HStack>
+
                     <Controller
                       control={control}
                       name="endDate"
                       render={({ field }) => (
                         <DatePicker
                           selected={field.value ? new Date(field.value) : null}
-                          onChange={(date: any) => {
+                          onChange={(date: Date | null) => {
                             field.onChange(
                               date ? date.toISOString().split("T")[0] : ""
                             );
@@ -278,6 +366,7 @@ const LeaveEdit = ({ leave, onUpdated, isOpen, onClose }: Props) => {
                         />
                       )}
                     />
+
                     {errors.endDate && (
                       <Text className="text-danger">
                         {errors.endDate.message}
@@ -285,46 +374,66 @@ const LeaveEdit = ({ leave, onUpdated, isOpen, onClose }: Props) => {
                     )}
                   </Box>
                 </HStack>
+
+                {/* SUBJECT + NOTES */}
                 <VStack>
                   <Box>
                     <HStack>
                       <FormLabel color="#C7D2FE" marginBottom="10px">
                         Sujet
-                        <span style={{ color: "#F2B705", fontSize: "1rem" }}>
+                        <span
+                          style={{
+                            color: "#F2B705",
+                            fontSize: "1rem",
+                          }}
+                        >
                           *
                         </span>
                       </FormLabel>
                     </HStack>
+
                     <Input
                       color="#e6ebfe"
                       width="300px"
                       height="40px"
                       {...register("subject")}
                     />
+
                     {errors.subject && (
                       <Text className="text-danger">
                         {errors.subject.message}
                       </Text>
                     )}
                   </Box>
+
                   <Box>
                     <HStack>
                       <FormLabel color="#C7D2FE" marginBottom="10px">
                         Motif
-                        <span style={{ color: "#F2B705", fontSize: "1rem" }}>
+                        <span
+                          style={{
+                            color: "#F2B705",
+                            fontSize: "1rem",
+                          }}
+                        >
                           *
                         </span>
                       </FormLabel>
                     </HStack>
+
                     <Textarea
                       color="#e6ebfe"
                       height="300px"
                       width="350px"
                       resize="none"
                       placeholder="Decrivez brievement le motif de votre demande..."
-                      _placeholder={{ opacity: 1, color: "gray.500" }}
+                      _placeholder={{
+                        opacity: 1,
+                        color: "gray.500",
+                      }}
                       {...register("notes")}
                     />
+
                     {errors.notes && (
                       <Text className="text-danger">
                         {errors.notes.message}
@@ -346,52 +455,49 @@ const LeaveEdit = ({ leave, onUpdated, isOpen, onClose }: Props) => {
                 right="20px"
                 color="red.300"
               >
-                {ServerErrorMessage}
+                {updateLeaveMutation.isError
+                  ? "Une erreur s'est produite. Veuillez contacter ADB Tech."
+                  : ""}
               </Text>
+
               <Button
                 borderRadius="10px"
                 borderColor="black"
                 bg="#F2B705"
                 borderWidth="0.5px"
-                colorScheme=" #320b01"
                 color="black"
                 mr={3}
                 type="submit"
-                isLoading={isUpdating}
+                isLoading={updateLeaveMutation.isPending}
                 loadingText="Patientez..."
                 spinnerPlacement="start"
-                isDisabled={isUpdating}
+                isDisabled={updateLeaveMutation.isPending}
               >
                 <HStack>
                   <Box>
                     <FaSave />
                   </Box>
-                  <Text position="relative" top="8px" fontSize="1rem">
-                    {" "}
-                    Soumettre
-                  </Text>
+
+                  <Text fontSize="1rem">Soumettre</Text>
                 </HStack>
               </Button>
+
               <Button
                 borderColor="#ffffff"
                 borderRadius="10px"
                 bg="#08162b"
                 borderWidth="0.5px"
-                colorScheme=" #320b01"
-                color="#1a000d"
+                color="#ffffff"
                 mr={3}
                 onClick={handleFormClose}
+                isDisabled={updateLeaveMutation.isPending}
               >
                 <HStack>
                   <Box>
                     <RxCrossCircled color="#ffffff" size="18px" />
                   </Box>
-                  <Text
-                    color="#ffffff"
-                    position="relative"
-                    top="8px"
-                    fontSize="1rem"
-                  >
+
+                  <Text color="#ffffff" fontSize="1rem">
                     Annuler
                   </Text>
                 </HStack>

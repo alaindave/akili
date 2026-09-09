@@ -28,7 +28,7 @@ import { LuPaperclip } from "react-icons/lu";
 import useAdminUser from "../../../../../store/auth.store";
 import type Employee from "../../../../../common/types/Employee";
 import EmployeeDetailsCard from "./EmployeeDetailsCard";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useDeleteEmployee, useEmployee } from "../hooks/useEmployees";
 import { EmployeeDocument } from "../../../../../common/types/EmployeeDocuments";
 import EmployeeDocumentsList from "./EmployeeDocumentsList";
@@ -39,6 +39,7 @@ import UpdateEmployee from "./EmployeeUpdate";
 import ComponentErrorFallback from "../../../../components/ComponentErrorFallback";
 import DeletionDialog from "../../../../components/DeletionDialog";
 import { useNavigate } from "react-router-dom";
+import useSyncStore from "../../../../../store/sync.store";
 
 interface Props {
   employee: Employee;
@@ -52,106 +53,83 @@ const EmployeeDetailsTab = ({ employee }: Props) => {
   const { data: currentEmployee, error: employeeError } = useEmployee(
     employee._id
   );
-
   const { mutateAsync: deleteEmployee, isPending: isDeleting } =
     useDeleteEmployee();
-
   const displayedEmployee = currentEmployee ?? employee;
   const [documents, setDocuments] = useState<EmployeeDocument[]>([]);
+  const syncVersion = useSyncStore((store) => store.syncVersion);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const navigate = useNavigate();
-
   const {
     isOpen: isDocumentDeletionOpen,
     onOpen: onDocumentDeletionOpen,
     onClose: onDocumentDeletionClose,
   } = useDisclosure();
-
   const {
     isOpen: isEmployeeDeletionOpen,
     onOpen: onEmployeeDeletionOpen,
     onClose: onEmployeeDeletionClose,
   } = useDisclosure();
-
   const cancelRef = useRef<HTMLButtonElement>(null);
-
-  const adminUser = useAdminUser((store) => store.adminUser);
-
+  const user = useAdminUser((store) => store.adminUser);
   const [documentToDelete, setDocumentToDelete] =
     useState<EmployeeDocument | null>(null);
-
   const toast = useToast();
 
-  // Delete employee
-  const handleEmployeeDelete = async () => {
-    if (!employee._id) return;
+  useEffect(() => {
+    loadEmployeeDocuments();
+  }, [employee, syncVersion]);
+
+  const loadEmployeeDocuments = async () => {
     try {
-      await deleteEmployee(employee._id);
-      navigate("/employees_admin/employees_list");
-    } catch (error) {
-      console.error("UNABLE TO DELETE EMPLOYEE:", error);
+      const documents = await window.electron.employees_documents.getByEmployee(
+        user.companyId,
+        displayedEmployee._id
+      );
+      setDocuments(documents);
+      console.log("DOCUMENTS FETCHED:", documents);
+    } catch (e) {
+      console.error("ERROR FETCHING DOCUMENT:", e);
     }
   };
-
-  // ============================================================
-  // LOAD EMPLOYEE DOCUMENTS
-  // ============================================================
-
-  const handleRefresh = () => {
-    window.electron.employees_documents
-      .getByEmployee(displayedEmployee._id)
-      .then((documents) => {
-        setDocuments(documents);
-        console.log("DOCUMENTS FETCHED:", documents);
-      })
-      .catch((error) => {
-        console.error("ERROR FETCHING DOCUMENT:", error);
-      });
-  };
-
-  // ============================================================
-  // VIEW DOCUMENT
-  // ============================================================
 
   const handleView = async (document: EmployeeDocument) => {
     console.log("VIEWING DOCUMENT LOCAL PATH:", document.localPath);
 
-    await window.electron.employees_documents.view(document.localPath);
+    await window.electron.employees_documents.view(
+      user.companyId,
+      document.localPath
+    );
   };
-
-  // ============================================================
-  // DOWNLOAD DOCUMENT
-  // ============================================================
 
   const handleDownload = async (document: EmployeeDocument) => {
     console.log("DOWNLOADING DOCUMENT LOCAL PATH:", document.localPath);
 
-    await window.electron.employees_documents.download(document);
+    await window.electron.employees_documents.download(
+      user.companyId,
+      document
+    );
 
     toast({
       title: "Telechargement",
       status: "success",
+      duration: 3000,
     });
   };
-
-  // ============================================================
-  // DELETE DOCUMENT
-  // ============================================================
 
   const handleDocumentDelete = (document: EmployeeDocument) => {
     setDocumentToDelete(document);
     onDocumentDeletionOpen();
   };
 
-  // ============================================================
-  // CONFIRM DELETE DOCUMENT
-  // ============================================================
-
   const confirmDelete = async () => {
     if (!documentToDelete) return;
 
     try {
-      await window.electron.employees_documents.delete(documentToDelete._id);
+      await window.electron.employees_documents.delete(
+        user.companyId,
+        documentToDelete._id
+      );
 
       setDocuments((prev) =>
         prev.filter((document) => document._id !== documentToDelete._id)
@@ -160,6 +138,7 @@ const EmployeeDetailsTab = ({ employee }: Props) => {
       toast({
         title: "Document supprimé",
         status: "success",
+        duration: 3000,
       });
 
       onDocumentDeletionClose();
@@ -169,6 +148,7 @@ const EmployeeDetailsTab = ({ employee }: Props) => {
       toast({
         title: "Suppression echouée",
         status: "error",
+        duration: 3000,
       });
     } finally {
       setDocumentToDelete(null);
@@ -176,9 +156,15 @@ const EmployeeDetailsTab = ({ employee }: Props) => {
     }
   };
 
-  // ============================================================
-  // ERROR STATE
-  // ============================================================
+  const handleEmployeeDelete = async () => {
+    if (!employee._id) return;
+    try {
+      await deleteEmployee(employee._id);
+      navigate("/employees_admin/employees_list");
+    } catch (error) {
+      console.error("UNABLE TO DELETE EMPLOYEE:", error);
+    }
+  };
 
   if (employeeError) {
     console.error("ERROR FETCHING EMPLOYEE:", employeeError);
@@ -414,9 +400,9 @@ const EmployeeDetailsTab = ({ employee }: Props) => {
               isOpen={isOpen}
               onClose={onClose}
               employeeId={displayedEmployee._id}
-              uploadedBy={adminUser._id}
+              uploadedBy={user._id}
               documentType="EMPLOYMENT_CONTRACT"
-              onRefresh={handleRefresh}
+              onRefresh={loadEmployeeDocuments}
             />
 
             <EmployeeDocumentsList
@@ -455,7 +441,7 @@ const EmployeeDetailsTab = ({ employee }: Props) => {
           borderColor="gray.200"
           justifyContent="flex-start"
         >
-          {adminUser?.role === "MANAGER" ? (
+          {user?.role === "MANAGER" ? (
             <ErrorBoundary FallbackComponent={ComponentErrorFallback}>
               <Box>
                 <UpdateEmployee
@@ -476,7 +462,7 @@ const EmployeeDetailsTab = ({ employee }: Props) => {
             </Box>
           )}
 
-          {adminUser?.role === "MANAGER" ? (
+          {user?.role === "MANAGER" ? (
             <Button
               bg="red.100"
               color="red.600"

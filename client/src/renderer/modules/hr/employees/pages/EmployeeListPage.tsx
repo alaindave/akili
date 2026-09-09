@@ -89,13 +89,7 @@ const EmployeeListPage = () => {
           {/* =================================================
               TITLE + FILTER
           ================================================= */}
-          <Flex
-            mt="0.5rem"
-            width="100%"
-            align="center"
-            justify="space-between"
-            gap="16px"
-          >
+          <Flex width="100%" align="center" justify="space-between" gap="16px">
             {/* TITLE */}
             <Box minWidth={0} flex="1">
               <Box>
@@ -156,7 +150,7 @@ const EmployeeListPage = () => {
                 </Text>
               </Box>
 
-              <Box mt="2rem" flexShrink={0}>
+              <Box mt="3rem" flexShrink={0}>
                 <EmployeeFilterMenu onFilterClicked={setFilter} />
               </Box>
             </Box>
@@ -190,7 +184,7 @@ const EmployeeListPage = () => {
                   base: 0,
                   md: "20rem",
                 }}
-                mt="2rem"
+                mt="4rem"
               >
                 <SearchBar
                   placeholderText="Rechercher un employé"
@@ -307,6 +301,7 @@ const EmployeeListPage = () => {
               p="0"
               listStyleType="none"
               flexShrink={0}
+              mt="0.2rem"
             >
               {filteredEmployees.map((employee) => (
                 <ListItem

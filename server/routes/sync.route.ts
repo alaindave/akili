@@ -112,6 +112,9 @@ function validateCompanyHeader(
     ? headerCompanyId[0]
     : headerCompanyId;
 
+  console.log("HEADER COMPANY ID", receivedCompanyId);
+  console.log("JWT COMPANY ID", companyId);
+
   if (receivedCompanyId !== companyId) {
     throw new Error("SYNC: x-company-id does not match authenticated company");
   }
@@ -688,9 +691,6 @@ router.get(
         afterVersion = "0",
         limit = "500",
       } = req.query as PullQuery;
-
-      console.log("SYNC PULL COMPANY:", companyId);
-      console.log("SYNC PULL USER:", req.user);
 
       /*
        * --------------------------------------------------------

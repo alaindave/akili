@@ -2,7 +2,7 @@ import fs from "fs/promises";
 import path from "path";
 import crypto from "crypto";
 import { get, run } from "../db.js";
-import { EMPLOYEE_PHOTO_DIR } from "../../storage/directories.js";
+import { getEmployeePhotoDir } from "../../storage/directories.js";
 import Employee from "../../../common/types/Employee.js";
 import { addToSyncQueue } from "./sync.repository.js";
 
@@ -31,6 +31,14 @@ export async function uploadEmployeePhoto(
     throw new Error("Employee not found");
   }
 
+  // Get the installation-specific photo directory
+  const employeePhotoDir = getEmployeePhotoDir();
+
+  // Make sure directory exists
+  await fs.mkdir(employeePhotoDir, {
+    recursive: true,
+  });
+
   // Get extension
   const ext = path.extname(file.name).toLowerCase();
 
@@ -47,7 +55,9 @@ export async function uploadEmployeePhoto(
 
   // Filename
   const fileName = `${employeeId}_photo${ext}`;
-  const absolutePath = path.join(EMPLOYEE_PHOTO_DIR, fileName);
+
+  const absolutePath = path.join(employeePhotoDir, fileName);
+
   const relativePath = path.join("employees_photos", fileName);
 
   // Hash of image contents
@@ -59,7 +69,7 @@ export async function uploadEmployeePhoto(
   if (employee.photo_path && employee.photo_path !== relativePath) {
     try {
       await fs.unlink(
-        path.join(path.dirname(EMPLOYEE_PHOTO_DIR), employee.photo_path)
+        path.join(path.dirname(employeePhotoDir), employee.photo_path)
       );
     } catch {
       // Ignore if file doesn't exist

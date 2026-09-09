@@ -27,5 +27,5 @@ export interface UploadedEmployeeDocument {
   name: string;
   mimeType: string;
   buffer: Uint8Array;
-  serverVersion: number;
+  serverVersion?: number;
 }

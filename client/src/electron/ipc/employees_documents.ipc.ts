@@ -17,64 +17,155 @@ import {
 import {
   EmployeeDocument,
   EmployeeDocumentType,
+  UploadedEmployeeDocument,
 } from "../../common/types/EmployeeDocuments.js";
 
-function resolveEmployeeDocumentPath(localPath: string): string {
+/**
+ * Resolve an employee document path using:
+ *
+ * employees_documents/
+ *   {companyId}/
+ *     {employeeId}/
+ *       {fileName}
+ *
+ * The companyId is always required so a document cannot
+ * accidentally resolve into another company's folder.
+ */
+function resolveEmployeeDocumentPath(
+  companyId: string,
+  localPath: string
+): string {
+  if (!companyId) {
+    throw new Error("Company ID is required");
+  }
+
   if (!localPath) {
     throw new Error("Employee document path is empty");
   }
 
-  // Already an absolute path
-  if (path.isAbsolute(localPath)) {
-    return localPath;
-  }
+  /*
+   * Normalize separators.
+   */
+  let normalizedPath = localPath.replace(/\\/g, "/").replace(/^\/+/, "");
 
-  // Normalize separators so this works with paths coming
-  // from Windows, macOS, SQLite, or MongoDB.
-  const normalizedPath = localPath.replace(/\\/g, "/");
-
-  // Stored path already includes employees_documents
+  /*
+   * Remove employees_documents prefix if it exists.
+   *
+   * Supported:
+   *
+   * employees_documents/companyId/employeeId/file.pdf
+   *
+   * OR:
+   *
+   * companyId/employeeId/file.pdf
+   */
   if (normalizedPath.startsWith("employees_documents/")) {
-    return path.join(app.getPath("userData"), ...normalizedPath.split("/"));
+    normalizedPath = normalizedPath.substring("employees_documents/".length);
   }
 
-  // Stored path is relative to employees_documents
-  return path.join(
+  /*
+   * The stored path MUST start with the requested companyId.
+   */
+  const expectedPrefix = `${companyId}/`;
+
+  if (!normalizedPath.startsWith(expectedPrefix)) {
+    throw new Error(
+      `EMPLOYEE DOCUMENT DOES NOT BELONG TO COMPANY ${companyId}`
+    );
+  }
+
+  /*
+   * Base directory:
+   *
+   * userData/
+   *   employees_documents/
+   */
+  const documentsRoot = path.resolve(
     app.getPath("userData"),
-    "employees_documents",
-    ...normalizedPath.split("/")
+    "employees_documents"
   );
+
+  /*
+   * Final path:
+   *
+   * userData/
+   *   employees_documents/
+   *     companyId/
+   *       employeeId/
+   *         file.pdf
+   */
+  const absolutePath = path.resolve(documentsRoot, normalizedPath);
+
+  /*
+   * Security check.
+   *
+   * Make sure the resolved path is still inside:
+   *
+   * userData/employees_documents/{companyId}
+   */
+  const companyRoot = path.resolve(documentsRoot, companyId);
+
+  const relativeToCompany = path.relative(companyRoot, absolutePath);
+
+  if (
+    relativeToCompany.startsWith("..") ||
+    path.isAbsolute(relativeToCompany)
+  ) {
+    throw new Error(
+      "EMPLOYEE DOCUMENT PATH IS OUTSIDE THE COMPANY STORAGE FOLDER"
+    );
+  }
+
+  return absolutePath;
 }
 
 export function registerEmployeeDocumentIPC() {
   console.log("REGISTERING EMPLOYEES DOCUMENTS IPC");
 
-  // View document
-  ipcMain.handle("employee_documents:view", async (_, localPath: string) => {
-    const absolutePath = resolveEmployeeDocumentPath(localPath);
+  // ==========================================================
+  // VIEW DOCUMENT
+  // ==========================================================
 
-    console.log("Viewing employee document:");
-    console.log("Stored path:", localPath);
-    console.log("Absolute path:", absolutePath);
+  ipcMain.handle(
+    "employee_documents:view",
+    async (_, companyId: string, localPath: string) => {
+      const absolutePath = resolveEmployeeDocumentPath(companyId, localPath);
 
-    const error = await shell.openPath(absolutePath);
+      console.log("VIEWING EMPLOYEE DOCUMENT:");
+      console.log("COMPANY ID:", companyId);
+      console.log("STORED PATH:", localPath);
+      console.log("ABSOLUTE PATH:", absolutePath);
 
-    if (error) {
-      console.error("Failed to open employee document:", error);
+      const error = await shell.openPath(absolutePath);
 
-      throw new Error(error);
+      if (error) {
+        console.error("Failed to open employee document:", error);
+
+        throw new Error(error);
+      }
+
+      return true;
     }
+  );
 
-    return true;
-  });
+  // ==========================================================
+  // DOWNLOAD DOCUMENT
+  // ==========================================================
 
-  // Download document
   ipcMain.handle(
     "employee_documents:download",
-    async (_, document: EmployeeDocument) => {
-      const absolutePath = resolveEmployeeDocumentPath(document.localPath);
+    async (_, companyId: string, document: EmployeeDocument) => {
+      if (document.companyId !== companyId) {
+        throw new Error("EMPLOYEE DOCUMENT DOES NOT BELONG TO THIS COMPANY");
+      }
+
+      const absolutePath = resolveEmployeeDocumentPath(
+        companyId,
+        document.localPath
+      );
 
       console.log("DOWNLOADING EMPLOYEE DOCUMENT:");
+      console.log("COMPANY ID:", companyId);
       console.log("STORED PATH:", document.localPath);
       console.log("ABSOLUTE PATH:", absolutePath);
 
@@ -99,20 +190,40 @@ export function registerEmployeeDocumentIPC() {
     }
   );
 
-  // Upload document
-  ipcMain.handle("employees-documents:upload", async (_, document) => {
-    return await uploadEmployeeDocument(document);
-  });
+  // ==========================================================
+  // UPLOAD DOCUMENT
+  // ==========================================================
 
-  // Update document
+  ipcMain.handle(
+    "employees-documents:upload",
+    async (_, document: UploadedEmployeeDocument) => {
+      if (!document.companyId) {
+        throw new Error("COMPANY ID IS REQUIRED FOR EMPLOYEE DOCUMENT UPLOAD");
+      }
+
+      return await uploadEmployeeDocument(document);
+    }
+  );
+
+  // ==========================================================
+  // UPDATE DOCUMENT
+  // ==========================================================
+
   ipcMain.handle(
     "employees-documents:update",
-    async (_, companyId, document) => {
+    async (_, companyId: string, document: EmployeeDocument) => {
+      if (document.companyId !== companyId) {
+        throw new Error("EMPLOYEE DOCUMENT DOES NOT BELONG TO THIS COMPANY");
+      }
+
       return await updateEmployeeDocument(companyId, document);
     }
   );
 
-  // Delete
+  // ==========================================================
+  // DELETE DOCUMENT
+  // ==========================================================
+
   ipcMain.handle(
     "employee_documents:delete",
     async (_, companyId: string, _id: string) => {
@@ -122,8 +233,18 @@ export function registerEmployeeDocumentIPC() {
         return false;
       }
 
+      /*
+       * Extra tenant protection.
+       */
+      if (document.companyId !== companyId) {
+        throw new Error("EMPLOYEE DOCUMENT DOES NOT BELONG TO THIS COMPANY");
+      }
+
       try {
-        const absolutePath = resolveEmployeeDocumentPath(document.localPath);
+        const absolutePath = resolveEmployeeDocumentPath(
+          companyId,
+          document.localPath
+        );
 
         await fs.unlink(absolutePath);
       } catch {
@@ -136,7 +257,10 @@ export function registerEmployeeDocumentIPC() {
     }
   );
 
-  // Read by ID
+  // ==========================================================
+  // GET BY ID
+  // ==========================================================
+
   ipcMain.handle(
     "employees-documents:get-by-id",
     async (_, companyId: string, _id: string) => {
@@ -144,7 +268,10 @@ export function registerEmployeeDocumentIPC() {
     }
   );
 
-  // Get by employee
+  // ==========================================================
+  // GET BY EMPLOYEE
+  // ==========================================================
+
   ipcMain.handle(
     "employees-documents:get-by-employee",
     async (_, companyId: string, employeeId: string) => {
@@ -152,7 +279,10 @@ export function registerEmployeeDocumentIPC() {
     }
   );
 
-  // Get by type
+  // ==========================================================
+  // GET BY TYPE
+  // ==========================================================
+
   ipcMain.handle(
     "employees-documents:get-by-type",
     async (
@@ -169,17 +299,32 @@ export function registerEmployeeDocumentIPC() {
     }
   );
 
-  // Get all
-  ipcMain.handle("employees-documents:get-all", async (_, companyId) => {
-    return await getAllEmployeeDocuments(companyId);
-  });
+  // ==========================================================
+  // GET ALL
+  // ==========================================================
 
-  // Sync
-  ipcMain.handle("employees-documents:get-unsynced", async (_, companyId) => {
-    return await getUnsyncedEmployeeDocuments(companyId);
-  });
+  ipcMain.handle(
+    "employees-documents:get-all",
+    async (_, companyId: string) => {
+      return await getAllEmployeeDocuments(companyId);
+    }
+  );
 
-  // Mark synced
+  // ==========================================================
+  // GET UNSYNCED
+  // ==========================================================
+
+  ipcMain.handle(
+    "employees-documents:get-unsynced",
+    async (_, companyId: string) => {
+      return await getUnsyncedEmployeeDocuments(companyId);
+    }
+  );
+
+  // ==========================================================
+  // MARK SYNCED
+  // ==========================================================
+
   ipcMain.handle(
     "employees-documents:mark-synced",
     async (_, companyId: string, _id: string) => {

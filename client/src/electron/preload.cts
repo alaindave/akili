@@ -590,33 +590,19 @@ contextBridge.exposeInMainWorld("electron", {
         companyId
       ),
 
-    completeMarkAbsent: (
-      companyId: string,
-      completedAt: string
-    ) =>
-      ipcRenderer.invoke(
-        "attendanceDailyCheck:completeMarkAbsent",
-        companyId,
-        completedAt
-      ),
-
     verify: (
-      companyId: string,
       input: VerifyAttendanceDailyCheckInput
     ) =>
       ipcRenderer.invoke(
         "attendanceDailyCheck:verify",
-        companyId,
         input
       ),
 
     notifyManager: (
-      companyId: string,
       input: MarkManagerNotifiedInput
     ) =>
       ipcRenderer.invoke(
         "attendanceDailyCheck:notifyManager",
-        companyId,
         input
       ),
 

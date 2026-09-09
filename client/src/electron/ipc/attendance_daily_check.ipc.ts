@@ -46,8 +46,8 @@ export function registerAttendanceDailyCheckIPC() {
 
   ipcMain.handle(
     "attendanceDailyCheck:completeMarkAbsent",
-    async (_, companyId: string, completedAt: string) => {
-      return completeMarkAbsent(companyId, completedAt);
+    async (_, companyId: string, completedAt: string, date: string) => {
+      return completeMarkAbsent(companyId, completedAt, date);
     }
   );
 

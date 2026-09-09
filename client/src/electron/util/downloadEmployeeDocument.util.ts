@@ -2,9 +2,9 @@ import axios from "axios";
 import { app } from "electron";
 import fs from "fs/promises";
 import path from "path";
-import { EMPLOYEE_DOCUMENTS_DIR } from "../storage/directories.js";
 import Employee from "../../common/types/Employee.js";
 import { EmployeeDocument } from "../../common/types/EmployeeDocuments.js";
+import { getEmployeeDocumentsDir } from "../storage/directories.js";
 
 const API_URL = app.isPackaged
   ? "https://leather-works.onrender.com"
@@ -14,25 +14,35 @@ export async function downloadEmployeeDocument(
   employee: Employee,
   document: EmployeeDocument
 ): Promise<string> {
+  if (!employee) {
+    throw new Error(`Employee ${document.employeeId} not found`);
+  }
+
   const url = `${API_URL}/documents/${document._id}`;
 
   const response = await axios.get(url, {
     responseType: "arraybuffer",
   });
 
-  if (!employee) {
-    throw new Error(`Employee ${document.employeeId} not found`);
-  }
+  // Get installation-specific documents directory
+  const employeeDocumentsDir = getEmployeeDocumentsDir();
 
-  const employeeFolderName =
-    `${employee.firstName}_${employee.lastName}_${employee._id}`
+  const sanitizeFolderPart = (value: string) =>
+    value
       .replace(/[<>:"/\\|?*\x00-\x1F]/g, "")
-      .replace(/\s+/g, "_");
+      .replace(/\s+/g, "_")
+      .trim();
+
+  const employeeFolderName = [
+    sanitizeFolderPart(employee.firstName),
+    sanitizeFolderPart(employee.lastName),
+    employee._id,
+  ].join("_");
 
   const documentFolder = path.join(
-    EMPLOYEE_DOCUMENTS_DIR,
+    employeeDocumentsDir,
     employeeFolderName,
-    document.documentType
+    sanitizeFolderPart(document.documentType)
   );
 
   await fs.mkdir(documentFolder, {

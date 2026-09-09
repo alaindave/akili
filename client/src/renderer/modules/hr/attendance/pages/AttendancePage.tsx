@@ -162,7 +162,7 @@ const EmployeeAttendancePage = () => {
    * Mark absent mutation.
    */
   const { mutateAsync: markAbsentMutation, isPending: isMarkingAbsent } =
-    useMarkAbsent(user.companyId);
+    useMarkAbsent(user.companyId, selectedDate);
 
   const loading = attendanceLoading || attendanceFetching;
 
@@ -186,7 +186,7 @@ const EmployeeAttendancePage = () => {
       title,
       description: message,
       status: "error",
-      duration: 3500,
+      duration: 3000,
       isClosable: true,
       position: "top-left",
     });
@@ -321,12 +321,13 @@ const EmployeeAttendancePage = () => {
   ========================================================= */
 
   const markAbsent = async () => {
+    console.log("SELECTED DATE", selectedDate);
     try {
       window.electron.sync(user.companyId).catch((error) => {
         console.error("IMMEDIATE SYNC FAILED:", error);
       });
 
-      const result = await markAbsentMutation(selectedDate);
+      const result = await markAbsentMutation();
 
       console.log("MARK ABSENT RESULT", result);
 
@@ -337,7 +338,7 @@ const EmployeeAttendancePage = () => {
           title: "Absences enregistrées",
           description: "Les absences ont été enregistrées avec succès.",
           status: "success",
-          duration: 4000,
+          duration: 3000,
           isClosable: true,
           position: "top-left",
         });
@@ -350,7 +351,7 @@ const EmployeeAttendancePage = () => {
         description:
           "Service indisponible les weekends. Les absences doivent être enregistrées manuellement.",
         status: "warning",
-        duration: 4000,
+        duration: 3000,
         isClosable: true,
         position: "top-left",
       });
@@ -371,13 +372,11 @@ const EmployeeAttendancePage = () => {
     try {
       setCheckLoading(true);
 
-      const result = await window.electron.attendanceDailyCheck.verify(
-        user.companyId,
-        {
-          date: selectedDate,
-          verifiedBy: user._id,
-        }
-      );
+      const result = await window.electron.attendanceDailyCheck.verify({
+        companyId: user.companyId,
+        date: selectedDate,
+        verifiedBy: user._id,
+      });
 
       console.log("VERIFIED ATTENDANCES", result);
 
@@ -385,7 +384,7 @@ const EmployeeAttendancePage = () => {
         title: "Présence vérifiée",
         description: "La liste de présence a été vérifiée avec succès.",
         status: "success",
-        duration: 4000,
+        duration: 3000,
         isClosable: true,
         position: "top-left",
       });
@@ -410,12 +409,10 @@ const EmployeeAttendancePage = () => {
     try {
       setCheckLoading(true);
 
-      const result = await window.electron.attendanceDailyCheck.notifyManager(
-        user.companyId,
-        {
-          date: selectedDate,
-        }
-      );
+      const result = await window.electron.attendanceDailyCheck.notifyManager({
+        companyId: user.companyId,
+        date: selectedDate,
+      });
 
       console.log("NOTIFIED MANAGER ATTENDANCES", result);
 
@@ -424,7 +421,7 @@ const EmployeeAttendancePage = () => {
         description:
           "La demande de confirmation a été envoyée au gestionnaire.",
         status: "success",
-        duration: 4000,
+        duration: 3000,
         isClosable: true,
         position: "top-left",
       });
@@ -449,14 +446,12 @@ const EmployeeAttendancePage = () => {
     try {
       setCheckLoading(true);
 
-      const result = await window.electron.attendanceDailyCheck.lock(
-        user.companyId,
-        {
-          date: selectedDate,
-          lockedBy: user._id,
-          lockedByRole: user.role,
-        }
-      );
+      const result = await window.electron.attendanceDailyCheck.lock({
+        companyId: user.companyId,
+        date: selectedDate,
+        lockedBy: user._id,
+        lockedByRole: user.role,
+      });
 
       console.log("LOCKED ATTENDANCE", result);
 
@@ -466,7 +461,7 @@ const EmployeeAttendancePage = () => {
         title: "Présence confirmée",
         description: "La liste de présence a été confirmée et verrouillée.",
         status: "success",
-        duration: 4000,
+        duration: 3000,
         isClosable: true,
         position: "top-left",
       });
@@ -538,6 +533,12 @@ const EmployeeAttendancePage = () => {
 
   const attendanceAction = getAttendanceAction();
 
+  const isItWeekend = (date: Date | string) => {
+    const now = new Date(date);
+    const dayOfWeek = now.getDay();
+    if (dayOfWeek === 0 || dayOfWeek === 6) return true;
+    return false;
+  };
   /* =========================================================
      RENDER
   ========================================================= */
@@ -595,111 +596,14 @@ const EmployeeAttendancePage = () => {
               Gérez la liste de présence
             </Text>
           </Box>
-
           <Spacer />
-
-          {/* VERIFY */}
-
-          {attendanceAction === "VERIFY" && (
-            <Button
-              colorScheme="blue"
-              onClick={verify}
-              mt="1rem"
-              mr="1.3rem"
-              isLoading={checkLoading}
-            >
-              <HStack>
-                <FaCheckDouble />
-
-                <Text>Vérifier</Text>
-              </HStack>
-            </Button>
-          )}
-
-          {/* NOTIFY MANAGER */}
-
-          {attendanceAction === "NOTIFY_MANAGER" && (
-            <Button
-              colorScheme="purple"
-              onClick={notify}
-              mt="0.5rem"
-              mr="1.3rem"
-              isLoading={checkLoading}
-            >
-              <HStack>
-                <PiSealCheck size="1.1rem" />
-
-                <Text mt="1rem">Confirmation</Text>
-              </HStack>
-            </Button>
-          )}
-
-          {/* WAITING */}
-
-          {attendanceAction === "WAITING_CONFIRMATION" && (
-            <Button
-              colorScheme="orange"
-              pointerEvents="none"
-              mt="1.3rem"
-              mr="1.3rem"
-            >
-              <HStack>
-                <GiConfirmed />
-
-                <Text>En attente de confirmation</Text>
-              </HStack>
-            </Button>
-          )}
-
-          {/* CONFIRM */}
-
-          {attendanceAction === "CONFIRM" && (
-            <Button
-              colorScheme="green"
-              onClick={lock}
-              mt="1.3rem"
-              mr="1.3rem"
-              isLoading={checkLoading}
-            >
-              <HStack>
-                <FaLock />
-
-                <Text>Confirmer</Text>
-              </HStack>
-            </Button>
-          )}
-
-          {/* LOCKED */}
-
-          {attendanceAction === "LOCKED" && (
+          {dailyCheck?.status === "LOCKED" && (
             <Box mt="1.3rem">
               <FaLock size="2rem" color="#D4A017" />
             </Box>
           )}
-
-          {/* MARK ABSENT */}
-
-          {attendanceAction === "MARK_ABSENT" && (
-            <Button
-              colorScheme="red"
-              onClick={markAbsent}
-              mt="1rem"
-              mr="1.3rem"
-              isLoading={isMarkingAbsent}
-              loadingText="Enregistrement..."
-            >
-              <HStack>
-                <RiPresentationFill />
-
-                <Text>Marquer les absences</Text>
-              </HStack>
-            </Button>
-          )}
-
           <Spacer />
-
           {/* ADD EMPLOYEE */}
-
           <Box>
             {dailyCheck?.status !== "LOCKED" ? (
               <Button
@@ -708,7 +612,7 @@ const EmployeeAttendancePage = () => {
                 onClick={onAddAttendanceOpen}
                 zIndex="1"
                 mt="1.2rem"
-                mr="3rem"
+                mr="1rem"
                 _hover={{
                   backgroundColor: "#4F46E5",
                 }}
@@ -720,16 +624,25 @@ const EmployeeAttendancePage = () => {
                 <Text>Ajouter un employé</Text>
               </Button>
             ) : null}
-
-            {/* DOWNLOAD */}
           </Box>
+          <Button
+            mt="1.2rem"
+            fontSize="1.5rem"
+            bg="transparent"
+            onClick={download}
+            _hover={{
+              bg: "transparent",
+            }}
+          >
+            <FaDownload />
+          </Button>
         </Flex>
 
         {/* ===================================================
             FILTER + SEARCH
         =================================================== */}
 
-        <Flex justify="space-between">
+        <Flex mt="2rem" justify="space-between">
           <Box mt="1.5rem" ml="0.5rem">
             <EmployeeFilterMenu onFilterClicked={setFilter} />
           </Box>
@@ -758,34 +671,34 @@ const EmployeeAttendancePage = () => {
           width="78.5vw"
           overflowY="hidden"
           overflowX="hidden"
-          mt="1rem"
+          mt="3rem"
           ml="0.5rem"
         >
-          <Text color="gray.800" fontSize="1.1rem" mt="0.7rem">
+          <Text color="gray.800" fontSize="1rem" mt="0.7rem">
             Employé
           </Text>
 
-          <Text color="gray.800" fontSize="1.1rem" mt="0.7rem">
+          <Text color="gray.800" fontSize="1rem" mt="0.7rem">
             ID
           </Text>
 
-          <Text color="gray.800" fontSize="1.1rem" mt="0.7rem">
+          <Text color="gray.800" fontSize="1rem" mt="0.7rem">
             Poste
           </Text>
 
-          <Text color="gray.800" fontSize="1.1rem" mt="0.7rem">
+          <Text color="gray.800" fontSize="1rem" mt="0.7rem">
             Departement
           </Text>
 
-          <Text color="gray.800" fontSize="1.1rem" mt="0.7rem">
+          <Text color="gray.800" fontSize="1rem" mt="0.7rem">
             Arrivée
           </Text>
 
-          <Text color="gray.800" fontSize="1.1rem" mt="0.7rem">
+          <Text color="gray.800" fontSize="1rem" mt="0.7rem">
             Départ
           </Text>
 
-          <Text color="gray.800" fontSize="1.1rem" mt="0.7rem">
+          <Text color="gray.800" fontSize="1rem" mt="0.7rem">
             Actions
           </Text>
         </Grid>
@@ -828,22 +741,11 @@ const EmployeeAttendancePage = () => {
                   base: "1rem",
                   md: "1.1rem",
                 }}
-                fontWeight="600"
-                color="gray.700"
-                textAlign="center"
-              >
-                Aucun employé trouvé
-              </Text>
-
-              <Text
-                fontSize={{
-                  base: "0.85rem",
-                  md: "0.9rem",
-                }}
+                fontWeight="500"
                 color="gray.500"
                 textAlign="center"
               >
-                Essayez de modifier votre recherche ou votre filtre.
+                Pas de présence enregistrée
               </Text>
             </VStack>
           </Flex>
@@ -880,6 +782,80 @@ const EmployeeAttendancePage = () => {
         height="5rem"
         justify="space-evenly"
       >
+        {/* VERIFY */}
+
+        {attendanceAction === "VERIFY" && (
+          <Button
+            colorScheme="blue"
+            onClick={verify}
+            mr="1rem"
+            isLoading={checkLoading}
+          >
+            <HStack>
+              <FaCheckDouble />
+
+              <Text>Vérifier</Text>
+            </HStack>
+          </Button>
+        )}
+
+        {/* NOTIFY MANAGER */}
+
+        {attendanceAction === "NOTIFY_MANAGER" && (
+          <Button
+            colorScheme="purple"
+            onClick={notify}
+            isLoading={checkLoading}
+          >
+            <HStack>
+              <PiSealCheck size="1.1rem" />
+
+              <Text>Confirmation</Text>
+            </HStack>
+          </Button>
+        )}
+
+        {/* WAITING */}
+
+        {attendanceAction === "WAITING_CONFIRMATION" && (
+          <Button colorScheme="orange" pointerEvents="none" mr="1rem">
+            <HStack>
+              <GiConfirmed />
+
+              <Text>En attente de confirmation</Text>
+            </HStack>
+          </Button>
+        )}
+
+        {/* CONFIRM */}
+
+        {attendanceAction === "CONFIRM" && (
+          <Button colorScheme="green" onClick={lock} isLoading={checkLoading}>
+            <HStack>
+              <FaLock />
+
+              <Text>Confirmer</Text>
+            </HStack>
+          </Button>
+        )}
+
+        {/* MARK ABSENT */}
+
+        {attendanceAction === "MARK_ABSENT" && !isItWeekend(selectedDate) && (
+          <Button
+            colorScheme="red"
+            onClick={markAbsent}
+            isLoading={isMarkingAbsent}
+            loadingText="Enregistrement..."
+          >
+            <HStack>
+              <RiPresentationFill />
+
+              <Text>Marquer les absences</Text>
+            </HStack>
+          </Button>
+        )}
+
         <Box>
           <DateRangePicker value={dateRange} onChange={setDateRange} />
         </Box>
@@ -892,7 +868,8 @@ const EmployeeAttendancePage = () => {
           />
         </Box>
 
-        {(!dailyCheck || dailyCheck.status !== "LOCKED") && (
+        {dailyCheck?.status === "MANAGER_NOTIFIED" ||
+        dailyCheck?.status === "LOCKED" ? null : (
           <Box mt="0.2rem">
             <Switch
               colorScheme="blue"
@@ -902,18 +879,6 @@ const EmployeeAttendancePage = () => {
             />
           </Box>
         )}
-        <Button
-          position="absolute"
-          right="0.1rem"
-          fontSize="1.3rem"
-          bg="transparent"
-          onClick={download}
-          _hover={{
-            bg: "transparent",
-          }}
-        >
-          <FaDownload />
-        </Button>
       </Flex>
       {/* =====================================================
           ADD ATTENDANCE

@@ -25,6 +25,7 @@ import TimePicker from "react-time-picker";
 import "react-datepicker/dist/react-datepicker.css";
 import "react-time-picker/dist/TimePicker.css";
 import Employee from "../../../../../common/types/Employee";
+import useAdminUser from "../../../../../store/auth.store";
 
 interface AddAttendanceModalProps {
   date: string;
@@ -53,6 +54,7 @@ const AddAttendanceModal = ({
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loadingEmployees, setLoadingEmployees] = useState(false);
   const [saving, setSaving] = useState(false);
+  const user = useAdminUser((store) => store.adminUser);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -65,7 +67,10 @@ const AddAttendanceModal = ({
       setLoadingEmployees(true);
 
       const result =
-        await window.electron.attendance.getEmployeesWithoutAttendance(date);
+        await window.electron.attendance.getEmployeesWithoutAttendance(
+          user.companyId,
+          date
+        );
 
       console.log(`EMPLOYEES WITHOUT ATTENDANCE RECORD FOR ${date}`, result);
 
@@ -144,6 +149,7 @@ const AddAttendanceModal = ({
        */
       if (attendanceType === "ABSENT") {
         await window.electron.attendance.createAbsenceLeave(
+          user.companyId,
           employee._id,
           "ABSENT",
           date
@@ -187,7 +193,7 @@ const AddAttendanceModal = ({
         /*
          * Create the leave.
          */
-        await window.electron.leave.create({
+        await window.electron.leave.create(user.companyId, {
           employeeId: employee._id,
           startDate: date,
           endDate: date,
@@ -199,7 +205,7 @@ const AddAttendanceModal = ({
         /*
          * Deduct one day from the employee's balance.
          */
-        await window.electron.employees.update(employee._id, {
+        await window.electron.employees.update(user.companyId, employee._id, {
           remainingLeave: remainingLeave - 1,
         });
 
@@ -207,6 +213,7 @@ const AddAttendanceModal = ({
          * Create the corresponding attendance record.
          */
         await window.electron.attendance.createAbsenceLeave(
+          user.companyId,
           employee._id,
           "CONGÉ",
           date
@@ -274,7 +281,7 @@ const AddAttendanceModal = ({
         0
       );
 
-      await window.electron.attendance.create({
+      await window.electron.attendance.create(user.companyId, {
         employeeId,
         date,
         clockIn: clockInDate.toISOString(),

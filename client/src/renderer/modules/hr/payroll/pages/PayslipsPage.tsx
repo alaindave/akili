@@ -72,7 +72,7 @@ const EmployeePayrollReport = () => {
   return (
     <Flex
       direction="column"
-      bg="#ffffff"
+      bg="#F8FAFC"
       width="100%"
       height="93vh"
       alignItems="flex-start"
@@ -205,15 +205,34 @@ const EmployeePayrollReport = () => {
             </TableContainer>
           </>
         ) : (
-          <Text
-            ml="15rem"
-            mt="15rem"
-            fontSize="2rem"
-            color="gray.600"
-            fontWeight="600"
+          <Flex
+            ml="1rem"
+            mt="10rem"
+            width="78vw"
+            minHeight={{
+              base: "180px",
+              md: "220px",
+            }}
+            align="center"
+            justify="center"
+            bg="#ffffff"
+            border="1px solid #E2E8F0"
+            borderRadius="8px"
+            px="20px"
+            flexShrink={0}
           >
-            Pas de bulletins de paye à afficher
-          </Text>
+            <Text
+              fontSize={{
+                base: "1rem",
+                md: "1.1rem",
+              }}
+              fontWeight="500"
+              color="gray.500"
+              textAlign="center"
+            >
+              Pas de bulletins de paye retrouvés
+            </Text>
+          </Flex>
         )}
       </Box>
 

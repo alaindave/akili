@@ -3,7 +3,7 @@ import fs from "fs/promises";
 import path from "path";
 import { app } from "electron";
 
-import { EMPLOYEE_PHOTO_DIR } from "../storage/directories.js";
+import { getEmployeePhotoDir } from "../storage/directories.js";
 import { getEmployeeById } from "../database/repositories/employees.repository.js";
 
 export async function downloadEmployeePhoto(
@@ -21,13 +21,23 @@ export async function downloadEmployeePhoto(
     throw new Error(`Employee ${employeeId} not found`);
   }
 
-  // Folder name
-  const employeeFolderName =
-    `${employee.firstName}_${employee.lastName}_${employee._id}`
-      .replace(/[<>:"/\\|?*\x00-\x1F]/g, "")
-      .replace(/\s+/g, "_");
+  // Get installation-specific photo directory
+  const employeePhotoDir = getEmployeePhotoDir();
 
-  const employeeFolder = path.join(EMPLOYEE_PHOTO_DIR, employeeFolderName);
+  const sanitizeFolderPart = (value: string) =>
+    value
+      .replace(/[<>:"/\\|?*\x00-\x1F]/g, "")
+      .replace(/\s+/g, "_")
+      .trim();
+
+  // Folder name
+  const employeeFolderName = [
+    sanitizeFolderPart(employee.firstName),
+    sanitizeFolderPart(employee.lastName),
+    employee._id,
+  ].join("_");
+
+  const employeeFolder = path.join(employeePhotoDir, employeeFolderName);
 
   await fs.mkdir(employeeFolder, {
     recursive: true,
@@ -36,6 +46,7 @@ export async function downloadEmployeePhoto(
   const filePath = path.join(employeeFolder, photoFilename);
 
   console.log("DOWNLOADING PHOTO FROM:", `${API_URL}/photos/${employeeId}`);
+
   console.log("SAVING PHOTO TO:", filePath);
 
   const response = await axios.get(`${API_URL}/photos/${employeeId}`, {

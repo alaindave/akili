@@ -4,7 +4,7 @@ import path from "path";
 import crypto from "crypto";
 import { randomUUID } from "crypto";
 
-import { EMPLOYEE_DOCUMENTS_DIR } from "../../storage/directories.js";
+import { getEmployeeDocumentsDir } from "../../storage/directories.js";
 
 import {
   EmployeeDocument,
@@ -14,6 +14,53 @@ import {
 
 import { addToSyncQueue } from "./sync.repository.js";
 import { getEmployeeById } from "./employees.repository.js";
+
+// ============================================================
+// Helpers
+// ============================================================
+
+function sanitizeFilePart(value: string): string {
+  return value
+    .replace(/[<>:"/\\|?*\x00-\x1F]/g, "")
+    .replace(/\s+/g, "_")
+    .trim();
+}
+
+/**
+ * Relative path stored in SQLite.
+ *
+ * Example:
+ * companyId/employeeId/John_Doe_NATIONAL_ID.png
+ */
+function buildRelativeDocumentPath(
+  companyId: string,
+  employeeId: string,
+  fileName: string
+): string {
+  return path.posix.join(companyId, employeeId, fileName);
+}
+
+/**
+ * Convert stored relative path into the actual
+ * installation-specific filesystem path.
+ */
+function resolveLocalDocumentPath(relativePath: string): string {
+  const documentsRoot = path.resolve(getEmployeeDocumentsDir());
+
+  const normalizedRelativePath = relativePath
+    .replace(/\\/g, "/")
+    .replace(/^\/+/, "");
+
+  const absolutePath = path.resolve(documentsRoot, normalizedRelativePath);
+
+  const relativeToRoot = path.relative(documentsRoot, absolutePath);
+
+  if (relativeToRoot.startsWith("..") || path.isAbsolute(relativeToRoot)) {
+    throw new Error("EMPLOYEE DOCUMENT PATH ESCAPES EMPLOYEE DOCUMENT STORAGE");
+  }
+
+  return absolutePath;
+}
 
 // ============================================================
 // Upload employee document
@@ -38,10 +85,15 @@ export async function uploadEmployeeDocument(
 
   const employee = await getEmployeeById(companyId, file.employeeId);
 
+  // Installation-specific root directory.
+  // This is NEVER stored in the database.
+  const employeeDocumentsDir = getEmployeeDocumentsDir();
+
+  // Company folder -> Employee folder -> Document type
   const employeeFolder = path.join(
-    EMPLOYEE_DOCUMENTS_DIR,
-    file.employeeId,
-    file.documentType
+    employeeDocumentsDir,
+    companyId,
+    file.employeeId
   );
 
   await fs.mkdir(employeeFolder, {
@@ -57,18 +109,34 @@ export async function uploadEmployeeDocument(
     _id = existing._id;
     createdAt = existing.createdAt;
 
+    // Resolve the stored relative path to the actual
+    // installation-specific file location.
     try {
-      await fs.unlink(existing.localPath);
+      const existingAbsolutePath = resolveLocalDocumentPath(existing.localPath);
+
+      await fs.unlink(existingAbsolutePath);
     } catch {
       // Old file doesn't exist. Ignore.
     }
   }
 
-  const fileName = `${employee?.firstName}_${employee?.lastName}_${file.documentType}${extension}`;
+  const fileName = `${sanitizeFilePart(
+    employee?.firstName ?? "employee"
+  )}_${sanitizeFilePart(employee?.lastName ?? "")}_${sanitizeFilePart(
+    file.documentType
+  )}${extension}`;
 
-  const localPath = path.join(employeeFolder, fileName);
+  // Actual filesystem path.
+  const absolutePath = path.join(employeeFolder, fileName);
 
-  await fs.writeFile(localPath, file.buffer);
+  // Relative path stored in SQLite.
+  const localPath = buildRelativeDocumentPath(
+    companyId,
+    file.employeeId,
+    fileName
+  );
+
+  await fs.writeFile(absolutePath, file.buffer);
 
   const now = new Date().toISOString();
 
@@ -194,13 +262,6 @@ export async function upsertEmployeeDocument(document: EmployeeDocument) {
     ]
   );
 
-  /*
-   * IMPORTANT:
-   * Remote/pulled documents should NOT be added to the sync queue.
-   *
-   * needsUpload === 1 means this document originated locally
-   * and still needs to be uploaded.
-   */
   if (document.needsUpload === 1) {
     await addToSyncQueue({
       companyId,
@@ -384,6 +445,15 @@ export async function deleteEmployeeDocument(companyId: string, id: string) {
 
   if (!document) {
     return false;
+  }
+
+  // Delete the physical file using the relative path.
+  try {
+    const absolutePath = resolveLocalDocumentPath(document.localPath);
+
+    await fs.unlink(absolutePath);
+  } catch {
+    // File doesn't exist. Continue with soft delete.
   }
 
   await run(

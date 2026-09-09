@@ -337,7 +337,7 @@ export default function PayrollPage() {
           {payrollRuns.length === 0 ? (
             <Flex
               ml="0.5rem"
-              mt="4rem"
+              mt="7rem"
               width="78vw"
               minHeight={{
                 base: "180px",
@@ -357,22 +357,11 @@ export default function PayrollPage() {
                     base: "1rem",
                     md: "1.1rem",
                   }}
-                  fontWeight="600"
-                  color="gray.700"
-                  textAlign="center"
-                >
-                  Pas de fiches de paye a afficher.
-                </Text>
-
-                <Text
-                  fontSize={{
-                    base: "0.85rem",
-                    md: "0.9rem",
-                  }}
+                  fontWeight="500"
                   color="gray.500"
                   textAlign="center"
                 >
-                  Essayez de modifier votre recherche ou votre filtre.
+                  Pas de fiches de paye retrouvées.
                 </Text>
               </VStack>
             </Flex>

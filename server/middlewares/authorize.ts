@@ -34,9 +34,6 @@ export default function authorize(
     }
 
     req.user = decoded;
-
-    console.log("AUTHORIZED USER:", req.user);
-
     return next();
   } catch (error) {
     console.error("AN ERROR OCCURRED WHILE AUTHORIZING ADMIN USER:", error);

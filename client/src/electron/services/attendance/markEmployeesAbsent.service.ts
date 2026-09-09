@@ -48,7 +48,7 @@ export async function markEmployeesAbsent(
     );
 
     try {
-      await markEmployeesOnLeave(date);
+      await markEmployeesOnLeave(companyId, date);
       console.log(`MARK EMPLOYEES ON LEAVE COMPLETED FOR ${date}`);
     } catch (error) {
       console.error(`FAILED TO MARK EMPLOYEES ON LEAVE FOR ${date}`, error);
@@ -68,11 +68,11 @@ export async function markEmployeesAbsent(
 
   if (backendAvailable) {
     try {
-      const absentAttendance = await markEmployeesAbsentOnline(date);
+      const absentAttendance = await markEmployeesAbsentOnline(companyId, date);
 
       console.log("ONLINE ABSENT ATTENDANCE", absentAttendance);
 
-      await completeMarkAbsent(now, date);
+      await completeMarkAbsent(companyId, now, date);
 
       return {
         companyId,
@@ -99,7 +99,7 @@ export async function markEmployeesAbsent(
 
   console.log("OFFLINE ABSENT ATTENDANCE", absentAttendance);
 
-  await completeMarkAbsent(now, date);
+  await completeMarkAbsent(companyId, now, date);
 
   return {
     companyId,

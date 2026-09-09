@@ -117,24 +117,36 @@ declare global {
       };
 
       employees_documents: {
-        view: (localPath: string) => Promise<EmployeeDocument>;
-        download: (document: EmployeeDocument) => Promise<EmployeeDocument>;
+        view: (
+          companyId: string,
+          localPath: string
+        ) => Promise<EmployeeDocument>;
+        download: (
+          companyId: string,
+          document: EmployeeDocument
+        ) => Promise<EmployeeDocument>;
         upload: (
           document: UploadedEmployeeDocument
         ) => Promise<EmployeeDocument>;
         create: (document: EmployeeDocument) => Promise<EmployeeDocument>;
-        getAll: () => Promise<EmployeeDocument[]>;
-        getById: (id: string) => Promise<EmployeeDocument>;
-        getByEmployee: (employeeId: string) => Promise<EmployeeDocument[]>;
+        getAll: (companyId: string) => Promise<EmployeeDocument[]>;
+        getById: (companyId: string, _id: string) => Promise<EmployeeDocument>;
+        getByEmployee: (
+          companyId: string,
+          employeeId: string
+        ) => Promise<EmployeeDocument[]>;
         getByType: (
+          companyId: string,
           employeeId: string,
           documentType: string
         ) => Promise<EmployeeDocument>;
-
         update: (document: EmployeeDocument) => Promise<EmployeeDocument>;
-        delete: (id: string) => Promise<EmployeeDocument>;
-        getUnsynced: () => Promise<EmployeeDocument>;
-        markSynced: (id: string) => Promise<EmployeeDocument>;
+        delete: (companyId: string, _id: string) => Promise<EmployeeDocument>;
+        getUnsynced: (companyId: string) => Promise<EmployeeDocument>;
+        markSynced: (
+          companyId: string,
+          _id: string
+        ) => Promise<EmployeeDocument>;
         upsert: (document: EmployeeDocument) => Promise<EmployeeDocument>;
       };
 
@@ -153,15 +165,12 @@ declare global {
         ): Promise<AttendanceDailyCheck | null>;
         getAll(companyId: string): Promise<AttendanceDailyCheck[]>;
         verify(
-          companyId: string,
           input: VerifyAttendanceDailyCheckInput
         ): Promise<VerifyDailyAttendanceResult>;
         notifyManager: (
-          companyId: string,
           input: MarkManagerNotifiedInput
         ) => Promise<AttendanceDailyCheck>;
         lock(
-          companyId: string,
           input: LockAttendanceDailyCheckInput
         ): Promise<AttendanceDailyCheck>;
       };

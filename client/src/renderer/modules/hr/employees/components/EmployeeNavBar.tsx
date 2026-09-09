@@ -65,7 +65,7 @@ const EmployeeNavBar = () => {
       const logout = await window.electron.auth.logout();
 
       if (logout) {
-        setLogOut();
+        await setLogOut();
         await clearTasks();
         navigate("/", { replace: true });
       }
@@ -537,14 +537,15 @@ const EmployeeNavBar = () => {
   ================================================= */}
         <Text
           justifySelf="start"
-          fontSize={{ base: "0.8rem", md: "0.95rem" }}
-          color="gray.800"
+          fontSize={{ base: "0.9rem", md: "1rem" }}
+          fontWeight="600"
+          color="gray.700"
           whiteSpace="nowrap"
           overflow="hidden"
           textOverflow="ellipsis"
           minWidth={0}
         >
-          Afritan-Gestion de personnel
+          Akili
         </Text>
 
         {/* =================================================

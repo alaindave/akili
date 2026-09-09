@@ -24,6 +24,7 @@ import { createSocket } from "./socket.js";
 import { ensureStorageDirectories } from "./storage/directories.js";
 import { isDev } from "./util/env.util.js";
 import { getCompanyId } from "./database/repositories/companies.repository.js";
+import { getInstallationId } from "./util/installationId.js";
 
 /* =========================================================
    PATHS
@@ -39,6 +40,24 @@ const __dirname = path.dirname(__filename);
 const DEV = isDev();
 
 const environment = DEV ? "Development" : "Production";
+
+/*
+ * =========================================================
+ * INSTALLATION ID
+ * =========================================================
+ */
+
+const installationId = getInstallationId();
+
+console.log("INSTALLATION ID:", installationId);
+
+/*
+ * Each installation gets its own Electron userData directory.
+ */
+app.setPath(
+  "userData",
+  path.join(app.getPath("appData"), "Akili", installationId)
+);
 
 const API_URL = app.isPackaged
   ? "https://leather-works.onrender.com"

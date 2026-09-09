@@ -46,8 +46,8 @@ const EmployeeFilterMenu = ({ onFilterClicked }: Props) => {
         maxH="160px"
         ml="3rem"
         position="relative"
-        left="17rem"
-        bottom="3rem"
+        left="18rem"
+        bottom="10rem"
         overflowY="auto"
         _hover={{ color: "yellow" }}
       >
@@ -67,10 +67,7 @@ const EmployeeFilterMenu = ({ onFilterClicked }: Props) => {
           <Box>
             <BsPeopleFill size="20px" />
           </Box>
-          <Text marginTop="15px" marginLeft="10px">
-            {" "}
-            Tous les employés
-          </Text>
+          <Text ml="0.8rem"> Tous les employés</Text>
         </MenuItem>
         <MenuItem
           color="gray.800"
@@ -88,9 +85,7 @@ const EmployeeFilterMenu = ({ onFilterClicked }: Props) => {
           <Box>
             <GiOfficeChair />
           </Box>
-          <Text marginTop="15px" marginLeft="10px">
-            Administration
-          </Text>
+          <Text ml="0.8rem">Administration</Text>
         </MenuItem>
         <MenuItem
           color="gray.800"
@@ -108,9 +103,7 @@ const EmployeeFilterMenu = ({ onFilterClicked }: Props) => {
           <Box>
             <GiFactory />
           </Box>
-          <Text marginTop="15px" marginLeft="10px">
-            Usine
-          </Text>
+          <Text ml="0.8rem">Usine</Text>
         </MenuItem>
         <MenuItem
           color="gray.800"
@@ -128,10 +121,7 @@ const EmployeeFilterMenu = ({ onFilterClicked }: Props) => {
           <Box>
             <MdOutlineHandyman />
           </Box>
-          <Text marginTop="15px" marginLeft="10px">
-            {" "}
-            Atelier
-          </Text>
+          <Text ml="0.8rem"> Atelier</Text>
         </MenuItem>
         <MenuItem
           color="gray.800"
@@ -149,9 +139,7 @@ const EmployeeFilterMenu = ({ onFilterClicked }: Props) => {
           <Box>
             <FaWarehouse />
           </Box>
-          <Text marginTop="15px" marginLeft="10px">
-            Magasin
-          </Text>
+          <Text ml="0.8rem">Magasin</Text>
         </MenuItem>
         <MenuItem
           color="gray.800"
@@ -169,9 +157,7 @@ const EmployeeFilterMenu = ({ onFilterClicked }: Props) => {
           <Box>
             <GiGuards />
           </Box>
-          <Text marginTop="15px" marginLeft="10px">
-            Sentinelle
-          </Text>
+          <Text ml="0.8rem">Sentinelle</Text>
         </MenuItem>
       </MenuList>
     </Menu>

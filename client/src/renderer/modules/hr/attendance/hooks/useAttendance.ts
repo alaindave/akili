@@ -347,14 +347,13 @@ export const useUpdateAttendance = (companyId: string) => {
 /**
  * Mark employees absent for a date
  */
-export const useMarkAbsent = (companyId: string) => {
+export const useMarkAbsent = (companyId: string, date: string) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (date: string) =>
-      window.electron.attendance.markAbsent(companyId, date),
+    mutationFn: () => window.electron.attendance.markAbsent(companyId, date),
 
-    onSuccess: (_, date) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: attendanceKeys.all,
       });

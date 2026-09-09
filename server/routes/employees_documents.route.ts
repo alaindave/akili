@@ -32,7 +32,7 @@ router.get(
       }
 
       const { data, error } = await supabase.storage
-        .from("afritan_employees_documents")
+        .from("employees_documents")
         .download(document.storagePath);
 
       if (error || !data) {

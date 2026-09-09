@@ -30,7 +30,7 @@ router.get(
       }
 
       const { data, error } = await supabase.storage
-        .from("afritan_employees_photos")
+        .from("employees_photos")
         .download(employee.photo_path);
 
       if (error || !data) {

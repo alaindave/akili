@@ -25,7 +25,7 @@ export async function markAbsentEmployees(
     isDeleted: 0,
   }).lean();
 
-  console.log("FETCHED ACTIVE EMPLOYEES", employees.length);
+  console.log(`FETCHED ACTIVE EMPLOYEES for CID ${companyId}:${employees}`);
 
   if (employees.length === 0) {
     return {

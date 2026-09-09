@@ -5,6 +5,7 @@ import Company from "../../../common/types/company.js";
 /* =========================================================
    UPSERT
 ========================================================= */
+
 /**
  * Used primarily when pulling a company from the server.
  */
@@ -13,11 +14,21 @@ export async function upsertCompany(company: Company): Promise<void> {
     `
     SELECT *
     FROM companies
-    WHERE companyId = ?
     LIMIT 1
-    `,
-    [company.companyId]
+    `
   );
+
+  /*
+   * This installation can only belong to one company.
+   *
+   * If a company already exists and it is a different company,
+   * refuse to overwrite it.
+   */
+  if (existing && existing.companyId !== company.companyId) {
+    throw new Error(
+      `This installation is already associated with company ${existing.companyId}`
+    );
+  }
 
   /*
    * Do not overwrite a newer local version.
@@ -59,7 +70,7 @@ export async function upsertCompany(company: Company): Promise<void> {
     ON CONFLICT(_id)
     DO UPDATE SET
       name = excluded.name,
-      legalName=excluded.legalName,
+      legalName = excluded.legalName,
       logoPath = excluded.logoPath,
       address = excluded.address,
       city = excluded.city,
@@ -78,7 +89,7 @@ export async function upsertCompany(company: Company): Promise<void> {
       company._id,
       company.companyId,
       company.name,
-      company.legalName,
+      company.legalName ?? null,
       company.logoPath ?? null,
       company.address ?? null,
       company.city ?? null,
@@ -103,23 +114,29 @@ export async function upsertCompany(company: Company): Promise<void> {
 /**
  * Used during first-admin login.
  *
- * This establishes the company that this local
- * Electron installation belongs to.
+ * Establishes the company that this local Electron
+ * installation belongs to.
+ *
+ * One installation = one company.
  */
 export async function upsertCompanyId(company: Company): Promise<void> {
-  console.log("NEW COMPANY TO UPSERT", company);
+  console.log("COMPANY TO UPSERT:", company);
+
   const existing = await get<Company>(
     `
     SELECT *
     FROM companies
-    WHERE companyId=?
     LIMIT 1
-    `,
-    [company.companyId]
+    `
   );
 
   const now = new Date().toISOString();
 
+  /*
+   * No company exists yet.
+   * This is the first company associated with
+   * this local installation.
+   */
   if (!existing) {
     await run(
       `
@@ -165,16 +182,26 @@ export async function upsertCompanyId(company: Company): Promise<void> {
       ]
     );
 
+    console.log(`COMPANY ASSOCIATED WITH INSTALLATION: ${company.companyId}`);
+
     return;
   }
 
-  // if (existing.companyId === company.companyId) {
-  //   return;
-  // }
+  /*
+   * Same company.
+   *
+   * Nothing needs to be changed.
+   */
+  if (existing.companyId === company.companyId) {
+    return;
+  }
 
-  // throw new Error(
-  //   `This installation is already associated with company ${existing.companyId}`
-  // );
+  /*
+   * Different company.
+   */
+  throw new Error(
+    `This installation is already associated with company ${existing.companyId}`
+  );
 }
 
 /* =========================================================
@@ -186,8 +213,8 @@ export async function getCompany(companyId: string): Promise<Company | null> {
     `
     SELECT *
     FROM companies
-    WHERE companyID=? 
-    AND isDeleted = 0
+    WHERE companyId = ?
+      AND isDeleted = 0
     LIMIT 1
     `,
     [companyId]
@@ -198,6 +225,9 @@ export async function getCompany(companyId: string): Promise<Company | null> {
    GET COMPANY ID
 ========================================================= */
 
+/**
+ * One local installation has one company.
+ */
 export async function getCompanyId(): Promise<string | null> {
   const company = await get<{ companyId: string }>(
     `
@@ -221,7 +251,7 @@ export async function updateCompany(company: Company): Promise<void> {
     UPDATE companies
     SET
       name = ?,
-      legalName=?,
+      legalName = ?,
       logoPath = ?,
       address = ?,
       city = ?,
@@ -327,7 +357,7 @@ export async function getUnsyncedCompany(): Promise<Company | null> {
     SELECT *
     FROM companies
     WHERE synced = 0
-    AND isDeleted = 0
+      AND isDeleted = 0
     LIMIT 1
     `
   );

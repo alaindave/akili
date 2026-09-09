@@ -33,9 +33,11 @@ import { usePayrollSettings } from "../hooks/payroll_settings.hook";
 import { getPayrollPeriod } from "../../../../lib/date";
 import { formatCurrency } from "../../../../lib/formatter";
 import Employee from "../../../../../common/types/Employee";
+import useAdminUser from "../../../../../store/auth.store";
 
 const EmployeePayslipDetails = () => {
   const { _id: employeeId, payslipId } = useParams();
+  const user = useAdminUser((store) => store.adminUser);
   const navigate = useNavigate();
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [payrollResults, setPayrollResults] = useState<PayrollResult | null>(
@@ -81,7 +83,10 @@ const EmployeePayslipDetails = () => {
     if (!employeeId) return;
 
     try {
-      const employee = await window.electron.employees.getById(employeeId);
+      const employee = await window.electron.employees.getById(
+        user.companyId,
+        employeeId
+      );
       console.log("FETCHED EMPLOYEE:", employee);
       setEmployee(employee);
     } catch (e) {

@@ -15,6 +15,7 @@ import {
 } from "react-icons/fi";
 import { useRef, useState } from "react";
 import { EmployeeDocumentType } from "../../../../../common/types/EmployeeDocuments";
+import useAdminUser from "../../../../../store/auth.store";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
@@ -37,6 +38,7 @@ export default function PdfUpload({
 
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const user = useAdminUser((store) => store.adminUser);
 
   const uploadDocument = async (selectedFile: File) => {
     try {
@@ -45,6 +47,7 @@ export default function PdfUpload({
       const arrayBuffer = await selectedFile.arrayBuffer();
 
       await window.electron.employees_documents.upload({
+        companyId: user.companyId,
         employeeId,
         uploadedBy,
         documentType,

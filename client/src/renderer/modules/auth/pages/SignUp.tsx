@@ -116,13 +116,13 @@ const SignUp = () => {
       console.log("USER SIGN UP SUCCESS: ", res);
 
       setAuth({
-        _id: res._id,
-        companyId: res.companyId,
-        firstName: res.firstName,
-        lastName: res.lastName,
-        email: res.email,
-        role: res.role,
-        notes: res.notes ?? "",
+        _id: res.admin._id,
+        companyId: res.company.companyId,
+        firstName: res.admin.firstName,
+        lastName: res.admin.lastName,
+        email: res.admin.email,
+        role: res.admin.role,
+        notes: res.admin.notes ?? "",
       });
 
       navigate("/admin");

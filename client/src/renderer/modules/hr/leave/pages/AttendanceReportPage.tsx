@@ -58,7 +58,13 @@ const EmployeeAttendanceReport = () => {
   }, []);
 
   return (
-    <Flex bg="#ffffff" width="100%" direction="column" alignItems="flex-start">
+    <Flex
+      bg="#F8FAFC"
+      width="100%"
+      height="100%"
+      direction="column"
+      alignItems="flex-start"
+    >
       {/* Header */}
       <HStack mt="1.5rem">
         <Link
@@ -96,9 +102,40 @@ const EmployeeAttendanceReport = () => {
       </HStack>
       {/* Employee bio */}
 
-      <Box ml="10rem" mt="5rem">
-        <AttendanceTable records={attendances} />
-      </Box>
+      {attendances.length !== 0 ? (
+        <Box ml="10rem" mt="5rem">
+          <AttendanceTable records={attendances} />
+        </Box>
+      ) : (
+        <Flex
+          ml="1rem"
+          mt="10rem"
+          width="80vw"
+          minHeight={{
+            base: "180px",
+            md: "220px",
+          }}
+          align="center"
+          justify="center"
+          bg="#ffffff"
+          border="1px solid #E2E8F0"
+          borderRadius="8px"
+          px="20px"
+          flexShrink={0}
+        >
+          <Text
+            fontSize={{
+              base: "1rem",
+              md: "1.1rem",
+            }}
+            fontWeight="500"
+            color="gray.500"
+            textAlign="center"
+          >
+            Pas d'historique de présence retrouvé
+          </Text>
+        </Flex>
+      )}
     </Flex>
   );
 };

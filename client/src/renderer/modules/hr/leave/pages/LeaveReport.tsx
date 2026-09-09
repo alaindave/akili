@@ -36,7 +36,13 @@ const EmployeeLeaveReport = () => {
     getLeaveHistory();
   }, []);
   return (
-    <Flex direction="column" bg="#ffffff" width="100%" alignItems="flex-start">
+    <Flex
+      direction="column"
+      bg="#F8FAFC"
+      height="100%"
+      width="100%"
+      alignItems="flex-start"
+    >
       {/* Header */}
       <HStack mt="1.4rem">
         <Link
@@ -81,7 +87,7 @@ const EmployeeLeaveReport = () => {
       ) : (
         <Flex
           ml="0.5rem"
-          mt="3rem"
+          mt="10rem"
           width="80vw"
           minHeight={{
             base: "180px",
@@ -100,8 +106,8 @@ const EmployeeLeaveReport = () => {
               base: "1rem",
               md: "1.1rem",
             }}
-            fontWeight="600"
-            color="gray.700"
+            fontWeight="500"
+            color="gray.500"
             textAlign="center"
           >
             Aucune demande de congé retrouvée

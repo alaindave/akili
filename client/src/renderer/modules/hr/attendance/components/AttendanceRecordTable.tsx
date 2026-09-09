@@ -1,17 +1,15 @@
 import {
-  Badge,
   Table,
-  Thead,
-  Tbody,
-  Tr,
-  Th,
-  Td,
   TableContainer,
-  Text,
+  Tbody,
+  Td,
+  Th,
+  Thead,
+  Tr,
 } from "@chakra-ui/react";
-import Attendance from "../../../../../common/types/Attendance";
-import { formatLateMinutes } from "./ClockIn";
+import { Attendance } from "../../../../../common/types/Attendance";
 import AttendanceNotesPopover from "./AttendanceNotesPopover";
+import { formatLateMinutes } from "./ClockIn";
 
 interface AttendanceTableProps {
   records: Attendance[];

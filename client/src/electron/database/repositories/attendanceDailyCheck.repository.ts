@@ -23,7 +23,7 @@ export async function createAttendanceDailyCheck(
     );
   }
 
-  console.log("CREATING ATTENDANCE DAILY CHECK NOW...");
+  console.log("CREATING ATTENDANCE DAILY CHECK NOW FOR DATE:", input.date);
   const date = input.date;
   const existing = await get<AttendanceDailyCheck>(
     `
@@ -336,9 +336,11 @@ export async function completeMarkAbsent(
     [date, companyId]
   );
 
+  console.log(`ATTENDANCE CHECK FOR companyId ${companyId} `, existing);
+
   if (!existing) {
     throw new Error(
-      "ATTENDANCE DAILY CHECK DOES NOT EXIST. MARK EMPLOYEES ON LEAVE MUST COMPLETE FIRST."
+      "L'enregistrement des employés en congé doit être effectué en premier."
     );
   }
 
