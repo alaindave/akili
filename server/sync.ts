@@ -13,7 +13,7 @@ import PayrollResult from "./models/payrollResult.model.js";
 import PayrollItem from "./models/payrollItem.model.js";
 import PayrollSettings from "./models/payrollSettings.model.js";
 import AttendanceDailyCheck from "./models/attendanceDailyCheck.model.js";
-import { getNextSyncVersion } from "./utils/syncVersion.js";
+import { Entity, getNextSyncVersion } from "./utils/syncVersion.js";
 
 export type SyncOperation = "CREATE" | "UPDATE" | "DELETE";
 
@@ -75,7 +75,7 @@ function requireUpdatedAt(data: SyncData): Date {
   return updatedAt;
 }
 
-async function getServerVersion(entity: string): Promise<number> {
+async function getServerVersion(entity: Entity): Promise<number> {
   return getNextSyncVersion(entity);
 }
 

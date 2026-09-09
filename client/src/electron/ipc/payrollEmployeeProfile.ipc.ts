@@ -1,6 +1,8 @@
 import { IpcMainInvokeEvent, ipcMain } from "electron";
 
-import EmployeePayrollProfile from "../../common/types/payroll/PayrollEmployeeProfile.js";
+import EmployeePayrollProfile, {
+  CreatePayrollProfileDto,
+} from "../../common/types/payroll/PayrollEmployeeProfile.js";
 
 import {
   createEmployeePayrollProfile,
@@ -28,8 +30,6 @@ import {
   addPayrollComponentToAllEmployees,
   resetEmployeePayrollProfileToDefaults,
 } from "../services/payroll/payrollProfile.service.js";
-
-import CreatePayrollProfileDto from "../../common/types/payroll/CreatePayrollProfileDto.js";
 
 /* -------------------------------------------------------------------------- */
 /*                         PAYROLL EMPLOYEE PROFILE IPC                       */

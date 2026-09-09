@@ -200,6 +200,9 @@ const EmployeeAttendancePage = () => {
     1.6fr 1.5fr 1.3fr 1.3fr 1fr 1fr 0.8fr
   `;
 
+  const delay = (ms: number) =>
+    new Promise((resolve) => setTimeout(resolve, ms));
+
   /* =========================================================
      CLOCK
   ========================================================= */
@@ -331,30 +334,20 @@ const EmployeeAttendancePage = () => {
 
       console.log("MARK ABSENT RESULT", result);
 
-      if (result?.completed) {
-        await loadDailyCheck();
+      await delay(3000);
 
-        toast({
-          title: "Absences enregistrées",
-          description: "Les absences ont été enregistrées avec succès.",
-          status: "success",
-          duration: 3000,
-          isClosable: true,
-          position: "top-left",
-        });
-
-        return;
-      }
+      await attendanceDailyCheckSync();
 
       toast({
-        title: "Weekend",
-        description:
-          "Service indisponible les weekends. Les absences doivent être enregistrées manuellement.",
-        status: "warning",
+        title: "Absences enregistrées",
+        description: "Les absences ont été enregistrées avec succès.",
+        status: "success",
         duration: 3000,
         isClosable: true,
         position: "top-left",
       });
+
+      return;
     } catch (error) {
       showActionError(
         "Échec d'enregistrement d'absences",

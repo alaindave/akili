@@ -28,9 +28,10 @@ import SearchBar from "../../../../components/SearchBar";
 const EmployeeListPage = () => {
   const [searchText, setSearchText] = useState("");
   const [filter, setFilter] = useState("");
-
   const user = useAdminUser((store) => store.adminUser);
+  const adminStore = useAdminUser();
 
+  console.log("CURRENT STORE", adminStore);
   const {
     data: employees = [],
     isLoading,

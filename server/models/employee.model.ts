@@ -10,7 +10,7 @@ export interface EmployeeDocument {
   dateBirth: Date;
   dateHired: Date;
   role: string;
-  department: "ADMINISTRATION" | "ATELIER" | "USINE" | "MAGASIN" | "SENTINELLE";
+  department: "Administation" | "Atelier" | "Usine" | "Magasin" | "Sentinelle";
   salary: number;
   remainingLeave: number;
   status: "ACTIF" | "INACTIF";
@@ -86,7 +86,7 @@ const employeeSchema = new Schema<EmployeeDocument>(
 
     department: {
       type: String,
-      enum: ["ADMINISTRATION", "ATELIER", "USINE", "MAGASIN", "SENTINELLE"],
+      enum: ["Administration", "Atelier", "Usine", "Magasin", "Sentinelle"],
       required: true,
     },
 

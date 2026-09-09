@@ -1,66 +1,105 @@
 import { Box, Flex, HStack, Stack, Text, VStack } from "@chakra-ui/react";
-import { useEffect, useState } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { CiCalendarDate } from "react-icons/ci";
 import { FaDollarSign, FaRegClock } from "react-icons/fa";
 import { GoDotFill } from "react-icons/go";
 import { Link, useLocation, useParams } from "react-router-dom";
-import { Attendance } from "../../../../../common/types/Attendance";
-import type Employee from "../../../../../common/types/Employee";
-import useAdminUser from "../../../../../store/auth.store";
 import ComponentErrorFallback from "../../../../components/ComponentErrorFallback";
 import EmployeeDetailsTab from "./EmployeeDetailsTab";
 import EmployeePhotoUpload from "./EmployeePhotoUpload";
+import { useEmployee } from "../hooks/useEmployees";
 
 type PhotoState = {
   photo_url?: string;
 };
 
 const EmployeeDetailsPage = () => {
-  const [employee, setEmployee] = useState<Employee | null>({} as Employee);
-  const [attendance, setAttendance] = useState<Attendance | null>(null);
   const { _id } = useParams();
-  const location = useLocation();
-  const { photo_url } = (location.state as PhotoState) || "";
-  const user = useAdminUser((store) => store.adminUser);
 
-  useEffect(() => {
-    if (!_id) return;
-    window.electron.employees
-      .getById(user.companyId, _id)
-      .then((employee) => {
-        setEmployee(employee);
-        console.log("EMPLOYEE FETCHED: ", employee);
-        return window.electron.attendance.getAttendanceRecord(
-          user.companyId,
-          employee._id,
-          new Date().toISOString().split("T")[0]
-        );
-      })
-      .then((attendance) => {
-        setAttendance(attendance);
-        console.log("ATTENDANCE FETCHED: ", attendance);
-      })
-      .catch((error) => {
-        console.error("ERROR FETCHING DATA:", error);
-      });
-  }, [_id]);
+  const location = useLocation();
+
+  const { photo_url } = (location.state as PhotoState) || {};
+
+  /*
+   * ---------------------------------------------------------
+   * EMPLOYEE
+   * ---------------------------------------------------------
+   */
+
+  const {
+    data: employee,
+    isLoading: employeeLoading,
+    isError: employeeError,
+    error: employeeErrorObject,
+    refetch: refetchEmployee,
+  } = useEmployee(_id);
+
+  /*
+   * ---------------------------------------------------------
+   * LOADING
+   * ---------------------------------------------------------
+   */
+
+  if (employeeLoading) {
+    return (
+      <Flex
+        width="100%"
+        height="94vh"
+        align="center"
+        justify="center"
+        bg="#F8F9FB"
+      >
+        <Text color="gray.500">Chargement de l'employé...</Text>
+      </Flex>
+    );
+  }
+
+  /*
+   * ---------------------------------------------------------
+   * ERROR
+   * ---------------------------------------------------------
+   */
+
+  if (employeeError) {
+    console.error("ERROR FETCHING EMPLOYEE:", employeeErrorObject);
+
+    return (
+      <Flex
+        width="100%"
+        height="94vh"
+        align="center"
+        justify="center"
+        bg="#F8F9FB"
+      >
+        <Text color="red.500">Impossible de charger l'employé.</Text>
+      </Flex>
+    );
+  }
+
+  if (!employee) {
+    return (
+      <Flex
+        width="100%"
+        height="94vh"
+        align="center"
+        justify="center"
+        bg="#F8F9FB"
+      >
+        <Text color="gray.500">Employé introuvable.</Text>
+      </Flex>
+    );
+  }
+
+  /*
+   * ---------------------------------------------------------
+   * PHOTO UPLOADED
+   * ---------------------------------------------------------
+   */
 
   const refreshEmployee = async () => {
-    try {
-      if (!employee?._id) return;
-      const updatedEmployee = await window.electron.employees.getById(
-        user.companyId,
-        employee?._id
-      );
-      setEmployee(updatedEmployee);
-      console.log("FETCHED UPDATED EMPLOYEE:", updatedEmployee);
-    } catch (error) {
-      console.error("AN ERROR OCCURED WHILE FETCHING EMPLOYEE", error);
-    }
+    await refetchEmployee();
   };
 
-  if (!employee) return;
   return (
     <Box
       position="relative"
@@ -72,21 +111,30 @@ const EmployeeDetailsPage = () => {
       height="94vh"
     >
       <VStack spacing={4} align="stretch">
-        {/* HEADER */}
+        {/* =====================================================
+            HEADER
+        ====================================================== */}
+
         <Flex
           direction={{ base: "column", md: "row" }}
           justify="space-between"
-          align={{ base: "flex-start", md: "center" }}
+          align={{
+            base: "flex-start",
+            md: "center",
+          }}
         >
           <HStack>
-            <HStack ml="0.3rem" mt="0.5rem">
+            <HStack ml="0.5rem" mt="0.7rem">
               {/* Profile photo */}
+
               <EmployeePhotoUpload
-                employeeId={_id!}
-                currentPhoto={photo_url}
+                employeeId={employee._id}
+                currentPhoto={employee.photo_url ?? photo_url}
                 onUploaded={refreshEmployee}
               />
+
               {/* Name and role */}
+
               <VStack spacing={3}>
                 <Text
                   fontSize="1.2rem"
@@ -94,26 +142,37 @@ const EmployeeDetailsPage = () => {
                   color="gray.700"
                   textAlign="center"
                 >
-                  {employee?.firstName} {employee?.lastName}
+                  {employee.firstName} {employee.lastName}
                 </Text>
+
                 <HStack position="relative" bottom="1rem">
-                  <Text>{employee?.role}</Text>
+                  <Text>{employee.role}</Text>
+
                   <Box>
-                    {" "}
                     <GoDotFill />
                   </Box>
-                  <Text>{employee?.department}</Text>
+
+                  <Text>{employee.department}</Text>
                 </HStack>
               </VStack>
             </HStack>
           </HStack>
-          {/* ATTENDANCE,LEAVES,PAYSLIPS */}
+
+          {/* =================================================
+              ATTENDANCE / LEAVES / PAYSLIPS
+          ================================================== */}
+
           <HStack mr="1rem" mb="1rem">
+            {/* Attendance */}
+
             <Link
               to={{
-                pathname: `/employees_admin/employees_list/${_id}/attendances`,
+                pathname: `/employees_admin/employees_list/${employee._id}/attendances`,
               }}
-              state={{ employee, photo_url, attendance }}
+              state={{
+                employee,
+                photo_url: employee.photo_url ?? photo_url,
+              }}
             >
               <HStack
                 cursor="pointer"
@@ -124,14 +183,21 @@ const EmployeeDetailsPage = () => {
                 padding="0.4rem"
               >
                 <FaRegClock size="1.2rem" color="blue" />
+
                 <Text color="gray.900">Présence</Text>
               </HStack>
             </Link>
+
+            {/* Leaves */}
+
             <Link
               to={{
-                pathname: `/employees_admin/employees_list/${_id}/leaves`,
+                pathname: `/employees_admin/employees_list/${employee._id}/leaves`,
               }}
-              state={{ employee, photo_url }}
+              state={{
+                employee,
+                photo_url: employee.photo_url ?? photo_url,
+              }}
             >
               <HStack
                 cursor="pointer"
@@ -142,14 +208,21 @@ const EmployeeDetailsPage = () => {
                 padding="0.4rem"
               >
                 <CiCalendarDate size="1.2rem" color="blue" />
+
                 <Text>Congés</Text>
               </HStack>
             </Link>
+
+            {/* Payslips */}
+
             <Link
               to={{
-                pathname: `/employees_admin/employees_list/${_id}/payslips`,
+                pathname: `/employees_admin/employees_list/${employee._id}/payslips`,
               }}
-              state={{ employee, photo_url }}
+              state={{
+                employee,
+                photo_url: employee.photo_url ?? photo_url,
+              }}
             >
               <HStack
                 cursor="pointer"
@@ -160,15 +233,26 @@ const EmployeeDetailsPage = () => {
                 padding="0.4rem"
               >
                 <FaDollarSign size="1.1rem" color="blue" />
+
                 <Text>Fiche de paye</Text>
               </HStack>
             </Link>
           </HStack>
         </Flex>
 
-        {/* MAIN CONTENT */}
-        <Stack direction={{ base: "column", lg: "row" }} spacing={4}>
+        {/* =====================================================
+            MAIN CONTENT
+        ====================================================== */}
+
+        <Stack
+          direction={{
+            base: "column",
+            lg: "row",
+          }}
+          spacing={4}
+        >
           {/* RIGHT PANEL */}
+
           <Box
             border="1px solid rgba(255,255,255,0.12)"
             boxShadow="0 2px 8px rgba(0,0,0,0.5)"
@@ -176,6 +260,7 @@ const EmployeeDetailsPage = () => {
             overflowY="auto"
             height="70.6vh"
             ml="15rem"
+            mt="2.5rem"
           >
             <ErrorBoundary FallbackComponent={ComponentErrorFallback}>
               <EmployeeDetailsTab employee={employee} />

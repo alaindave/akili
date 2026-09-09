@@ -38,6 +38,7 @@ import DatePicker from "react-datepicker";
 import AdminUser from "../../../../common/types/AdminUser";
 import User from "../../../../common/types/User";
 import { Priority } from "../../../../common/types/Task";
+import useAdminUser from "../../../../store/auth.store";
 
 interface Props {
   author: Omit<User, "password" | "notes">;
@@ -64,6 +65,8 @@ const TaskSubmissionModal = ({
   onRefresh,
   adminUsersList,
 }: Props) => {
+  const user = useAdminUser((store) => store.adminUser);
+
   const [recipient, setRecipient] = useState<AdminUser>({} as AdminUser);
 
   const [taskRecipients, setTaskRecipients] = useState<AdminUser[]>([]);
@@ -146,7 +149,8 @@ const TaskSubmissionModal = ({
       setIsSubmitting(true);
       setErrorMessage("");
 
-      const result = await window.electron.tasks.create({
+      const result = await window.electron.tasks.create(user.companyId, {
+        companyId: user.companyId,
         author,
         subject: task.subject,
         message: task.message,
@@ -166,7 +170,7 @@ const TaskSubmissionModal = ({
       onRefresh();
       onClose();
 
-      window.electron.sync().catch((error) => {
+      window.electron.sync(user.companyId).catch((error) => {
         console.error("IMMEDIATE SYNC FAILED:", error);
       });
     } catch (error: any) {

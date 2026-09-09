@@ -42,9 +42,12 @@ export function registerPayrollComponentIPC() {
   );
 
   //Create
-  ipcMain.handle("payroll-components:create", async (_, component) => {
-    return await createPayrollComponent(component);
-  });
+  ipcMain.handle(
+    "payroll-components:create",
+    async (_, companyId, component) => {
+      return await createPayrollComponent(companyId, component);
+    }
+  );
 
   //Update
   ipcMain.handle(

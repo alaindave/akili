@@ -46,14 +46,13 @@ export async function createOrUpdateOfflineUser(user: OfflineUser) {
     ]
   );
 
-  return getOfflineUserByEmail(user.companyId, user.email);
+  return getOfflineUserByEmail(user.email);
 }
 
 /**
- * Get an offline user by ID for a specific company.
+ * Get an offline user by ID
  */
 export async function getOfflineUserById(
-  companyId: string,
   _id: string
 ): Promise<OfflineUser | undefined | null> {
   return get<OfflineUser>(
@@ -61,17 +60,15 @@ export async function getOfflineUserById(
     SELECT *
     FROM offline_users
     WHERE _id = ?
-      AND companyId = ?
     `,
-    [_id, companyId]
+    [_id]
   );
 }
 
 /**
- * Get an offline user by email for a specific company.
+ * Get an offline user by email .
  */
 export async function getOfflineUserByEmail(
-  companyId: string,
   email: string
 ): Promise<OfflineUser | undefined | null> {
   return get<OfflineUser>(
@@ -79,9 +76,8 @@ export async function getOfflineUserByEmail(
     SELECT *
     FROM offline_users
     WHERE email = ?
-      AND companyId = ?
     `,
-    [email, companyId]
+    [email]
   );
 }
 
@@ -121,30 +117,27 @@ export async function saveNotes(companyId: string, _id: string, notes: string) {
     payload: JSON.stringify(savedNotes),
   });
 
-  return getOfflineUserById(companyId, _id);
+  return getOfflineUserById(_id);
 }
 
 /**
- * Get all offline users for a specific company.
+ * Get all offline users
  */
-export async function getAllOfflineUsers(
-  companyId: string
-): Promise<OfflineUser[]> {
+export async function getAllOfflineUsers(): Promise<OfflineUser[]> {
   return all<OfflineUser>(
     `
     SELECT *
     FROM offline_users
-    WHERE companyId = ?
     ORDER BY firstName ASC
     `,
-    [companyId]
+    []
   );
 }
 
 /**
  * Update the last verification timestamp.
  */
-export async function updateLastVerifiedAt(companyId: string, _id: string) {
+export async function updateLastVerifiedAt(_id: string) {
   await run(
     `
     UPDATE offline_users
@@ -152,25 +145,24 @@ export async function updateLastVerifiedAt(companyId: string, _id: string) {
       lastVerifiedAt = datetime('now'),
       updatedAt = datetime('now')
     WHERE _id = ?
-      AND companyId = ?
+      
     `,
-    [_id, companyId]
+    [_id]
   );
 
-  return getOfflineUserById(companyId, _id);
+  return getOfflineUserById(_id);
 }
 
 /**
- * Delete an offline user for a specific company.
+ * Delete an offline user.
  */
-export async function deleteOfflineUser(companyId: string, _id: string) {
+export async function deleteOfflineUser(_id: string) {
   await run(
     `
     DELETE FROM offline_users
     WHERE _id = ?
-      AND companyId = ?
     `,
-    [_id, companyId]
+    [_id]
   );
 
   return true;

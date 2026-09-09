@@ -22,6 +22,7 @@ import { PayrollRun } from "../../../../../common/types/payroll/Payroll";
 import MonthDropDown from "../../../../components/MonthDropDown";
 import PayrollStatusFilter from "../components/PayrollStatusFilter";
 import { getPayrollPeriod } from "../../../../lib/date";
+import useAdminUser from "../../../../../store/auth.store";
 
 type EmployeeState = {
   employee?: Employee;
@@ -32,6 +33,7 @@ type PhotoState = {
 };
 
 const EmployeePayrollReport = () => {
+  const user = useAdminUser((store: { adminUser: any }) => store.adminUser);
   const [payrollRuns, setPayrollRuns] = useState<PayrollRun[]>([]);
   const [statusFilter, setStatusFilter] = useState("");
   const location = useLocation();
@@ -59,6 +61,7 @@ const EmployeePayrollReport = () => {
     console.log("Selected month", month);
     try {
       const payrollRuns = await window.electron.payrollRun.getPayrollRuns(
+        user.companyId,
         Number(year),
         Number(month)
       );
@@ -106,14 +109,14 @@ const EmployeePayrollReport = () => {
                 <Box>
                   <MdOutlineChevronRight fontSize="1.3rem" />
                 </Box>
-                <Text fontSize="1.1rem" fontWeight="500">
+                <Text fontSize="1rem" fontWeight="500">
                   {" "}
                   {employee?.firstName} {employee?.lastName}
                 </Text>
                 <Box>
                   <MdOutlineChevronRight fontSize="1.3rem" />
                 </Box>
-                <Text fontSize="1.1rem" fontWeight="500">
+                <Text fontSize="1rem" fontWeight="500">
                   Fiches de paye
                 </Text>
               </HStack>

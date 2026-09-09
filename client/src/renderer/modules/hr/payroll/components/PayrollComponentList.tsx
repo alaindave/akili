@@ -21,6 +21,7 @@ import { useEffect, useState } from "react";
 import { FaDeleteLeft } from "react-icons/fa6";
 import PayrollComponent from "../../../../../common/types/payroll/PayrollComponent";
 import AddPayrollComponentModal from "./PayrollComponentAddModal";
+import useAdminUser from "../../../../../store/auth.store";
 
 interface Props {
   type: "EARNING" | "DEDUCTION";
@@ -34,6 +35,7 @@ export default function PayrollComponentList({ type, showTaxable }: Props) {
   const [originalComponents, setOriginalComponents] = useState<
     PayrollComponent[]
   >([]);
+  const user = useAdminUser((store) => store.adminUser);
 
   useEffect(() => {
     loadComponents();
@@ -41,7 +43,10 @@ export default function PayrollComponentList({ type, showTaxable }: Props) {
 
   const loadComponents = async () => {
     try {
-      const data = await window.electron.payrollComponents.getAll(type);
+      const data = await window.electron.payrollComponents.getAll(
+        user.companyId,
+        type
+      );
 
       setComponents(structuredClone(data));
       setOriginalComponents(structuredClone(data));
@@ -118,7 +123,10 @@ export default function PayrollComponentList({ type, showTaxable }: Props) {
         return;
       }
 
-      await window.electron.payrollComponents.update(modifiedComponents);
+      await window.electron.payrollComponents.update(
+        user.companyId,
+        modifiedComponents
+      );
 
       toast({
         title: "Paramètres sauvegardés.",
@@ -138,7 +146,7 @@ export default function PayrollComponentList({ type, showTaxable }: Props) {
 
   const handleDelete = async (_id: string) => {
     try {
-      await window.electron.payrollComponents.delete(_id);
+      await window.electron.payrollComponents.delete(user.companyId, _id);
       await loadComponents();
     } catch (error) {
       console.error("AN ERROR OCCURED WHILE DELETING COMPONENT:", error);

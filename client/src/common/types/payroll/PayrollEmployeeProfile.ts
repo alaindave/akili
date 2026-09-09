@@ -52,4 +52,5 @@ export interface CreatePayrollProfileDto {
     | null;
   taxable?: number;
   requiresHRApproval?: number | null;
+  enabled?: number;
 }

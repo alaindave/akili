@@ -35,13 +35,10 @@ type AuthData = z.infer<typeof schema>;
 const LoginPage = () => {
   const [errorMessage, setErrorMessage] = useState("");
   const navigate = useNavigate();
-
   const setLogIn = useAdminUser((store) => store.login);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-
   const clearTasks = useTaskStore((store) => store.clearTasks);
   const loadTopTasks = useTaskStore((store) => store.loadTopTasks);
-
   const { register, handleSubmit } = useForm<AuthData>({
     resolver: zodResolver(schema),
   });
@@ -67,16 +64,16 @@ const LoginPage = () => {
         console.log("OFFLINE LOGIN SUCCESS: ", offlineUser);
 
         setLogIn({
-          companyId: offlineUser.company.companyId,
-          _id: offlineUser.admin._id,
-          firstName: offlineUser.admin.firstName,
-          lastName: offlineUser.admin.lastName,
-          email: offlineUser.admin.email,
-          role: offlineUser.admin.role,
-          notes: offlineUser.admin.notes ?? "",
+          companyId: offlineUser.companyId,
+          _id: offlineUser._id,
+          firstName: offlineUser.firstName,
+          lastName: offlineUser.lastName,
+          email: offlineUser.email,
+          role: offlineUser.role,
+          notes: offlineUser.notes ?? "",
         });
 
-        await loadTopTasks(offlineUser.admin._id);
+        await loadTopTasks(offlineUser.companyId, offlineUser._id);
         navigate("/admin", { replace: true });
 
         return;
@@ -89,30 +86,33 @@ const LoginPage = () => {
       console.log("CREDS:", credentials);
 
       if (adminUser) {
-        const offlineUser = await window.electron.offlineUsers.save({
-          companyId: adminUser.company.companyId,
-          _id: adminUser.admin._id,
-          email: adminUser.admin.email,
-          password: credentials.password,
-          firstName: adminUser.admin.firstName,
-          lastName: adminUser.admin.lastName,
-          role: adminUser.admin.role,
-          notes: adminUser.admin.notes,
-        });
+        const offlineUser = await window.electron.offlineUsers.save(
+          adminUser.company.companyId,
+          {
+            companyId: adminUser.company.companyId,
+            _id: adminUser.admin._id,
+            email: adminUser.admin.email,
+            password: credentials.password,
+            firstName: adminUser.admin.firstName,
+            lastName: adminUser.admin.lastName,
+            role: adminUser.admin.role,
+            notes: adminUser.admin.notes,
+          }
+        );
 
         console.log("OFFLINE USER SUCCESSFULLY SAVED: ", offlineUser);
 
         setLogIn({
-          companyId: adminUser.admin.companyId,
+          companyId: adminUser.company.companyId,
           _id: adminUser.admin._id,
           firstName: adminUser.admin.firstName,
           lastName: adminUser.admin.lastName,
           email: adminUser.admin.email,
           role: adminUser.admin.role,
-          notes: adminUser.admin.notes ?? "",
+          notes: adminUser.admin.notes,
         });
 
-        await loadTopTasks(adminUser.admin._id);
+        await loadTopTasks(adminUser.company.companyId, adminUser.admin._id);
         navigate("/admin", { replace: true });
       }
     } catch (error) {

@@ -3,6 +3,7 @@ import type mongoose from "mongoose";
 
 import PayrollComponent from "../models/payrollComponent.model.js";
 import { defaultPayrollComponents } from "../seeds/payroll-component.seed.js";
+import { getNextSyncVersion } from "./syncVersion.js";
 
 export async function createDefaultPayrollComponents(
   companyId: string,
@@ -28,6 +29,8 @@ export async function createDefaultPayrollComponents(
       continue;
     }
 
+    const serverVersion = await getNextSyncVersion("payroll_component");
+
     const [component] = await PayrollComponent.create(
       [
         {
@@ -46,7 +49,7 @@ export async function createDefaultPayrollComponents(
           requiresHRApproval: defaultComponent.requiresHRApproval ?? 0,
           createdAt: now,
           updatedAt: now,
-          serverVersion: 0,
+          serverVersion,
           isDeleted: 0,
         },
       ],
@@ -57,7 +60,8 @@ export async function createDefaultPayrollComponents(
 
     console.log(
       `CREATED PAYROLL COMPONENT: ${defaultComponent.name} ` +
-        `FOR COMPANY ${companyId}`
+        `FOR COMPANY ${companyId} ` +
+        `SERVER VERSION: ${serverVersion}`
     );
   }
 

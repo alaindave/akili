@@ -21,6 +21,7 @@ import { FaDeleteLeft } from "react-icons/fa6";
 
 import AddPayrollEmployeeProfileModal from "./PayrollEmployeeProfileAddModal";
 import PayrollEmployeeProfile from "../../../../../common/types/payroll/PayrollEmployeeProfile";
+import useAdminUser from "../../../../../store/auth.store";
 
 interface Props {
   type: "EARNING" | "DEDUCTION";
@@ -33,10 +34,9 @@ export default function PayrollEmployeeProfileList({
   employeeID,
   showTaxable,
 }: Props) {
+  const user = useAdminUser((store) => store.adminUser);
   const toast = useToast();
-
   const [profiles, setProfiles] = useState<PayrollEmployeeProfile[]>([]);
-
   const [originalProfiles, setOriginalProfiles] = useState<
     PayrollEmployeeProfile[]
   >([]);
@@ -48,6 +48,7 @@ export default function PayrollEmployeeProfileList({
   const loadProfiles = async () => {
     try {
       const data = await window.electron.payrollEmployeeProfiles.getAll(
+        user.companyId,
         employeeID,
         type
       );
@@ -132,7 +133,10 @@ export default function PayrollEmployeeProfileList({
         return;
       }
 
-      await window.electron.payrollEmployeeProfiles.update(modifiedProfiles);
+      await window.electron.payrollEmployeeProfiles.update(
+        user.companyId,
+        modifiedProfiles
+      );
 
       toast({
         title: "Paramètres sauvegardés.",
@@ -156,7 +160,7 @@ export default function PayrollEmployeeProfileList({
 
   const handleDelete = async (_id: string) => {
     try {
-      await window.electron.payrollEmployeeProfiles.delete(_id);
+      await window.electron.payrollEmployeeProfiles.delete(user.companyId, _id);
 
       toast({
         title: "Élément supprimé.",
@@ -180,7 +184,10 @@ export default function PayrollEmployeeProfileList({
 
   const reset = async () => {
     try {
-      await window.electron.payrollEmployeeProfiles.resetToDefaults(employeeID);
+      await window.electron.payrollEmployeeProfiles.resetToDefaults(
+        user.companyId,
+        employeeID
+      );
 
       toast({
         title: "Profil réinitialisé.",

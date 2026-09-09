@@ -36,6 +36,7 @@ const EmployeeAdminPage = () => {
   const [adminUsersList, setAdminUsersList] = useState<AdminUser[]>([]);
   const [time, setTime] = useState<Date>(new Date());
   const [loading, setLoading] = useState(false);
+  const adminStore = useAdminUser();
   const user = useAdminUser((store) => store.adminUser);
   const [notes, setNotes] = useState(user.notes);
   const saveNotes = useAdminUser((store) => store.saveNotes);
@@ -44,6 +45,8 @@ const EmployeeAdminPage = () => {
   const tasks = useTaskStore((store) => store.tasks);
   const syncVersion = useSyncStore((store) => store.syncVersion);
   const previousSyncVersion = useRef(syncVersion);
+
+  console.log("ADMIN USER STORE", adminStore);
 
   // ---------------------------------------------------------
   // DISCLOSURES
@@ -142,7 +145,7 @@ const EmployeeAdminPage = () => {
 
     try {
       console.log("LOADING TOP TASKS FOR USER:", user._id);
-      await loadTopTasks(user._id);
+      await loadTopTasks(user.companyId, user._id);
       console.log("TOP TASKS LOADED SUCCESSFULLY");
     } catch (error) {
       console.error("AN ERROR OCCURRED WHILE FETCHING TASKS:", error);
@@ -230,7 +233,7 @@ const EmployeeAdminPage = () => {
     console.log("ID TO DELETE:", _id);
 
     try {
-      const deletedTask = await deleteTask(_id);
+      const deletedTask = await deleteTask(user.companyId, _id);
 
       console.log("DELETED TASK:", deletedTask);
     } catch (error) {
@@ -240,12 +243,12 @@ const EmployeeAdminPage = () => {
 
   const handleNotesSubmission = () => {
     window.electron.offlineUsers
-      .saveNotes(user._id, notes)
+      .saveNotes(user.companyId, user._id, notes ?? "")
       .then((res) => {
         console.log("NOTES SUCCESSFULLY SAVED:", res);
 
         setNotes(notes);
-        saveNotes(notes);
+        saveNotes(notes ?? "");
       })
       .catch((error) =>
         console.error("AN ERROR OCCURRED WHILE SAVING NOTES:", error)
@@ -414,7 +417,7 @@ const EmployeeAdminPage = () => {
             width="6rem"
             height="3rem"
             onClick={handleOpenReminder}
-            isDisabled={!notes.trim()}
+            isDisabled={!notes?.trim()}
           >
             <Box mr="0.4rem">
               <FaBell />
@@ -484,7 +487,7 @@ const EmployeeAdminPage = () => {
       <ReminderModal
         isReminderOpen={isReminderOpen}
         onReminderClose={onReminderClose}
-        notes={notes}
+        notes={notes ?? ""}
       />
     </Flex>
   );

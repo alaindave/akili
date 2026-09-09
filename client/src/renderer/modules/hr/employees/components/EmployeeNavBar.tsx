@@ -537,15 +537,15 @@ const EmployeeNavBar = () => {
   ================================================= */}
         <Text
           justifySelf="start"
-          fontSize={{ base: "0.9rem", md: "1rem" }}
-          fontWeight="600"
-          color="gray.700"
+          fontSize={{ base: "1rem", md: "1.1rem" }}
+          fontWeight="700"
           whiteSpace="nowrap"
           overflow="hidden"
           textOverflow="ellipsis"
           minWidth={0}
+          fontFamily="heading"
         >
-          Akili
+          AKILI
         </Text>
 
         {/* =================================================

@@ -97,6 +97,8 @@ export async function createPayrollSettings(
     throw new Error("PAYROLL SETTINGS ALREADY EXIST FOR THIS COMPANY");
   }
 
+  console.log("PAYROLL SETTINGS DATA", data);
+
   const _id = randomUUID();
   const now = new Date().toISOString();
   const serverVersion = 0;

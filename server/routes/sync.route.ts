@@ -816,6 +816,21 @@ router.get(
           "-password -notes"
         );
 
+        console.log("ADMIN USER VERSION PULL:", {
+          companyId,
+          afterVersion: version,
+          nextVersion: result.nextVersion,
+          count: result.items.length,
+          hasMore: result.hasMore,
+        });
+
+        if (result.items.length > 0) {
+          console.log(
+            "ADMIN USER PULL FROM MONGO:",
+            JSON.stringify(result.items[0], null, 2)
+          );
+        }
+
         return res.json({
           success: true,
           companyId,
@@ -840,6 +855,21 @@ router.get(
           version,
           max
         );
+
+        console.log("EMPLOYEE DOCUMENTS VERSION PULL:", {
+          companyId,
+          afterVersion: version,
+          nextVersion: result.nextVersion,
+          count: result.items.length,
+          hasMore: result.hasMore,
+        });
+
+        if (result.items.length > 0) {
+          console.log(
+            "EMPLOYEE DOCUMENTS PULL FROM MONGO:",
+            JSON.stringify(result.items[0], null, 2)
+          );
+        }
 
         return res.json({
           success: true,
@@ -866,6 +896,21 @@ router.get(
           max
         );
 
+        console.log("ATTENDANCE VERSION PULL:", {
+          companyId,
+          afterVersion: version,
+          nextVersion: result.nextVersion,
+          count: result.items.length,
+          hasMore: result.hasMore,
+        });
+
+        if (result.items.length > 0) {
+          console.log(
+            "ATTENDANCE PULL FROM MONGO:",
+            JSON.stringify(result.items[0], null, 2)
+          );
+        }
+
         return res.json({
           success: true,
           companyId,
@@ -890,6 +935,21 @@ router.get(
           version,
           max
         );
+
+        console.log("ATTENDANCE DAILY CHECK VERSION PULL:", {
+          companyId,
+          afterVersion: version,
+          nextVersion: result.nextVersion,
+          count: result.items.length,
+          hasMore: result.hasMore,
+        });
+
+        if (result.items.length > 0) {
+          console.log(
+            "ATTENDANCE DAILY CHECK PULL FROM MONGO:",
+            JSON.stringify(result.items[0], null, 2)
+          );
+        }
 
         return res.json({
           success: true,
@@ -916,6 +976,21 @@ router.get(
           max
         );
 
+        console.log("LEAVE VERSION PULL:", {
+          companyId,
+          afterVersion: version,
+          nextVersion: result.nextVersion,
+          count: result.items.length,
+          hasMore: result.hasMore,
+        });
+
+        if (result.items.length > 0) {
+          console.log(
+            "LEAVE PULL FROM MONGO:",
+            JSON.stringify(result.items[0], null, 2)
+          );
+        }
+
         return res.json({
           success: true,
           companyId,
@@ -940,6 +1015,21 @@ router.get(
           version,
           max
         );
+
+        console.log("TASK VERSION PULL:", {
+          companyId,
+          afterVersion: version,
+          nextVersion: result.nextVersion,
+          count: result.items.length,
+          hasMore: result.hasMore,
+        });
+
+        if (result.items.length > 0) {
+          console.log(
+            "TASK PULL FROM MONGO:",
+            JSON.stringify(result.items[0], null, 2)
+          );
+        }
 
         return res.json({
           success: true,
@@ -966,6 +1056,21 @@ router.get(
           max
         );
 
+        console.log("PAYROLL SETTINGS VERSION PULL:", {
+          companyId,
+          afterVersion: version,
+          nextVersion: result.nextVersion,
+          count: result.items.length,
+          hasMore: result.hasMore,
+        });
+
+        if (result.items.length > 0) {
+          console.log(
+            "PAYROLL SETTINGS PULL FROM MONGO:",
+            JSON.stringify(result.items[0], null, 2)
+          );
+        }
+
         return res.json({
           success: true,
           companyId,
@@ -990,6 +1095,21 @@ router.get(
           version,
           max
         );
+
+        console.log("PAYROLL COMPONENT VERSION PULL:", {
+          companyId,
+          afterVersion: version,
+          nextVersion: result.nextVersion,
+          count: result.items.length,
+          hasMore: result.hasMore,
+        });
+
+        if (result.items.length > 0) {
+          console.log(
+            "PAYROLL COMPONENT PULL FROM MONGO:",
+            JSON.stringify(result.items[0], null, 2)
+          );
+        }
 
         return res.json({
           success: true,
@@ -1016,6 +1136,21 @@ router.get(
           max
         );
 
+        console.log("PAYROLL PROFILE VERSION PULL:", {
+          companyId,
+          afterVersion: version,
+          nextVersion: result.nextVersion,
+          count: result.items.length,
+          hasMore: result.hasMore,
+        });
+
+        if (result.items.length > 0) {
+          console.log(
+            "PAYROLL PROFILE PULL FROM MONGO:",
+            JSON.stringify(result.items[0], null, 2)
+          );
+        }
+
         return res.json({
           success: true,
           companyId,
@@ -1040,6 +1175,21 @@ router.get(
           version,
           max
         );
+
+        console.log("PAYROLL RUN VERSION PULL:", {
+          companyId,
+          afterVersion: version,
+          nextVersion: result.nextVersion,
+          count: result.items.length,
+          hasMore: result.hasMore,
+        });
+
+        if (result.items.length > 0) {
+          console.log(
+            "PAYROLL RUN PULL FROM MONGO:",
+            JSON.stringify(result.items[0], null, 2)
+          );
+        }
 
         return res.json({
           success: true,
@@ -1066,6 +1216,21 @@ router.get(
           max
         );
 
+        console.log("PAYROLL RESULT VERSION PULL:", {
+          companyId,
+          afterVersion: version,
+          nextVersion: result.nextVersion,
+          count: result.items.length,
+          hasMore: result.hasMore,
+        });
+
+        if (result.items.length > 0) {
+          console.log(
+            "PAYROLL RESULT PULL FROM MONGO:",
+            JSON.stringify(result.items[0], null, 2)
+          );
+        }
+
         return res.json({
           success: true,
           companyId,
@@ -1090,6 +1255,21 @@ router.get(
           version,
           max
         );
+
+        console.log("PAYROLL ITEM VERSION PULL:", {
+          companyId,
+          afterVersion: version,
+          nextVersion: result.nextVersion,
+          count: result.items.length,
+          hasMore: result.hasMore,
+        });
+
+        if (result.items.length > 0) {
+          console.log(
+            "PAYROLL ITEM PULL FROM MONGO:",
+            JSON.stringify(result.items[0], null, 2)
+          );
+        }
 
         return res.json({
           success: true,

@@ -7,23 +7,20 @@ import {
   Flex,
   Grid,
   HStack,
-  Icon,
   Stack,
   Text,
   Textarea,
   VStack,
 } from "@chakra-ui/react";
-import { FiCheckCircle } from "react-icons/fi";
-import { FaArrowLeftLong } from "react-icons/fa6";
-import { FaHourglassStart } from "react-icons/fa";
-import { FaHourglassEnd } from "react-icons/fa6";
 import { useEffect, useState } from "react";
+import { FaHourglassStart } from "react-icons/fa";
+import { FaArrowLeftLong, FaHourglassEnd } from "react-icons/fa6";
 import { Link, useParams } from "react-router-dom";
 import Task from "../../../../common/types/Task";
 import useAdminUser from "../../../../store/auth.store";
+import useSyncStore from "../../../../store/sync.store";
 import useTaskStore from "../../../../store/task.store";
 import TaskResolutionPopover from "../components/TaskResolutionPopover";
-import useSyncStore from "../../../../store/sync.store";
 
 export default function TaskDetailsPage() {
   const { _id } = useParams();
@@ -41,7 +38,7 @@ export default function TaskDetailsPage() {
     if (!_id) return;
 
     try {
-      const result = await window.electron.tasks.getById(_id);
+      const result = await window.electron.tasks.getById(author.companyId, _id);
       if (!result) {
         return;
       }
@@ -57,10 +54,10 @@ export default function TaskDetailsPage() {
     }
 
     try {
-      await addComment(task?._id, author, comment);
+      await addComment(author.companyId, task?._id, author, comment);
       setComment("");
       await loadTask();
-      window.electron.sync().catch((error) => {
+      window.electron.sync(author.companyId).catch((error) => {
         console.error("IMMEDIATE SYNC FAILED:", error);
       });
     } catch (error) {
@@ -92,7 +89,7 @@ export default function TaskDetailsPage() {
     };
 
     try {
-      await window.electron.tasks.update(updatedTask);
+      await window.electron.tasks.update(author.companyId, updatedTask);
 
       useTaskStore.setState((state) => ({
         tasks: state.tasks.map((existingTask) =>
@@ -104,7 +101,7 @@ export default function TaskDetailsPage() {
             : existingTask
         ),
       }));
-      window.electron.sync().catch((error) => {
+      window.electron.sync(author.companyId).catch((error) => {
         console.error("IMMEDIATE SYNC FAILED:", error);
       });
       await loadTask();
@@ -217,7 +214,7 @@ export default function TaskDetailsPage() {
                   Auteur
                 </Text>
 
-                <HStack spacing={3}>
+                <HStack spacing={3} mt="1rem">
                   <Avatar
                     size="sm"
                     name={
@@ -276,7 +273,7 @@ export default function TaskDetailsPage() {
                           name={`${user.firstName} ${user.lastName}`}
                         />
 
-                        <Text fontSize="sm" color="gray.700">
+                        <Text fontSize="md" color="gray.800">
                           {user.firstName} {user.lastName}
                         </Text>
                       </HStack>

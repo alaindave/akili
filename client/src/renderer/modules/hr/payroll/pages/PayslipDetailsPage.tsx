@@ -100,13 +100,17 @@ const EmployeePayslipDetails = () => {
     try {
       const payrollResults =
         await window.electron.payrollRun.getEmployeePayrollResults(
+          user.companyId,
           employeeId,
           payslipId
         );
       console.log("FETCHED PAYROLL RESULTS", payrollResults);
+      console.log("PAYSLIP ID", payslipId);
+
       setPayrollResults(payrollResults);
 
       const payrollItems = await window.electron.payrollRun.getPayrollItems(
+        user.companyId,
         payrollResults?._id!,
         employeeId
       );
@@ -133,13 +137,13 @@ const EmployeePayslipDetails = () => {
           </Box>
           <Box mt="1rem">
             <HStack>
-              <Text ml="0.3rem" fontSize="1.3rem" fontWeight="600">
+              <Text ml="0.3rem" fontSize="1.1rem" fontWeight="500">
                 Fiches de paye
               </Text>
               <Box>
                 <MdOutlineChevronRight fontSize="1.3rem" />
               </Box>
-              <Text fontWeight="600" fontSize="1.1rem" color="gray.700">
+              <Text fontWeight="600" fontSize="1rem">
                 Periode du{" "}
                 {payrollResults?.month && payrollResults?.year
                   ? getPayrollPeriod(payrollResults.month, payrollResults.year)
@@ -149,10 +153,10 @@ const EmployeePayslipDetails = () => {
                 <MdOutlineChevronRight fontSize="1.3rem" />
               </Box>
 
-              <Text fontWeight="600" fontSize="1.1rem">
+              <Text fontWeight="600" fontSize="1rem">
                 {employee?.firstName}
               </Text>
-              <Text fontWeight="600" fontSize="1.1rem">
+              <Text fontWeight="600" fontSize="1rem">
                 {employee?.lastName}
               </Text>
             </HStack>
@@ -449,7 +453,7 @@ const EmployeePayslipDetails = () => {
           <Table variant="simple" sx={{ tableLayout: "fixed" }} flexShrink={0}>
             <Thead>
               <Tr>
-                <Th color="purple.600" fontSize="0.8rem">
+                <Th color="red.600" fontSize="0.8rem">
                   Déductions
                 </Th>
                 <Th isNumeric>Montant</Th>

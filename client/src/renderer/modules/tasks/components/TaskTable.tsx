@@ -178,8 +178,8 @@ const TaskTable = ({
                     <Td maxW="320px">
                       <Text
                         fontSize="md"
-                        fontWeight="500"
-                        color="gray.800"
+                        fontWeight="600"
+                        color="gray.700"
                         noOfLines={2}
                         maxW="200px"
                         whiteSpace="normal"
@@ -196,7 +196,6 @@ const TaskTable = ({
                         px={2.5}
                         py={1}
                         fontSize="xs"
-                        mb="1rem"
                       >
                         {task.priority}
                       </Badge>
@@ -218,7 +217,6 @@ const TaskTable = ({
                             borderRadius="full"
                             px={2.5}
                             py={1}
-                            mb="1rem"
                           >
                             Resolue
                           </Badge>
@@ -230,7 +228,6 @@ const TaskTable = ({
                             borderRadius="full"
                             px={2.5}
                             py={1}
-                            mb="1rem"
                           >
                             Ouverte
                           </Badge>

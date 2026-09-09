@@ -15,6 +15,7 @@ import {
 // ============================================================
 
 export async function createPayrollComponent(
+  companyId: string,
   component: CreatePayrollComponentDto
 ): Promise<PayrollComponent | null> {
   if (!component.companyId) {
@@ -56,7 +57,7 @@ export async function createPayrollComponent(
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `,
     [
-      component.companyId,
+      companyId,
       _id,
       component.name,
       component.displayName,
@@ -74,7 +75,7 @@ export async function createPayrollComponent(
       now,
       null,
       0,
-      null,
+      0,
     ]
   );
 
@@ -83,7 +84,7 @@ export async function createPayrollComponent(
     ...component,
     createdAt: now,
     updatedAt: now,
-    serverVersion: null,
+    serverVersion: 0,
     synced: 0,
     isDeleted: 0,
   };
@@ -91,14 +92,14 @@ export async function createPayrollComponent(
   console.log("PAYROLL COMPONENT TO SAVE TO SYNC QUEUE", savedPayrollComponent);
 
   await addToSyncQueue({
-    companyId: component.companyId,
+    companyId: companyId,
     entity: "payroll_component",
     entityId: _id,
     operation: "create",
     payload: JSON.stringify(savedPayrollComponent),
   });
 
-  const newComponent = await getPayrollComponentById(component.companyId, _id);
+  const newComponent = await getPayrollComponentById(companyId, _id);
 
   // Add the new component to employee payroll profiles.
   if (newComponent) {

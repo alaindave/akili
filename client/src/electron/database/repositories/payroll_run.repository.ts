@@ -1748,7 +1748,7 @@ export async function getEmployeePayrollResults(
   payrollRunId?: string
 ) {
   if (payrollRunId) {
-    return await all<PayrollResult>(
+    return await get<PayrollResult>(
       `
       SELECT *
       FROM payroll_results

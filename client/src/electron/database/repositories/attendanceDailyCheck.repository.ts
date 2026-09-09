@@ -11,6 +11,7 @@ import {
 import { addToSyncQueue } from "./sync.repository.js";
 import { markEmployeesAbsent } from "../../services/attendance/markEmployeesAbsent.service.js";
 import { markEmployeesOnLeave } from "../../services/attendance/markEmployeesOnLeave.service.js";
+import sync from "../../services/sync/sync.service.js";
 
 const now = () => new Date().toISOString();
 
@@ -376,6 +377,8 @@ export async function completeMarkAbsent(
     operation: "update",
     payload: JSON.stringify(record),
   });
+
+  await sync(companyId);
 
   return record;
 }

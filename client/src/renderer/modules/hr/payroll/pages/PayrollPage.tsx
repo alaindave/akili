@@ -163,6 +163,7 @@ export default function PayrollPage() {
     console.log("Selected month", month);
     try {
       const payrollRuns = await window.electron.payrollRun.getPayrollRuns(
+        user.companyId,
         Number(year),
         Number(month)
       );
@@ -200,6 +201,7 @@ export default function PayrollPage() {
     try {
       const payroll_results =
         await window.electron.payrollRun.createPayrollDraft(
+          user.companyId,
           user,
           Number(year),
           Number(month)
@@ -225,7 +227,10 @@ export default function PayrollPage() {
 
   const withdraw = async (_id: string) => {
     try {
-      const results = await window.electron.payrollRun.returnToDraft(_id);
+      const results = await window.electron.payrollRun.returnToDraft(
+        user.companyId,
+        _id
+      );
       console.log("WITHDRAW RESULTS", results);
       await handlePayrollSync();
     } catch (error) {
@@ -240,7 +245,11 @@ export default function PayrollPage() {
   const handlePayrollCancellation = async (_id: string) => {
     if (!_id) return;
     try {
-      const results = await window.electron.payrollRun.cancelPayroll(_id, user);
+      const results = await window.electron.payrollRun.cancelPayroll(
+        user.companyId,
+        _id,
+        user
+      );
       console.log("CANCELLATION RESULTS", results);
       await handlePayrollSync();
     } catch (error) {
@@ -254,7 +263,10 @@ export default function PayrollPage() {
 
   const handleDelete = async (_id: string) => {
     try {
-      const results = await window.electron.payrollRun.deletePayrollRun(_id);
+      const results = await window.electron.payrollRun.deletePayrollRun(
+        user.companyId,
+        _id
+      );
       console.log("DELETE RESULTS", results);
       await handlePayrollSync();
     } catch (e) {
@@ -333,7 +345,7 @@ export default function PayrollPage() {
           </Box>
         </Flex>
 
-        <Box mt="5rem" ml="1rem">
+        <Box mt="3rem" ml="1rem">
           {payrollRuns.length === 0 ? (
             <Flex
               ml="0.5rem"
@@ -377,7 +389,7 @@ export default function PayrollPage() {
                 borderRadius="lg"
                 overflowY="auto"
               >
-                <Table variant="simple" size="md">
+                <Table mt="1rem" variant="simple" size="md">
                   <Thead position="sticky" top={0} zIndex={1} bg="gray.50">
                     <Tr>
                       <Th>Période</Th>

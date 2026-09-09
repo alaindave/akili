@@ -20,8 +20,6 @@ export async function markEmployeesAbsent(
   const now = new Date().toISOString();
   const today = new Date(date);
 
-  // Sunday = 0
-  // Saturday = 6
   const dayOfWeek = today.getDay();
   if (dayOfWeek === 0 || dayOfWeek === 6) {
     console.log("ABSENCE CHECK SKIPPED: WEEKEND");

@@ -1,10 +1,15 @@
 import { randomUUID } from "crypto";
-import PayrollEmployeeProfile from "../../../common/types/payroll/PayrollEmployeeProfile.js";
+import PayrollEmployeeProfile, {
+  CreatePayrollProfileDto,
+} from "../../../common/types/payroll/PayrollEmployeeProfile.js";
 import {
   getAllEmployees,
   getEmployeeById,
 } from "../../database/repositories/employees.repository.js";
-import { getPayrollComponents } from "../../database/repositories/payroll_components.repository.js";
+import {
+  getEnabledPayrollComponents,
+  getPayrollComponents,
+} from "../../database/repositories/payroll_components.repository.js";
 import {
   createEmployeePayrollProfile,
   createManyEmployeePayrollProfiles,
@@ -12,7 +17,6 @@ import {
   updateEmployeePayrollProfile,
 } from "../../database/repositories/payroll_employee_profile.repository.js";
 import PayrollComponent from "../../../common/types/payroll/PayrollComponent.js";
-import CreatePayrollProfileDto from "../../../common/types/payroll/CreatePayrollProfileDto.js";
 
 // Create payroll profiles for a newly created employee.
 export async function initializeEmployeePayrollProfilesForEmployee(
@@ -24,7 +28,7 @@ export async function initializeEmployeePayrollProfilesForEmployee(
   if (!employee) {
     throw new Error(`Employee ${employeeId} not found`);
   }
-  const components = await getPayrollComponents(companyId);
+  const components = await getEnabledPayrollComponents(companyId);
   const now = new Date().toISOString();
   const profiles: CreatePayrollProfileDto[] = components.map((component) => {
     let value = component.defaultValue ?? null;
@@ -89,6 +93,7 @@ export async function initializeEmployeePayrollProfiles(companyId: string) {
       }
 
       await createEmployeePayrollProfile(companyId, employee._id, {
+        companyId,
         name: component.name,
         displayName: component.displayName,
         displayOrder: component.displayOrder,
@@ -99,6 +104,7 @@ export async function initializeEmployeePayrollProfiles(companyId: string) {
         value: value ?? null,
         taxable: component.taxable,
         requiresHRApproval: component.requiresHRApproval,
+        enabled: component.enabled,
       });
 
       existing.add(key);

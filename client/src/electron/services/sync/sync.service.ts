@@ -14,6 +14,9 @@ const API_URL = app.isPackaged
 
 let syncing = false;
 
+const MAX_SYNC_RETRIES = 3;
+const SYNC_RETRY_DELAY = 2000;
+
 export default async function sync(companyId: string) {
   console.log("SYNC SERVICE API URL:", API_URL);
   console.log("SYNC SERVICE FOR COMPANY", companyId);
@@ -67,40 +70,117 @@ export default async function sync(companyId: string) {
 
     /*
      * ---------------------------------------------------------
-     * PUSH PENDING CHANGES
+     * PUSH PENDING CHANGES WITH RETRIES
      * ---------------------------------------------------------
      */
 
-    try {
-      const pushResult = await pushPendingChanges(companyId);
+    let pushSuccessful = false;
+    let lastPushError: unknown = null;
 
-      console.log("PUSH RESULTS:", pushResult);
+    for (let attempt = 1; attempt <= MAX_SYNC_RETRIES; attempt++) {
+      try {
+        console.log(`PUSH ATTEMPT ${attempt}/${MAX_SYNC_RETRIES}`);
 
-      /*
-       * A push is successful only when there are no unsynced
-       * items remaining in the local SQLite sync queue.
-       */
-      const pendingAfterPush = await getPendingChangesCount(companyId);
+        const pushResult = await pushPendingChanges(companyId);
 
-      console.log("PENDING CHANGES AFTER PUSH:", pendingAfterPush);
+        console.log("PUSH RESULTS:", pushResult);
 
-      if (pendingAfterPush > 0) {
-        throw new Error(
-          `PUSH INCOMPLETE: ${pendingAfterPush} item(s) were not successfully pushed to the server`
+        /*
+         * Check the queue after every push attempt.
+         */
+        const pendingAfterPush = await getPendingChangesCount(companyId);
+
+        console.log(
+          `PENDING CHANGES AFTER PUSH ATTEMPT ${attempt}:`,
+          pendingAfterPush
         );
+
+        /*
+         * Nothing remains -> push is successful.
+         */
+        if (pendingAfterPush === 0) {
+          pushSuccessful = true;
+
+          console.log("ALL PENDING CHANGES PUSHED SUCCESSFULLY.");
+
+          break;
+        }
+
+        /*
+         * Items still remain.
+         *
+         * Retry unless this was the final attempt.
+         */
+        lastPushError = new Error(
+          `PUSH INCOMPLETE: ${pendingAfterPush} item(s) remain`
+        );
+
+        if (attempt < MAX_SYNC_RETRIES) {
+          console.log(
+            `PUSH INCOMPLETE. RETRYING IN ${SYNC_RETRY_DELAY / 1000} SECONDS...`
+          );
+
+          notifyRenderer({
+            status: "SYNCING",
+            timestamp: new Date().toISOString(),
+            pendingChanges: pendingAfterPush,
+            error: `Retrying sync (${attempt + 1}/${MAX_SYNC_RETRIES})...`,
+          });
+
+          await delay(SYNC_RETRY_DELAY);
+        }
+      } catch (error) {
+        lastPushError = error;
+
+        console.error(`PUSH ATTEMPT ${attempt} FAILED:`, error);
+
+        const pendingChanges = await getPendingChangesCount(companyId);
+
+        /*
+         * Retry if attempts remain.
+         */
+        if (attempt < MAX_SYNC_RETRIES) {
+          console.log(
+            `PUSH FAILED. RETRYING IN ${SYNC_RETRY_DELAY / 1000} SECONDS...`
+          );
+
+          notifyRenderer({
+            status: "SYNCING",
+            timestamp: new Date().toISOString(),
+            pendingChanges,
+            error: `Push failed. Retrying (${
+              attempt + 1
+            }/${MAX_SYNC_RETRIES})...`,
+          });
+
+          await delay(SYNC_RETRY_DELAY);
+        }
+
+        await notifyPendingChanges(companyId);
       }
+    }
 
-      console.log("ALL PENDING CHANGES PUSHED SUCCESSFULLY.");
-    } catch (error) {
-      console.error("PUSH FAILED:", error);
+    /*
+     * ---------------------------------------------------------
+     * PUSH FAILED AFTER ALL RETRIES
+     * ---------------------------------------------------------
+     */
 
+    if (!pushSuccessful) {
       const pendingChanges = await getPendingChangesCount(companyId);
+
+      const errorMessage =
+        lastPushError instanceof Error
+          ? lastPushError.message
+          : String(lastPushError);
+
+      console.error(`PUSH FAILED AFTER ${MAX_SYNC_RETRIES} ATTEMPTS.`);
 
       notifyRenderer({
         status: "ERROR",
         timestamp: new Date().toISOString(),
         pendingChanges,
-        error: getErrorMessage(error),
+        error: `PUSH FAILED AFTER ${MAX_SYNC_RETRIES} ATTEMPTS: ${errorMessage}`,
       });
 
       return;
@@ -150,10 +230,6 @@ export default async function sync(companyId: string) {
 
     console.log("FINAL PENDING CHANGES:", pendingChanges);
 
-    /*
-     * If anything remains in the local sync queue, the sync
-     * is NOT considered successful.
-     */
     if (pendingChanges > 0) {
       console.error(
         `SYNC INCOMPLETE: ${pendingChanges} pending change(s) remain.`
@@ -173,16 +249,6 @@ export default async function sync(companyId: string) {
      * ---------------------------------------------------------
      * SYNC SUCCESS
      * ---------------------------------------------------------
-     *
-     * At this point:
-     *
-     * 1. Backend was reachable.
-     * 2. Every pending local change was pushed.
-     * 3. Local pending queue is empty.
-     * 4. pullLatestChanges completed without error.
-     * 5. Therefore all pulled items were successfully upserted.
-     *
-     * NOW the sync is considered successful.
      */
 
     console.log("========================================");
@@ -217,6 +283,18 @@ export default async function sync(companyId: string) {
 
 /*
  * ---------------------------------------------------------
+ * DELAY
+ * ---------------------------------------------------------
+ */
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+/*
+ * ---------------------------------------------------------
  * GET CURRENT PENDING CHANGES
  * ---------------------------------------------------------
  */
@@ -229,12 +307,6 @@ async function getPendingChangesCount(companyId: string): Promise<number> {
   } catch (error) {
     console.error("FAILED TO GET PENDING CHANGES:", error);
 
-    /*
-     * IMPORTANT:
-     *
-     * Do NOT return 0 here if the database query itself failed.
-     * Returning 0 could falsely make the sync look successful.
-     */
     throw error;
   }
 }

@@ -9,11 +9,13 @@ import {
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { PayrollSettings } from "../../../../../common/types/payroll/Payroll";
+import useAdminUser from "../../../../../store/auth.store";
 
 export default function PayrollDefaults() {
+  const user = useAdminUser((store) => store.adminUser);
   const toast = useToast();
   const [settings, setSettings] = useState<PayrollSettings | null>(null);
-  const [currency, setCurrency] = useState("BIF");
+  const [currency, setCurrency] = useState("FBU");
   const [paymentDay, setPaymentDay] = useState("30");
   const [workingDays, setWorkingDays] = useState("25");
   const [workingHours, setWorkingHours] = useState("8");
@@ -27,7 +29,7 @@ export default function PayrollDefaults() {
   const loadPayrollSettings = async () => {
     try {
       setLoading(true);
-      const result = await window.electron.payrollSettings.get();
+      const result = await window.electron.payrollSettings.get(user.companyId);
       if (result) {
         setSettings(result);
         setCurrency(result.currency);
@@ -145,12 +147,15 @@ export default function PayrollDefaults() {
       setSaving(true);
 
       if (!settings) {
-        const created = await window.electron.payrollSettings.create({
-          currency,
-          paymentDay: paymentDayNumber,
-          workingDays: workingDaysNumber,
-          workingHours: workingHoursNumber,
-        });
+        const created = await window.electron.payrollSettings.create(
+          user.companyId,
+          {
+            currency,
+            paymentDay: paymentDayNumber,
+            workingDays: workingDaysNumber,
+            workingHours: workingHoursNumber,
+          }
+        );
 
         setSettings(created);
         setCurrency(created.currency);
@@ -170,6 +175,7 @@ export default function PayrollDefaults() {
       }
 
       const updated = await window.electron.payrollSettings.updateFields(
+        user.companyId,
         settings._id,
         {
           currency,

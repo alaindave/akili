@@ -40,7 +40,7 @@ type CreatePayrollComponentDto = import(
 ).default;
 
 type CreatePayrollProfileDto = import(
-  "../common/types/payroll/CreatePayrollProfileDto",
+  "../common/types/payroll/PayrollEmployeeProfile",
   {
     with: { "resolution-mode": "require" },
   }
@@ -155,18 +155,20 @@ contextBridge.exposeInMainWorld("electron", {
   // ============================================================
 
   offlineUsers: {
-    save: (user: OfflineUser) =>
+    save: (companyId: string,user: OfflineUser) =>
       ipcRenderer.invoke(
         "offline-users:save",
+        companyId,
         user
       ),
 
     saveNotes: (
+      companyId:string,
       _id: string,
       notes: string
     ) =>
       ipcRenderer.invoke(
-        "offline-users:saveNotes",
+        "offline-users:saveNotes",companyId,
         _id,
         notes
       ),
@@ -177,26 +179,26 @@ contextBridge.exposeInMainWorld("electron", {
         credentials
       ),
 
-    getById: (_id: string) =>
+    getById: (companyId:string,_id: string) =>
       ipcRenderer.invoke(
-        "offline-users:getById",
+        "offline-users:getById",companyId,
         _id
       ),
 
-    getByEmail: (email: string) =>
+    getByEmail: (companyId:string,email: string) =>
       ipcRenderer.invoke(
-        "offline-users:getByEmail",
+        "offline-users:getByEmail",companyId,
         email
       ),
 
-    getAll: () =>
+    getAll: (companyId:string) =>
       ipcRenderer.invoke(
-        "offline-users:getAll"
+        "offline-users:getAll",companyId
       ),
 
-    delete: (_id: string) =>
+    delete: (companyId:string,_id: string) =>
       ipcRenderer.invoke(
-        "offline-users:delete",
+        "offline-users:delete",companyId,
         _id
       ),
   },

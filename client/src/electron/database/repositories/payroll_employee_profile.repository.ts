@@ -1,8 +1,9 @@
 import { all, get, run } from "../db.js";
-import PayrollEmployeeProfile from "../../../common/types/payroll/PayrollEmployeeProfile.js";
+import PayrollEmployeeProfile, {
+  CreatePayrollProfileDto,
+} from "../../../common/types/payroll/PayrollEmployeeProfile.js";
 import { addToSyncQueue } from "./sync.repository.js";
 import { randomUUID } from "crypto";
-import CreatePayrollProfileDto from "../../../common/types/payroll/CreatePayrollProfileDto.js";
 import { getPayrollComponentById } from "./payroll_components.repository.js";
 import { PayrollEmployeeInput } from "../../../common/types/payroll/Payroll.js";
 

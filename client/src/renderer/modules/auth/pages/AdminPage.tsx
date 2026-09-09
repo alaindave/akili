@@ -8,9 +8,11 @@ import Logo from "../../../components/Logo";
 import { useEffect } from "react";
 import { checkOnline } from "../../../services/connectivity_check.service";
 import useAdminUser from "../../../../store/auth.store";
+import useSyncStore from "../../../../store/sync.store";
 
 const AdminPage = () => {
   const user = useAdminUser((store) => store.adminUser);
+  const setOffline = useSyncStore((store) => store.setOffline);
 
   useEffect(() => {
     syncOnLogin();
@@ -20,6 +22,7 @@ const AdminPage = () => {
     const online = await checkOnline();
 
     if (!online) {
+      setOffline();
       return;
     }
 

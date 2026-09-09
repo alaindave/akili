@@ -1,19 +1,19 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import User from "../common/types/User";
+import OfflineUser from "../common/types/OfflineUser";
 
 interface AdminUserStore {
-  adminUser: Omit<User, "password">;
+  adminUser: Omit<OfflineUser, "password">;
   isAuthenticated: boolean;
 
-  login: (user: Omit<User, "password">) => void;
+  login: (user: Omit<OfflineUser, "password">) => void;
 
   logout: () => void;
 
   saveNotes: (notes: string) => void;
 }
 
-const emptyAdminUser = {} as Omit<User, "password">;
+const emptyAdminUser = {} as OfflineUser;
 
 const useAdminUser = create<AdminUserStore>()(
   persist(

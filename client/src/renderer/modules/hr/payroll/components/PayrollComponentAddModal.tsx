@@ -20,6 +20,7 @@ import {
 } from "@chakra-ui/react";
 import { useState } from "react";
 import { CreatePayrollComponentDto } from "../../../../../common/types/payroll/PayrollComponent";
+import useAdminUser from "../../../../../store/auth.store";
 
 interface Props {
   type: "EARNING" | "DEDUCTION";
@@ -27,6 +28,7 @@ interface Props {
 }
 
 export default function AddPayrollComponentModal({ type, onCreated }: Props) {
+  const user = useAdminUser((store) => store.adminUser);
   const toast = useToast();
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [loading, setLoading] = useState(false);
@@ -67,6 +69,7 @@ export default function AddPayrollComponentModal({ type, onCreated }: Props) {
     setLoading(true);
     try {
       const component: CreatePayrollComponentDto = {
+        companyId: user.companyId,
         name: displayName.toUpperCase().replace(/\s+/g, "_"),
         displayName,
         type,
@@ -75,7 +78,7 @@ export default function AddPayrollComponentModal({ type, onCreated }: Props) {
         defaultValue,
         calculationBase: null,
       };
-      await window.electron.payrollComponents.create(component);
+      await window.electron.payrollComponents.create(user.companyId, component);
       toast({
         title: "Composante créée",
         status: "success",

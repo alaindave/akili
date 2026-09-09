@@ -108,8 +108,8 @@ export function registerPayrollGenerationIPC() {
    */
   ipcMain.handle(
     "payroll:submitForVerification",
-    async (_, payrollRunId: string, admin: AdminUser) => {
-      return await verifyPayrollRun(admin.companyId, payrollRunId, admin);
+    async (_, companyId: string, payrollRunId: string, admin: AdminUser) => {
+      return await verifyPayrollRun(companyId, payrollRunId, admin);
     }
   );
 
@@ -133,8 +133,8 @@ export function registerPayrollGenerationIPC() {
    */
   ipcMain.handle(
     "payroll:approve",
-    async (_, payrollRunId: string, admin: AdminUser) => {
-      return await approvePayrollRun(admin.companyId, payrollRunId, admin);
+    async (_, companyId: string, payrollRunId: string, admin: AdminUser) => {
+      return await approvePayrollRun(companyId, payrollRunId, admin);
     }
   );
 
@@ -143,8 +143,8 @@ export function registerPayrollGenerationIPC() {
    */
   ipcMain.handle(
     "payroll:markAsPaid",
-    async (_, payrollRunId: string, admin: AdminUser) => {
-      return await paymentPayrollRun(admin.companyId, payrollRunId, admin);
+    async (_, companyId: string, payrollRunId: string, admin: AdminUser) => {
+      return await paymentPayrollRun(companyId, payrollRunId, admin);
     }
   );
 

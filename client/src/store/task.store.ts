@@ -6,11 +6,12 @@ import User from "../common/types/User";
 interface TaskStore {
   tasks: Task[];
   loading: boolean;
-  loadTopTasks: (userId: string) => Promise<void>;
-  createTask: (task: Task) => Promise<void>;
-  updateTask: (task: Task) => Promise<void>;
-  deleteTask: (taskId: string) => void;
+  loadTopTasks: (companyId: string, userId: string) => Promise<void>;
+  createTask: (companyId: string, task: Task) => Promise<void>;
+  updateTask: (companyId: string, task: Task) => Promise<void>;
+  deleteTask: (companyId: string, taskId: string) => void;
   addComment: (
+    companyId: string,
     taskId: string,
     author: Omit<User, "password">,
     message: string
@@ -26,11 +27,11 @@ const useTaskStore = create<TaskStore>((set, get) => ({
 
   setTasks: (tasks) => set({ tasks }),
 
-  loadTopTasks: async (userId: string) => {
+  loadTopTasks: async (companyId: string, userId: string) => {
     set({ loading: true });
 
     try {
-      const tasks = await window.electron.tasks.getTopTasks(userId);
+      const tasks = await window.electron.tasks.getTopTasks(companyId, userId);
 
       console.log("LOADED TOP TASKS IN STORE:", tasks);
 
@@ -48,9 +49,10 @@ const useTaskStore = create<TaskStore>((set, get) => ({
     }
   },
 
-  createTask: async (taskData) => {
+  createTask: async (companyId: string, taskData: Task) => {
     const optimisticTask: Task = {
       ...taskData,
+      companyId,
       _id: crypto.randomUUID(),
       comments: [],
     } as Task;
@@ -60,7 +62,7 @@ const useTaskStore = create<TaskStore>((set, get) => ({
     }));
 
     try {
-      const savedTask = await window.electron.tasks.create(taskData);
+      const savedTask = await window.electron.tasks.create(companyId, taskData);
 
       set((state) => ({
         tasks: state.tasks.map((t) =>
@@ -79,7 +81,7 @@ const useTaskStore = create<TaskStore>((set, get) => ({
     }
   },
 
-  updateTask: async (updatedTask) => {
+  updateTask: async (companyId: string, updatedTask: Task) => {
     const previous = get().tasks;
 
     set((state) => ({
@@ -89,7 +91,7 @@ const useTaskStore = create<TaskStore>((set, get) => ({
     }));
 
     try {
-      await window.electron.tasks.update(updatedTask);
+      await window.electron.tasks.update(companyId, updatedTask);
     } catch (error) {
       set({ tasks: previous });
 
@@ -100,7 +102,7 @@ const useTaskStore = create<TaskStore>((set, get) => ({
     }
   },
 
-  deleteTask: (taskId) => {
+  deleteTask: (companyId: string, taskId: string) => {
     set((state) => ({
       tasks: state.tasks.filter((task) => task._id !== taskId),
     }));
@@ -112,9 +114,10 @@ const useTaskStore = create<TaskStore>((set, get) => ({
       loading: false,
     }),
 
-  addComment: async (taskId, author, comment) => {
+  addComment: async (companyId: string, taskId: string, author, comment) => {
     const tempId = crypto.randomUUID();
     const optimisticComment: PopulatedTaskComment = {
+      companyId,
       _id: tempId,
       taskId,
       comment,
@@ -140,12 +143,15 @@ const useTaskStore = create<TaskStore>((set, get) => ({
     }));
 
     try {
-      await window.electron.taskComments.create({
+      await window.electron.taskComments.create(companyId, {
         taskId,
         author: author._id,
         comment,
       });
-      const refreshedTask = await window.electron.tasks.getById(taskId);
+      const refreshedTask = await window.electron.tasks.getById(
+        companyId,
+        taskId
+      );
 
       if (!refreshedTask) {
         throw new Error(

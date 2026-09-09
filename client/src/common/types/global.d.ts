@@ -59,35 +59,17 @@ declare global {
       };
 
       offlineUsers: {
-        save: (user: OfflineUser) => Promise<LoggedUser>;
-        saveNotes: (_id: string, notes: string) => Promise<LoggedUser>;
-        login: (credentials: LoginCredentials) => Promise<LoggedUser>;
-        getById: (_id: string) => Promise<LoggedUser>;
-        getByEmail: (email: string) => Promise<LoggedUser>;
-        getAll: () => Promise<LoggedUser[]>;
-        delete: (_id: string) => Promise<LoggedUser>;
-      };
-
-      tasks: {
-        create: (data: Omit<Task, "_id" | "createdAt">) => Promise<Task>;
-        update: (task: Task) => Promise<Task>;
-        delete: (taskId: string) => Promise<Task>;
-        getAll: () => Promise<Task[]>;
-        getById: (_id: string) => Promise<Task>;
-        getUserTasks: (userId: string) => Promise<Task[]>;
-        getTopTasks: (userId: string) => Promise<Task[]>;
-        onNew: (callback: (data: Task) => void) => () => void;
-      };
-
-      taskComments: {
-        create: (payload: {
-          taskId: string;
-          author: string;
-          comment: string;
-        }) => Promise<TaskComment>;
-
-        getByTaskId: (taskId: string) => Promise<TaskComment>;
-        delete: (commentId: string) => Promise<void>;
+        save: (companyId: string, user: OfflineUser) => Promise<OfflineUser>;
+        saveNotes: (
+          companyId: string,
+          _id: string,
+          notes: string
+        ) => Promise<OfflineUser>;
+        login: (credentials: LoginCredentials) => Promise<OfflineUser>;
+        getById: (companyId: string, _id: string) => Promise<OfflineUser>;
+        getByEmail: (companyId: string, email: string) => Promise<OfflineUser>;
+        getAll: (companyId: string) => Promise<OfflineUser[]>;
+        delete: (companyId: string, _id: string) => Promise<OfflineUser>;
       };
 
       adminUsers: {
@@ -281,16 +263,26 @@ declare global {
       };
 
       payrollSettings: {
-        get: () => Promise<PayrollSettings | null>;
-        getById: (_id: string) => Promise<PayrollSettings | null>;
-        create: (data: {
-          currency: string;
-          workingDays: number;
-          workingHours: number;
-          paymentDay: number;
-        }) => Promise<PayrollSettings>;
-        update: (settings: PayrollSettings) => Promise<PayrollSettings>;
+        get: (companyId: string) => Promise<PayrollSettings | null>;
+        getById: (
+          companyId: string,
+          _id: string
+        ) => Promise<PayrollSettings | null>;
+        create: (
+          companyId: string,
+          data: {
+            currency: string;
+            workingDays: number;
+            workingHours: number;
+            paymentDay: number;
+          }
+        ) => Promise<PayrollSettings>;
+        update: (
+          companyId: string,
+          settings: PayrollSettings
+        ) => Promise<PayrollSettings>;
         updateFields: (
+          companyId: string,
           _id: string,
           fields: Partial<
             Pick<
@@ -299,120 +291,233 @@ declare global {
             >
           >
         ) => Promise<PayrollSettings>;
-        delete: (_id: string) => Promise<{
+        delete: (
+          companyId: string,
+          _id: string
+        ) => Promise<{
           success: boolean;
         }>;
-        restore: (_id: string) => Promise<PayrollSettings>;
-        markSynced: (_id: string) => Promise<{
+        restore: (companyId: string, _id: string) => Promise<PayrollSettings>;
+        markSynced: (
+          companyId: string,
+          _id: string
+        ) => Promise<{
           success: boolean;
         }>;
-        getUnsynced: () => Promise<PayrollSettings[]>;
+        getUnsynced: (companyId: string) => Promise<PayrollSettings[]>;
       };
 
       payrollComponents: {
-        create: (component: PayrollComponent) => Promise<PayrollComponent>;
-        getAll: (type?: "EARNING" | "DEDUCTION") => Promise<PayrollComponent[]>;
-        getEnabled: (
+        create: (
+          companyId: string,
+          component: CreatePayrollComponentDto
+        ) => Promise<PayrollComponent>;
+        getAll: (
+          companyId: string,
           type?: "EARNING" | "DEDUCTION"
         ) => Promise<PayrollComponent[]>;
-        getById: (id: string) => Promise<PayrollComponent | null>;
+        getEnabled: (
+          companyId: string,
+          type?: "EARNING" | "DEDUCTION"
+        ) => Promise<PayrollComponent[]>;
+        getById: (
+          companyId: string,
+          id: string
+        ) => Promise<PayrollComponent | null>;
         update: (
+          companyId: string,
           component: PayrollComponent[]
         ) => Promise<PayrollComponent[] | null>;
-        delete: (id: string) => Promise<void>;
+        delete: (companyId: string, _id: string) => Promise<void>;
         setEnabled: (
-          id: string,
+          companyId: string,
+          _id: string,
           enabled: boolean
         ) => Promise<PayrollComponent | null>;
         upsert: (
+          companyId: string,
           component: PayrollComponent
         ) => Promise<PayrollComponent | null>;
-        getUnsynced: () => Promise<PayrollComponent[]>;
-        markSynced: (id: string) => Promise<PayrollComponent | null>;
+        getUnsynced: (companyId: string) => Promise<PayrollComponent[]>;
+        markSynced: (
+          companyId: string,
+          _id: string
+        ) => Promise<PayrollComponent | null>;
       };
 
       payrollEmployeeProfiles: {
         create(
+          companyId: string,
           employeeID: string,
           profile: CreatePayrollProfileDto
         ): Promise<void>;
         createMany(
+          companyId: string,
           employeeID: string,
           profiles: CreatePayrollProfileDto[]
         ): Promise<void>;
-        update(profile: PayrollEmployeeProfile): Promise<void>;
-        updateMany(profiles: PayrollEmployeeProfile[]): Promise<void>;
-        upsert(profile: PayrollEmployeeProfile): Promise<void>;
-        upsertMany(profiles: PayrollEmployeeProfile[]): Promise<void>;
-        get(_id: string): Promise<PayrollEmployeeProfile | undefined>;
+        update(
+          companyId: string,
+          profile: PayrollEmployeeProfile
+        ): Promise<void>;
+        updateMany(
+          companyId: string,
+          profiles: PayrollEmployeeProfile[]
+        ): Promise<void>;
+        upsert(
+          companyId: string,
+          profile: PayrollEmployeeProfile
+        ): Promise<void>;
+        upsertMany(
+          companyId: string,
+          profiles: PayrollEmployeeProfile[]
+        ): Promise<void>;
+        get(
+          companyId: string,
+          _id: string
+        ): Promise<PayrollEmployeeProfile | undefined>;
         getAll: (
+          companyId: string,
           employeeID?: string,
           type?: "EARNING" | "DEDUCTION"
         ) => Promise<PayrollEmployeeProfile[]>;
-        getByEmployee(employeeId: string): Promise<PayrollEmployeeProfile[]>;
+        getByEmployee(
+          companyId: string,
+          employeeId: string
+        ): Promise<PayrollEmployeeProfile[]>;
         getByComponent(
+          companyId: string,
           employeeId: string,
           componentId: string
         ): Promise<PayrollEmployeeProfile | undefined>;
-        getUnsynced(): Promise<PayrollEmployeeProfile[]>;
-        markSynced(_id: string): Promise<void>;
-        markManySynced(ids: string[]): Promise<void>;
-        delete(_id: string): Promise<void>;
-        restore(_id: string): Promise<void>;
-        permanentlyDelete(_id: string): Promise<void>;
-        exists(employeeId: string, componentId: string): Promise<boolean>;
-        count(): Promise<number>;
-        initialize(): Promise<void>;
-        initializeForEmployee(employeeId: string): Promise<void>;
-        addComponentToEmployees(component: PayrollComponent): Promise<void>;
-        resetToDefaults(employeeId: string): Promise<void>;
+        getUnsynced(companyId: string): Promise<PayrollEmployeeProfile[]>;
+        markSynced(companyId: string, _id: string): Promise<void>;
+        markManySynced(companyId: string, ids: string[]): Promise<void>;
+        delete(companyId: string, _id: string): Promise<void>;
+        restore(companyId: string, _id: string): Promise<void>;
+        permanentlyDelete(companyId: string, _id: string): Promise<void>;
+        exists(
+          companyId: string,
+          employeeId: string,
+          componentId: string
+        ): Promise<boolean>;
+        count(companyId: string): Promise<number>;
+        initialize(companyId: string): Promise<void>;
+        initializeForEmployee(
+          companyId: string,
+          employeeId: string
+        ): Promise<void>;
+        addComponentToEmployees(
+          companyId: string,
+          component: PayrollComponent
+        ): Promise<void>;
+        resetToDefaults(companyId: string, employeeId: string): Promise<void>;
       };
 
       payrollRun: {
         createPayrollDraft(
+          companyId: string,
           admin: AdminUser,
           year: number,
           month: number
         ): Promise<PayrollRun>;
 
-        getPayrollRuns(year: number, month: number): Promise<PayrollRun[]>;
+        getPayrollRuns(
+          companyId: string,
+          year: number,
+          month: number
+        ): Promise<PayrollRun[]>;
 
-        getPayrollRunById(_id: string): Promise<PayrollRun | null>;
+        getPayrollRunById(
+          companyId: string,
+          _id: string
+        ): Promise<PayrollRun | null>;
 
         // BROUILLON → EN_VERIFICATION
         submitForVerification(
+          companyId: string,
           payrollRunId: string,
           admin: AdminUser
         ): Promise<void>;
 
         // EN_VERIFICATION → BROUILLON
-        returnToDraft(payrollRunId: string): Promise<void>;
+        returnToDraft(companyId: string, payrollRunId: string): Promise<void>;
 
         // EN_VERIFICATION → APPROUVÉ
-        approvePayroll(payrollRunId: string, admin: AdminUser): Promise<void>;
+        approvePayroll(
+          companyId: string,
+          payrollRunId: string,
+          admin: AdminUser
+        ): Promise<void>;
 
         // APPROUVÉ → PAYÉ
         markPayrollAsPaid(
+          companyId: string,
           payrollRunId: string,
           admin: AdminUser
         ): Promise<void>;
 
         // BROUILLON / EN_VERIFICATION / APPROUVÉ → ANNULÉ
-        cancelPayroll(payrollRunId: string, admin: AdminUser): Promise<void>;
+        cancelPayroll(
+          companyId: string,
+          payrollRunId: string,
+          admin: AdminUser
+        ): Promise<void>;
 
-        getPayrollResults(payrollRunId: string): Promise<PayrollResultRecord[]>;
+        getPayrollResults(
+          companyId: string,
+          payrollRunId: string
+        ): Promise<PayrollResultRecord[]>;
 
         getEmployeePayrollResults(
+          companyId: string,
           employeeId: string,
           payrollRunId?: string
         ): Promise<PayrollResultRecord | null>;
 
         getPayrollItems(
+          companyId: string,
           payrollResultId: string,
           employeeId?: string
         ): Promise<PayrollItem[]>;
 
-        deletePayrollRun(payrollResultId: string): Promise<void>;
+        deletePayrollRun(
+          companyId: string,
+          payrollResultId: string
+        ): Promise<void>;
+      };
+
+      tasks: {
+        create: (
+          companyId: string,
+          data: Omit<Task, "_id" | "createdAt">
+        ) => Promise<Task>;
+        update: (companyId: string, task: Task) => Promise<Task>;
+        delete: (companyId: string, taskId: string) => Promise<Task>;
+        getAll: (companyId: string) => Promise<Task[]>;
+        getById: (companyId: string, _id: string) => Promise<Task>;
+        getUserTasks: (companyId: string, userId: string) => Promise<Task[]>;
+        getTopTasks: (companyId: string, userId: string) => Promise<Task[]>;
+        onNew: (
+          callback: (companyId: string, data: Task) => void
+        ) => () => void;
+      };
+
+      taskComments: {
+        create: (
+          companyId: string,
+          payload: {
+            taskId: string;
+            author: string;
+            comment: string;
+          }
+        ) => Promise<TaskComment>;
+
+        getByTaskId: (
+          companyId: string,
+          taskId: string
+        ) => Promise<TaskComment>;
+        delete: (companyId: string, commentId: string) => Promise<void>;
       };
 
       sync: (companyId: string) => Promise<{

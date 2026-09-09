@@ -44,7 +44,10 @@ const TaskPage = () => {
   const loadTasks = async () => {
     try {
       setLoading(true);
-      const tasks = await window.electron.tasks.getUserTasks(user._id);
+      const tasks = await window.electron.tasks.getUserTasks(
+        user.companyId,
+        user._id
+      );
       console.log("FETCHED TASKS", tasks);
       setTasks(tasks);
     } catch (error) {

@@ -57,6 +57,7 @@ const PayrollDashboard = ({
             fontWeight="700"
             position="relative"
             left="1rem"
+            top="0.3rem"
           >
             Employés
           </Text>
@@ -104,6 +105,7 @@ const PayrollDashboard = ({
             fontWeight="700"
             position="relative"
             left="1rem"
+            top="0.3rem"
           >
             Salaires
           </Text>
@@ -144,12 +146,7 @@ const PayrollDashboard = ({
           >
             <IoWalletOutline color="#ffffff" size="1.2rem" />
           </Box>
-          <Text
-            color="gray.700"
-            fontSize="1.3rem"
-            fontWeight="700"
-            right="1.5rem"
-          >
+          <Text color="gray.700" fontSize="1.3rem" fontWeight="700">
             Remunerations
           </Text>
         </HStack>

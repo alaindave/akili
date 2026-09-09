@@ -54,8 +54,8 @@ export default function EmployeePhotoUpload({
 
   return (
     <Box
-      w="110px"
-      h="110px"
+      w="100px"
+      h="100px"
       borderRadius="full"
       overflow="hidden"
       border="1px solid"
