@@ -42,6 +42,7 @@ interface UploadedFile {
 function cleanSyncFields(data: SyncData) {
   const {
     _id,
+    companyId,
     serverVersion: _clientServerVersion,
     lastSyncedAt: _clientLastSyncedAt,
     synced: _clientSynced,
@@ -49,12 +50,14 @@ function cleanSyncFields(data: SyncData) {
   } = data;
 
   delete fields._id;
+  delete fields.companyId;
   delete fields.serverVersion;
   delete fields.lastSyncedAt;
   delete fields.synced;
 
   return {
     _id,
+    companyId,
     fields,
   };
 }
@@ -526,8 +529,6 @@ export async function syncEmployeeDocument(
 
       const { _id, fields } = cleanSyncFields(data);
 
-      fields.companyId = companyId;
-
       await EmployeesDocuments.updateOne(
         {
           _id,
@@ -543,6 +544,7 @@ export async function syncEmployeeDocument(
 
           $setOnInsert: {
             _id,
+            companyId,
           },
         },
         {

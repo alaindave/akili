@@ -30,6 +30,10 @@ import {
 
 import { markPayrollSettingsSynced } from "../../database/repositories/payroll_settings.repository.js";
 import { markAttendanceDailyCheckSynced } from "../../database/repositories/attendanceDailyCheck.repository.js";
+import {
+  getEmployeeDocumentsDir,
+  getEmployeePhotoDir,
+} from "../../storage/directories.js";
 
 const API_URL = app.isPackaged
   ? "https://leather-works.onrender.com"
@@ -162,7 +166,7 @@ export async function pushPendingChanges(
 
     switch (item.entity) {
       case "employee_photo": {
-        const photoPath = path.join(app.getPath("userData"), data.photo_path);
+        const photoPath = path.join(getEmployeePhotoDir(), data.photo_path);
 
         if (fs.existsSync(photoPath)) {
           form.append("employees_photos", fs.createReadStream(photoPath), {
@@ -181,10 +185,25 @@ export async function pushPendingChanges(
       }
 
       case "employee_document": {
-        if (fs.existsSync(data.localPath)) {
+        const documentPath = path.join(
+          getEmployeeDocumentsDir(),
+          data.localPath
+        );
+
+        console.log("STARTING SYNC FOR EMPLOYEE DOCUMENT:", {
+          companyId,
+          employeeId: data.employeeId,
+          documentId: data._id,
+          localPath: data.localPath,
+          resolvedPath: documentPath,
+          exists: fs.existsSync(documentPath),
+          fileName: data.fileName,
+          mimeType: data.mimeType,
+        });
+        if (fs.existsSync(documentPath)) {
           form.append(
             "employees_documents",
-            fs.createReadStream(data.localPath),
+            fs.createReadStream(documentPath),
             {
               filename: data.fileName,
               contentType: data.mimeType,

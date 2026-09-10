@@ -1,4 +1,4 @@
-import { ipcMain, app } from "electron";
+import { ipcMain } from "electron";
 import path from "path";
 import fs from "fs";
 
@@ -12,6 +12,7 @@ import {
 } from "../database/repositories/employees.repository.js";
 
 import { uploadEmployeePhoto } from "../database/repositories/employees_photos.repository.js";
+import { getEmployeePhotoDir } from "../storage/directories.js";
 
 export function registerEmployeeIPC() {
   console.log("REGISTERING EMPLOYEES IPC");
@@ -56,10 +57,9 @@ export function registerEmployeeIPC() {
 
   // Get employee photo
   ipcMain.handle("photos:getUrl", (_, relativePath: string) => {
-    const fullPath = path.join(app.getPath("userData"), relativePath);
-
+    const fullPath = path.join(getEmployeePhotoDir(), relativePath);
+    console.log("FULL PATH:", fullPath);
     const buffer = fs.readFileSync(fullPath);
-
     return buffer.toString("base64");
   });
 

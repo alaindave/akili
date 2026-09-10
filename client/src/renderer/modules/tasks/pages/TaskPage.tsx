@@ -117,13 +117,13 @@ const TaskPage = () => {
         </Button>
       </Flex>
       <Grid templateColumns="6fr 2fr 2fr">
-        <Flex width="200px" mt="2.5rem" ml="1rem" wrap="wrap">
+        <Flex width="200px" mt="3rem" ml="1rem" wrap="wrap">
           <SearchBar
             placeholderText="Rechercher une tache"
             onSearch={setSearchText}
           />
         </Flex>
-        <Flex width="200px" mt="2.5rem" mr="4rem" wrap="wrap">
+        <Flex width="200px" mt="3rem" mr="4rem" wrap="wrap">
           <TaskPriorityFilter onFilterClicked={setPriorityFilter} />
         </Flex>
         <Flex width="200px" mt="2.5rem" mr="4rem" wrap="wrap">

@@ -1,6 +1,7 @@
 import { Schema, model } from "mongoose";
 
 export interface EmployeeDocumentRecord {
+  companyId: string;
   _id: string;
   employeeId: string;
   uploadedBy: string | null;
@@ -18,11 +19,15 @@ export interface EmployeeDocumentRecord {
 }
 
 const employeeDocumentSchema = new Schema<EmployeeDocumentRecord>({
+  companyId: {
+    type: String,
+    required: true,
+    trim: true,
+  },
   _id: {
     type: String,
     required: true,
   },
-
   employeeId: {
     type: String,
     ref: "Employees",
