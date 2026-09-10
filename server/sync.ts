@@ -745,30 +745,79 @@ export async function syncAttendanceDailyCheck(
   requireUpdatedAt(data);
 
   const { _id, fields } = cleanSyncFields(data);
+
   fields.companyId = companyId;
 
   const serverVersion = await getServerVersion("attendance_daily_check");
 
-  await AttendanceDailyCheck.updateOne(
-    {
-      _id,
-      companyId,
-    },
-    {
-      $set: {
-        ...fields,
-        serverVersion,
-      },
-      $setOnInsert: {
-        _id,
-      },
-    },
-    {
-      upsert: true,
-    }
-  );
+  // ---------------------------------------------------------
+  // 1. First check if the record exists with the given _id
+  // ---------------------------------------------------------
+  let attendanceDailyCheck = await AttendanceDailyCheck.findOne({
+    _id,
+    companyId,
+  });
 
-  const attendanceDailyCheck = await AttendanceDailyCheck.findOne({
+  // ---------------------------------------------------------
+  // 2. If not found by _id, check if one already exists
+  //    for the same date and company
+  // ---------------------------------------------------------
+  if (!attendanceDailyCheck && fields.date) {
+    attendanceDailyCheck = await AttendanceDailyCheck.findOne({
+      companyId,
+      date: fields.date,
+    });
+  }
+
+  // ---------------------------------------------------------
+  // 3. Existing record found -> UPDATE it
+  // ---------------------------------------------------------
+  if (attendanceDailyCheck) {
+    await AttendanceDailyCheck.updateOne(
+      {
+        _id: attendanceDailyCheck._id,
+        companyId,
+      },
+      {
+        $set: {
+          ...fields,
+          serverVersion,
+        },
+      }
+    );
+
+    attendanceDailyCheck = await AttendanceDailyCheck.findOne({
+      _id: attendanceDailyCheck._id,
+      companyId,
+    }).lean();
+
+    console.log(`SYNCED ${operation.toUpperCase()} ATTENDANCE DAILY CHECK:`, {
+      incomingId: _id,
+      actualId: attendanceDailyCheck?._id,
+      updatedAt: data.updatedAt,
+      serverVersion,
+      action: "UPDATED_EXISTING",
+    });
+
+    return {
+      success: true,
+      _id: attendanceDailyCheck?._id,
+      serverVersion,
+      attendanceDailyCheck,
+    };
+  }
+
+  // ---------------------------------------------------------
+  // 4. Nothing found by _id or date -> INSERT new record
+  // ---------------------------------------------------------
+  await AttendanceDailyCheck.create({
+    ...fields,
+    _id,
+    companyId,
+    serverVersion,
+  });
+
+  attendanceDailyCheck = await AttendanceDailyCheck.findOne({
     _id,
     companyId,
   }).lean();
@@ -777,6 +826,7 @@ export async function syncAttendanceDailyCheck(
     _id,
     updatedAt: data.updatedAt,
     serverVersion,
+    action: "CREATED_NEW",
   });
 
   return {
