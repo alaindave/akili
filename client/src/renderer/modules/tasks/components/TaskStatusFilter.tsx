@@ -10,7 +10,7 @@ import {
 import { useState } from "react";
 import { FaSlidersH } from "react-icons/fa";
 import { FcHighPriority } from "react-icons/fc";
-import { FcMediumPriority } from "react-icons/fc";
+import { FcLowPriority } from "react-icons/fc";
 import { MdTask } from "react-icons/md";
 
 interface Props {
@@ -73,7 +73,7 @@ const TaskStatusFilter = ({ onFilterClicked }: Props) => {
           }}
         >
           <Box>
-            <FcHighPriority />
+            <FcLowPriority />
           </Box>
           <Text ml="1rem">Resolue</Text>
         </MenuItem>
@@ -91,7 +91,7 @@ const TaskStatusFilter = ({ onFilterClicked }: Props) => {
           }}
         >
           <Box>
-            <FcMediumPriority />
+            <FcHighPriority />
           </Box>
           <Text ml="1rem">Ouverte</Text>
         </MenuItem>

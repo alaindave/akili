@@ -444,7 +444,7 @@ const EmployeeLeaveCard = ({ leave, onDelete, gridTemplate }: Props) => {
       border="1px solid #E2E8F0"
       borderWidth="0.3px"
       boxShadow="0 2px 10px rgba(15,23,42,.06)"
-      minH="6.3rem"
+      minH="5rem"
       width="80vw"
       marginBottom="0.8px"
     >

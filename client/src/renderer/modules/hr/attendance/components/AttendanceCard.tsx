@@ -533,7 +533,7 @@ const EmployeeAttendanceCard = ({
       border="1px solid #E2E8F0"
       boxShadow="0 2px 10px rgba(15,23,42,.06)"
       width="78.5vw"
-      minH="6.3rem"
+      minH="5rem"
       ml="0.5rem"
       mr="0.5rem"
     >

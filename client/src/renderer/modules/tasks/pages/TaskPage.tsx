@@ -126,7 +126,7 @@ const TaskPage = () => {
         <Flex width="200px" mt="3rem" mr="4rem" wrap="wrap">
           <TaskPriorityFilter onFilterClicked={setPriorityFilter} />
         </Flex>
-        <Flex width="200px" mt="2.5rem" mr="4rem" wrap="wrap">
+        <Flex width="200px" mt="3rem" mr="4rem" wrap="wrap">
           <TaskStatusFilter onFilterClicked={setStatusFilter} />
         </Flex>
       </Grid>

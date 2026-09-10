@@ -47,10 +47,11 @@ const Logo = ({ text }: Props) => {
         {/* Subtitle */}
         <Text
           marginTop={{ base: "1px", sm: "1px", md: "2px" }}
-          fontSize={{ base: "0.65rem", sm: "0.75rem", md: "0.85rem" }}
+          mr="0.8rem"
+          fontSize={{ base: "0.7rem", sm: "0.8rem", md: "0.85rem" }}
           lineHeight="1.3"
-          color="gray.600"
-          fontWeight="300"
+          color="gray.800"
+          fontWeight="400"
           whiteSpace="nowrap"
         >
           {text}

@@ -223,6 +223,7 @@ async function createMainWindow(): Promise<BrowserWindow> {
     height: 900,
     minWidth: 900,
     minHeight: 600,
+    title: "Akili",
     show: false,
     backgroundColor: "#0f172a",
     webPreferences: {
@@ -233,6 +234,8 @@ async function createMainWindow(): Promise<BrowserWindow> {
   });
 
   mainWindow = window;
+
+  mainWindow.setTitle("Akili");
 
   console.log("CREATING MAIN WINDOW...");
 

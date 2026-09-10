@@ -580,7 +580,10 @@ const EmployeeNavBar = () => {
           <Flex align="center" gap={1} whiteSpace="nowrap">
             <CiClock2 color="#0078D4" size={22} />
 
-            <Text color="gray.900" fontSize={{ base: "0.75rem", md: "0.9rem" }}>
+            <Text
+              color="gray.900"
+              fontSize={{ base: "0.85rem", md: "0.95rem" }}
+            >
               {String(time.getHours()).padStart(2, "0")}:
               {String(time.getMinutes()).padStart(2, "0")}
             </Text>

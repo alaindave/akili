@@ -9,9 +9,7 @@ import {
 } from "@chakra-ui/react";
 import { useState } from "react";
 import { FaSlidersH } from "react-icons/fa";
-import { FcHighPriority } from "react-icons/fc";
-import { FcMediumPriority } from "react-icons/fc";
-import { MdTask } from "react-icons/md";
+import { GoDotFill } from "react-icons/go";
 
 interface Props {
   onFilterClicked: (filter: string) => void;
@@ -55,7 +53,7 @@ const PayrollStatusFilter = ({ onFilterClicked }: Props) => {
           }}
         >
           <Box>
-            <MdTask size="20px" />
+            <GoDotFill />
           </Box>
           <Text ml="1rem"> Tous les bulletins</Text>
         </MenuItem>
@@ -73,7 +71,7 @@ const PayrollStatusFilter = ({ onFilterClicked }: Props) => {
           }}
         >
           <Box>
-            <FcHighPriority />
+            <GoDotFill />
           </Box>
           <Text ml="1rem">Brouillon</Text>
         </MenuItem>
@@ -91,7 +89,7 @@ const PayrollStatusFilter = ({ onFilterClicked }: Props) => {
           }}
         >
           <Box>
-            <FcMediumPriority />
+            <GoDotFill />
           </Box>
           <Text ml="1rem">En verification</Text>
         </MenuItem>
@@ -109,7 +107,7 @@ const PayrollStatusFilter = ({ onFilterClicked }: Props) => {
           }}
         >
           <Box>
-            <FcMediumPriority />
+            <GoDotFill />
           </Box>
           <Text ml="1rem">Approuvé</Text>
         </MenuItem>
@@ -127,7 +125,7 @@ const PayrollStatusFilter = ({ onFilterClicked }: Props) => {
           }}
         >
           <Box>
-            <FcMediumPriority />
+            <GoDotFill />
           </Box>
           <Text ml="1rem">Payé</Text>
         </MenuItem>
@@ -145,7 +143,7 @@ const PayrollStatusFilter = ({ onFilterClicked }: Props) => {
           }}
         >
           <Box>
-            <FcMediumPriority />
+            <GoDotFill />
           </Box>
           <Text ml="1rem">Annulé</Text>
         </MenuItem>
