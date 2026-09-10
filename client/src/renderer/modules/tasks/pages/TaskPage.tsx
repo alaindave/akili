@@ -108,8 +108,8 @@ const TaskPage = () => {
           </Text>
         </Box>
         <Button
-          mt="1rem"
-          mr="1rem"
+          mt="1.2rem"
+          mr="2rem"
           colorScheme="blue"
           onClick={() => onCreateOpen()}
         >
@@ -117,38 +117,20 @@ const TaskPage = () => {
         </Button>
       </Flex>
       <Grid templateColumns="6fr 2fr 2fr">
-        <Flex
-          width="200px"
-          position="relative"
-          top="2rem"
-          left="1rem"
-          wrap="wrap"
-        >
+        <Flex width="200px" mt="2.5rem" ml="1rem" wrap="wrap">
           <SearchBar
             placeholderText="Rechercher une tache"
             onSearch={setSearchText}
           />
         </Flex>
-        <Flex
-          width="200px"
-          position="relative"
-          top="2rem"
-          right="3rem"
-          wrap="wrap"
-        >
+        <Flex width="200px" mt="2.5rem" mr="4rem" wrap="wrap">
           <TaskPriorityFilter onFilterClicked={setPriorityFilter} />
         </Flex>
-        <Flex
-          width="200px"
-          position="relative"
-          top="2rem"
-          right="2rem"
-          wrap="wrap"
-        >
+        <Flex width="200px" mt="2.5rem" mr="4rem" wrap="wrap">
           <TaskStatusFilter onFilterClicked={setStatusFilter} />
         </Flex>
       </Grid>
-      <Box mt="3rem" ml="1rem">
+      <Box mt="4.5rem" ml="1rem">
         <TaskTable
           tasks={tasks}
           searchText={searchText}

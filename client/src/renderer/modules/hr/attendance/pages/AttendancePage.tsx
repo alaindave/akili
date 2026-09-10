@@ -476,6 +476,7 @@ const EmployeeAttendancePage = () => {
   const download = async () => {
     try {
       const result = await window.electron.attendanceReports.savePdf(
+        user.companyId,
         selectedDate
       );
 
@@ -618,17 +619,6 @@ const EmployeeAttendancePage = () => {
               </Button>
             ) : null}
           </Box>
-          <Button
-            mt="1.2rem"
-            fontSize="1.5rem"
-            bg="transparent"
-            onClick={download}
-            _hover={{
-              bg: "transparent",
-            }}
-          >
-            <FaDownload />
-          </Button>
         </Flex>
 
         {/* ===================================================
@@ -723,7 +713,7 @@ const EmployeeAttendancePage = () => {
             align="center"
             justify="center"
             bg="#ffffff"
-            border="1px solid #E2E8F0"
+            border="1px solid #A0AEC0"
             borderRadius="8px"
             px="20px"
             flexShrink={0}
@@ -774,6 +764,7 @@ const EmployeeAttendancePage = () => {
         width="80vw"
         height="5rem"
         justify="space-evenly"
+        mb="0.5rem"
       >
         {/* VERIFY */}
 
@@ -863,15 +854,31 @@ const EmployeeAttendancePage = () => {
 
         {dailyCheck?.status === "MANAGER_NOTIFIED" ||
         dailyCheck?.status === "LOCKED" ? null : (
-          <Box mt="0.2rem">
+          <Box mt="0.2rem" color="red">
             <Switch
-              colorScheme="blue"
+              colorScheme="red"
+              sx={{
+                "span.chakra-switch__track:not([data-checked])": {
+                  backgroundColor: "gray.800",
+                },
+              }}
               size="lg"
               isChecked={unlocked}
               onChange={(e) => setUnlocked(e.target.checked)}
             />
           </Box>
         )}
+        <Button
+          mb="0.5rem"
+          fontSize="1.5rem"
+          bg="transparent"
+          onClick={download}
+          _hover={{
+            bg: "transparent",
+          }}
+        >
+          <FaDownload />
+        </Button>
       </Flex>
       {/* =====================================================
           ADD ATTENDANCE

@@ -15,7 +15,7 @@ import PayrollSettings from "./models/payrollSettings.model.js";
 import AttendanceDailyCheck from "./models/attendanceDailyCheck.model.js";
 import { Entity, getNextSyncVersion } from "./utils/syncVersion.js";
 
-export type SyncOperation = "CREATE" | "UPDATE" | "DELETE";
+export type SyncOperation = "create" | "update" | "delete";
 
 interface SyncData {
   _id: string;
@@ -99,7 +99,7 @@ export async function syncCompany(operation: SyncOperation, data: SyncData) {
    * ------------------------------------------------------------
    */
 
-  if (operation === "DELETE") {
+  if (operation === "delete") {
     await Company.updateOne(
       {
         companyId,
@@ -250,6 +250,8 @@ export async function syncEmployeePhoto(data: SyncData, file?: UploadedFile) {
     _id: data.employeeId,
     companyId,
   });
+
+  console.log("PHOTO DATA", data);
 
   if (!employee) {
     throw new Error(`EMPLOYEE ${data.employeeId} NOT FOUND`);
@@ -463,9 +465,16 @@ export async function syncEmployeeDocument(
 
   const serverVersion = await getServerVersion("employee_document");
 
+  console.log(
+    `STARTING SYNC FOR EMPLOYEE DOCUMENT. COMPANY ${companyId} EMPLOYEE:
+   ${employee}.Server version:${serverVersion}.Operation:${operation}`
+  );
+
+  console.log("EMPLOYEE DOCUMENTS DATA:", data);
+
   switch (operation) {
-    case "CREATE":
-    case "UPDATE": {
+    case "create":
+    case "update": {
       if (!file) {
         throw new Error("DOCUMENT FILE MISSING");
       }
@@ -560,7 +569,7 @@ export async function syncEmployeeDocument(
       };
     }
 
-    case "DELETE": {
+    case "delete": {
       /*
        * --------------------------------------------------------
        * DELETE DOCUMENT
@@ -914,7 +923,7 @@ export async function syncTaskComment(
   const commentServerVersion = await getServerVersion("task_comment");
 
   switch (operation) {
-    case "CREATE": {
+    case "create": {
       const existingComment = task.comments.find(
         (comment) => comment._id === data._id
       );
@@ -951,7 +960,7 @@ export async function syncTaskComment(
       break;
     }
 
-    case "UPDATE": {
+    case "update": {
       const comment = task.comments.find((c) => c._id === data._id);
 
       if (!comment) {
@@ -977,7 +986,7 @@ export async function syncTaskComment(
       break;
     }
 
-    case "DELETE": {
+    case "delete": {
       const deletedComment = task.comments.find((c) => c._id === data._id);
 
       if (!deletedComment) {

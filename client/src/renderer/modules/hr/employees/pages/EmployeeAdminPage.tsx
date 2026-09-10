@@ -476,7 +476,7 @@ const EmployeeAdminPage = () => {
           QUICK ACTIONS
       ====================================================== */}
 
-      <Box position="absolute" bottom="0.3rem">
+      <Box position="absolute" bottom="0.5rem">
         <QuickActions onTaskCreate={handleTaskCreate} />
       </Box>
 

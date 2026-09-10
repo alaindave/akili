@@ -25,7 +25,7 @@ const SearchBar = ({ placeholderText, onSearch }: Props) => {
           ref={ref}
           borderRadius="5px"
           borderWidth="0.3px"
-          border="1px solid #E2E8F0"
+          border="1px solid #A0AEC0"
           boxShadow="0 2px 10px rgba(15,23,42,.06)"
           bg="#FFFFFF"
           placeholder={placeholderText}

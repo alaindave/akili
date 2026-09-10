@@ -112,9 +112,6 @@ function validateCompanyHeader(
     ? headerCompanyId[0]
     : headerCompanyId;
 
-  console.log("HEADER COMPANY ID", receivedCompanyId);
-  console.log("JWT COMPANY ID", companyId);
-
   if (receivedCompanyId !== companyId) {
     throw new Error("SYNC: x-company-id does not match authenticated company");
   }
@@ -497,13 +494,14 @@ router.post(
                 (f) => f.originalname === data.fileName
               );
 
+              console.log("file name", data.fileName);
+
               const result = await syncEmployeeDocument(operation, data, file);
 
               console.log(
                 `EMPLOYEE DOCUMENT ${data._id} COMPANY ${companyId} SERVER VERSION:`,
                 result?.serverVersion
               );
-
               break;
             }
 

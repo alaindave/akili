@@ -447,7 +447,7 @@ const SignUp = () => {
                     bg: "#DFA900",
                   }}
                 >
-                  Créer le compte
+                  Créer
                 </Button>
               </HStack>
             </ModalFooter>

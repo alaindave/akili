@@ -557,6 +557,67 @@ const TaskSubmissionModal = ({
                     boxShadow: "0 0 0 1px #F4C20D",
                   }}
                 />
+                <Flex
+                  mt="0.5rem"
+                  width="100%"
+                  direction={{
+                    base: "column",
+                    sm: "row",
+                  }}
+                  justify="flex-end"
+                  align={{
+                    base: "stretch",
+                    sm: "center",
+                  }}
+                  gap={3}
+                >
+                  {/* CREATE */}
+                  <Button
+                    type="submit"
+                    borderRadius="8px"
+                    bg="#F2B705"
+                    color="black"
+                    borderWidth="1px"
+                    borderColor="#D9A000"
+                    isLoading={isSubmitting}
+                    loadingText="Patientez..."
+                    spinnerPlacement="start"
+                    isDisabled={isSubmitting}
+                    leftIcon={<FaSave />}
+                    width={{
+                      base: "100%",
+                      sm: "auto",
+                    }}
+                    minW={{ sm: "120px" }}
+                    _hover={{
+                      bg: "#E5AA00",
+                    }}
+                  >
+                    Créer
+                  </Button>
+                  {/* CANCEL */}
+
+                  <Button
+                    type="button"
+                    borderColor="#08162b"
+                    borderRadius="8px"
+                    bg="#08162b"
+                    color="white"
+                    borderWidth="1px"
+                    onClick={handleFormClose}
+                    leftIcon={<RxCrossCircled color="white" size="18px" />}
+                    width={{
+                      base: "100%",
+                      sm: "auto",
+                    }}
+                    minW={{ sm: "120px" }}
+                    _hover={{
+                      bg: "#12233d",
+                    }}
+                  >
+                    Annuler
+                  </Button>
+                </Flex>
 
                 {errors.message && (
                   <Text mt={1} color="red.500" fontSize="0.8rem">
@@ -623,73 +684,6 @@ const TaskSubmissionModal = ({
               )}
             </VStack>
           </ModalBody>
-
-          {/* =====================================================
-              FOOTER
-          ===================================================== */}
-
-          <ModalFooter bg="gray.100" px={{ base: 4, md: 6 }} py={4}>
-            <Flex
-              width="100%"
-              direction={{
-                base: "column",
-                sm: "row",
-              }}
-              justify="flex-end"
-              align={{
-                base: "stretch",
-                sm: "center",
-              }}
-              gap={3}
-            >
-              {/* CREATE */}
-              <Button
-                type="submit"
-                borderRadius="8px"
-                bg="#F2B705"
-                color="black"
-                borderWidth="1px"
-                borderColor="#D9A000"
-                isLoading={isSubmitting}
-                loadingText="Patientez..."
-                spinnerPlacement="start"
-                isDisabled={isSubmitting}
-                leftIcon={<FaSave />}
-                width={{
-                  base: "100%",
-                  sm: "auto",
-                }}
-                minW={{ sm: "120px" }}
-                _hover={{
-                  bg: "#E5AA00",
-                }}
-              >
-                Créer
-              </Button>
-              {/* CANCEL */}
-
-              <Button
-                type="button"
-                borderColor="#08162b"
-                borderRadius="8px"
-                bg="#08162b"
-                color="white"
-                borderWidth="1px"
-                onClick={handleFormClose}
-                leftIcon={<RxCrossCircled color="white" size="18px" />}
-                width={{
-                  base: "100%",
-                  sm: "auto",
-                }}
-                minW={{ sm: "120px" }}
-                _hover={{
-                  bg: "#12233d",
-                }}
-              >
-                Annuler
-              </Button>
-            </Flex>
-          </ModalFooter>
         </form>
       </ModalContent>
     </Modal>

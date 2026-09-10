@@ -214,13 +214,19 @@ declare global {
       };
 
       attendanceReports: {
-        savePdf: (date: string) => Promise<{
+        savePdf: (
+          companyId: string,
+          date: string
+        ) => Promise<{
           success: boolean;
           canceled?: boolean;
           filePath?: string;
         }>;
 
-        printPdf: (date: string) => Promise<{
+        printPdf: (
+          companyId,
+          date: string
+        ) => Promise<{
           success: boolean;
           canceled?: boolean;
         }>;

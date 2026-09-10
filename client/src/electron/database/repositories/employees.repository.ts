@@ -8,8 +8,6 @@ import { initializeEmployeePayrollProfilesForEmployee } from "../../services/pay
  * ============================================================
  * CREATE EMPLOYEE
  * ============================================================
- *
- *
  */
 export async function createEmployee(
   companyId: string,
@@ -114,7 +112,7 @@ export async function createEmployee(
   return getEmployeeById(companyId, _id);
 }
 
-/**
+/*
  * ============================================================
  * GET EMPLOYEE BY ID
  * ============================================================
@@ -132,7 +130,7 @@ export function getEmployeeById(companyId: string, _id: string) {
   );
 }
 
-/**
+/*
  * ============================================================
  * GET EMPLOYEE BY EMPLOYEE ID / MATRICULE
  * ============================================================
@@ -150,7 +148,7 @@ export function getEmployeeByEmployeeID(companyId: string, employeeID: string) {
   );
 }
 
-/**
+/*
  * ============================================================
  * GET ALL EMPLOYEES
  * ============================================================
@@ -168,7 +166,7 @@ export function getAllEmployees(companyId: string) {
   );
 }
 
-/**
+/*
  * ============================================================
  * SEARCH EMPLOYEES
  * ============================================================
@@ -193,11 +191,10 @@ export function searchEmployees(companyId: string, searchTerm: string) {
   );
 }
 
-/**
+/*
  * ============================================================
  * UPDATE EMPLOYEE
  * ============================================================
- *
  */
 export async function updateEmployee(
   companyId: string,
@@ -214,7 +211,6 @@ export async function updateEmployee(
 
   /*
    * Keep the existing serverVersion.
-   *
    */
   const serverVersion = existing.serverVersion ?? 0;
 
@@ -268,9 +264,6 @@ export async function updateEmployee(
     ]
   );
 
-  /*
-   * Read the complete updated employee from SQLite.
-   */
   const updatedEmployee = await getEmployeeByIdIncludingDeleted(companyId, _id);
 
   if (!updatedEmployee) {
@@ -290,11 +283,10 @@ export async function updateEmployee(
   return updatedEmployee;
 }
 
-/**
+/*
  * ============================================================
  * DELETE EMPLOYEE
  * ============================================================
- *
  */
 export async function deleteEmployee(companyId: string, _id: string) {
   const existing = await getEmployeeByIdIncludingDeleted(companyId, _id);
@@ -387,7 +379,7 @@ export async function deleteEmployee(companyId: string, _id: string) {
   });
 }
 
-/**
+/*
  * ============================================================
  * GET UNSYNCED EMPLOYEES
  * ============================================================
@@ -405,11 +397,10 @@ export function getUnsyncedEmployees(companyId: string) {
   );
 }
 
-/**
+/*
  * ============================================================
  * UPSERT EMPLOYEE FROM SERVER
  * ============================================================
- *
  */
 export async function upsertEmployee(employee: Employee) {
   if (!employee.companyId) {
@@ -453,16 +444,16 @@ export async function upsertEmployee(employee: Employee) {
         emergencyContact,
         relationship,
         contactPhone,
+        serverVersion,       
         createdAt,
         updatedAt,
-        serverVersion,
-        isDeleted,
         synced,
-        lastSyncedAt
+        lastSyncedAt,
+        isDeleted
       )
       VALUES (
         ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
-        ?,?,?,?, ?,0,CURRENT_TIMESTAMP
+        ?,?,?,?,?,?
       )
       `,
       [
@@ -484,9 +475,11 @@ export async function upsertEmployee(employee: Employee) {
         employee.emergencyContact,
         employee.relationship,
         employee.contactPhone,
+        incomingVersion,
         employee.createdAt,
         employee.updatedAt,
-        incomingVersion,
+        0,
+        new Date().toISOString(),
         employee.isDeleted ?? 0,
       ]
     );
@@ -602,11 +595,10 @@ export async function upsertEmployee(employee: Employee) {
   );
 }
 
-/**
+/*
  * ============================================================
  * MARK EMPLOYEE AS SYNCED
  * ============================================================
- *
  */
 export async function markEmployeeSynced(companyId: string, _id: string) {
   await run(
@@ -622,11 +614,10 @@ export async function markEmployeeSynced(companyId: string, _id: string) {
   );
 }
 
-/**
+/*
  * ============================================================
  * INTERNAL HELPER
  * ============================================================
- *
  */
 async function getEmployeeByIdIncludingDeleted(companyId: string, _id: string) {
   return get<Employee>(

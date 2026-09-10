@@ -89,6 +89,16 @@ export default function DateDropdown({ startDate, endDate, onChange }: Props) {
       onChange={handleChange}
       isSearchable={false}
       menuPlacement="top"
+      styles={{
+        control: (base, state) => ({
+          ...base,
+          borderColor: state.isFocused ? "#6B7280" : "#9CA3AF",
+          boxShadow: state.isFocused ? "0 0 0 1px #6B7280" : "none",
+          "&:hover": {
+            borderColor: "#6B7280",
+          },
+        }),
+      }}
     />
   );
 }

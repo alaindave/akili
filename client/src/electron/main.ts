@@ -64,7 +64,7 @@ const API_URL = app.isPackaged
   : process.env.VITE_API_URL;
 
 console.log("========================================");
-console.log("LEATHER WORKS STARTING");
+console.log("AKILI STARTING");
 console.log("========================================");
 console.log("ENVIRONMENT:", environment);
 console.log("API URL:", API_URL);
@@ -259,11 +259,9 @@ async function createMainWindow(): Promise<BrowserWindow> {
   try {
     if (DEV) {
       console.log("LOADING DEVELOPMENT RENDERER...");
-
       await window.loadURL("http://localhost:5173");
     } else {
       console.log("LOADING PRODUCTION RENDERER...");
-
       await window.loadFile(path.join(__dirname, "../../dist/index.html"));
     }
 

@@ -349,7 +349,7 @@ export default function PayrollPage() {
           {payrollRuns.length === 0 ? (
             <Flex
               ml="0.5rem"
-              mt="7rem"
+              mt="8rem"
               width="78vw"
               minHeight={{
                 base: "180px",
@@ -358,7 +358,7 @@ export default function PayrollPage() {
               align="center"
               justify="center"
               bg="#ffffff"
-              border="1px solid #E2E8F0"
+              border="1px solid #A0AEC0"
               borderRadius="8px"
               px="20px"
               flexShrink={0}

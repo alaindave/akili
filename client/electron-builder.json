@@ -1,5 +1,5 @@
 {
-  "name": "leather-works",
+  "name": "Akili",
   "version": "1.0.0",
   "main": "dist-electron/electron/main.cjs",
 
@@ -9,8 +9,8 @@
   },
 
   "build": {
-    "appId": "com.a-bedetse.leather-works",
-    "productName": "Leather Works",
+    "appId": "com.a-bedetse.akili",
+    "productName": "Akili",
 
     "directories": {
       "output": "dist-app"

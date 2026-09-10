@@ -17,7 +17,7 @@ type Migration = {
 // =====================
 // DB PATH
 // =====================
-const dbPath: string = path.join(app.getPath("userData"), "hr.sqlite");
+const dbPath: string = path.join(app.getPath("userData"), "Akili_db");
 
 console.log("DATABASE PATH:", dbPath);
 
@@ -30,7 +30,7 @@ export const db = new sqlite3.Database(dbPath, (err: Error | null) => {
     return;
   }
 
-  console.log("SQLite connected");
+  console.log("SQLite CONNECTED");
 
   db.serialize(() => {
     db.run("PRAGMA foreign_keys = ON");

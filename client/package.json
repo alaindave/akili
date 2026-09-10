@@ -1,5 +1,5 @@
 {
-  "name": "leather-works",
+  "name": "Akili",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -9,8 +9,8 @@
     "url": "https://github.com/alaindave/leather-works.git"
   },
   "build": {
-    "appId": "com.leatherworks.app",
-    "productName": "LeatherWorks",
+    "appId": "com.akili.app",
+    "productName": "Akili",
     "directories": {
       "output": "dist-app"
     },

@@ -488,7 +488,7 @@ const AddEmployee = () => {
                       placeholder="Choisissez un departement"
                       {...register("department")}
                     >
-                      <option value="Administation" style={{ color: "black" }}>
+                      <option value="Administration" style={{ color: "black" }}>
                         Administration
                       </option>
 

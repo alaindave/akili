@@ -253,7 +253,7 @@ const EmployeeLeavePage = () => {
           >
             Gérez les demandes de congés
           </Text>
-          <Box mt="2.5rem" ml="0.5rem">
+          <Box mt="3rem" ml="0.5rem">
             <EmployeeFilterMenu onFilterClicked={setFilter} />
           </Box>
         </Box>
@@ -276,7 +276,7 @@ const EmployeeLeavePage = () => {
 
             <Text>Soumettre une demande</Text>
           </Button>
-          <Box mt="5.5rem">
+          <Box mt="6rem">
             <SearchBar
               placeholderText="Rechercher un employé"
               onSearch={setSearchText}
@@ -292,7 +292,7 @@ const EmployeeLeavePage = () => {
       {leaves.length === 0 ? (
         <Flex
           ml="0.5rem"
-          mt="7rem"
+          mt="6rem"
           width="80vw"
           minHeight={{
             base: "180px",
@@ -301,7 +301,7 @@ const EmployeeLeavePage = () => {
           align="center"
           justify="center"
           bg="#ffffff"
-          border="1px solid #E2E8F0"
+          border="1px solid #A0AEC0"
           borderRadius="8px"
           px="20px"
           flexShrink={0}

@@ -33,7 +33,7 @@ const EmployeeFilterMenu = ({ onFilterClicked }: Props) => {
         as={Button}
         leftIcon={<FaSlidersH color="black" />}
         rightIcon={<IoIosArrowDown color="black" />}
-        border="1px solid #E2E8F0"
+        border="1px solid #A0AEC0"
         boxShadow="0 2px 10px rgba(15,23,42,.06)"
         _hover={{ bg: "transparent" }}
       >
