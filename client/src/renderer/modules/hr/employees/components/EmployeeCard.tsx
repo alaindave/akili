@@ -22,7 +22,6 @@ import { GiClockwork } from "react-icons/gi";
 import { GoDotFill } from "react-icons/go";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { Link } from "react-router-dom";
-import type Employee from "../../../../../common/types/Employee";
 import Leave from "../../../../../common/types/Leave";
 import "../../../../styles/App.css";
 import AddClockInNotesPopover from "../../attendance/components/AddClockInNotesPopover";
@@ -35,11 +34,11 @@ import {
   useCreateAbsenceLeave,
   useUpdateAttendance,
 } from "../../attendance/hooks/useAttendance";
-import { useUpdateEmployee } from "../hooks/useEmployees";
+import { useEmployee, useUpdateEmployee } from "../hooks/useEmployees";
 import useAdminUser from "../../../../../store/auth.store";
 
 interface Props {
-  employee: Employee;
+  employeeId: string;
 }
 
 /* =========================================================
@@ -49,7 +48,6 @@ interface Props {
 function formatClockInTime(input: string): string | null {
   const cleaned = input.trim().replace(/[hH]/g, ":");
 
-  // Handle 0830
   if (/^\d{4}$/.test(cleaned)) {
     const hours = Number(cleaned.slice(0, 2));
     const minutes = Number(cleaned.slice(2, 4));
@@ -69,7 +67,6 @@ function formatClockInTime(input: string): string | null {
     )}`;
   }
 
-  // Handle 08:30, 8:30, 08H30, 08h30
   const match = cleaned.match(/^(\d{1,2}):(\d{1,2})$/);
 
   if (!match) return null;
@@ -110,25 +107,28 @@ const formattedDate = formatter.format(date);
    COMPONENT
 ========================================================= */
 
-const EmployeeCard = ({ employee }: Props) => {
+const EmployeeCard = ({ employeeId }: Props) => {
   const [_clockIn, setClockIn] = useState("");
 
   const [isClockingIn, setIsClockingIn] = useState(false);
-
   const [displayClock, setDisplayClock] = useState(true);
-
   const [showEditable, setShowEditable] = useState(false);
-
   const [photo_url, setPhotoUrl] = useState("");
 
   const user = useAdminUser((store) => store.adminUser);
+
+  /* =======================================================
+     EMPLOYEE QUERY
+  ======================================================= */
+
+  const { data: employee, isLoading: loadingEmployee } =
+    useEmployee(employeeId);
 
   /* =======================================================
      TOASTS
   ======================================================= */
 
   const toast = useToast();
-
   const showErrorMessage = useErrorToast();
 
   /* =======================================================
@@ -139,7 +139,7 @@ const EmployeeCard = ({ employee }: Props) => {
     data: attendance = null,
     isLoading: loadingAttendance,
     refetch: refetchAttendance,
-  } = useAttendanceRecord(user.companyId, employee._id, formattedDate);
+  } = useAttendanceRecord(user.companyId, employeeId, formattedDate);
 
   /* =======================================================
      ATTENDANCE MUTATIONS
@@ -175,7 +175,7 @@ const EmployeeCard = ({ employee }: Props) => {
 
   useEffect(() => {
     async function load() {
-      if (!employee.photo_path) {
+      if (!employee?.photo_path) {
         setPhotoUrl("");
         return;
       }
@@ -188,13 +188,12 @@ const EmployeeCard = ({ employee }: Props) => {
         setPhotoUrl(`data:image/jpeg;base64,${base64}`);
       } catch (error) {
         console.error("FAILED TO LOAD EMPLOYEE PHOTO:", error);
-
         setPhotoUrl("");
       }
     }
 
     load();
-  }, [employee.photo_path]);
+  }, [employee?.photo_path]);
 
   /* =======================================================
      CLOCK IN EDIT
@@ -226,6 +225,8 @@ const EmployeeCard = ({ employee }: Props) => {
   ======================================================= */
 
   const handleClockInSubmit = async () => {
+    if (!employee) return;
+
     const formatted = formatClockInTime(_clockIn);
 
     if (!formatted) {
@@ -301,26 +302,25 @@ const EmployeeCard = ({ employee }: Props) => {
   ======================================================= */
 
   const handleMenuAction = async (action: "CONGÉ" | "ABSENT") => {
+    if (!employee) {
+      toast({
+        title: "Employé introuvable",
+        description: "Impossible de trouver l'employé.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+        position: "top-left",
+      });
+
+      return;
+    }
+
     /* =====================================================
        CONGÉ
     ===================================================== */
 
     if (action === "CONGÉ") {
       try {
-        if (!employee) {
-          toast({
-            title: "Employé introuvable",
-            description:
-              "Impossible de trouver l'employé pour vérifier son solde de congé.",
-            status: "error",
-            duration: 5000,
-            isClosable: true,
-            position: "top-left",
-          });
-
-          return;
-        }
-
         const remainingLeave = employee.remainingLeave ?? 0;
 
         const leaveDays = 1;
@@ -342,14 +342,6 @@ const EmployeeCard = ({ employee }: Props) => {
 
         const leaveDate = today.toISOString().split("T")[0];
 
-        /* =================================================
-           CREATE LEAVE
-
-           Leave is still using the existing leave
-           preload because no leave React Query hook
-           was provided.
-        ================================================= */
-
         const leave: Partial<Leave> = {
           employeeId: employee._id,
           startDate: leaveDate,
@@ -368,6 +360,9 @@ const EmployeeCard = ({ employee }: Props) => {
 
         /* =================================================
            UPDATE EMPLOYEE LEAVE BALANCE
+
+           React Query mutation will invalidate/refetch
+           the employee query if configured that way.
         ================================================= */
 
         const updatedEmployee = await updateEmployee({
@@ -443,6 +438,38 @@ const EmployeeCard = ({ employee }: Props) => {
   };
 
   /* =======================================================
+     EMPLOYEE LOADING / NOT FOUND
+  ======================================================= */
+
+  if (loadingEmployee) {
+    return (
+      <Flex
+        width="100%"
+        minHeight="5.2rem"
+        bg="#ffffff"
+        px="1rem"
+        align="center"
+      >
+        <Text color="gray.500">Chargement de l'employé...</Text>
+      </Flex>
+    );
+  }
+
+  if (!employee) {
+    return (
+      <Flex
+        width="100%"
+        minHeight="5.2rem"
+        bg="#ffffff"
+        px="1rem"
+        align="center"
+      >
+        <Text color="red.500">Employé introuvable</Text>
+      </Flex>
+    );
+  }
+
+  /* =======================================================
      RENDER
   ======================================================= */
 
@@ -473,9 +500,7 @@ const EmployeeCard = ({ employee }: Props) => {
         md: "1rem",
       }}
     >
-      {/* =====================================================
-          EMPLOYEE PHOTO
-      ====================================================== */}
+      {/* EMPLOYEE PHOTO */}
 
       <Box
         flexShrink={0}
@@ -509,9 +534,7 @@ const EmployeeCard = ({ employee }: Props) => {
         </Link>
       </Box>
 
-      {/* =====================================================
-          EMPLOYEE INFORMATION
-      ====================================================== */}
+      {/* EMPLOYEE INFORMATION */}
 
       <Box
         minWidth={0}
@@ -603,9 +626,7 @@ const EmployeeCard = ({ employee }: Props) => {
         </Flex>
       </Box>
 
-      {/* =====================================================
-          ATTENDANCE STATUS
-      ====================================================== */}
+      {/* ATTENDANCE STATUS */}
 
       <Flex
         flexShrink={0}
@@ -677,9 +698,7 @@ const EmployeeCard = ({ employee }: Props) => {
         )}
       </Flex>
 
-      {/* =====================================================
-          CLOCK IN
-      ====================================================== */}
+      {/* CLOCK IN */}
 
       <Flex
         flexShrink={0}
@@ -759,15 +778,9 @@ const EmployeeCard = ({ employee }: Props) => {
                 }}
                 sx={{
                   "@keyframes pulse": {
-                    "0%": {
-                      opacity: 1,
-                    },
-                    "50%": {
-                      opacity: 0.3,
-                    },
-                    "100%": {
-                      opacity: 1,
-                    },
+                    "0%": { opacity: 1 },
+                    "50%": { opacity: 0.3 },
+                    "100%": { opacity: 1 },
                   },
                 }}
               />
@@ -785,9 +798,7 @@ const EmployeeCard = ({ employee }: Props) => {
         </Box>
       </Flex>
 
-      {/* =====================================================
-          OPTIONS MENU
-      ====================================================== */}
+      {/* OPTIONS MENU */}
 
       <Box
         flexShrink={0}

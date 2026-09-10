@@ -257,16 +257,6 @@ export default function TaskDetailsDrawer({
                   >
                     {currentTask.taskNumber}
                   </Text>
-
-                  <Badge
-                    colorScheme={currentTask.isResolved ? "green" : "yellow"}
-                    alignSelf={{
-                      base: "flex-start",
-                      sm: "center",
-                    }}
-                  >
-                    {currentTask.isResolved ? "Résolue" : "Ouverte"}
-                  </Badge>
                 </Flex>
 
                 {/* Author */}
@@ -431,36 +421,47 @@ export default function TaskDetailsDrawer({
                 SUBJECT + MESSAGE
             ================================================== */}
 
-            <Box width="100%">
-              <Text
-                fontSize={{
-                  base: "1.05rem",
-                  sm: "1.15rem",
-                  md: "1.2rem",
+            <Flex>
+              <Box width="100%">
+                <Text
+                  fontSize={{
+                    base: "1.05rem",
+                    sm: "1.15rem",
+                    md: "1.2rem",
+                  }}
+                  fontWeight="600"
+                  color="gray.900"
+                  mb={2}
+                  wordBreak="break-word"
+                >
+                  {currentTask.subject}
+                </Text>
+                <Text
+                  fontSize={{
+                    base: "0.95rem",
+                    sm: "1rem",
+                    md: "1.05rem",
+                  }}
+                  fontWeight="400"
+                  color="gray.700"
+                  fontFamily="system-ui"
+                  whiteSpace="pre-wrap"
+                  wordBreak="break-word"
+                >
+                  {currentTask.message}
+                </Text>
+              </Box>
+              <Badge
+                mb="1rem"
+                colorScheme={currentTask.isResolved ? "green" : "yellow"}
+                alignSelf={{
+                  base: "flex-start",
+                  sm: "center",
                 }}
-                fontWeight="600"
-                color="gray.900"
-                mb={2}
-                wordBreak="break-word"
               >
-                {currentTask.subject}
-              </Text>
-
-              <Text
-                fontSize={{
-                  base: "0.95rem",
-                  sm: "1rem",
-                  md: "1.05rem",
-                }}
-                fontWeight="400"
-                color="gray.700"
-                fontFamily="system-ui"
-                whiteSpace="pre-wrap"
-                wordBreak="break-word"
-              >
-                {currentTask.message}
-              </Text>
-            </Box>
+                {currentTask.isResolved ? "Résolue" : "Ouverte"}
+              </Badge>
+            </Flex>
           </VStack>
         </DrawerHeader>
 
@@ -554,8 +555,8 @@ export default function TaskDetailsDrawer({
 
                       <Text
                         fontSize={{
-                          base: "0.9rem",
-                          md: "1rem",
+                          base: "0.8rem",
+                          md: "0.85rem",
                         }}
                         color="gray.700"
                         wordBreak="break-word"
@@ -572,13 +573,11 @@ export default function TaskDetailsDrawer({
                   {/* Resolved by */}
 
                   {currentTask.resolvedBy && (
-                    <HStack align="flex-start" spacing={3}>
-                      <Icon as={FiUser} boxSize={5} mt={1} flexShrink={0} />
-
+                    <HStack ml="1.1rem" spacing={3}>
                       <Text
                         fontSize={{
-                          base: "0.9rem",
-                          md: "1rem",
+                          base: "0.8rem",
+                          md: "0.85rem",
                         }}
                         color="gray.700"
                         wordBreak="break-word"
@@ -641,7 +640,7 @@ export default function TaskDetailsDrawer({
                 mb={4}
                 fontSize={{
                   base: "1rem",
-                  md: "1.1rem",
+                  md: "1rem",
                 }}
                 color="gray.800"
               >
@@ -686,8 +685,8 @@ export default function TaskDetailsDrawer({
                           <Text
                             fontWeight="semibold"
                             fontSize={{
-                              base: "1.1rem",
-                              md: "1.1rem",
+                              base: "1rem",
+                              md: "1rem",
                             }}
                             color="gray.800"
                             wordBreak="break-word"
@@ -697,7 +696,7 @@ export default function TaskDetailsDrawer({
                           </Text>
 
                           <Text
-                            fontSize="0.75rem"
+                            fontSize="0.85rem"
                             color="gray.500"
                             flexShrink={0}
                           >
@@ -718,11 +717,12 @@ export default function TaskDetailsDrawer({
                         {/* Comment text */}
 
                         <Text
-                          mt={2}
+                          mt="0.5rem"
+                          ml="0.5rem"
                           fontFamily="mono"
                           fontSize={{
-                            base: "1rem",
-                            md: "1rem",
+                            base: "0.9rem",
+                            md: "0.93rem",
                           }}
                           color="gray.700"
                           whiteSpace="pre-wrap"

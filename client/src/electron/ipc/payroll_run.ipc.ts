@@ -30,11 +30,13 @@ export function registerPayrollGenerationIPC() {
     "payroll:createDraft",
     async (
       _,
+      companyId: string,
       admin: Omit<User, "password" | "notes">,
       year: number,
       month: number
     ) => {
       //  Fetch payroll settings
+      console.log("CID", companyId);
       const payrollSettings = await getPayrollSettings(admin.companyId);
       if (!payrollSettings) {
         throw new Error(

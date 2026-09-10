@@ -320,7 +320,7 @@ const EmployeeListPage = () => {
                   }}
                   m="0"
                 >
-                  <EmployeeCard employee={employee} />
+                  <EmployeeCard employeeId={employee._id} />
                 </ListItem>
               ))}
 
