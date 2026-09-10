@@ -268,11 +268,9 @@ const EmployeeAttendancePage = () => {
   const attendanceDailyCheckSync = async () => {
     try {
       const result = await window.electron.sync(user.companyId);
-
       if (!result.success) {
         console.error(result.message);
       }
-
       await loadDailyCheck();
     } catch (error) {
       console.error(
@@ -334,7 +332,7 @@ const EmployeeAttendancePage = () => {
 
       console.log("MARK ABSENT RESULT", result);
 
-      await delay(3000);
+      await delay(6000);
 
       await attendanceDailyCheckSync();
 

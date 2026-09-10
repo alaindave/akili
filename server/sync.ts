@@ -982,6 +982,7 @@ export async function syncTaskComment(
 
       if (!existingComment) {
         task.comments.push({
+          companyId,
           _id: data._id,
           taskId: data.taskId,
           author: data.author,

@@ -58,7 +58,18 @@ export function registerEmployeeIPC() {
   // Get employee photo
   ipcMain.handle("photos:getUrl", (_, relativePath: string) => {
     const fullPath = path.join(getEmployeePhotoDir(), relativePath);
+    console.log("RELATIVE PATH:", relativePath);
     console.log("FULL PATH:", fullPath);
+    console.log("EXISTS:", fs.existsSync(fullPath));
+
+    if (fs.existsSync(fullPath)) {
+      const stat = fs.statSync(fullPath);
+
+      console.log("IS FILE:", stat.isFile());
+      console.log("IS DIRECTORY:", stat.isDirectory());
+      console.log("SIZE:", stat.size);
+    }
+
     const buffer = fs.readFileSync(fullPath);
     return buffer.toString("base64");
   });

@@ -425,20 +425,30 @@ async function syncEmployeePhotos(employees: Employee[]) {
       await downloadEmployeePhoto(
         employee.companyId,
         employee._id,
-        employee.photo_filename
+        employee.photo_version
       );
 
-      const employeeFolderName =
-        `${employee.firstName}_${employee.lastName}_${employee._id}`
-          .replace(/[<>:"/\\|?*\x00-\x1F]/g, "")
-          .replace(/\s+/g, "_");
+      const extension = (() => {
+        const mimeType = employee.photo_mime_type;
+
+        switch (mimeType) {
+          case "image/png":
+            return ".png";
+
+          case "image/webp":
+            return ".webp";
+
+          case "image/jpeg":
+          case "image/jpg":
+          default:
+            return ".jpg";
+        }
+      })();
+
+      const photo_path = `${employee.companyId}/${employee._id}/photo_v${employee.photo_version}${extension}`;
 
       await updateEmployeePhotoMetadata(employee.companyId, employee._id, {
-        photo_path: path.join(
-          "employees_photos",
-          employeeFolderName,
-          employee.photo_filename
-        ),
+        photo_path,
         photo_filename: employee.photo_filename,
         photo_version: employee.photo_version,
         photo_hash: employee.photo_hash,

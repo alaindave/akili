@@ -9,11 +9,15 @@ import { getEmployeeById } from "../database/repositories/employees.repository.j
 export async function downloadEmployeePhoto(
   companyId: string,
   employeeId: string,
-  photoFilename: string
+  photo_version: number
 ) {
   const API_URL = app.isPackaged
     ? "https://leather-works.onrender.com"
     : process.env.VITE_API_URL;
+
+  if (!API_URL) {
+    throw new Error("VITE_API_URL is not configured");
+  }
 
   const employee = await getEmployeeById(companyId, employeeId);
 
@@ -24,36 +28,67 @@ export async function downloadEmployeePhoto(
   // Get installation-specific photo directory
   const employeePhotoDir = getEmployeePhotoDir();
 
-  const sanitizeFolderPart = (value: string) =>
-    value
-      .replace(/[<>:"/\\|?*\x00-\x1F]/g, "")
-      .replace(/\s+/g, "_")
-      .trim();
+  // Determine file extension from the employee's MIME type
+  const extension = (() => {
+    const mimeType = employee.photo_mime_type;
 
-  // Folder name
-  const employeeFolderName = [
-    sanitizeFolderPart(employee.firstName),
-    sanitizeFolderPart(employee.lastName),
+    switch (mimeType) {
+      case "image/png":
+        return ".png";
+
+      case "image/webp":
+        return ".webp";
+
+      case "image/jpeg":
+      case "image/jpg":
+      default:
+        return ".jpg";
+    }
+  })();
+
+  // File path:
+  // employees_photos/<companyId>/<employeeId>/photo_v<version>.<extension>
+  const photoRelativePath = path.join(
+    employee.companyId,
     employee._id,
-  ].join("_");
+    `photo_v${photo_version}${extension}`
+  );
 
-  const employeeFolder = path.join(employeePhotoDir, employeeFolderName);
+  const absolutePath = path.join(employeePhotoDir, photoRelativePath);
 
-  await fs.mkdir(employeeFolder, {
+  // Create the parent directory
+  const photoDir = path.dirname(absolutePath);
+
+  await fs.mkdir(photoDir, {
     recursive: true,
   });
 
-  const filePath = path.join(employeeFolder, photoFilename);
-
   console.log("DOWNLOADING PHOTO FROM:", `${API_URL}/photos/${employeeId}`);
 
-  console.log("SAVING PHOTO TO:", filePath);
+  console.log("SAVING PHOTO TO:", absolutePath);
 
   const response = await axios.get(`${API_URL}/photos/${employeeId}`, {
     responseType: "arraybuffer",
   });
 
-  await fs.writeFile(filePath, Buffer.from(response.data));
+  try {
+    const existing = await fs.stat(absolutePath);
 
-  return filePath;
+    if (existing.isDirectory()) {
+      await fs.rm(absolutePath, {
+        recursive: true,
+        force: true,
+      });
+    }
+  } catch (error: any) {
+    if (error.code !== "ENOENT") {
+      throw error;
+    }
+  }
+
+  await fs.writeFile(absolutePath, Buffer.from(response.data));
+
+  console.log("PHOTO SAVED SUCCESSFULLY:", absolutePath);
+
+  return absolutePath;
 }
