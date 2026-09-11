@@ -1,5 +1,4 @@
 import {
-  Badge,
   Box,
   Button,
   Flex,
@@ -24,7 +23,7 @@ import PayrollDashboard from "../components/PayrollDashboard";
 import PayrollResultsTable from "../components/PayrollResultsTable";
 import useSyncStore from "../../../../../store/sync.store";
 import { getPayrollPeriod } from "../../../../lib/date";
-import { formatTime } from "../../../../lib/formatter";
+import PayrollAuditPopover from "../components/PayrollAuditPopover";
 
 const PayrollDetailsPage = () => {
   const { _id } = useParams();
@@ -39,14 +38,6 @@ const PayrollDetailsPage = () => {
 
   const [payrollResults, setPayrollResults] = useState<PayrollResult[]>([]);
   const syncVersion = useSyncStore((store) => store.syncVersion);
-
-  const statusColor = {
-    BROUILLON: "#e6b800",
-    VERIFICATION: "#1a53ff",
-    APPROUVÉ: "green",
-    PAYÉ: "purple",
-    ANNULÉ: "red",
-  } as const;
 
   const {
     isOpen: isConfirmationOpen,
@@ -247,7 +238,13 @@ const PayrollDetailsPage = () => {
    */
 
   return (
-    <Flex bg="#ffffff" width="100%" direction="column" justify="space-between">
+    <Flex
+      bg="#ffffff"
+      width="100%"
+      height="93vh"
+      direction="column"
+      justify="space-between"
+    >
       {/* Header */}
       <Flex>
         <Link
@@ -267,7 +264,6 @@ const PayrollDetailsPage = () => {
             <FaArrowLeftLong color="black" />
           </Box>
         </Link>
-
         <Box ml="2rem">
           <HStack>
             <Text mt="1rem" ml="1rem" fontSize="1.4rem" fontWeight="600">
@@ -278,175 +274,65 @@ const PayrollDetailsPage = () => {
               <MdOutlineChevronRight fontSize="1.3rem" />
             </Box>
 
-            <Text mt="1rem" color="gray.600">
+            <Text mt="1.2rem" fontWeight="600" color="gray.700">
               Periode du{" "}
               {payrollRun?.month && payrollRun?.year
                 ? getPayrollPeriod(payrollRun.month, payrollRun.year)
                 : ""}
             </Text>
-
-            {/* Buttons */}
-
-            {payrollRun?.status !== "ANNULÉ" &&
-              payrollRun?.status !== "PAYÉ" && (
-                <HStack position="absolute" right="1rem">
-                  <Button
-                    onClick={onConfirmationOpen}
-                    width="10rem"
-                    bg="#ffffff"
-                    border="1px solid gray"
-                    mt="1rem"
-                  >
-                    <Box color="red.400" fontSize="1.2rem" mr="0.7rem">
-                      <MdOutlineCancel />
-                    </Box>
-                    Annuler
-                  </Button>
-
-                  {statusAction && (
-                    <Button
-                      onClick={statusAction.onClick}
-                      width="10rem"
-                      bg="#ffffff"
-                      border="1px solid gray"
-                      mt="1rem"
-                    >
-                      <Box color="green.600" fontSize="1.2rem" mr="0.7rem">
-                        <GiConfirmed />
-                      </Box>
-
-                      {statusAction.label}
-                    </Button>
-                  )}
-                </HStack>
-              )}
           </HStack>
+          {/* Payroll dashboard */}
+          <Box mt="5rem" ml="1.5rem">
+            <PayrollDashboard
+              employeeCount={payrollRun?.employeeCount ?? 0}
+              totalBasicSalary={payrollRun?.totalBasicSalary ?? 0}
+              totalEarnings={payrollRun?.totalEarnings ?? 0}
+              totalDeductions={payrollRun?.totalDeductions ?? 0}
+              totalNetSalary={payrollRun?.totalNetSalary ?? 0}
+            />
+          </Box>
+          {/* Payroll results table */}
 
-          {/* Audit log */}
-
-          <Text position="relative" left="0.5rem" color="gray.500">
-            - Créee le{" "}
-            {payrollRun?.createdAt &&
-              new Date(payrollRun.createdAt).toLocaleDateString("fr-FR", {
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              })}
-            {"  "}à {payrollRun?.createdAt && formatTime(payrollRun.createdAt)}
-            {"  "}
-            par {payrollRun?.generatedByName}.
-          </Text>
-
-          {/* Cancelled payroll run */}
-
-          {payrollRun?.status === "ANNULÉ" && (
-            <Text color="gray.500">
-              - Annulée le{" "}
-              {payrollRun?.cancelledAt &&
-                new Date(payrollRun.cancelledAt).toLocaleDateString("fr-FR", {
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                })}
-              {"  "}à{" "}
-              {payrollRun?.cancelledAt && formatTime(payrollRun.cancelledAt)}
-              {"  "}
-              par {payrollRun?.cancelledByName}.
-            </Text>
-          )}
-
-          {/* Verifying payroll */}
-
-          {["VERIFICATION", "APPROUVÉ", "PAYÉ"].includes(
-            payrollRun?.status ?? ""
-          ) && (
-            <Text color="gray.500">
-              - Soumise pour verification le{" "}
-              {payrollRun?.submittedForVerificationAt &&
-                new Date(
-                  payrollRun.submittedForVerificationAt
-                ).toLocaleDateString("fr-FR", {
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                })}
-              {"  "}à{" "}
-              {payrollRun?.submittedForVerificationAt &&
-                formatTime(payrollRun.submittedForVerificationAt)}
-              {"  "}
-              par {payrollRun?.submittedForVerificationByName}.
-            </Text>
-          )}
-
-          {/* Approved payroll */}
-
-          {["APPROUVÉ", "PAYÉ"].includes(payrollRun?.status ?? "") && (
-            <Text color="gray.500">
-              - Approuvée le{" "}
-              {payrollRun?.approvedAt &&
-                new Date(payrollRun.approvedAt).toLocaleDateString("fr-FR", {
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                })}
-              {"  "}à{" "}
-              {payrollRun?.approvedAt && formatTime(payrollRun.approvedAt)}
-              {"  "}
-              par {payrollRun?.approvedByName}.
-            </Text>
-          )}
-
-          {/* Paid payroll */}
-
-          {payrollRun?.status === "PAYÉ" && (
-            <Text color="gray.500">
-              -Payée le{" "}
-              {payrollRun?.paidAt &&
-                new Date(payrollRun.paidAt).toLocaleDateString("fr-FR", {
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                })}
-              {"  "}à {payrollRun?.paidAt && formatTime(payrollRun.paidAt)}
-              {"  "}
-              par {payrollRun?.paidByName}.
-            </Text>
-          )}
+          <Box mt="3rem" ml="1rem">
+            <PayrollResultsTable payrollResults={payrollResults} />
+          </Box>
         </Box>
-
-        {/* Status badge */}
-
-        <Badge
-          position="absolute"
-          top="1.5rem"
-          right={
-            payrollRun?.status === "ANNULÉ" || payrollRun?.status === "PAYÉ"
-              ? "2rem"
-              : "28rem"
-          }
-          bg={payrollRun?.status ? statusColor[payrollRun.status] : undefined}
-          color="gray.200"
-          fontSize="1rem"
-        >
-          {payrollRun?.status}
-        </Badge>
+        <PayrollAuditPopover payrollRun={payrollRun} />
       </Flex>
-      {/* Payroll dashboard */}
-      <Box mt="5rem" ml="3rem">
-        <PayrollDashboard
-          employeeCount={payrollRun?.employeeCount ?? 0}
-          totalBasicSalary={payrollRun?.totalBasicSalary ?? 0}
-          totalEarnings={payrollRun?.totalEarnings ?? 0}
-          totalDeductions={payrollRun?.totalDeductions ?? 0}
-          totalNetSalary={payrollRun?.totalNetSalary ?? 0}
-        />
-      </Box>
 
-      {/* Payroll results table */}
+      {/* Buttons */}
 
-      <Box ml="1rem" mt="5rem">
-        <PayrollResultsTable payrollResults={payrollResults} />
-      </Box>
+      {payrollRun?.status !== "ANNULÉ" && payrollRun?.status !== "PAYÉ" && (
+        <Flex mr="2rem" mt="3rem" justify="flex-end">
+          <Button
+            onClick={onConfirmationOpen}
+            width="10rem"
+            bg="#ffffff"
+            border="1px solid gray"
+          >
+            <Box color="red.400" fontSize="1.2rem" mr="0.7rem">
+              <MdOutlineCancel />
+            </Box>
+            Annuler
+          </Button>
+
+          {statusAction && (
+            <Button
+              onClick={statusAction.onClick}
+              width="10rem"
+              bg="#ffffff"
+              border="1px solid gray"
+              ml="0.3rem"
+            >
+              <Box color="green.600" fontSize="1.2rem" mr="0.7rem">
+                <GiConfirmed />
+              </Box>
+
+              {statusAction.label}
+            </Button>
+          )}
+        </Flex>
+      )}
 
       <DeletionDialog
         isOpen={isConfirmationOpen}

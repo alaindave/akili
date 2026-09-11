@@ -1,9 +1,10 @@
 <!DOCTYPE html>
+
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
 
-    <title>LeatherWorks Splash</title>
+    <title>AKILI Splash</title>
 
     <style>
       * {
@@ -20,41 +21,42 @@
 
         font-family: Inter, Arial, sans-serif;
 
-        background:
-          radial-gradient(
-            circle at center,
-            #0f2b67 0%,
-            #071737 45%,
-            #020817 100%
-          );
+        background: radial-gradient(
+          circle at 50% 35%,
+          #ffffff 0%,
+          #f8fafc 45%,
+          #eef2f7 100%
+        );
 
         display: flex;
         align-items: center;
         justify-content: center;
 
-        color: white;
+        color: #1f2937;
       }
 
       body {
         animation: fadeIn 0.6s ease;
       }
 
-      /* subtle animated glow */
+      /* subtle gold ambient glow */
       body::before {
         content: "";
 
         position: absolute;
 
-        width: 700px;
-        height: 700px;
+        width: 650px;
+        height: 650px;
 
         background: radial-gradient(
           circle,
-          rgba(250, 204, 21, 0.08),
+          rgba(242, 183, 5, 0.1),
           transparent 70%
         );
 
         animation: pulse 5s infinite ease-in-out;
+
+        pointer-events: none;
       }
 
       .container {
@@ -67,11 +69,17 @@
         justify-content: center;
 
         text-align: center;
+
+        width: 100%;
+        height: 100%;
       }
 
-      /* logo */
+      /* =========================
+     LOGO
+  ========================= */
+
       .logo-wrapper {
-        margin-bottom: 18px;
+        margin-bottom: 14px;
 
         position: relative;
       }
@@ -79,6 +87,7 @@
       .logo {
         font-size: 100px;
         font-weight: 900;
+
         letter-spacing: -10px;
 
         display: flex;
@@ -86,78 +95,76 @@
         justify-content: center;
 
         line-height: 1;
+
+        text-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
       }
 
       .logo .l {
-        color: white;
+        color: #1f2937;
       }
 
       .logo .w {
-        color: #facc15;
+        color: #f2b705;
 
         margin-left: -8px;
       }
 
-      /* app name */
-      .title {
-        font-size: 72px;
-        font-weight: 800;
-
-        letter-spacing: -3px;
-
-        margin-bottom: 18px;
-      }
+      /* =========================
+     APP NAME
+  ========================= */
 
       .subtitle {
         font-size: 24px;
-        color: #94a3b8;
 
-        margin-bottom: 22px;
+        font-weight: 500;
+
+        color: #64748b;
+
+        letter-spacing: 0.2px;
+
+        margin-bottom: 20px;
       }
 
-      .line {
-        width: 120px;
-        height: 2px;
+      /* =========================
+     GOLD LINE
+  ========================= */
 
-        background: #facc15;
+      .line {
+        width: 110px;
+        height: 3px;
+
+        background: #f2b705;
 
         border-radius: 999px;
 
-        margin-bottom: 30px;
+        margin-bottom: 28px;
+
+        box-shadow: 0 2px 8px rgba(242, 183, 5, 0.2);
       }
 
-      /* company */
-      .company {
-        color: #cbd5e1;
+      /* =========================
+     LOADER
+  ========================= */
 
-        font-size: 18px;
-
-        margin-bottom: 40px;
-      }
-
-      .company strong {
-        color: #facc15;
-        font-weight: 700;
-      }
-
-      /* loading dots */
       .loader {
         display: flex;
         align-items: center;
         justify-content: center;
 
-        gap: 14px;
+        gap: 10px;
 
-        margin-bottom: 60px;
+        margin-bottom: 52px;
       }
 
       .dot {
-        width: 16px;
-        height: 16px;
+        width: 11px;
+        height: 11px;
 
         border-radius: 50%;
 
-        background: #facc15;
+        background: #f2b705;
+
+        box-shadow: 0 2px 6px rgba(242, 183, 5, 0.2);
 
         animation: bounce 1.2s infinite ease-in-out;
       }
@@ -170,7 +177,10 @@
         animation-delay: 0.4s;
       }
 
-      /* footer company card */
+      /* =========================
+     FOOTER
+  ========================= */
+
       .footer {
         display: flex;
         flex-direction: column;
@@ -178,22 +188,22 @@
 
         color: #94a3b8;
 
-        font-size: 17px;
+        font-size: 15px;
       }
 
       .footer-line {
-        width: 340px;
+        width: 300px;
         height: 1px;
 
-        background: rgba(255, 255, 255, 0.15);
+        background: #d7dde5;
 
-        margin-bottom: 28px;
+        margin-bottom: 24px;
 
         position: relative;
       }
 
       .footer-line::after {
-        content: "🏢";
+        content: "◆";
 
         position: absolute;
 
@@ -202,40 +212,48 @@
 
         transform: translate(-50%, -50%);
 
-        background: #071737;
+        background: #f8fafc;
 
-        padding: 0 16px;
+        padding: 0 14px;
 
-        font-size: 20px;
+        color: #f2b705;
+
+        font-size: 10px;
       }
 
       .footer-company {
-        color: #facc15;
+        color: #334155;
 
-        font-size: 22px;
+        font-size: 19px;
+
         font-weight: 700;
 
-        margin-top: 8px;
-        margin-bottom: 8px;
+        margin-top: 7px;
+        margin-bottom: 6px;
       }
 
       .footer-tagline {
-        font-size: 16px;
-        color: #64748b;
+        font-size: 14px;
+
+        color: #94a3b8;
+
+        letter-spacing: 0.2px;
       }
 
-      /* animations */
+      /* =========================
+     ANIMATIONS
+  ========================= */
 
       @keyframes bounce {
         0%,
         80%,
         100% {
           transform: scale(0.7);
-          opacity: 0.4;
+          opacity: 0.35;
         }
 
         40% {
-          transform: scale(1.2);
+          transform: scale(1.15);
           opacity: 1;
         }
       }
@@ -243,7 +261,7 @@
       @keyframes pulse {
         0% {
           transform: scale(1);
-          opacity: 0.6;
+          opacity: 0.55;
         }
 
         50% {
@@ -253,7 +271,7 @@
 
         100% {
           transform: scale(1);
-          opacity: 0.6;
+          opacity: 0.55;
         }
       }
 
@@ -287,49 +305,39 @@
 
   <body>
     <div class="container">
-
-      <!-- LOGO -->
+      <!-- AKILI LOGO -->
       <div class="logo-wrapper">
         <div class="logo">
           <span class="l">A</span>
-          <span class="w">F</span>
-          <span class="l">R</span>
-          <span class="w">I</span>
-          <span class="l">T</span>
-          <span class="w">A</span>
-          <span class="l">N</span>
+          <span class="w">K</span>
+          <span class="l">I</span>
+          <span class="w">L</span>
+          <span class="l">I</span>
         </div>
       </div>
 
-      <div class="subtitle">
-        Gestion d’entreprise
-      </div>
+      <!-- DESCRIPTION -->
+      <div class="subtitle">Gestion d’entreprise</div>
 
+      <!-- GOLD ACCENT -->
       <div class="line"></div>
 
-    
+      <!-- LOADING -->
       <div class="loader">
         <div class="dot"></div>
         <div class="dot"></div>
         <div class="dot"></div>
       </div>
 
+      <!-- DEVELOPER -->
       <div class="footer">
-
         <div class="footer-line"></div>
 
-        <div>
-          Développé par
-        </div>
+        <div>Développé par</div>
 
-        <div class="footer-company">
-          ADB Tech Solutions
-        </div>
+        <div class="footer-company">ADB Tech Solutions</div>
 
-        <div class="footer-tagline">
-          Solutions numériques sur mesure
-        </div>
-
+        <div class="footer-tagline">Solutions numériques sur mesure</div>
       </div>
     </div>
   </body>

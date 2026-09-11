@@ -20,17 +20,6 @@ import {
   UploadedEmployeeDocument,
 } from "../../common/types/EmployeeDocuments.js";
 
-/**
- * Resolve an employee document path using:
- *
- * employees_documents/
- *   {companyId}/
- *     {employeeId}/
- *       {fileName}
- *
- * The companyId is always required so a document cannot
- * accidentally resolve into another company's folder.
- */
 function resolveEmployeeDocumentPath(
   companyId: string,
   localPath: string
@@ -48,16 +37,10 @@ function resolveEmployeeDocumentPath(
    */
   let normalizedPath = localPath.replace(/\\/g, "/").replace(/^\/+/, "");
 
+  console.log("NORMALIZED PATH", normalizedPath);
+
   /*
    * Remove employees_documents prefix if it exists.
-   *
-   * Supported:
-   *
-   * employees_documents/companyId/employeeId/file.pdf
-   *
-   * OR:
-   *
-   * companyId/employeeId/file.pdf
    */
   if (normalizedPath.startsWith("employees_documents/")) {
     normalizedPath = normalizedPath.substring("employees_documents/".length);

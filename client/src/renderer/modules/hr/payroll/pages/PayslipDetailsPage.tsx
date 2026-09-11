@@ -143,7 +143,7 @@ const EmployeePayslipDetails = () => {
               <Box>
                 <MdOutlineChevronRight fontSize="1.3rem" />
               </Box>
-              <Text fontWeight="600" fontSize="1rem">
+              <Text fontWeight="500" fontSize="1rem">
                 Periode du{" "}
                 {payrollResults?.month && payrollResults?.year
                   ? getPayrollPeriod(payrollResults.month, payrollResults.year)
@@ -153,10 +153,10 @@ const EmployeePayslipDetails = () => {
                 <MdOutlineChevronRight fontSize="1.3rem" />
               </Box>
 
-              <Text fontWeight="600" fontSize="1rem">
+              <Text fontWeight="500" fontSize="1rem">
                 {employee?.firstName}
               </Text>
-              <Text fontWeight="600" fontSize="1rem">
+              <Text fontWeight="500" fontSize="1rem">
                 {employee?.lastName}
               </Text>
             </HStack>
@@ -324,13 +324,13 @@ const EmployeePayslipDetails = () => {
           itemName="Remunerations"
           amount={payrollResults?.totalEarnings ?? 0}
           icon={FaArrowTrendUp}
-          color="blue"
+          color="purple"
         />
         <PayslipItemDisplay
           itemName="Salaire brut"
           amount={payrollResults?.grossSalary ?? 0}
           icon={FaDollarSign}
-          color="purple"
+          color="blue"
         />
         <PayslipItemDisplay
           itemName="Deductions"
@@ -342,7 +342,7 @@ const EmployeePayslipDetails = () => {
           itemName="Salaire net"
           amount={payrollResults?.netSalary ?? 0}
           icon={PiCreditCardLight}
-          color="purple"
+          color="green"
         />
       </HStack>
       {/* Earnings and deductions breakdown */}

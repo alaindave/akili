@@ -8,6 +8,7 @@ import ComponentErrorFallback from "../../../../components/ComponentErrorFallbac
 import EmployeeDetailsTab from "./EmployeeDetailsTab";
 import EmployeePhotoUpload from "./EmployeePhotoUpload";
 import { useEmployee } from "../hooks/useEmployees";
+import useAdminUser from "../../../../../store/auth.store";
 
 type PhotoState = {
   photo_url?: string;
@@ -19,6 +20,8 @@ const EmployeeDetailsPage = () => {
   const location = useLocation();
 
   const { photo_url } = (location.state as PhotoState) || {};
+
+  const user = useAdminUser((store) => store.adminUser);
 
   /*
    * ---------------------------------------------------------
@@ -257,7 +260,7 @@ const EmployeeDetailsPage = () => {
             border="1px solid rgba(255,255,255,0.12)"
             boxShadow="0 2px 8px rgba(0,0,0,0.5)"
             borderRadius="0.4rem"
-            overflowY="auto"
+            overflowY={user?.role === "MANAGER" ? "auto" : "hidden"}
             height="70.6vh"
             ml="15rem"
             mt="1.5rem"

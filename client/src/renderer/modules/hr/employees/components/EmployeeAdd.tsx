@@ -1,4 +1,6 @@
 import {
+  Alert,
+  AlertIcon,
   Box,
   Button,
   Flex,
@@ -14,6 +16,7 @@ import {
   ModalHeader,
   ModalOverlay,
   Select,
+  SimpleGrid,
   Text,
   VStack,
   useDisclosure,
@@ -37,35 +40,84 @@ import { z } from "zod";
 import "../../../../styles/App.css";
 import useAdminUser from "../../../../../store/auth.store";
 import { employeeKeys } from "../hooks/useEmployees";
+
 registerLocale("fr", fr);
+
 const errorMessage = "Ce champ est obligatoire";
 
 const schema = z.object({
-  firstName: z.string().min(1, { message: errorMessage }),
-  lastName: z.string().min(1, { message: errorMessage }),
-  matricule: z.string().min(1, { message: errorMessage }),
-  idNum: z.string().min(1, { message: errorMessage }),
+  firstName: z.string().trim().min(1, { message: errorMessage }),
+
+  lastName: z.string().trim().min(1, { message: errorMessage }),
+
+  matricule: z.string().trim().min(1, { message: errorMessage }),
+
+  idNum: z.string().trim().min(1, { message: errorMessage }),
+
   dateBirth: z.string().min(1, { message: errorMessage }),
-  role: z.string().min(1, { message: errorMessage }),
+
+  role: z.string().trim().min(1, { message: errorMessage }),
+
   department: z.string().min(1, { message: errorMessage }),
+
   dateHired: z.string().min(1, { message: errorMessage }),
-  telephone: z.string().min(1, "Le numéro de téléphone est obligatoire"),
-  address: z.string().min(1, { message: errorMessage }),
-  emergencyContact: z.string().min(1, { message: errorMessage }),
-  relationship: z.string().min(1, { message: errorMessage }),
-  contactPhone: z.string().min(1, { message: errorMessage }),
-  salary: z.coerce.number({
-    required_error: errorMessage,
-  }),
+
+  telephone: z
+    .string()
+    .trim()
+    .min(1, { message: "Le numéro de téléphone est obligatoire" }),
+
+  address: z.string().trim().min(1, { message: errorMessage }),
+
+  emergencyContact: z.string().trim().min(1, { message: errorMessage }),
+
+  relationship: z.string().trim().min(1, { message: errorMessage }),
+
+  contactPhone: z.string().trim().min(1, { message: errorMessage }),
+
+  salary: z
+    .number({
+      required_error: errorMessage,
+      invalid_type_error: "Veuillez saisir un salaire valide",
+    })
+    .finite("Veuillez saisir un salaire valide")
+    .positive("Le salaire doit être supérieur à 0"),
 });
 
 type EmployeeData = z.infer<typeof schema>;
 
+const fieldStyles = {
+  bg: "white",
+  borderColor: "gray.300",
+  borderWidth: "1px",
+  borderRadius: "7px",
+  height: "38px",
+  fontSize: "0.9rem",
+  color: "gray.800",
+  _hover: {
+    borderColor: "gray.400",
+  },
+  _focus: {
+    borderColor: "#F2B705",
+    boxShadow: "0 0 0 1px #F2B705",
+  },
+};
+
+const sectionTitleStyles = {
+  fontSize: "0.82rem",
+  fontWeight: "700",
+  color: "gray.600",
+  textTransform: "uppercase" as const,
+  letterSpacing: "0.04em",
+};
+
 const AddEmployee = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const queryClient = useQueryClient();
+
   const [ServerErrorMessage, setServerErrorMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+
   const companyId = useAdminUser((store) => store.adminUser.companyId);
 
   const {
@@ -76,11 +128,13 @@ const AddEmployee = () => {
     formState: { errors },
   } = useForm<EmployeeData>({
     resolver: zodResolver(schema),
+    mode: "onSubmit",
   });
 
   const onSubmit = async (employeeData: EmployeeData) => {
     setIsSaving(true);
     setServerErrorMessage("");
+
     console.log("Form to be submitted:", employeeData);
 
     try {
@@ -88,34 +142,133 @@ const AddEmployee = () => {
         companyId,
         employeeData
       );
+
       console.log("Employee successfully saved", employee);
+
       await queryClient.invalidateQueries({
         queryKey: employeeKeys.all,
       });
 
       reset();
+      setServerErrorMessage("");
       onClose();
-    } catch (error) {
-      console.error("An error occured while adding employee: ", error);
+    } catch (error: any) {
+      console.error("An error occurred while adding employee:", error);
 
-      setServerErrorMessage(
-        "Une erreur s'est produite. Veuillez contacter ADB Tech."
-      );
+      /*
+       * Try to extract a useful error message from the backend /
+       * Electron IPC layer.
+       */
+      let message =
+        "Une erreur s'est produite lors de l'enregistrement de l'employé.";
+
+      if (typeof error === "string") {
+        message = error;
+      } else if (error?.message) {
+        message = error.message;
+      } else if (error?.response?.data?.message) {
+        message = error.response.data.message;
+      } else if (error?.response?.data?.error) {
+        message = error.response.data.error;
+      }
+
+      /*
+       * Convert some technical errors into user-friendly French
+       * messages.
+       */
+      const lowerMessage = message.toLowerCase();
+
+      if (
+        lowerMessage.includes("matricule") &&
+        (lowerMessage.includes("unique") ||
+          lowerMessage.includes("duplicate") ||
+          lowerMessage.includes("exist"))
+      ) {
+        message =
+          "Ce matricule existe déjà. Veuillez saisir un autre matricule.";
+      } else if (
+        lowerMessage.includes("idnum") ||
+        lowerMessage.includes("carte d'identité") ||
+        lowerMessage.includes("identity")
+      ) {
+        if (
+          lowerMessage.includes("unique") ||
+          lowerMessage.includes("duplicate") ||
+          lowerMessage.includes("exist")
+        ) {
+          message = "Ce numéro de carte d'identité existe déjà.";
+        }
+      } else if (
+        lowerMessage.includes("telephone") ||
+        lowerMessage.includes("phone")
+      ) {
+        if (
+          lowerMessage.includes("unique") ||
+          lowerMessage.includes("duplicate") ||
+          lowerMessage.includes("exist")
+        ) {
+          message = "Ce numéro de téléphone existe déjà.";
+        }
+      } else if (
+        lowerMessage.includes("network") ||
+        lowerMessage.includes("fetch") ||
+        lowerMessage.includes("timeout") ||
+        lowerMessage.includes("econnrefused")
+      ) {
+        message =
+          "Impossible de contacter le serveur. Vérifiez votre connexion et réessayez.";
+      }
+
+      setServerErrorMessage(message);
     } finally {
       setIsSaving(false);
     }
   };
 
+  const handleClose = () => {
+    if (isSaving) return;
+
+    setServerErrorMessage("");
+    reset();
+    onClose();
+  };
+
+  const Required = () => (
+    <Text as="span" color="#F2B705" ml="2px">
+      *
+    </Text>
+  );
+
+  const FieldError = ({ message }: { message?: string }) => {
+    if (!message) return null;
+
+    return (
+      <Text
+        color="red.500"
+        fontSize="0.68rem"
+        fontWeight="500"
+        mt="2px"
+        lineHeight="1.2"
+      >
+        {message}
+      </Text>
+    );
+  };
+
   return (
     <>
+      {/* Open button */}
       <Button
         colorScheme="blue"
-        padding="16px"
+        px="16px"
+        height="40px"
+        borderRadius="8px"
         _hover={{
-          bg: "blue",
-          color: "#e6e6e6",
-          transform: "scale(1.05)",
+          bg: "blue.600",
+          color: "white",
+          transform: "scale(1.02)",
         }}
+        transition="all 0.15s ease"
         onClick={() => {
           setServerErrorMessage("");
           onOpen();
@@ -125,665 +278,632 @@ const AddEmployee = () => {
         spinnerPlacement="start"
         isDisabled={isSaving}
       >
-        <IoPersonAdd fontSize="1.2rem" />
+        <IoPersonAdd fontSize="1.15rem" />
 
-        <Text fontSize="1rem" ml="10px">
+        <Text fontSize="0.95rem" ml="9px">
           Ajouter un employé
         </Text>
       </Button>
 
-      <Modal size="5xl" isOpen={isOpen} onClose={onClose}>
+      <Modal size="5xl" isOpen={isOpen} onClose={handleClose} isCentered>
         <ModalOverlay backdropFilter="auto" backdropBlur="0.5rem" />
 
-        <ModalContent position="relative" top="2.5rem" bg="#08162b">
+        <ModalContent
+          bg="white"
+          borderRadius="14px"
+          overflow="hidden"
+          maxH="92vh"
+          boxShadow="0 10px 40px rgba(0,0,0,0.18)"
+        >
           <form onSubmit={handleSubmit(onSubmit)}>
-            <ModalHeader color="#ffffff">
-              <HStack>
+            {/* ================= HEADER ================= */}
+            <ModalHeader
+              bg="gray.50"
+              borderBottom="1px solid"
+              borderColor="gray.200"
+              px="24px"
+              py="14px"
+            >
+              <HStack spacing="13px">
                 <Flex
-                  height="55px"
-                  width="55px"
-                  padding="5px"
-                  borderRadius="27px"
-                  borderWidth="0.3px"
+                  w="43px"
+                  h="43px"
+                  borderRadius="10px"
+                  bg="#FFF8DF"
+                  border="1px solid"
                   borderColor="#F2B705"
-                  justifyContent="center"
-                  alignItems="center"
-                  position="relative"
-                  left="12px"
+                  align="center"
+                  justify="center"
+                  flexShrink={0}
                 >
-                  <BsPersonFillAdd color="#F2B705" size="2.3rem" />
+                  <BsPersonFillAdd color="#F2B705" size="1.8rem" />
                 </Flex>
 
-                <VStack position="relative" top="10px" right="18px">
-                  <Text position="relative" top="8px" fontSize="1.7rem">
+                <VStack align="flex-start" spacing="0">
+                  <Text
+                    fontSize="1.3rem"
+                    fontWeight="700"
+                    color="gray.800"
+                    lineHeight="1.2"
+                  >
                     Nouveau employé
                   </Text>
 
-                  <Text
-                    color="#C7D2FE"
-                    fontSize="15px"
-                    position="relative"
-                    left="2.8rem"
-                    bottom="0.3rem"
-                  >
+                  <Text color="gray.500" fontSize="0.82rem" mt="2px">
                     Ajoutez les informations du nouvel employé
                   </Text>
                 </VStack>
               </HStack>
             </ModalHeader>
 
-            <ModalCloseButton color="#ffffff" />
+            <ModalCloseButton
+              top="13px"
+              right="15px"
+              color="gray.500"
+              borderRadius="6px"
+              _hover={{
+                bg: "gray.200",
+                color: "gray.800",
+              }}
+            />
 
-            <ModalBody>
-              <FormControl>
-                <HStack
-                  spacing="12px"
-                  marginBottom="10px"
-                  alignItems="flex-start"
-                >
-                  {/* Last name */}
-                  <Box>
-                    <HStack>
-                      <Box marginBottom="10px">
-                        <MdPerson2 color="#F2B705" size="1.3rem" />
-                      </Box>
+            {/* ================= BODY ================= */}
+            <ModalBody px="24px" py="14px" bg="white">
+              <VStack spacing="11px" align="stretch">
+                {/* ================= IDENTITÉ ================= */}
+                <Box>
+                  <Text {...sectionTitleStyles} mb="7px">
+                    Informations personnelles
+                  </Text>
 
-                      <FormLabel color="#C7D2FE" marginBottom="10px">
-                        Nom
-                        <span
-                          style={{
-                            color: "#F2B705",
-                            fontSize: "1rem",
-                          }}
-                        >
-                          *
-                        </span>
+                  <SimpleGrid
+                    columns={{
+                      base: 1,
+                      md: 2,
+                      lg: 4,
+                    }}
+                    spacing="10px"
+                  >
+                    {/* Nom */}
+                    <FormControl isInvalid={!!errors.lastName}>
+                      <FormLabel
+                        mb="3px"
+                        fontSize="0.78rem"
+                        fontWeight="600"
+                        color="gray.600"
+                      >
+                        <HStack spacing="5px">
+                          <MdPerson2 color="#F2B705" size="1rem" />
+
+                          <Text>
+                            Nom <Required />
+                          </Text>
+                        </HStack>
                       </FormLabel>
-                    </HStack>
 
-                    <Input
-                      color="#e6ebfe"
-                      width="300px"
-                      type="text"
-                      {...register("lastName")}
-                    />
+                      <Input
+                        {...fieldStyles}
+                        type="text"
+                        {...register("lastName")}
+                      />
 
-                    {errors.lastName && (
-                      <p className="text-danger">{errors.lastName.message}</p>
-                    )}
-                  </Box>
+                      <FieldError message={errors.lastName?.message} />
+                    </FormControl>
 
-                  {/* First name */}
-                  <Box>
-                    <HStack>
-                      <Box marginBottom="10px">
-                        <MdPerson2 color="#F2B705" size="1.3rem" />
-                      </Box>
+                    {/* Prénom */}
+                    <FormControl isInvalid={!!errors.firstName}>
+                      <FormLabel
+                        mb="3px"
+                        fontSize="0.78rem"
+                        fontWeight="600"
+                        color="gray.600"
+                      >
+                        <HStack spacing="5px">
+                          <MdPerson2 color="#F2B705" size="1rem" />
 
-                      <FormLabel color="#C7D2FE" marginBottom="10px">
-                        Prenom
-                        <span
-                          style={{
-                            color: "#F2B705",
-                            fontSize: "1rem",
-                          }}
-                        >
-                          *
-                        </span>
+                          <Text>
+                            Prénom <Required />
+                          </Text>
+                        </HStack>
                       </FormLabel>
-                    </HStack>
 
-                    <Input
-                      color="#e6ebfe"
-                      width="300px"
-                      type="text"
-                      {...register("firstName")}
-                    />
+                      <Input
+                        {...fieldStyles}
+                        type="text"
+                        {...register("firstName")}
+                      />
 
-                    {errors.firstName && (
-                      <p className="text-danger">{errors.firstName.message}</p>
-                    )}
-                  </Box>
+                      <FieldError message={errors.firstName?.message} />
+                    </FormControl>
 
-                  {/* Date of birth */}
-                  <Box>
-                    <HStack>
-                      <Box marginBottom="10px">
-                        <IoCalendarNumberSharp color="#F2B705" size="1.3rem" />
-                      </Box>
+                    {/* Date naissance */}
+                    <FormControl isInvalid={!!errors.dateBirth}>
+                      <FormLabel
+                        mb="3px"
+                        fontSize="0.78rem"
+                        fontWeight="600"
+                        color="gray.600"
+                      >
+                        <HStack spacing="5px">
+                          <IoCalendarNumberSharp color="#F2B705" size="1rem" />
 
-                      <FormLabel color="#C7D2FE" marginBottom="10px">
-                        Date de naissance
-                        <span
-                          style={{
-                            color: "#F2B705",
-                            fontSize: "1rem",
-                          }}
-                        >
-                          *
-                        </span>
+                          <Text>
+                            Date de naissance <Required />
+                          </Text>
+                        </HStack>
                       </FormLabel>
-                    </HStack>
 
-                    <Controller
-                      control={control}
-                      name="dateBirth"
-                      render={({ field }) => (
-                        <DatePicker
-                          selected={field.value ? new Date(field.value) : null}
-                          onChange={(date: Date | null) => {
-                            field.onChange(
-                              date ? date.toISOString().split("T")[0] : ""
-                            );
-                          }}
-                          locale="fr"
-                          dateFormat="dd/MM/yyyy"
-                          showYearDropdown
-                          scrollableYearDropdown
-                          yearDropdownItemNumber={80}
-                          customInput={
-                            <Input
-                              color="#e6ebfe"
-                              width="300px"
-                              bg="#08162b"
-                              borderColor="#ffffff"
-                              borderWidth="1px"
-                            />
-                          }
-                        />
-                      )}
-                    />
+                      <Controller
+                        control={control}
+                        name="dateBirth"
+                        render={({ field }) => (
+                          <DatePicker
+                            selected={
+                              field.value ? new Date(field.value) : null
+                            }
+                            onChange={(date: Date | null) => {
+                              field.onChange(
+                                date ? date.toISOString().split("T")[0] : ""
+                              );
+                            }}
+                            locale="fr"
+                            dateFormat="dd/MM/yyyy"
+                            showYearDropdown
+                            scrollableYearDropdown
+                            yearDropdownItemNumber={80}
+                            customInput={<Input {...fieldStyles} />}
+                          />
+                        )}
+                      />
 
-                    {errors.dateBirth && (
-                      <p className="text-danger">{errors.dateBirth.message}</p>
-                    )}
-                  </Box>
-                </HStack>
+                      <FieldError message={errors.dateBirth?.message} />
+                    </FormControl>
 
-                <HStack spacing="0.8rem" alignItems="flex-start">
-                  {/* Matricule */}
-                  <Box>
-                    <HStack>
-                      <Box marginBottom="10px">
-                        <MdOutlineNumbers color="#F2B705" size="1.3rem" />
-                      </Box>
+                    {/* Matricule */}
+                    <FormControl isInvalid={!!errors.matricule}>
+                      <FormLabel
+                        mb="3px"
+                        fontSize="0.78rem"
+                        fontWeight="600"
+                        color="gray.600"
+                      >
+                        <HStack spacing="5px">
+                          <MdOutlineNumbers color="#F2B705" size="1rem" />
 
-                      <FormLabel color="#C7D2FE" marginBottom="10px">
-                        Matricule
-                        <span
-                          style={{
-                            color: "#F2B705",
-                            fontSize: "1rem",
-                          }}
-                        >
-                          *
-                        </span>
+                          <Text>
+                            Matricule <Required />
+                          </Text>
+                        </HStack>
                       </FormLabel>
-                    </HStack>
 
-                    <Input
-                      color="#e6ebfe"
-                      width="300px"
-                      type="text"
-                      {...register("matricule")}
-                    />
+                      <Input
+                        {...fieldStyles}
+                        type="text"
+                        {...register("matricule")}
+                      />
 
-                    {errors.matricule && (
-                      <p className="text-danger">{errors.matricule.message}</p>
-                    )}
-                  </Box>
+                      <FieldError message={errors.matricule?.message} />
+                    </FormControl>
+                  </SimpleGrid>
+                </Box>
 
-                  {/* National ID */}
-                  <Box>
-                    <HStack>
-                      <Box marginBottom="10px">
-                        <MdOutlineNumbers color="#F2B705" size="1.3rem" />
-                      </Box>
+                {/* ================= EMPLOI ================= */}
+                <Box>
+                  <Text {...sectionTitleStyles} mb="7px">
+                    Informations professionnelles
+                  </Text>
 
-                      <FormLabel color="#C7D2FE" marginBottom="10px">
-                        No de carte d'identite
-                        <span
-                          style={{
-                            color: "#F2B705",
-                            fontSize: "1rem",
-                          }}
-                        >
-                          *
-                        </span>
+                  <SimpleGrid
+                    columns={{
+                      base: 1,
+                      md: 2,
+                      lg: 4,
+                    }}
+                    spacing="10px"
+                  >
+                    {/* ID */}
+                    <FormControl isInvalid={!!errors.idNum}>
+                      <FormLabel
+                        mb="3px"
+                        fontSize="0.78rem"
+                        fontWeight="600"
+                        color="gray.600"
+                      >
+                        <HStack spacing="5px">
+                          <MdOutlineNumbers color="#F2B705" size="1rem" />
+
+                          <Text>
+                            N° carte d'identité <Required />
+                          </Text>
+                        </HStack>
                       </FormLabel>
-                    </HStack>
 
-                    <Input
-                      color="#e6ebfe"
-                      width="300px"
-                      type="text"
-                      {...register("idNum")}
-                    />
+                      <Input
+                        {...fieldStyles}
+                        type="text"
+                        {...register("idNum")}
+                      />
 
-                    {errors.idNum && (
-                      <p className="text-danger">{errors.idNum.message}</p>
-                    )}
-                  </Box>
+                      <FieldError message={errors.idNum?.message} />
+                    </FormControl>
 
-                  {/* Hire date */}
-                  <Box>
-                    <HStack>
-                      <Box marginBottom="10px">
-                        <FaCalendarDays color="#F2B705" size="1.3rem" />
-                      </Box>
+                    {/* Poste */}
+                    <FormControl isInvalid={!!errors.role}>
+                      <FormLabel
+                        mb="3px"
+                        fontSize="0.78rem"
+                        fontWeight="600"
+                        color="gray.600"
+                      >
+                        <HStack spacing="5px">
+                          <MdWork color="#F2B705" size="1rem" />
 
-                      <FormLabel color="#C7D2FE" marginBottom="10px">
-                        Date d'engagement
-                        <span
-                          style={{
-                            color: "#F2B705",
-                            fontSize: "1rem",
-                          }}
-                        >
-                          *
-                        </span>
+                          <Text>
+                            Poste <Required />
+                          </Text>
+                        </HStack>
                       </FormLabel>
-                    </HStack>
 
-                    <Controller
-                      control={control}
-                      name="dateHired"
-                      render={({ field }) => (
-                        <DatePicker
-                          selected={field.value ? new Date(field.value) : null}
-                          onChange={(date: Date | null) => {
-                            field.onChange(
-                              date ? date.toISOString().split("T")[0] : ""
-                            );
-                          }}
-                          locale="fr"
-                          dateFormat="dd/MM/yyyy"
-                          showYearDropdown
-                          scrollableYearDropdown
-                          yearDropdownItemNumber={80}
-                          minDate={new Date(1990, 0, 1)}
-                          maxDate={new Date()}
-                          customInput={
-                            <Input
-                              color="#e6ebfe"
-                              width="300px"
-                              bg="#08162b"
-                              borderColor="#ffffff"
-                              borderWidth="1px"
-                            />
-                          }
-                        />
-                      )}
-                    />
+                      <Input
+                        {...fieldStyles}
+                        type="text"
+                        {...register("role")}
+                      />
 
-                    {errors.dateHired && (
-                      <p className="text-danger">{errors.dateHired.message}</p>
-                    )}
-                  </Box>
-                </HStack>
+                      <FieldError message={errors.role?.message} />
+                    </FormControl>
 
-                <HStack spacing="0.8rem" alignItems="flex-start">
-                  {/* Role */}
-                  <Box>
-                    <HStack>
-                      <Box marginBottom="10px">
-                        <MdWork color="#F2B705" size="1.3rem" />
-                      </Box>
+                    {/* Département */}
+                    <FormControl isInvalid={!!errors.department}>
+                      <FormLabel
+                        mb="3px"
+                        fontSize="0.78rem"
+                        fontWeight="600"
+                        color="gray.600"
+                      >
+                        <HStack spacing="5px">
+                          <MdFactory color="#F2B705" size="1rem" />
 
-                      <FormLabel color="#C7D2FE" marginBottom="10px">
-                        Poste
-                        <span
-                          style={{
-                            color: "#F2B705",
-                            fontSize: "1rem",
-                          }}
-                        >
-                          *
-                        </span>
+                          <Text>
+                            Département <Required />
+                          </Text>
+                        </HStack>
                       </FormLabel>
-                    </HStack>
 
-                    <Input
-                      color="#e6ebfe"
-                      width="300px"
-                      type="text"
-                      {...register("role")}
-                    />
+                      <Select
+                        {...fieldStyles}
+                        placeholder="Choisir"
+                        iconColor="#F2B705"
+                        {...register("department")}
+                      >
+                        <option value="Administration">Administration</option>
 
-                    {errors.role && (
-                      <p className="text-danger">{errors.role.message}</p>
-                    )}
-                  </Box>
+                        <option value="Atelier">Atelier</option>
 
-                  {/* Department */}
-                  <Box>
-                    <HStack>
-                      <Box marginBottom="10px">
-                        <MdFactory color="#F2B705" size="1.3rem" />
-                      </Box>
+                        <option value="Usine">Usine</option>
 
-                      <FormLabel color="#C7D2FE" marginBottom="10px">
-                        Departement
-                        <span
-                          style={{
-                            color: "#F2B705",
-                            fontSize: "1rem",
-                          }}
-                        >
-                          *
-                        </span>
+                        <option value="Magasin">Magasin</option>
+
+                        <option value="Sentinelle">Sentinelle</option>
+                      </Select>
+
+                      <FieldError message={errors.department?.message} />
+                    </FormControl>
+
+                    {/* Salaire */}
+                    <FormControl isInvalid={!!errors.salary}>
+                      <FormLabel
+                        mb="3px"
+                        fontSize="0.78rem"
+                        fontWeight="600"
+                        color="gray.600"
+                      >
+                        <HStack spacing="5px">
+                          <LuCircleDollarSign color="#F2B705" size="1rem" />
+
+                          <Text>
+                            Salaire <Required />
+                          </Text>
+                        </HStack>
                       </FormLabel>
-                    </HStack>
 
-                    <Select
-                      width="300px"
-                      bg="#08162b"
-                      color="#e6ebfe"
-                      borderColor="#ffffff"
-                      focusBorderColor="#F2B705"
-                      iconColor="#F2B705"
-                      _hover={{
-                        borderColor: "#F2B705",
-                      }}
-                      placeholder="Choisissez un departement"
-                      {...register("department")}
+                      <Input
+                        {...fieldStyles}
+                        type="number"
+                        step="1"
+                        min="1"
+                        {...register("salary", {
+                          valueAsNumber: true,
+                        })}
+                      />
+
+                      <FieldError message={errors.salary?.message} />
+                    </FormControl>
+
+                    {/* Date engagement */}
+                    <FormControl isInvalid={!!errors.dateHired}>
+                      <FormLabel
+                        mb="3px"
+                        fontSize="0.78rem"
+                        fontWeight="600"
+                        color="gray.600"
+                      >
+                        <HStack spacing="5px">
+                          <FaCalendarDays color="#F2B705" size="0.95rem" />
+
+                          <Text>
+                            Date d'engagement <Required />
+                          </Text>
+                        </HStack>
+                      </FormLabel>
+
+                      <Controller
+                        control={control}
+                        name="dateHired"
+                        render={({ field }) => (
+                          <DatePicker
+                            selected={
+                              field.value ? new Date(field.value) : null
+                            }
+                            onChange={(date: Date | null) => {
+                              field.onChange(
+                                date ? date.toISOString().split("T")[0] : ""
+                              );
+                            }}
+                            locale="fr"
+                            dateFormat="dd/MM/yyyy"
+                            showYearDropdown
+                            scrollableYearDropdown
+                            yearDropdownItemNumber={80}
+                            minDate={new Date(1990, 0, 1)}
+                            maxDate={new Date()}
+                            customInput={<Input {...fieldStyles} />}
+                          />
+                        )}
+                      />
+
+                      <FieldError message={errors.dateHired?.message} />
+                    </FormControl>
+                  </SimpleGrid>
+                </Box>
+
+                {/* ================= CONTACT ================= */}
+                <Box>
+                  <Text {...sectionTitleStyles} mb="7px">
+                    Coordonnées
+                  </Text>
+
+                  <SimpleGrid
+                    columns={{
+                      base: 1,
+                      md: 2,
+                      lg: 3,
+                    }}
+                    spacing="10px"
+                  >
+                    {/* Téléphone */}
+                    <FormControl isInvalid={!!errors.telephone}>
+                      <FormLabel
+                        mb="3px"
+                        fontSize="0.78rem"
+                        fontWeight="600"
+                        color="gray.600"
+                      >
+                        <HStack spacing="5px">
+                          <GiRotaryPhone color="#F2B705" size="1rem" />
+
+                          <Text>
+                            Téléphone <Required />
+                          </Text>
+                        </HStack>
+                      </FormLabel>
+
+                      <Input
+                        {...fieldStyles}
+                        type="text"
+                        {...register("telephone")}
+                      />
+
+                      <FieldError message={errors.telephone?.message} />
+                    </FormControl>
+
+                    {/* Adresse */}
+                    <FormControl
+                      isInvalid={!!errors.address}
+                      gridColumn={{ lg: "span 2" }}
                     >
-                      <option value="Administration" style={{ color: "black" }}>
-                        Administration
-                      </option>
+                      <FormLabel
+                        mb="3px"
+                        fontSize="0.78rem"
+                        fontWeight="600"
+                        color="gray.600"
+                      >
+                        <HStack spacing="5px">
+                          <IoHome color="#F2B705" size="1rem" />
 
-                      <option value="Atelier" style={{ color: "black" }}>
-                        Atelier
-                      </option>
-
-                      <option value="Usine" style={{ color: "black" }}>
-                        Usine
-                      </option>
-
-                      <option value="Magasin" style={{ color: "black" }}>
-                        Magasin
-                      </option>
-
-                      <option value="Sentinelle" style={{ color: "black" }}>
-                        Sentinelle
-                      </option>
-                    </Select>
-
-                    {errors.department && (
-                      <p className="text-danger">{errors.department.message}</p>
-                    )}
-                  </Box>
-
-                  {/* Salary */}
-                  <Box>
-                    <HStack>
-                      <Box marginBottom="10px">
-                        <LuCircleDollarSign color="#F2B705" size="1.3rem" />
-                      </Box>
-
-                      <FormLabel color="#C7D2FE" marginBottom="10px">
-                        Salaire
-                        <span
-                          style={{
-                            color: "#F2B705",
-                            fontSize: "1rem",
-                          }}
-                        >
-                          *
-                        </span>
+                          <Text>
+                            Adresse <Required />
+                          </Text>
+                        </HStack>
                       </FormLabel>
-                    </HStack>
 
-                    <Input
-                      color="#e6ebfe"
-                      width="300px"
-                      type="number"
-                      {...register("salary", {
-                        valueAsNumber: true,
-                      })}
-                    />
+                      <Input
+                        {...fieldStyles}
+                        type="text"
+                        {...register("address")}
+                      />
 
-                    {errors.salary && (
-                      <p className="text-danger">{errors.salary.message}</p>
-                    )}
-                  </Box>
-                </HStack>
+                      <FieldError message={errors.address?.message} />
+                    </FormControl>
+                  </SimpleGrid>
+                </Box>
 
-                <HStack>
-                  {/* Telephone */}
-                  <Box>
-                    <HStack>
-                      <Box marginBottom="10px">
-                        <GiRotaryPhone color="#F2B705" size="1.3rem" />
-                      </Box>
+                {/* ================= URGENCE ================= */}
+                <Box>
+                  <Text {...sectionTitleStyles} mb="7px">
+                    Contact d'urgence
+                  </Text>
 
-                      <FormLabel color="#C7D2FE" marginBottom="10px">
-                        Telephone
-                        <span
-                          style={{
-                            color: "#F2B705",
-                            fontSize: "1rem",
-                          }}
-                        >
-                          *
-                        </span>
+                  <SimpleGrid
+                    columns={{
+                      base: 1,
+                      md: 2,
+                      lg: 3,
+                    }}
+                    spacing="10px"
+                  >
+                    {/* Nom contact */}
+                    <FormControl isInvalid={!!errors.emergencyContact}>
+                      <FormLabel
+                        mb="3px"
+                        fontSize="0.78rem"
+                        fontWeight="600"
+                        color="gray.600"
+                      >
+                        <HStack spacing="5px">
+                          <MdPerson2 color="#F2B705" size="1rem" />
+
+                          <Text>
+                            Nom du contact <Required />
+                          </Text>
+                        </HStack>
                       </FormLabel>
-                    </HStack>
 
-                    <Input
-                      color="#e6ebfe"
-                      width="300px"
-                      type="text"
-                      {...register("telephone")}
-                    />
+                      <Input
+                        {...fieldStyles}
+                        type="text"
+                        {...register("emergencyContact")}
+                      />
 
-                    {errors.telephone && (
-                      <p className="text-danger">{errors.telephone.message}</p>
-                    )}
-                  </Box>
+                      <FieldError message={errors.emergencyContact?.message} />
+                    </FormControl>
 
-                  {/* Address */}
-                  <Box>
-                    <HStack>
-                      <Box marginBottom="10px">
-                        <IoHome color="#F2B705" size="1.3rem" />
-                      </Box>
+                    {/* Relation */}
+                    <FormControl isInvalid={!!errors.relationship}>
+                      <FormLabel
+                        mb="3px"
+                        fontSize="0.78rem"
+                        fontWeight="600"
+                        color="gray.600"
+                      >
+                        <HStack spacing="5px">
+                          <GiRelationshipBounds color="#F2B705" size="1rem" />
 
-                      <FormLabel color="#C7D2FE" marginBottom="10px">
-                        Addresse
-                        <span
-                          style={{
-                            color: "#F2B705",
-                            fontSize: "1rem",
-                          }}
-                        >
-                          *
-                        </span>
+                          <Text>
+                            Relation <Required />
+                          </Text>
+                        </HStack>
                       </FormLabel>
-                    </HStack>
 
-                    <Input
-                      color="#e6ebfe"
-                      marginBottom="10px"
-                      width="38.5rem"
-                      type="text"
-                      {...register("address")}
-                    />
+                      <Input
+                        {...fieldStyles}
+                        type="text"
+                        {...register("relationship")}
+                      />
 
-                    {errors.address && (
-                      <p className="text-danger">{errors.address.message}</p>
-                    )}
-                  </Box>
-                </HStack>
+                      <FieldError message={errors.relationship?.message} />
+                    </FormControl>
 
-                {/* Emergency contact */}
-                <HStack
-                  spacing="0.8rem"
-                  marginBottom="0.7rem"
-                  alignItems="flex-start"
-                >
-                  {/* Emergency contact name */}
-                  <Box>
-                    <HStack>
-                      <Box marginBottom="10px">
-                        <MdPerson2 color="#F2B705" size="1.3rem" />
-                      </Box>
+                    {/* Téléphone contact */}
+                    <FormControl isInvalid={!!errors.contactPhone}>
+                      <FormLabel
+                        mb="3px"
+                        fontSize="0.78rem"
+                        fontWeight="600"
+                        color="gray.600"
+                      >
+                        <HStack spacing="5px">
+                          <MdOutlineNumbers color="#F2B705" size="1rem" />
 
-                      <FormLabel color="#C7D2FE" marginBottom="10px">
-                        Nom du contact d'urgence
-                        <span
-                          style={{
-                            color: "#F2B705",
-                            fontSize: "1rem",
-                          }}
-                        >
-                          *
-                        </span>
+                          <Text>
+                            Téléphone du contact <Required />
+                          </Text>
+                        </HStack>
                       </FormLabel>
-                    </HStack>
 
-                    <Input
-                      color="#e6ebfe"
-                      width="300px"
-                      type="text"
-                      {...register("emergencyContact")}
-                    />
+                      <Input
+                        {...fieldStyles}
+                        type="text"
+                        {...register("contactPhone")}
+                      />
 
-                    {errors.emergencyContact && (
-                      <p className="text-danger">
-                        {errors.emergencyContact.message}
-                      </p>
-                    )}
-                  </Box>
+                      <FieldError message={errors.contactPhone?.message} />
+                    </FormControl>
+                  </SimpleGrid>
+                </Box>
 
-                  {/* Relationship */}
-                  <Box>
-                    <HStack>
-                      <Box marginBottom="10px">
-                        <GiRelationshipBounds color="#F2B705" size="1.3rem" />
-                      </Box>
+                {/* ================= SERVER ERROR ================= */}
+                {ServerErrorMessage && (
+                  <Alert
+                    status="error"
+                    borderRadius="7px"
+                    py="7px"
+                    px="12px"
+                    fontSize="0.8rem"
+                    bg="red.50"
+                    border="1px solid"
+                    borderColor="red.200"
+                    color="red.700"
+                  >
+                    <AlertIcon />
 
-                      <FormLabel color="#C7D2FE" marginBottom="10px">
-                        Relation avec l'employé
-                        <span
-                          style={{
-                            color: "#F2B705",
-                            fontSize: "1rem",
-                          }}
-                        >
-                          *
-                        </span>
-                      </FormLabel>
-                    </HStack>
-
-                    <Input
-                      color="#e6ebfe"
-                      width="300px"
-                      type="text"
-                      {...register("relationship")}
-                    />
-
-                    {errors.relationship && (
-                      <p className="text-danger">
-                        {errors.relationship.message}
-                      </p>
-                    )}
-                  </Box>
-
-                  {/* Contact phone */}
-                  <Box>
-                    <HStack>
-                      <Box marginBottom="10px">
-                        <MdOutlineNumbers color="#F2B705" size="1.3rem" />
-                      </Box>
-
-                      <FormLabel color="#C7D2FE" marginBottom="10px">
-                        Telephone du contact
-                        <span
-                          style={{
-                            color: "#F2B705",
-                            fontSize: "1rem",
-                          }}
-                        >
-                          *
-                        </span>
-                      </FormLabel>
-                    </HStack>
-
-                    <Input
-                      color="#e6ebfe"
-                      width="300px"
-                      type="text"
-                      {...register("contactPhone")}
-                    />
-
-                    {errors.contactPhone && (
-                      <p className="text-danger">
-                        {errors.contactPhone.message}
-                      </p>
-                    )}
-                  </Box>
-                </HStack>
-              </FormControl>
+                    <Text fontWeight="500">{ServerErrorMessage}</Text>
+                  </Alert>
+                )}
+              </VStack>
             </ModalBody>
 
-            <ModalFooter bg="#08162b">
-              <HStack position="relative" right="2rem">
-                <Text
-                  position="relative"
-                  top="0.6rem"
-                  right="2rem"
-                  fontSize="1.1rem"
-                  fontWeight="600"
-                  color="red.300"
+            {/* ================= FOOTER ================= */}
+            <ModalFooter
+              bg="gray.50"
+              borderTop="1px solid"
+              borderColor="gray.200"
+              px="24px"
+              py="10px"
+            >
+              <Flex width="100%" justify="flex-end" align="center" gap="9px">
+                <Button
+                  variant="outline"
+                  borderColor="gray.300"
+                  color="gray.600"
+                  borderRadius="7px"
+                  height="36px"
+                  px="16px"
+                  onClick={handleClose}
+                  type="button"
+                  isDisabled={isSaving}
+                  leftIcon={<RxCrossCircled size="17px" />}
+                  _hover={{
+                    bg: "gray.100",
+                    borderColor: "gray.400",
+                    color: "gray.800",
+                  }}
                 >
-                  {ServerErrorMessage}
-                </Text>
+                  Annuler
+                </Button>
 
                 <Button
-                  borderRadius="10px"
-                  borderColor="black"
                   bg="#F2B705"
-                  borderWidth="0.5px"
-                  color="black"
-                  mr={3}
+                  color="gray.900"
+                  borderRadius="7px"
+                  height="36px"
+                  px="18px"
                   type="submit"
                   isLoading={isSaving}
                   loadingText="Patientez..."
                   spinnerPlacement="start"
                   isDisabled={isSaving}
+                  leftIcon={<FaSave />}
+                  _hover={{
+                    bg: "#DFA800",
+                  }}
+                  _active={{
+                    bg: "#C99600",
+                  }}
                 >
-                  <HStack>
-                    <Box>
-                      <FaSave />
-                    </Box>
-
-                    <Text fontSize="1rem">Sauvegarder</Text>
-                  </HStack>
+                  Sauvegarder
                 </Button>
-
-                <Button
-                  borderColor="#ffffff"
-                  borderRadius="10px"
-                  bg="#08162b"
-                  borderWidth="0.5px"
-                  color="#1a000d"
-                  mr={3}
-                  onClick={onClose}
-                  type="button"
-                  isDisabled={isSaving}
-                >
-                  <HStack>
-                    <Box>
-                      <RxCrossCircled color="#ffffff" size="18px" />
-                    </Box>
-
-                    <Text color="#ffffff" position="relative" fontSize="1rem">
-                      Annuler
-                    </Text>
-                  </HStack>
-                </Button>
-              </HStack>
+              </Flex>
             </ModalFooter>
           </form>
         </ModalContent>

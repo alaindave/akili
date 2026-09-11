@@ -40,21 +40,21 @@ const PayrollDashboard = ({
       >
         <HStack>
           <Box
-            width="2.2rem"
-            height="2.2rem"
+            width="2rem"
+            height="2rem"
             backgroundColor="#000080"
             borderRadius="10px"
             padding="8px"
             ml="0.5rem"
             mt="1rem"
           >
-            <BsFillPeopleFill color="#ffffff" size="1.2rem" />
+            <BsFillPeopleFill color="#ffffff" size="1rem" />
           </Box>
 
           <Text
             color="gray.700"
-            fontSize="1.3rem"
-            fontWeight="700"
+            fontSize="1.1rem"
+            fontWeight="600"
             position="relative"
             left="1rem"
             top="0.3rem"
@@ -88,21 +88,21 @@ const PayrollDashboard = ({
       >
         <HStack>
           <Box
-            width="2.2rem"
-            height="2.2rem"
+            width="2rem"
+            height="2rem"
             backgroundColor="#000080"
             borderRadius="10px"
             padding="8px"
             mt="1rem"
             ml="0.5rem"
           >
-            <FaDollarSign color="#ffffff" size="1.2rem" />
+            <FaDollarSign color="#ffffff" size="1rem" />
           </Box>
 
           <Text
             color="gray.700"
-            fontSize="1.3rem"
-            fontWeight="700"
+            fontSize="1.1rem"
+            fontWeight="600"
             position="relative"
             left="1rem"
             top="0.3rem"
@@ -136,17 +136,17 @@ const PayrollDashboard = ({
       >
         <HStack position="relative" bottom="1rem">
           <Box
-            width="2.2rem"
-            height="2.2rem"
+            width="2rem"
+            height="2rem"
             backgroundColor=" #16833e"
             borderRadius="10px"
             padding="8px"
             position="relative"
             right="1.3rem"
           >
-            <IoWalletOutline color="#ffffff" size="1.2rem" />
+            <IoWalletOutline color="#ffffff" size="1rem" />
           </Box>
-          <Text color="gray.700" fontSize="1.3rem" fontWeight="700">
+          <Text color="gray.700" fontSize="1.1rem" fontWeight="600">
             Remunerations
           </Text>
         </HStack>
@@ -175,8 +175,8 @@ const PayrollDashboard = ({
       >
         <HStack>
           <Box
-            width="2.2rem"
-            height="2.2rem"
+            width="2rem"
+            height="2rem"
             backgroundColor="red.500"
             borderRadius="10px"
             padding="8px"
@@ -184,12 +184,12 @@ const PayrollDashboard = ({
             right="1rem"
             bottom="1rem"
           >
-            <FaRegArrowAltCircleDown color="#ffffff" size="1.2rem" />
+            <FaRegArrowAltCircleDown color="#ffffff" size="1.1rem" />
           </Box>
           <Text
             color="gray.700"
-            fontWeight="700"
-            fontSize="1.3rem"
+            fontSize="1.1rem"
+            fontWeight="600"
             marginLeft="0.8rem"
             position="relative"
             right="1.5rem"
@@ -223,8 +223,8 @@ const PayrollDashboard = ({
       >
         <HStack>
           <Box
-            width="2.2rem"
-            height="2.2rem"
+            width="2rem"
+            height="2rem"
             borderRadius="10px"
             padding="8px"
             backgroundColor="blue.500"
@@ -232,12 +232,12 @@ const PayrollDashboard = ({
             right="1rem"
             bottom="1rem"
           >
-            <FaRegCreditCard color="#ffffff" size="1.2rem" />
+            <FaRegCreditCard color="#ffffff" size="1rem" />
           </Box>
           <Text
             color="gray.700"
-            fontWeight="700"
-            fontSize="1.3rem"
+            fontSize="1.1rem"
+            fontWeight="600"
             position="relative"
             left="1rem"
             right="1rem"

@@ -22,7 +22,7 @@ const LeaveNotesPopover = ({ subject, notes }: Props) => {
         <Text
           color="gray.600"
           fontWeight="500"
-          fontSize="1.1rem"
+          fontSize="1rem"
           cursor="pointer"
           _hover={{
             color: "#F2B705",
@@ -46,7 +46,7 @@ const LeaveNotesPopover = ({ subject, notes }: Props) => {
         <PopoverBody>
           <Text
             color="gray.800"
-            fontSize="1.1rem"
+            fontSize="1rem"
             whiteSpace="normal"
             wordBreak="break-word"
             noOfLines={2}

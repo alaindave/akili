@@ -86,6 +86,31 @@ const schema = z.object({
 
 type EmployeeData = z.infer<typeof schema>;
 
+const inputStyles = {
+  bg: "white",
+  color: "#1F2937",
+  borderColor: "#CBD5E1",
+  borderWidth: "1px",
+  borderRadius: "6px",
+  height: "38px",
+  _hover: {
+    borderColor: "#94A3B8",
+  },
+  _focus: {
+    borderColor: "#F2B705",
+    boxShadow: "0 0 0 1px #F2B705",
+  },
+};
+
+const labelStyles = {
+  color: "#374151",
+  fontSize: "13px",
+  fontWeight: "600",
+  marginBottom: "5px",
+};
+
+const iconColor = "#D39A00";
+
 const UpdateEmployee = ({ _id, employee }: Props) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
 
@@ -141,10 +166,6 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
     },
   });
 
-  // ============================================================
-  // KEEP FORM SYNCHRONIZED WITH CURRENT EMPLOYEE
-  // ============================================================
-
   useEffect(() => {
     reset({
       firstName: employee.firstName,
@@ -163,15 +184,12 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
     });
   }, [employee, reset]);
 
-  // ============================================================
-  // SUBMIT
-  // ============================================================
-
   const onSubmit = async (data: EmployeeData) => {
     if (!_id) {
       setServerErrorMessage("Impossible de modifier cet employé.");
       return;
     }
+
     setServerErrorMessage("");
 
     try {
@@ -185,19 +203,6 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
 
       console.log("EMPLOYEE SUCCESSFULLY UPDATED:", updatedEmployee);
 
-      /*
-       * IMPORTANT:
-       *
-       * useUpdateEmployee() should update the React Query cache
-       * with the returned employee.
-       *
-       * The EmployeeDetailsTab is subscribed to:
-       *
-       * ["employee", _id]
-       *
-       * Therefore, once the mutation updates that cache,
-       * the details tab will immediately display the new data.
-       */
       if (!updatedEmployee) return;
 
       reset({
@@ -226,10 +231,6 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
     }
   };
 
-  // ============================================================
-  // CLOSE FORM
-  // ============================================================
-
   const handleFormClosed = () => {
     if (updateEmployee.isPending) {
       return;
@@ -239,22 +240,46 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
     onClose();
   };
 
+  const renderDatePicker = (name: "dateBirth" | "dateHired", minDate: Date) => (
+    <Controller
+      control={control}
+      name={name}
+      render={({ field }) => (
+        <DatePicker
+          selected={field.value ? new Date(field.value) : null}
+          onChange={(date: Date | null) => {
+            field.onChange(date ? date.toISOString().split("T")[0] : "");
+          }}
+          locale="fr"
+          dateFormat="dd/MM/yyyy"
+          isClearable
+          showYearDropdown
+          scrollableYearDropdown
+          yearDropdownItemNumber={80}
+          minDate={minDate}
+          maxDate={new Date()}
+          customInput={<Input {...inputStyles} width="100%" />}
+        />
+      )}
+    />
+  );
+
   return (
     <>
       <Button
         bg="#4F46E5"
-        color="#ffffff"
-        padding="16px"
+        color="white"
+        height="40px"
+        px={4}
+        borderRadius="6px"
         _hover={{
-          bg: "brown",
-          color: "#e6e6e6",
-          transform: "scale(1.05)",
+          bg: "#4338CA",
         }}
         onClick={onOpen}
       >
-        <FaEdit color="#ffffff" size="1.2rem" />
-
-        <Text ml="1rem" fontSize="1rem">
+        {" "}
+        <FaEdit size="1rem" />
+        <Text ml="0.6rem" fontSize="14px">
           Modifier
         </Text>
       </Button>
@@ -264,10 +289,19 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
         isOpen={isOpen}
         onClose={handleFormClosed}
         returnFocusOnClose={false}
+        isCentered
       >
-        <ModalOverlay backdropFilter="auto" backdropBlur="0.5rem" />
+        <ModalOverlay bg="rgba(15, 23, 42, 0.45)" />
 
-        <ModalContent bg="#08162b" position="relative" top="1rem" width="53vw">
+        <ModalContent
+          bg="white"
+          color="#1F2937"
+          borderRadius="10px"
+          overflow="hidden"
+          boxShadow="0 20px 50px rgba(15, 23, 42, 0.18)"
+          width="min(1100px, 92vw)"
+          maxH="90vh"
+        >
           <form
             onSubmit={handleSubmit(
               (data) => {
@@ -279,528 +313,498 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
               }
             )}
           >
-            <ModalHeader color="#ffffff">
-              <HStack>
+            {/* ======================================================
+            HEADER
+        ====================================================== */}
+
+            <ModalHeader
+              bg="#F8FAFC"
+              borderBottom="1px solid #E2E8F0"
+              px={6}
+              py={4}
+            >
+              <HStack spacing={3}>
                 <Flex
-                  height="55px"
-                  width="55px"
-                  padding="5px"
-                  borderRadius="27px"
-                  borderWidth="0.2px"
-                  borderColor="#F2B705"
+                  height="44px"
+                  width="44px"
+                  borderRadius="8px"
+                  bg="#FFF8DD"
+                  border="1px solid #F2B705"
                   justifyContent="center"
                   alignItems="center"
+                  flexShrink={0}
                 >
-                  <FaUserEdit color="#F2B705" size="2.3rem" />
+                  <FaUserEdit color={iconColor} size="1.5rem" />
                 </Flex>
 
-                <VStack position="relative" right="3rem">
-                  <Text position="relative" top="0.5rem" fontSize="1.7rem">
-                    Modification
+                <Box>
+                  <Text
+                    fontSize="19px"
+                    fontWeight="700"
+                    color="#1F2937"
+                    lineHeight="1.2"
+                  >
+                    Modification de l'employé
                   </Text>
 
-                  <Text
-                    color="#C7D2FE"
-                    fontSize="15px"
-                    position="relative"
-                    left="4rem"
-                    bottom="0.4rem"
-                  >
+                  <Text color="#64748B" fontSize="13px" mt={1} fontWeight="400">
                     Modifiez les informations de l'employé
                   </Text>
-                </VStack>
+                </Box>
               </HStack>
             </ModalHeader>
 
-            <ModalCloseButton color="#ffffff" />
+            <ModalCloseButton
+              color="#64748B"
+              top={4}
+              right={4}
+              _hover={{
+                bg: "#E2E8F0",
+                color: "#1F2937",
+              }}
+            />
 
-            <ModalBody marginLeft={4}>
-              {/* ======================================================
-                  LAST NAME / FIRST NAME / DATE BIRTH
-              ====================================================== */}
+            {/* ======================================================
+            BODY
+        ====================================================== */}
 
-              <HStack
-                spacing="0.8rem"
-                marginBottom="0.7rem"
-                alignItems="flex-start"
-              >
-                <FormControl isInvalid={!!errors.lastName}>
-                  <HStack>
-                    <Box marginBottom="10px">
-                      <MdPerson2 color="#F2B705" size="1.3rem" />
-                    </Box>
+            <ModalBody px={6} py={4} overflow="hidden">
+              <VStack spacing={3} align="stretch">
+                {/* ==================================================
+                PERSONAL INFORMATION
+            ================================================== */}
 
-                    <FormLabel color="#C7D2FE" marginBottom="10px">
-                      Nom
-                    </FormLabel>
-                  </HStack>
-
-                  <Input
-                    type="text"
-                    color="gray.300"
-                    {...register("lastName")}
-                  />
-
-                  <Box minH="24px">
-                    <FormErrorMessage>
-                      {errors.lastName?.message}
-                    </FormErrorMessage>
-                  </Box>
-                </FormControl>
-
-                <FormControl isInvalid={!!errors.firstName}>
-                  <HStack>
-                    <Box marginBottom="10px">
-                      <MdPerson2 color="#F2B705" size="1.3rem" />
-                    </Box>
-
-                    <FormLabel color="#C7D2FE" marginBottom="10px">
-                      Prenom
-                    </FormLabel>
-                  </HStack>
-
-                  <Input
-                    type="text"
-                    color="gray.300"
-                    borderColor={errors.firstName ? "red.400" : undefined}
-                    {...register("firstName")}
-                  />
-
-                  <Box minH="24px">
-                    <FormErrorMessage>
-                      {errors.firstName?.message}
-                    </FormErrorMessage>
-                  </Box>
-                </FormControl>
-
-                <FormControl isInvalid={!!errors.dateBirth}>
-                  <HStack>
-                    <Box marginBottom="10px">
-                      <IoCalendarNumberSharp color="#F2B705" size="1.3rem" />
-                    </Box>
-
-                    <FormLabel color="#C7D2FE" marginBottom="10px">
-                      Date de naissance
-                    </FormLabel>
-                  </HStack>
-
-                  <Controller
-                    control={control}
-                    name="dateBirth"
-                    render={({ field }) => (
-                      <DatePicker
-                        selected={field.value ? new Date(field.value) : null}
-                        onChange={(date: Date | null) => {
-                          field.onChange(
-                            date ? date.toISOString().split("T")[0] : ""
-                          );
-                        }}
-                        locale="fr"
-                        dateFormat="dd/MM/yyyy"
-                        isClearable
-                        showYearDropdown
-                        scrollableYearDropdown
-                        yearDropdownItemNumber={80}
-                        minDate={new Date(1940, 0, 1)}
-                        maxDate={new Date()}
-                        customInput={
-                          <Input
-                            color="#e6ebfe"
-                            width="300px"
-                            bg="#08162b"
-                            borderColor="#ffffff"
-                            borderWidth="1px"
-                          />
-                        }
-                      />
-                    )}
-                  />
-
-                  <Box minH="24px">
-                    <FormErrorMessage>
-                      {errors.dateBirth?.message}
-                    </FormErrorMessage>
-                  </Box>
-                </FormControl>
-              </HStack>
-
-              {/* ======================================================
-                  EMPLOYEE ID / ROLE / DEPARTMENT
-              ====================================================== */}
-
-              <HStack
-                spacing="0.8rem"
-                marginBottom="0.7rem"
-                alignItems="flex-start"
-              >
-                <FormControl isInvalid={!!errors.matricule}>
-                  <HStack>
-                    <Box marginBottom="10px">
-                      <MdOutlineNumbers color="#F2B705" size="1.3rem" />
-                    </Box>
-
-                    <FormLabel color="#C7D2FE" marginBottom="10px">
-                      Matricule
-                    </FormLabel>
-                  </HStack>
-
-                  <Input
-                    type="text"
-                    color="gray.300"
-                    {...register("matricule")}
-                  />
-
-                  <Box minH="24px">
-                    <FormErrorMessage>
-                      {errors.matricule?.message}
-                    </FormErrorMessage>
-                  </Box>
-                </FormControl>
-
-                <FormControl isInvalid={!!errors.role}>
-                  <HStack>
-                    <Box marginBottom="10px">
-                      <MdWork color="#F2B705" size="1.3rem" />
-                    </Box>
-
-                    <FormLabel color="#C7D2FE" marginBottom="10px">
-                      Poste
-                    </FormLabel>
-                  </HStack>
-
-                  <Input type="text" color="gray.300" {...register("role")} />
-
-                  <Box minH="24px">
-                    <FormErrorMessage>{errors.role?.message}</FormErrorMessage>
-                  </Box>
-                </FormControl>
-
-                <FormControl isInvalid={!!errors.department}>
-                  <HStack>
-                    <Box marginBottom="10px">
-                      <MdFactory color="#F2B705" size="1.3rem" />
-                    </Box>
-
-                    <FormLabel color="#C7D2FE" marginBottom="10px">
-                      Departement
-                    </FormLabel>
-                  </HStack>
-
-                  <Select
-                    width="300px"
-                    bg="#08162b"
-                    color="#e6ebfe"
-                    borderColor="#ffffff"
-                    focusBorderColor="#F2B705"
-                    iconColor="#F2B705"
-                    _hover={{
-                      borderColor: "#F2B705",
-                    }}
-                    placeholder="Choisissez un departement"
-                    {...register("department")}
+                <Box>
+                  <Text
+                    fontSize="12px"
+                    fontWeight="700"
+                    color="#64748B"
+                    textTransform="uppercase"
+                    letterSpacing="0.6px"
+                    mb={2}
                   >
-                    <option value="Administration" style={{ color: "black" }}>
-                      Administration
-                    </option>
+                    Informations personnelles
+                  </Text>
 
-                    <option value="Atelier" style={{ color: "black" }}>
-                      Atelier
-                    </option>
+                  <Grid templateColumns="repeat(3, 1fr)" gap={3}>
+                    {/* NOM */}
 
-                    <option value="Usine" style={{ color: "black" }}>
-                      Usine
-                    </option>
+                    <FormControl isInvalid={!!errors.lastName}>
+                      <FormLabel {...labelStyles}>
+                        <HStack spacing={1.5}>
+                          <MdPerson2 color={iconColor} size="15px" />
+                          <Text>Nom</Text>
+                        </HStack>
+                      </FormLabel>
 
-                    <option value="Magasin" style={{ color: "black" }}>
-                      Magasin
-                    </option>
-
-                    <option value="Sentinelle" style={{ color: "black" }}>
-                      Sentinelle
-                    </option>
-                  </Select>
-
-                  <Box minH="24px">
-                    <FormErrorMessage>
-                      {errors.department?.message}
-                    </FormErrorMessage>
-                  </Box>
-                </FormControl>
-              </HStack>
-
-              {/* ======================================================
-                  SALARY / TELEPHONE / HIRING DATE
-              ====================================================== */}
-
-              <HStack
-                spacing="0.8rem"
-                marginBottom="0.7rem"
-                alignItems="flex-start"
-              >
-                <FormControl isInvalid={!!errors.salary}>
-                  <HStack>
-                    <Box marginBottom="10px">
-                      <LuCircleDollarSign color="#F2B705" size="1.3rem" />
-                    </Box>
-
-                    <FormLabel color="#C7D2FE" marginBottom="10px">
-                      Salaire
-                    </FormLabel>
-                  </HStack>
-
-                  <Input
-                    type="number"
-                    color="gray.300"
-                    {...register("salary", {
-                      valueAsNumber: true,
-                    })}
-                  />
-
-                  <Box minH="24px">
-                    <FormErrorMessage>
-                      {errors.salary?.message}
-                    </FormErrorMessage>
-                  </Box>
-                </FormControl>
-
-                <FormControl isInvalid={!!errors.telephone}>
-                  <HStack>
-                    <Box marginBottom="10px">
-                      <GiRotaryPhone color="#F2B705" size="1.3rem" />
-                    </Box>
-
-                    <FormLabel color="#C7D2FE" marginBottom="10px">
-                      Telephone
-                    </FormLabel>
-                  </HStack>
-
-                  <Input
-                    type="text"
-                    color="gray.300"
-                    {...register("telephone")}
-                  />
-
-                  <Box minH="24px">
-                    <FormErrorMessage>
-                      {errors.telephone?.message}
-                    </FormErrorMessage>
-                  </Box>
-                </FormControl>
-
-                <FormControl isInvalid={!!errors.dateHired}>
-                  <HStack>
-                    <Box marginBottom="10px">
-                      <FaCalendarDays color="#F2B705" size="1.3rem" />
-                    </Box>
-
-                    <FormLabel color="#C7D2FE" marginBottom="10px">
-                      Date d'embauche
-                    </FormLabel>
-                  </HStack>
-
-                  <Controller
-                    control={control}
-                    name="dateHired"
-                    render={({ field }) => (
-                      <DatePicker
-                        selected={field.value ? new Date(field.value) : null}
-                        onChange={(date: Date | null) => {
-                          field.onChange(
-                            date ? date.toISOString().split("T")[0] : ""
-                          );
-                        }}
-                        locale="fr"
-                        dateFormat="dd/MM/yyyy"
-                        isClearable
-                        showYearDropdown
-                        scrollableYearDropdown
-                        yearDropdownItemNumber={80}
-                        minDate={new Date(1990, 0, 1)}
-                        maxDate={new Date()}
-                        customInput={
-                          <Input
-                            color="#e6ebfe"
-                            width="300px"
-                            bg="#08162b"
-                            borderColor="#ffffff"
-                            borderWidth="1px"
-                          />
-                        }
+                      <Input
+                        type="text"
+                        {...inputStyles}
+                        {...register("lastName")}
                       />
-                    )}
-                  />
 
-                  <Box minH="24px">
-                    <FormErrorMessage>
-                      {errors.dateHired?.message}
-                    </FormErrorMessage>
-                  </Box>
-                </FormControl>
-              </HStack>
+                      <Box minH="18px">
+                        <FormErrorMessage fontSize="11px">
+                          {errors.lastName?.message}
+                        </FormErrorMessage>
+                      </Box>
+                    </FormControl>
 
-              {/* ======================================================
-                  EMERGENCY CONTACT
-              ====================================================== */}
+                    {/* PRENOM */}
 
-              <Grid templateColumns="repeat(3, 1fr)" gap={4}>
-                <FormControl isInvalid={!!errors.emergencyContact}>
-                  <HStack>
-                    <Box marginBottom="10px">
-                      <MdPerson2 color="#F2B705" size="1.3rem" />
-                    </Box>
+                    <FormControl isInvalid={!!errors.firstName}>
+                      <FormLabel {...labelStyles}>
+                        <HStack spacing={1.5}>
+                          <MdPerson2 color={iconColor} size="15px" />
+                          <Text>Prénom</Text>
+                        </HStack>
+                      </FormLabel>
 
-                    <FormLabel color="#C7D2FE" marginBottom="10px">
-                      Contact d'urgence
-                    </FormLabel>
-                  </HStack>
+                      <Input
+                        type="text"
+                        {...inputStyles}
+                        {...register("firstName")}
+                      />
 
-                  <Input
-                    color="#e6ebfe"
-                    type="text"
-                    h="40px"
-                    {...register("emergencyContact")}
-                  />
+                      <Box minH="18px">
+                        <FormErrorMessage fontSize="11px">
+                          {errors.firstName?.message}
+                        </FormErrorMessage>
+                      </Box>
+                    </FormControl>
 
-                  <Box minH="24px">
-                    <FormErrorMessage>
-                      {errors.emergencyContact?.message}
-                    </FormErrorMessage>
-                  </Box>
-                </FormControl>
+                    {/* DATE NAISSANCE */}
 
-                <FormControl isInvalid={!!errors.relationship}>
-                  <HStack>
-                    <Box marginBottom="10px">
-                      <GiRelationshipBounds color="#F2B705" size="1.3rem" />
-                    </Box>
+                    <FormControl isInvalid={!!errors.dateBirth}>
+                      <FormLabel {...labelStyles}>
+                        <HStack spacing={1.5}>
+                          <IoCalendarNumberSharp
+                            color={iconColor}
+                            size="15px"
+                          />
+                          <Text>Date de naissance</Text>
+                        </HStack>
+                      </FormLabel>
 
-                    <FormLabel color="#C7D2FE" marginBottom="10px">
-                      Relation avec l'employé
-                    </FormLabel>
-                  </HStack>
+                      {renderDatePicker("dateBirth", new Date(1940, 0, 1))}
 
-                  <Input
-                    color="#e6ebfe"
-                    type="text"
-                    h="40px"
-                    {...register("relationship")}
-                  />
-
-                  <Box minH="24px">
-                    <FormErrorMessage>
-                      {errors.relationship?.message}
-                    </FormErrorMessage>
-                  </Box>
-                </FormControl>
-
-                <FormControl isInvalid={!!errors.contactPhone}>
-                  <HStack>
-                    <Box marginBottom="10px">
-                      <MdOutlineNumbers color="#F2B705" size="1.3rem" />
-                    </Box>
-
-                    <FormLabel color="#C7D2FE" marginBottom="10px">
-                      Telephone du contact
-                    </FormLabel>
-                  </HStack>
-
-                  <Input
-                    color="#e6ebfe"
-                    type="text"
-                    h="40px"
-                    {...register("contactPhone")}
-                  />
-
-                  <Box minH="24px">
-                    <FormErrorMessage>
-                      {errors.contactPhone?.message}
-                    </FormErrorMessage>
-                  </Box>
-                </FormControl>
-              </Grid>
-
-              {/* ======================================================
-                  ADDRESS
-              ====================================================== */}
-
-              <FormControl isInvalid={!!errors.address}>
-                <HStack>
-                  <Box marginBottom="10px">
-                    <IoHome color="#F2B705" size="1.3rem" />
-                  </Box>
-
-                  <FormLabel color="#C7D2FE" marginBottom="10px">
-                    Addresse
-                  </FormLabel>
-                </HStack>
-
-                <Input type="text" color="gray.300" {...register("address")} />
-
-                <Box minH="24px">
-                  <FormErrorMessage>{errors.address?.message}</FormErrorMessage>
+                      <Box minH="18px">
+                        <FormErrorMessage fontSize="11px">
+                          {errors.dateBirth?.message}
+                        </FormErrorMessage>
+                      </Box>
+                    </FormControl>
+                  </Grid>
                 </Box>
-              </FormControl>
+
+                {/* ==================================================
+                EMPLOYMENT INFORMATION
+            ================================================== */}
+
+                <Box borderTop="1px solid #E5E7EB" pt={3}>
+                  <Text
+                    fontSize="12px"
+                    fontWeight="700"
+                    color="#64748B"
+                    textTransform="uppercase"
+                    letterSpacing="0.6px"
+                    mb={2}
+                  >
+                    Informations professionnelles
+                  </Text>
+
+                  <Grid templateColumns="repeat(3, 1fr)" gap={3}>
+                    {/* MATRICULE */}
+
+                    <FormControl isInvalid={!!errors.matricule}>
+                      <FormLabel {...labelStyles}>
+                        <HStack spacing={1.5}>
+                          <MdOutlineNumbers color={iconColor} size="15px" />
+                          <Text>Matricule</Text>
+                        </HStack>
+                      </FormLabel>
+
+                      <Input
+                        type="text"
+                        {...inputStyles}
+                        {...register("matricule")}
+                      />
+
+                      <Box minH="18px">
+                        <FormErrorMessage fontSize="11px">
+                          {errors.matricule?.message}
+                        </FormErrorMessage>
+                      </Box>
+                    </FormControl>
+
+                    {/* POSTE */}
+
+                    <FormControl isInvalid={!!errors.role}>
+                      <FormLabel {...labelStyles}>
+                        <HStack spacing={1.5}>
+                          <MdWork color={iconColor} size="15px" />
+                          <Text>Poste</Text>
+                        </HStack>
+                      </FormLabel>
+
+                      <Input
+                        type="text"
+                        {...inputStyles}
+                        {...register("role")}
+                      />
+
+                      <Box minH="18px">
+                        <FormErrorMessage fontSize="11px">
+                          {errors.role?.message}
+                        </FormErrorMessage>
+                      </Box>
+                    </FormControl>
+
+                    {/* DEPARTEMENT */}
+
+                    <FormControl isInvalid={!!errors.department}>
+                      <FormLabel {...labelStyles}>
+                        <HStack spacing={1.5}>
+                          <MdFactory color={iconColor} size="15px" />
+                          <Text>Département</Text>
+                        </HStack>
+                      </FormLabel>
+
+                      <Select
+                        {...inputStyles}
+                        placeholder="Choisissez un département"
+                        focusBorderColor="#F2B705"
+                        iconColor={iconColor}
+                        {...register("department")}
+                      >
+                        <option value="Administration">Administration</option>
+
+                        <option value="Atelier">Atelier</option>
+
+                        <option value="Usine">Usine</option>
+
+                        <option value="Magasin">Magasin</option>
+
+                        <option value="Sentinelle">Sentinelle</option>
+                      </Select>
+
+                      <Box minH="18px">
+                        <FormErrorMessage fontSize="11px">
+                          {errors.department?.message}
+                        </FormErrorMessage>
+                      </Box>
+                    </FormControl>
+
+                    {/* SALAIRE */}
+
+                    <FormControl isInvalid={!!errors.salary}>
+                      <FormLabel {...labelStyles}>
+                        <HStack spacing={1.5}>
+                          <LuCircleDollarSign color={iconColor} size="15px" />
+                          <Text>Salaire</Text>
+                        </HStack>
+                      </FormLabel>
+
+                      <Input
+                        type="number"
+                        {...inputStyles}
+                        {...register("salary", {
+                          valueAsNumber: true,
+                        })}
+                      />
+
+                      <Box minH="18px">
+                        <FormErrorMessage fontSize="11px">
+                          {errors.salary?.message}
+                        </FormErrorMessage>
+                      </Box>
+                    </FormControl>
+
+                    {/* TELEPHONE */}
+
+                    <FormControl isInvalid={!!errors.telephone}>
+                      <FormLabel {...labelStyles}>
+                        <HStack spacing={1.5}>
+                          <GiRotaryPhone color={iconColor} size="15px" />
+                          <Text>Téléphone</Text>
+                        </HStack>
+                      </FormLabel>
+
+                      <Input
+                        type="text"
+                        {...inputStyles}
+                        {...register("telephone")}
+                      />
+
+                      <Box minH="18px">
+                        <FormErrorMessage fontSize="11px">
+                          {errors.telephone?.message}
+                        </FormErrorMessage>
+                      </Box>
+                    </FormControl>
+
+                    {/* DATE EMBAUCHE */}
+
+                    <FormControl isInvalid={!!errors.dateHired}>
+                      <FormLabel {...labelStyles}>
+                        <HStack spacing={1.5}>
+                          <FaCalendarDays color={iconColor} size="14px" />
+                          <Text>Date d'embauche</Text>
+                        </HStack>
+                      </FormLabel>
+
+                      {renderDatePicker("dateHired", new Date(1990, 0, 1))}
+
+                      <Box minH="18px">
+                        <FormErrorMessage fontSize="11px">
+                          {errors.dateHired?.message}
+                        </FormErrorMessage>
+                      </Box>
+                    </FormControl>
+                  </Grid>
+                </Box>
+
+                {/* ==================================================
+                EMERGENCY CONTACT
+            ================================================== */}
+
+                <Box borderTop="1px solid #E5E7EB" pt={3}>
+                  <Text
+                    fontSize="12px"
+                    fontWeight="700"
+                    color="#64748B"
+                    textTransform="uppercase"
+                    letterSpacing="0.6px"
+                    mb={2}
+                  >
+                    Contact d'urgence
+                  </Text>
+
+                  <Grid templateColumns="repeat(3, 1fr)" gap={3}>
+                    {/* CONTACT */}
+
+                    <FormControl isInvalid={!!errors.emergencyContact}>
+                      <FormLabel {...labelStyles}>
+                        <HStack spacing={1.5}>
+                          <MdPerson2 color={iconColor} size="15px" />
+                          <Text>Contact</Text>
+                        </HStack>
+                      </FormLabel>
+
+                      <Input
+                        type="text"
+                        {...inputStyles}
+                        {...register("emergencyContact")}
+                      />
+
+                      <Box minH="18px">
+                        <FormErrorMessage fontSize="11px">
+                          {errors.emergencyContact?.message}
+                        </FormErrorMessage>
+                      </Box>
+                    </FormControl>
+
+                    {/* RELATION */}
+
+                    <FormControl isInvalid={!!errors.relationship}>
+                      <FormLabel {...labelStyles}>
+                        <HStack spacing={1.5}>
+                          <GiRelationshipBounds color={iconColor} size="15px" />
+                          <Text>Relation</Text>
+                        </HStack>
+                      </FormLabel>
+
+                      <Input
+                        type="text"
+                        {...inputStyles}
+                        {...register("relationship")}
+                      />
+
+                      <Box minH="18px">
+                        <FormErrorMessage fontSize="11px">
+                          {errors.relationship?.message}
+                        </FormErrorMessage>
+                      </Box>
+                    </FormControl>
+
+                    {/* TELEPHONE CONTACT */}
+
+                    <FormControl isInvalid={!!errors.contactPhone}>
+                      <FormLabel {...labelStyles}>
+                        <HStack spacing={1.5}>
+                          <MdOutlineNumbers color={iconColor} size="15px" />
+                          <Text>Téléphone</Text>
+                        </HStack>
+                      </FormLabel>
+
+                      <Input
+                        type="text"
+                        {...inputStyles}
+                        {...register("contactPhone")}
+                      />
+
+                      <Box minH="18px">
+                        <FormErrorMessage fontSize="11px">
+                          {errors.contactPhone?.message}
+                        </FormErrorMessage>
+                      </Box>
+                    </FormControl>
+                  </Grid>
+                </Box>
+
+                {/* ==================================================
+                ADDRESS
+            ================================================== */}
+
+                <Box borderTop="1px solid #E5E7EB" pt={3}>
+                  <FormControl isInvalid={!!errors.address}>
+                    <FormLabel {...labelStyles}>
+                      <HStack spacing={1.5}>
+                        <IoHome color={iconColor} size="15px" />
+                        <Text>Adresse</Text>
+                      </HStack>
+                    </FormLabel>
+
+                    <Input
+                      type="text"
+                      {...inputStyles}
+                      {...register("address")}
+                    />
+
+                    <Box minH="18px">
+                      <FormErrorMessage fontSize="11px">
+                        {errors.address?.message}
+                      </FormErrorMessage>
+                    </Box>
+                  </FormControl>
+                </Box>
+              </VStack>
             </ModalBody>
 
-            {/* ========================================================
-                FOOTER
-            ======================================================== */}
+            {/* ======================================================
+            FOOTER
+        ====================================================== */}
 
-            <ModalFooter bg="#08162b">
-              <VStack position="relative" right="2rem">
-                <Text
-                  position="relative"
-                  right="20px"
-                  fontSize="1.1rem"
-                  fontWeight="600"
-                  color="red.300"
-                >
+            <ModalFooter
+              bg="#F8FAFC"
+              borderTop="1px solid #E2E8F0"
+              px={6}
+              py={3}
+            >
+              <Flex width="100%" align="center" justify="space-between">
+                <Text fontSize="12px" color="red.500" fontWeight="500">
                   {serverErrorMessage}
                 </Text>
 
-                <Box>
+                <HStack spacing={2}>
                   <Button
-                    borderColor="black"
+                    variant="outline"
+                    borderColor="#CBD5E1"
+                    color="#475569"
+                    bg="white"
+                    height="38px"
+                    px={4}
+                    onClick={handleFormClosed}
+                    isDisabled={updateEmployee.isPending}
+                    _hover={{
+                      bg: "#F1F5F9",
+                      borderColor: "#94A3B8",
+                    }}
+                  >
+                    <HStack spacing={2}>
+                      <RxCrossCircled size="17px" />
+
+                      <Text fontSize="14px">Fermer</Text>
+                    </HStack>
+                  </Button>
+
+                  <Button
                     bg="#F2B705"
-                    borderWidth="3px"
-                    color="black"
-                    mr={3}
-                    type="submit"
+                    color="#1F2937"
+                    height="38px"
+                    px={5}
+                    fontWeight="700"
+                    border="1px solid #D39A00"
                     isLoading={updateEmployee.isPending}
                     loadingText="Patientez..."
                     spinnerPlacement="start"
                     isDisabled={updateEmployee.isPending}
+                    type="submit"
+                    _hover={{
+                      bg: "#E0A900",
+                    }}
+                    _active={{
+                      bg: "#CC9900",
+                    }}
                   >
-                    <HStack>
-                      <Box>
-                        <FaSave />
-                      </Box>
+                    <HStack spacing={2}>
+                      <FaSave size="14px" />
 
-                      <Text fontSize="1rem">Modifier</Text>
+                      <Text fontSize="14px">Enregistrer</Text>
                     </HStack>
                   </Button>
-
-                  <Button
-                    borderColor="#ffffff"
-                    bg="#08162b"
-                    borderWidth="0.5px"
-                    color="#1a000d"
-                    mr={3}
-                    onClick={handleFormClosed}
-                    isDisabled={updateEmployee.isPending}
-                  >
-                    <HStack>
-                      <Box>
-                        <RxCrossCircled color="#ffffff" size="18px" />
-                      </Box>
-
-                      <Text color="#ffffff" fontSize="1rem">
-                        Fermer
-                      </Text>
-                    </HStack>
-                  </Button>
-                </Box>
-              </VStack>
+                </HStack>
+              </Flex>
             </ModalFooter>
           </form>
         </ModalContent>

@@ -13,6 +13,33 @@ import User from "../../../common/types/User.js";
 import AdminUser from "../../../common/types/AdminUser.js";
 
 import { addToSyncQueue } from "./sync.repository.js";
+import { createAuditLog } from "./audit_log.repository.js";
+
+function getAdminName(
+  admin: Pick<AdminUser, "firstName" | "lastName">
+): string {
+  return `${admin.firstName} ${admin.lastName}`.trim();
+}
+
+async function createPayrollStatusAudit(
+  companyId: string,
+  payrollRunId: string,
+  admin: AdminUser,
+  from: PayrollStatus,
+  to: PayrollStatus,
+  description: string
+): Promise<void> {
+  await createAuditLog({
+    companyId,
+    userId: admin._id,
+    userName: getAdminName(admin),
+    action: "UPDATE",
+    entity: "PAYROLL_RUN",
+    entityId: payrollRunId,
+    description,
+    changes: { status: { from, to } },
+  });
+}
 
 // ============================================================
 // CREATE PAYROLL RUN
@@ -136,6 +163,16 @@ export async function createPayrollRun(
     entityId: payrollRun._id,
     operation: "create",
     payload: JSON.stringify(payrollRun),
+  });
+
+  await createAuditLog({
+    companyId,
+    userId: admin._id,
+    userName: getAdminName(admin),
+    action: "CREATE",
+    entity: "PAYROLL_RUN",
+    entityId: payrollRun._id,
+    description: "Création de la paie",
   });
 
   return payrollRun;
@@ -1080,9 +1117,9 @@ export async function cancelPayrollRun(
 
   const now = new Date().toISOString();
 
-  const payrollRun = await get<{ _id: string }>(
+  const payrollRun = await get<{ _id: string; status: PayrollStatus }>(
     `
-    SELECT _id
+    SELECT _id, status
     FROM payroll_runs
     WHERE companyId = ?
       AND _id = ?
@@ -1171,6 +1208,15 @@ export async function cancelPayrollRun(
     });
   }
 
+  await createPayrollStatusAudit(
+    companyId,
+    payrollRunId,
+    admin,
+    payrollRun.status,
+    "ANNULÉ",
+    "Annulation de la paie"
+  );
+
   return true;
 }
 
@@ -1189,9 +1235,9 @@ export async function verifyPayrollRun(
 
   const now = new Date().toISOString();
 
-  const payrollRun = await get<{ _id: string }>(
+  const payrollRun = await get<{ _id: string; status: PayrollStatus }>(
     `
-    SELECT _id
+    SELECT _id, status
     FROM payroll_runs
     WHERE companyId = ?
       AND _id = ?
@@ -1278,6 +1324,15 @@ export async function verifyPayrollRun(
     });
   }
 
+  await createPayrollStatusAudit(
+    companyId,
+    payrollRunId,
+    admin,
+    payrollRun.status,
+    "VERIFICATION",
+    "Modification du statut de la paie"
+  );
+
   return true;
 }
 
@@ -1296,9 +1351,9 @@ export async function approvePayrollRun(
 
   const now = new Date().toISOString();
 
-  const payrollRun = await get<{ _id: string }>(
+  const payrollRun = await get<{ _id: string; status: PayrollStatus }>(
     `
-    SELECT _id
+    SELECT _id, status
     FROM payroll_runs
     WHERE companyId = ?
       AND _id = ?
@@ -1385,6 +1440,15 @@ export async function approvePayrollRun(
     });
   }
 
+  await createPayrollStatusAudit(
+    companyId,
+    payrollRunId,
+    admin,
+    payrollRun.status,
+    "APPROUVÉ",
+    "Approbation de la paie"
+  );
+
   return true;
 }
 
@@ -1403,9 +1467,9 @@ export async function paymentPayrollRun(
 
   const now = new Date().toISOString();
 
-  const payrollRun = await get<{ _id: string }>(
+  const payrollRun = await get<{ _id: string; status: PayrollStatus }>(
     `
-    SELECT _id
+    SELECT _id, status
     FROM payroll_runs
     WHERE companyId = ?
       AND _id = ?
@@ -1491,6 +1555,15 @@ export async function paymentPayrollRun(
       }),
     });
   }
+
+  await createPayrollStatusAudit(
+    companyId,
+    payrollRunId,
+    admin,
+    payrollRun.status,
+    "PAYÉ",
+    "Marquage de la paie comme payée"
+  );
 
   return true;
 }

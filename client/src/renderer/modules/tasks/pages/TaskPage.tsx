@@ -69,7 +69,7 @@ const TaskPage = () => {
   };
 
   return (
-    <Flex direction="column" width="100%">
+    <Flex bg="#F8FAFC" direction="column" width="100%">
       <Flex width="100%" justify="space-between">
         <Box>
           <HStack>

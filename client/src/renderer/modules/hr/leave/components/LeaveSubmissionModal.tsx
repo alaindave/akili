@@ -1,6 +1,7 @@
 import {
   Box,
   Button,
+  Flex,
   FormControl,
   FormLabel,
   HStack,
@@ -36,7 +37,7 @@ import useAdminUser from "../../../../../store/auth.store";
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  onRefresh: () => void;
+  onRefresh?: () => void;
   employees: Employee[];
 }
 
@@ -97,7 +98,7 @@ const LeaveSubmissionModal = ({
       console.log("LEAVE CREATION SUCCESS:", leave);
       setEmployee(null);
       setErrorMessage("");
-      onRefresh();
+      onRefresh?.();
       reset();
       onClose();
     } catch (error: any) {
@@ -111,408 +112,591 @@ const LeaveSubmissionModal = ({
   };
 
   return (
-    <Modal size="5xl" isOpen={isOpen} onClose={onClose}>
+    <Modal size="5xl" isOpen={isOpen} onClose={handleFormClose} isCentered>
       <ModalOverlay backdropFilter="auto" backdropBlur="0.5rem" />
-      <ModalContent bg="#08162b">
+
+      <ModalContent
+        bg="white"
+        borderRadius="14px"
+        boxShadow="0 12px 40px rgba(0, 0, 0, 0.15)"
+        overflow="hidden"
+        maxH="90vh"
+      >
         <form onSubmit={handleSubmit(onSubmit)}>
-          <ModalHeader color="#08162b" position="relative" left="120px">
-            <HStack>
-              <Box position="relative" left="120px">
-                <p
-                  style={{
-                    color: "#ffffff",
-                    fontSize: "21px",
-                    fontWeight: "600",
+          {/* =====================================================
+            HEADER
+        ===================================================== */}
+          <ModalHeader
+            bg="gray.50"
+            borderBottom="1px solid"
+            borderColor="gray.200"
+            py={4}
+            px={6}
+          >
+            <HStack justify="space-between" align="center">
+              <HStack spacing={3}>
+                <Box
+                  w="38px"
+                  h="38px"
+                  borderRadius="10px"
+                  bg="#FFF8E1"
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                >
+                  <FaRegNoteSticky color="#F2B705" size="18px" />
+                </Box>
+
+                <Box>
+                  <Text fontSize="1.15rem" fontWeight="700" color="gray.800">
+                    Demande de congé
+                  </Text>
+
+                  <Text fontSize="0.8rem" color="gray.500" fontWeight="400">
+                    Remplissez les informations de la demande
+                  </Text>
+                </Box>
+              </HStack>
+
+              {/* Employee selector */}
+              <Menu>
+                <MenuButton
+                  as={Button}
+                  variant="outline"
+                  size="sm"
+                  borderColor="gray.300"
+                  bg="white"
+                  color="gray.700"
+                  _hover={{
+                    bg: "gray.50",
+                    borderColor: "#F2B705",
+                  }}
+                  _active={{
+                    bg: "gray.50",
                   }}
                 >
-                  Demande de congé
-                </p>
-              </Box>
-              <Box position="relative" left="150px">
-                <Menu>
-                  <MenuButton
-                    backgroundColor="transparent"
-                    as={Button}
-                    _hover={{ bg: "transparent" }}
-                  >
-                    {employee?._id ? (
-                      <HStack spacing={2}>
-                        <Text
-                          color="#ffffff"
-                          fontSize="22px"
-                          position="relative"
-                        >
-                          {employee?.firstName} {employee?.lastName}
-                        </Text>
-                        <Text
-                          color="#ffffff"
-                          fontSize="18px"
-                          position="relative"
-                        >
-                          #{employee.matricule}
-                        </Text>
-                      </HStack>
-                    ) : (
-                      <p style={{ color: "#ffffff", fontSize: "16px" }}>
-                        Cliquez ici pour choisir un employé
-                      </p>
-                    )}
-                  </MenuButton>
-                  <MenuList
-                    _expanded={{
-                      bg: "transparent",
-                    }}
-                    maxH="450px"
-                    overflowY="auto"
-                  >
-                    {employees.map((employee) => (
-                      <MenuItem
-                        key={employee._id}
-                        onClick={() => handleMenuClick(employee)}
-                        color="black"
-                        _hover={{
-                          backgroundColor: "#08162b",
-                          color: "#ffffff",
-                        }}
+                  {employee?._id ? (
+                    <HStack spacing={2}>
+                      <Box
+                        w="28px"
+                        h="28px"
+                        borderRadius="full"
+                        bg="#FFF8E1"
+                        display="flex"
+                        alignItems="center"
+                        justifyContent="center"
                       >
-                        <Text>
+                        <MdPerson2 color="#F2B705" size="16px" />
+                      </Box>
+
+                      <Box textAlign="left">
+                        <Text
+                          fontSize="0.9rem"
+                          fontWeight="600"
+                          color="gray.800"
+                        >
                           {employee.firstName} {employee.lastName}
                         </Text>
-                      </MenuItem>
-                    ))}
-                  </MenuList>
-                </Menu>
-              </Box>
+
+                        <Text fontSize="0.7rem" color="gray.500">
+                          #{employee.matricule}
+                        </Text>
+                      </Box>
+                    </HStack>
+                  ) : (
+                    <HStack spacing={2}>
+                      <MdPerson2 color="#F2B705" size="17px" />
+
+                      <Text fontSize="0.85rem">Choisir un employé</Text>
+                    </HStack>
+                  )}
+                </MenuButton>
+
+                <MenuList
+                  bg="white"
+                  borderColor="gray.200"
+                  boxShadow="0 8px 25px rgba(0,0,0,0.12)"
+                  maxH="300px"
+                  overflowY="auto"
+                  zIndex={20}
+                >
+                  {employees.map((employee) => (
+                    <MenuItem
+                      key={employee._id}
+                      onClick={() => handleMenuClick(employee)}
+                      color="gray.700"
+                      _hover={{
+                        bg: "#FFF8E1",
+                        color: "gray.900",
+                      }}
+                    >
+                      <HStack spacing={2}>
+                        <MdPerson2 color="#F2B705" size="16px" />
+
+                        <Box>
+                          <Text fontSize="0.85rem" fontWeight="500">
+                            {employee.firstName} {employee.lastName}
+                          </Text>
+
+                          <Text fontSize="0.7rem" color="gray.500">
+                            #{employee.matricule}
+                          </Text>
+                        </Box>
+                      </HStack>
+                    </MenuItem>
+                  ))}
+                </MenuList>
+              </Menu>
             </HStack>
           </ModalHeader>
-          <ModalCloseButton onClick={handleFormClose} />
-          <ModalBody>
+
+          {/* =====================================================
+            BODY
+        ===================================================== */}
+          <ModalBody px={6} py={5}>
             <FormControl>
-              <VStack spacing="10px">
-                <HStack>
-                  <Box>
-                    <HStack>
-                      <Box marginBottom="10px">
-                        <MdPerson2 color="#F2B705" size="1.3rem" />
-                      </Box>
-                      <FormLabel
-                        color="#e6ebfe"
-                        marginBottom="10px"
-                        fontSize="1.1rem"
-                      >
-                        Nom
-                      </FormLabel>
-                    </HStack>
-                    <Input
-                      type="text"
-                      color="#e6ebfe"
-                      fontSize="1.1rem"
-                      width="250px"
-                      value={employee?.lastName || ""}
-                      isReadOnly
-                    />
-                  </Box>
-                  <Box>
-                    <HStack>
-                      <Box marginBottom="10px">
-                        <MdPerson2 color="#F2B705" size="1.3rem" />
-                      </Box>
-                      <FormLabel
-                        color="#e6ebfe"
-                        marginBottom="10px"
-                        fontSize="1.1rem"
-                      >
-                        {" "}
-                        Prenom
-                      </FormLabel>
-                    </HStack>
-                    <Input
-                      type="text"
-                      color="#e6ebfe"
-                      fontSize="1.1rem"
-                      width="250px"
-                      value={employee?.firstName || ""}
-                      isReadOnly
-                    />
-                  </Box>
-                  <Box>
-                    <HStack>
-                      <Box marginBottom="10px">
-                        <MdWork color="#F2B705" size="1.3rem" />
-                      </Box>
-                      <FormLabel
-                        color="#e6ebfe"
-                        marginBottom="10px"
-                        fontSize="1.1rem"
-                      >
-                        {" "}
-                        Poste
-                      </FormLabel>
-                    </HStack>
-                    <Input
-                      type="text"
-                      color="#e6ebfe"
-                      fontSize="1.1rem"
-                      width="250px"
-                      value={employee?.role || ""}
-                      isReadOnly
-                    />
-                  </Box>
-                </HStack>
+              <VStack spacing={4} align="stretch">
+                {/* -------------------------------------------------
+                  EMPLOYEE INFORMATION
+              ------------------------------------------------- */}
+                <Box>
+                  <Text
+                    fontSize="0.75rem"
+                    fontWeight="700"
+                    color="gray.500"
+                    textTransform="uppercase"
+                    letterSpacing="0.04em"
+                    mb={3}
+                  >
+                    Informations de l'employé
+                  </Text>
 
-                <HStack>
-                  <Box>
-                    <HStack>
-                      <Box marginBottom="10px">
-                        <MdFactory color="#F2B705" size="1.3rem" />
-                      </Box>
+                  <Box
+                    display="grid"
+                    gridTemplateColumns="repeat(4, 1fr)"
+                    gap={3}
+                  >
+                    {/* Last name */}
+                    <Box>
                       <FormLabel
-                        color="#e6ebfe"
-                        marginBottom="10px"
-                        fontSize="1.1rem"
+                        fontSize="0.78rem"
+                        fontWeight="600"
+                        color="gray.600"
+                        mb={1}
                       >
-                        {" "}
-                        Departement
+                        <HStack spacing={1.5}>
+                          <MdPerson2 color="#F2B705" />
+                          <Text>Nom</Text>
+                        </HStack>
                       </FormLabel>
-                    </HStack>
-                    <Input
-                      color="#e6ebfe"
-                      fontSize="1.1rem"
-                      type="text"
-                      width="250px"
-                      value={employee?.department || ""}
-                      isReadOnly
-                    />
+
+                      <Input
+                        size="sm"
+                        bg="gray.50"
+                        borderColor="gray.300"
+                        color="gray.700"
+                        value={employee?.lastName || ""}
+                        isReadOnly
+                        _readOnly={{
+                          cursor: "default",
+                        }}
+                      />
+                    </Box>
+
+                    {/* First name */}
+                    <Box>
+                      <FormLabel
+                        fontSize="0.78rem"
+                        fontWeight="600"
+                        color="gray.600"
+                        mb={1}
+                      >
+                        <HStack spacing={1.5}>
+                          <MdPerson2 color="#F2B705" />
+                          <Text>Prénom</Text>
+                        </HStack>
+                      </FormLabel>
+
+                      <Input
+                        size="sm"
+                        bg="gray.50"
+                        borderColor="gray.300"
+                        color="gray.700"
+                        value={employee?.firstName || ""}
+                        isReadOnly
+                        _readOnly={{
+                          cursor: "default",
+                        }}
+                      />
+                    </Box>
+
+                    {/* Role */}
+                    <Box>
+                      <FormLabel
+                        fontSize="0.78rem"
+                        fontWeight="600"
+                        color="gray.600"
+                        mb={1}
+                      >
+                        <HStack spacing={1.5}>
+                          <MdWork color="#F2B705" />
+                          <Text>Poste</Text>
+                        </HStack>
+                      </FormLabel>
+
+                      <Input
+                        size="sm"
+                        bg="gray.50"
+                        borderColor="gray.300"
+                        color="gray.700"
+                        value={employee?.role || ""}
+                        isReadOnly
+                        _readOnly={{
+                          cursor: "default",
+                        }}
+                      />
+                    </Box>
+
+                    {/* Department */}
+                    <Box>
+                      <FormLabel
+                        fontSize="0.78rem"
+                        fontWeight="600"
+                        color="gray.600"
+                        mb={1}
+                      >
+                        <HStack spacing={1.5}>
+                          <MdFactory color="#F2B705" />
+                          <Text>Département</Text>
+                        </HStack>
+                      </FormLabel>
+
+                      <Input
+                        size="sm"
+                        bg="gray.50"
+                        borderColor="gray.300"
+                        color="gray.700"
+                        value={employee?.department || ""}
+                        isReadOnly
+                        _readOnly={{
+                          cursor: "default",
+                        }}
+                      />
+                    </Box>
                   </Box>
-                  <Box>
-                    <HStack>
-                      <Box marginBottom="10px">
-                        <FaCalendarDays color="#F2B705" size="1.3rem" />
-                      </Box>
+                </Box>
+
+                {/* -------------------------------------------------
+                  LEAVE DATES
+              ------------------------------------------------- */}
+                <Flex justify="space-evenly">
+                  <VStack>
+                    <Text
+                      fontSize="0.75rem"
+                      fontWeight="700"
+                      color="gray.500"
+                      textTransform="uppercase"
+                      letterSpacing="0.04em"
+                      mb={3}
+                      position="relative"
+                      right="1.5rem"
+                    >
+                      Période du congé
+                    </Text>
+                    {/* Start date */}
+                    <Box>
                       <FormLabel
-                        color="#e6ebfe"
-                        marginBottom="10px"
-                        fontSize="1.1rem"
+                        fontSize="0.78rem"
+                        fontWeight="600"
+                        color="gray.600"
+                        mb={1}
                       >
-                        {" "}
-                        Date de début de congé
+                        <HStack spacing={1.5}>
+                          <FaCalendarDays color="#F2B705" />
+                          <Text>Date de début</Text>
+                        </HStack>
                       </FormLabel>
-                    </HStack>
-                    <Controller
-                      control={control}
-                      name="startDate"
-                      render={({ field }) => (
-                        <DatePicker
-                          selected={field.value ? new Date(field.value) : null}
-                          onChange={(date: Date | null) => {
-                            if (!date) {
-                              field.onChange("");
-                              return;
+                      <Controller
+                        control={control}
+                        name="startDate"
+                        render={({ field }) => (
+                          <DatePicker
+                            selected={
+                              field.value ? new Date(field.value) : null
                             }
-
-                            const year = date.getFullYear();
-                            const month = String(date.getMonth() + 1).padStart(
-                              2,
-                              "0"
-                            );
-                            const day = String(date.getDate()).padStart(2, "0");
-
-                            field.onChange(`${year}-${month}-${day}`);
-                          }}
-                          locale="fr"
-                          dateFormat="dd/MM/yyyy"
-                          showYearDropdown
-                          scrollableYearDropdown
-                          yearDropdownItemNumber={100}
-                          customInput={
-                            <Input
-                              color="#e6ebfe"
-                              fontSize="1.1rem"
-                              width="300px"
-                              borderWidth="1px"
-                            />
-                          }
-                        />
-                      )}
-                    />
-                    {errors.startDate && (
-                      <Text className="text-danger">
-                        {errors.startDate.message}
-                      </Text>
-                    )}
-                  </Box>
-                  <Box>
-                    <HStack>
-                      <Box marginBottom="10px">
-                        <FaCalendarDays color="#F2B705" size="1.3rem" />
-                      </Box>
-                      <FormLabel
-                        color="#e6ebfe"
-                        marginBottom="10px"
-                        fontSize="1.1rem"
-                      >
-                        {" "}
-                        Date de fin de congé
-                      </FormLabel>
-                    </HStack>
-                    <Controller
-                      control={control}
-                      name="endDate"
-                      render={({ field }) => (
-                        <DatePicker
-                          selected={field.value ? new Date(field.value) : null}
-                          onChange={(date: Date | null) => {
-                            if (!date) {
-                              field.onChange("");
-                              return;
+                            onChange={(date: Date | null) => {
+                              if (!date) {
+                                field.onChange("");
+                                return;
+                              }
+                              const year = date.getFullYear();
+                              const month = String(
+                                date.getMonth() + 1
+                              ).padStart(2, "0");
+                              const day = String(date.getDate()).padStart(
+                                2,
+                                "0"
+                              );
+                              field.onChange(`${year}-${month}-${day}`);
+                            }}
+                            locale="fr"
+                            dateFormat="dd/MM/yyyy"
+                            showYearDropdown
+                            scrollableYearDropdown
+                            yearDropdownItemNumber={100}
+                            customInput={
+                              <Input
+                                size="sm"
+                                bg="white"
+                                borderColor="gray.300"
+                                color="gray.700"
+                                width="100%"
+                                _hover={{
+                                  borderColor: "gray.400",
+                                }}
+                                _focus={{
+                                  borderColor: "#F2B705",
+                                  boxShadow: "0 0 0 1px #F2B705",
+                                }}
+                              />
                             }
-
-                            const year = date.getFullYear();
-                            const month = String(date.getMonth() + 1).padStart(
-                              2,
-                              "0"
-                            );
-                            const day = String(date.getDate()).padStart(2, "0");
-
-                            field.onChange(`${year}-${month}-${day}`);
-                          }}
-                          locale="fr"
-                          dateFormat="dd/MM/yyyy"
-                          showYearDropdown
-                          scrollableYearDropdown
-                          yearDropdownItemNumber={100}
-                          customInput={
-                            <Input
-                              color="#e6ebfe"
-                              fontSize="1.1rem"
-                              width="300px"
-                              borderWidth="1px"
-                            />
-                          }
-                        />
+                          />
+                        )}
+                      />
+                      {errors.startDate && (
+                        <Text mt={1} fontSize="0.7rem" color="red.500">
+                          {errors.startDate.message}
+                        </Text>
                       )}
-                    />
-                    {errors.endDate && (
-                      <Text className="text-danger">
-                        {errors.endDate.message}
-                      </Text>
-                    )}
-                  </Box>
-                </HStack>
-                <VStack>
-                  <Box>
-                    <HStack>
-                      <Box marginBottom="10px">
-                        <FaRegNoteSticky color="#F2B705" size="1.3rem" />
-                      </Box>
+                    </Box>
+                    {/* End date */}
+                    <Box>
                       <FormLabel
-                        color="#e6ebfe"
-                        marginBottom="10px"
-                        fontSize="1.1rem"
+                        fontSize="0.78rem"
+                        fontWeight="600"
+                        color="gray.600"
+                        mb={1}
                       >
-                        {" "}
-                        Sujet
+                        <HStack spacing={1.5}>
+                          <FaCalendarDays color="#F2B705" />
+                          <Text>Date de fin</Text>
+                        </HStack>
                       </FormLabel>
-                    </HStack>
-                    <Input
-                      height="40px"
-                      color="#e6ebfe"
-                      fontSize="1.1rem"
-                      width="300px"
-                      borderWidth="1px"
-                      {...register("subject")}
-                    />
-                    {errors.subject && (
-                      <Text className="text-danger">
-                        {errors.subject.message}
-                      </Text>
-                    )}
-                  </Box>
+                      <Controller
+                        control={control}
+                        name="endDate"
+                        render={({ field }) => (
+                          <DatePicker
+                            selected={
+                              field.value ? new Date(field.value) : null
+                            }
+                            onChange={(date: Date | null) => {
+                              if (!date) {
+                                field.onChange("");
+                                return;
+                              }
+                              const year = date.getFullYear();
+                              const month = String(
+                                date.getMonth() + 1
+                              ).padStart(2, "0");
+                              const day = String(date.getDate()).padStart(
+                                2,
+                                "0"
+                              );
+                              field.onChange(`${year}-${month}-${day}`);
+                            }}
+                            locale="fr"
+                            dateFormat="dd/MM/yyyy"
+                            showYearDropdown
+                            scrollableYearDropdown
+                            yearDropdownItemNumber={100}
+                            customInput={
+                              <Input
+                                size="sm"
+                                bg="white"
+                                borderColor="gray.300"
+                                color="gray.700"
+                                width="100%"
+                                _hover={{
+                                  borderColor: "gray.400",
+                                }}
+                                _focus={{
+                                  borderColor: "#F2B705",
+                                  boxShadow: "0 0 0 1px #F2B705",
+                                }}
+                              />
+                            }
+                          />
+                        )}
+                      />
+                      {errors.endDate && (
+                        <Text mt={1} fontSize="0.7rem" color="red.500">
+                          {errors.endDate.message}
+                        </Text>
+                      )}
+                    </Box>
+                  </VStack>
+                  {/* -------------------------------------------------
+                    SUBJECT + NOTES
+                  ------------------------------------------------- */}
                   <Box>
-                    <HStack>
-                      <Box marginBottom="10px">
-                        <FaRegNoteSticky color="#F2B705" size="1.3rem" />
+                    <Text
+                      fontSize="0.75rem"
+                      fontWeight="700"
+                      color="gray.500"
+                      textTransform="uppercase"
+                      letterSpacing="0.04em"
+                      mb={3}
+                    >
+                      Détails de la demande
+                    </Text>
+                    <Box>
+                      {/* Subject */}
+                      <Box>
+                        <FormLabel
+                          fontSize="0.78rem"
+                          fontWeight="600"
+                          color="gray.600"
+                          mb={1}
+                        >
+                          <HStack spacing={1.5}>
+                            <FaRegNoteSticky color="#F2B705" />
+                            <Text>Sujet</Text>
+                          </HStack>
+                        </FormLabel>
+                        <Input
+                          size="sm"
+                          bg="white"
+                          borderColor="gray.300"
+                          color="gray.700"
+                          {...register("subject")}
+                          _hover={{
+                            borderColor: "gray.400",
+                          }}
+                          _focus={{
+                            borderColor: "#F2B705",
+                            boxShadow: "0 0 0 1px #F2B705",
+                          }}
+                        />
+                        {errors.subject && (
+                          <Text mt={1} fontSize="0.7rem" color="red.500">
+                            {errors.subject.message}
+                          </Text>
+                        )}
                       </Box>
-                      <FormLabel
-                        color="#e6ebfe"
-                        marginBottom="10px"
-                        fontSize="1.1rem"
-                      >
-                        {" "}
-                        Motif
-                      </FormLabel>
-                    </HStack>
-                    <Textarea
-                      color="gray.200"
-                      fontSize="1.1rem"
-                      height="300px"
-                      width="350px"
-                      resize="none"
-                      placeholder="Decrivez brievement le motif de votre demande..."
-                      _placeholder={{ opacity: 1, color: "gray.500" }}
-                      {...register("notes")}
-                    />
-                    {errors.notes && (
-                      <Text className="text-danger">
-                        {errors.notes.message}
-                      </Text>
-                    )}
+                      {/* Notes */}
+                      <Box>
+                        <FormLabel
+                          fontSize="0.78rem"
+                          fontWeight="600"
+                          color="gray.600"
+                          mb={1}
+                        >
+                          <HStack spacing={1.5}>
+                            <FaRegNoteSticky color="#F2B705" />
+                            <Text>Motif</Text>
+                          </HStack>
+                        </FormLabel>
+                        <Textarea
+                          size="md"
+                          bg="white"
+                          borderColor="gray.300"
+                          color="gray.700"
+                          height="75px"
+                          resize="none"
+                          placeholder="Décrivez brièvement le motif de votre demande..."
+                          _placeholder={{
+                            color: "gray.400",
+                          }}
+                          _hover={{
+                            borderColor: "gray.400",
+                          }}
+                          _focus={{
+                            borderColor: "#F2B705",
+                            boxShadow: "0 0 0 1px #F2B705",
+                          }}
+                          {...register("notes")}
+                        />
+                        {errors.notes && (
+                          <Text mt={1} fontSize="0.7rem" color="red.500">
+                            {errors.notes.message}
+                          </Text>
+                        )}
+                      </Box>
+                    </Box>
                   </Box>
-                </VStack>
+                </Flex>
+
+                {/* Error */}
+                {errorMessage && (
+                  <Box
+                    bg="red.50"
+                    border="1px solid"
+                    borderColor="red.200"
+                    borderRadius="8px"
+                    px={3}
+                    py={2}
+                  >
+                    <Text fontSize="0.8rem" color="red.600" fontWeight="500">
+                      {errorMessage}
+                    </Text>
+                  </Box>
+                )}
               </VStack>
             </FormControl>
           </ModalBody>
 
-          <ModalFooter bg="#08162b">
-            <HStack position="relative" right="2rem">
-              <Text
-                fontWeight="500"
-                fontSize="1.1rem"
-                position="relative"
-                top="10px"
-                right="20px"
-                color="red.300"
-              >
-                {errorMessage}
-              </Text>
+          {/* =====================================================
+            FOOTER
+        ===================================================== */}
+          <ModalFooter
+            bg="gray.50"
+            borderTop="1px solid"
+            borderColor="gray.200"
+            px={6}
+            py={3}
+          >
+            <HStack spacing={3}>
               <Button
-                borderRadius="10px"
-                borderColor="black"
-                bg="#F2B705"
-                borderWidth="0.5px"
-                colorScheme=" #320b01"
-                color="black"
-                mr={3}
+                type="button"
+                variant="outline"
+                size="sm"
+                borderColor="gray.300"
+                color="gray.600"
+                borderRadius="8px"
+                onClick={handleFormClose}
+                _hover={{
+                  bg: "gray.100",
+                  borderColor: "gray.400",
+                }}
+              >
+                <HStack spacing={2}>
+                  <RxCrossCircled size="16px" />
+                  <Text>Annuler</Text>
+                </HStack>
+              </Button>
+
+              <Button
                 type="submit"
+                size="sm"
+                borderRadius="8px"
+                bg="#F2B705"
+                color="gray.900"
+                fontWeight="600"
                 isLoading={isSubmitting}
                 loadingText="Patientez..."
                 spinnerPlacement="start"
                 isDisabled={isSubmitting}
+                _hover={{
+                  bg: "#DFA700",
+                }}
+                _active={{
+                  bg: "#C99600",
+                }}
               >
-                <HStack>
-                  <Box>
-                    <FaSave />
-                  </Box>
-                  <Text fontSize="1rem"> Soumettre</Text>
-                </HStack>
-              </Button>
-              <Button
-                borderColor="#ffffff"
-                borderRadius="10px"
-                bg="#08162b"
-                borderWidth="0.5px"
-                colorScheme=" #320b01"
-                color="#1a000d"
-                mr={3}
-                onClick={handleFormClose}
-              >
-                <HStack>
-                  <Box>
-                    <RxCrossCircled color="#ffffff" size="18px" />
-                  </Box>
-                  <Text color="#ffffff" fontSize="1rem">
-                    Annuler
-                  </Text>
+                <HStack spacing={2}>
+                  <FaSave />
+                  <Text>Soumettre</Text>
                 </HStack>
               </Button>
             </HStack>

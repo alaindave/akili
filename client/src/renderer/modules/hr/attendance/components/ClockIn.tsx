@@ -320,7 +320,7 @@ const ClockIn = ({
                   mr="0.3rem"
                   bg={awayStatus === "CONGÉ" ? "#3182CE" : "#E53E3E"}
                   color="gray.200"
-                  fontSize="14px"
+                  fontSize="1rem"
                 >
                   {awayStatus}
                 </Badge>
@@ -405,7 +405,7 @@ const ClockIn = ({
               >
                 <EditablePreview
                   color="red.600"
-                  fontSize="18px"
+                  fontSize="1rem"
                   fontWeight="500"
                   px={2}
                   borderRadius="6px"

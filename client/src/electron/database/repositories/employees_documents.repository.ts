@@ -167,12 +167,21 @@ export async function uploadEmployeeDocument(
 // ============================================================
 // Upsert employee document
 // ============================================================
-
-export async function upsertEmployeeDocument(document: EmployeeDocument) {
+export async function upsertEmployeeDocument(
+  document: EmployeeDocument
+): Promise<void> {
   const companyId = document.companyId;
 
   if (!companyId) {
     throw new Error("Cannot upsert employee document without companyId");
+  }
+
+  if (!document.employeeId) {
+    throw new Error("Cannot upsert employee document without employeeId");
+  }
+
+  if (!document.fileName) {
+    throw new Error("Cannot upsert employee document without fileName");
   }
 
   const incomingServerVersion = document.serverVersion ?? 0;
@@ -192,15 +201,39 @@ export async function upsertEmployeeDocument(document: EmployeeDocument) {
     [companyId, document._id]
   );
 
-  // Do not overwrite a newer local/server version.
+  // ----------------------------------------------------------
+  // Do not overwrite a newer local/server version
+  // ----------------------------------------------------------
+
   if (existing && existing.serverVersion > incomingServerVersion) {
     return;
   }
 
-  // Do not overwrite local changes that have not been synced.
+  // ----------------------------------------------------------
+  // Do not overwrite local changes that haven't been synced
+  // ----------------------------------------------------------
+
   if (existing && existing.needsUpload === 1) {
     return;
   }
+
+  // ----------------------------------------------------------
+  // ALWAYS store a normalized relative path in SQLite
+  //
+  // Format:
+  //
+  // companyId/employeeId/fileName
+  //
+  // Example:
+  //
+  // abc123/employee456/Alain_Bedetse_ID_CARD.pdf
+  // ----------------------------------------------------------
+
+  const normalizedLocalPath = buildRelativeDocumentPath(
+    companyId,
+    document.employeeId,
+    path.basename(document.fileName)
+  );
 
   await run(
     `
@@ -250,7 +283,7 @@ export async function upsertEmployeeDocument(document: EmployeeDocument) {
       document.documentType,
       document.originalName,
       document.fileName,
-      document.localPath,
+      normalizedLocalPath,
       document.mimeType,
       document.fileSize,
       document.hash,
@@ -262,13 +295,20 @@ export async function upsertEmployeeDocument(document: EmployeeDocument) {
     ]
   );
 
+  // ----------------------------------------------------------
+  // Add local modifications to sync queue
+  // ----------------------------------------------------------
+
   if (document.needsUpload === 1) {
     await addToSyncQueue({
       companyId,
       entity: "employee_document",
       entityId: document._id,
       operation: document.isDeleted ? "delete" : "update",
-      payload: JSON.stringify(document),
+      payload: JSON.stringify({
+        ...document,
+        localPath: normalizedLocalPath,
+      }),
     });
   }
 }
@@ -438,10 +478,10 @@ export async function updateEmployeeDocument(
 // Delete employee document
 // ============================================================
 
-export async function deleteEmployeeDocument(companyId: string, id: string) {
+export async function deleteEmployeeDocument(companyId: string, _id: string) {
   const now = new Date().toISOString();
 
-  const document = await getEmployeeDocumentById(companyId, id);
+  const document = await getEmployeeDocumentById(companyId, _id);
 
   if (!document) {
     return false;
@@ -466,19 +506,17 @@ export async function deleteEmployeeDocument(companyId: string, id: string) {
       WHERE companyId = ?
         AND _id = ?
     `,
-    [now, companyId, id]
+    [now, companyId, _id]
   );
 
   await addToSyncQueue({
     companyId,
     entity: "employee_document",
-    entityId: id,
+    entityId: _id,
     operation: "delete",
     payload: JSON.stringify({
+      ...document,
       companyId,
-      _id: id,
-      employeeId: document.employeeId,
-      documentType: document.documentType,
       isDeleted: 1,
       updatedAt: now,
     }),

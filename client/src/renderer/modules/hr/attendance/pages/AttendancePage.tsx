@@ -540,7 +540,13 @@ const EmployeeAttendancePage = () => {
       {/* =====================================================
           HEADER
       ===================================================== */}
-      <Flex direction="column" bg="#F8F9FB" height="10rem" width="80vw">
+      <Flex
+        ml="0.5rem"
+        direction="column"
+        bg="#F8F9FB"
+        height="10rem"
+        width="80vw"
+      >
         <Flex>
           <Box>
             <HStack>
@@ -572,16 +578,16 @@ const EmployeeAttendancePage = () => {
             </HStack>
 
             <Text
-              fontWeight="500"
-              left="0.45rem"
-              fontSize={{
-                base: "0.85rem",
-                sm: "0.9rem",
-                md: "0.95rem",
-                lg: "1rem",
-              }}
               color="gray.500"
+              fontWeight="500"
+              fontSize={{
+                base: "0.8rem",
+                sm: "0.8rem",
+                md: "0.8rem",
+                lg: "0.9rem",
+              }}
               position="relative"
+              left="0.45rem"
               bottom="0.5rem"
               ml="0.5rem"
             >
@@ -653,7 +659,7 @@ const EmployeeAttendancePage = () => {
           overflowY="hidden"
           overflowX="hidden"
           mt="3rem"
-          ml="0.5rem"
+          ml="1rem"
         >
           <Text color="gray.800" fontSize="1rem" mt="0.7rem">
             Employé
@@ -701,7 +707,7 @@ const EmployeeAttendancePage = () => {
           </>
         ) : attendances.length === 0 ? (
           <Flex
-            ml="0.5rem"
+            ml="1rem"
             mt="4rem"
             width="78vw"
             minHeight={{

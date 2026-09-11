@@ -268,8 +268,8 @@ const EmployeeAdminPage = () => {
       direction="column"
       ml="0.01rem"
       w="100%"
-      minH="94vh"
-      bg="#ffffff"
+      minH="95vh"
+      bg="#F8FAFC"
       border="none"
       overflow="hidden"
       p={{ base: 3, md: 6 }}
@@ -476,8 +476,8 @@ const EmployeeAdminPage = () => {
           QUICK ACTIONS
       ====================================================== */}
 
-      <Box position="absolute" bottom="0.5rem">
-        <QuickActions onTaskCreate={handleTaskCreate} />
+      <Box>
+        <QuickActions onTaskCreate={handleTaskCreate} employees={employees} />
       </Box>
 
       {/* =====================================================
@@ -489,6 +489,9 @@ const EmployeeAdminPage = () => {
         onReminderClose={onReminderClose}
         notes={notes ?? ""}
       />
+      {/* =====================================================
+          LEAVE SUBMISSION MODAL
+      ====================================================== */}
     </Flex>
   );
 };

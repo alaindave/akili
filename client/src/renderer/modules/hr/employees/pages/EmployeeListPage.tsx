@@ -137,10 +137,10 @@ const EmployeeListPage = () => {
                   color="gray.500"
                   fontWeight="500"
                   fontSize={{
-                    base: "0.85rem",
-                    sm: "0.9rem",
-                    md: "0.95rem",
-                    lg: "1rem",
+                    base: "0.8rem",
+                    sm: "0.8rem",
+                    md: "0.8rem",
+                    lg: "0.9rem",
                   }}
                   lineHeight="1.3"
                   noOfLines={1}

@@ -121,12 +121,8 @@ export function registerPayrollGenerationIPC() {
    */
   ipcMain.handle(
     "payroll:returnToDraft",
-    async (_, payrollRunId: string, admin: AdminUser) => {
-      return await updatePayrollStatus(
-        admin.companyId,
-        payrollRunId,
-        "BROUILLON"
-      );
+    async (_, companyId: string, payrollRunId: string) => {
+      return await updatePayrollStatus(companyId, payrollRunId, "BROUILLON");
     }
   );
 
@@ -155,8 +151,8 @@ export function registerPayrollGenerationIPC() {
    */
   ipcMain.handle(
     "payroll:cancel",
-    async (_, payrollRunId: string, admin: AdminUser) => {
-      return await cancelPayrollRun(admin.companyId, payrollRunId, admin);
+    async (_, companyId: string, payrollRunId: string, admin: AdminUser) => {
+      return await cancelPayrollRun(companyId, payrollRunId, admin);
     }
   );
 

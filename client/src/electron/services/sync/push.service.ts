@@ -30,10 +30,16 @@ import {
 
 import { markPayrollSettingsSynced } from "../../database/repositories/payroll_settings.repository.js";
 import { markAttendanceDailyCheckSynced } from "../../database/repositories/attendanceDailyCheck.repository.js";
+
 import {
   getEmployeeDocumentsDir,
   getEmployeePhotoDir,
 } from "../../storage/directories.js";
+
+// IMPORTANT:
+// Use the employee document repository to check whether the
+// document still exists locally.
+import { getEmployeeDocument } from "../../database/repositories/employees_documents.repository.js";
 
 const API_URL = app.isPackaged
   ? "https://leather-works.onrender.com"
@@ -129,13 +135,88 @@ export async function pushPendingChanges(
 
   /*
    * ---------------------------------------------------------
+   * REMOVE OBSOLETE EMPLOYEE DOCUMENT UPDATES
+   * ---------------------------------------------------------
+   */
+
+  const obsoleteQueueIds: string[] = [];
+
+  const validPending = [];
+
+  for (const item of pending) {
+    if (item.entity === "employee_document" && item.operation === "update") {
+      const data = JSON.parse(item.payload);
+
+      const existingDocument = await getEmployeeDocument(
+        companyId,
+        data.employeeId,
+        data.documentType
+      );
+
+      if (!existingDocument) {
+        console.warn("SKIPPING OBSOLETE EMPLOYEE DOCUMENT UPDATE:", {
+          queueId: item._id,
+          companyId,
+          employeeId: data.employeeId,
+          documentId: data._id,
+          documentType: data.documentType,
+        });
+
+        obsoleteQueueIds.push(item._id);
+
+        continue;
+      }
+    }
+
+    validPending.push(item);
+  }
+
+  /*
+   * ---------------------------------------------------------
+   * MARK OBSOLETE QUEUE ITEMS AS SYNCED
+   * ---------------------------------------------------------
+   */
+
+  if (obsoleteQueueIds.length > 0) {
+    await markManySynced(companyId, obsoleteQueueIds);
+
+    console.log("MARKED OBSOLETE EMPLOYEE DOCUMENT UPDATES AS SYNCED:", {
+      companyId,
+      count: obsoleteQueueIds.length,
+      queueIds: obsoleteQueueIds,
+    });
+  }
+
+  /*
+   * ---------------------------------------------------------
+   * NOTHING LEFT TO PUSH
+   * ---------------------------------------------------------
+   */
+
+  if (!validPending.length) {
+    const remainingPending = await getUnsyncedItems(companyId);
+
+    console.log("PUSH COMPLETE - ONLY OBSOLETE ITEMS WERE FOUND:", {
+      companyId,
+      skipped: obsoleteQueueIds.length,
+      stillPending: remainingPending.length,
+    });
+
+    return {
+      pendingChanges: remainingPending.length,
+      syncedCount: obsoleteQueueIds.length,
+    };
+  }
+
+  /*
+   * ---------------------------------------------------------
    * CREATE FORM DATA
    * ---------------------------------------------------------
    */
 
   const form = new FormData();
 
-  const items = pending.map((item) => {
+  const items = validPending.map((item) => {
     const data = JSON.parse(item.payload);
 
     return {
@@ -161,7 +242,7 @@ export async function pushPendingChanges(
    * ---------------------------------------------------------
    */
 
-  for (const item of pending) {
+  for (const item of validPending) {
     const data = JSON.parse(item.payload);
 
     switch (item.entity) {
@@ -200,6 +281,7 @@ export async function pushPendingChanges(
           fileName: data.fileName,
           mimeType: data.mimeType,
         });
+
         if (fs.existsSync(documentPath)) {
           form.append(
             "employees_documents",
@@ -213,6 +295,7 @@ export async function pushPendingChanges(
           console.error("DOCUMENT FILE MISSING:", {
             companyId,
             employeeId: data.employeeId,
+            documentId: data._id,
             localPath: data.localPath,
           });
         }
@@ -230,7 +313,8 @@ export async function pushPendingChanges(
 
   console.log("FORM TO SEND TO BACKEND:", {
     companyId,
-    itemCount: pending.length,
+    itemCount: validPending.length,
+    skippedObsolete: obsoleteQueueIds.length,
   });
 
   const response = await axios.post(`${API_URL}/sync/push`, form, {
@@ -250,7 +334,7 @@ export async function pushPendingChanges(
 
   /*
    * ---------------------------------------------------------
-   * MARK SYNC QUEUE ITEMS AS SYNCED
+   * MARK SERVER-SYNCED QUEUE ITEMS
    * ---------------------------------------------------------
    */
 
@@ -264,7 +348,7 @@ export async function pushPendingChanges(
    * ---------------------------------------------------------
    */
 
-  for (const item of pending) {
+  for (const item of validPending) {
     if (!syncedIds.includes(item._id)) {
       continue;
     }
@@ -348,14 +432,18 @@ export async function pushPendingChanges(
 
   const pendingChanges = remainingPending.length;
 
+  const totalSynced = syncedIds.length + obsoleteQueueIds.length;
+
   console.log("PUSH COMPLETE:", {
     companyId,
-    synced: syncedIds.length,
+    synced: totalSynced,
+    pushedSuccessfully: syncedIds.length,
+    skippedObsolete: obsoleteQueueIds.length,
     stillPending: pendingChanges,
   });
 
   return {
     pendingChanges,
-    syncedCount: syncedIds.length,
+    syncedCount: totalSynced,
   };
 }

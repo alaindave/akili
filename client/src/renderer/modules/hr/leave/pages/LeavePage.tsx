@@ -222,7 +222,7 @@ const EmployeeLeavePage = () => {
               color="#1F2937"
               fontSize="clamp(1.3rem, 1vw + 0.8rem, 1.4rem)"
               fontWeight="700"
-              ml="0.5rem"
+              ml="1rem"
               mt="1.3rem"
             >
               Congés
@@ -244,16 +244,21 @@ const EmployeeLeavePage = () => {
           </HStack>
 
           <Text
-            fontWeight="500"
-            left="0.45rem"
-            fontSize="clamp(1rem, 1vw + 0.8rem, 1rem)"
             color="gray.500"
+            fontWeight="500"
+            fontSize={{
+              base: "0.8rem",
+              sm: "0.8rem",
+              md: "0.8rem",
+              lg: "0.9rem",
+            }}
             position="relative"
+            left="1rem"
             bottom="0.5rem"
           >
             Gérez les demandes de congés
           </Text>
-          <Box mt="3rem" ml="0.5rem">
+          <Box mt="3rem" ml="1rem">
             <EmployeeFilterMenu onFilterClicked={setFilter} />
           </Box>
         </Box>
@@ -291,7 +296,7 @@ const EmployeeLeavePage = () => {
 
       {leaves.length === 0 ? (
         <Flex
-          ml="0.5rem"
+          ml="1rem"
           mt="6rem"
           width="80vw"
           minHeight={{
@@ -336,7 +341,7 @@ const EmployeeLeavePage = () => {
             overflowY="hidden"
             overflowX="hidden"
             mt="2.3rem"
-            ml="0.4rem"
+            ml="1rem"
           >
             <Text color="gray.800" fontSize="1rem" ml={8} mt={4}>
               Employé

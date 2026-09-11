@@ -1,22 +1,17 @@
-import { Link, useLocation } from "react-router-dom";
 import {
   Box,
   Flex,
   HStack,
-  Text,
-  VStack,
-  Image,
-  Spacer,
+  Text
 } from "@chakra-ui/react";
-import type Employee from "../../../../../common/types/Employee";
+import { useEffect, useState } from "react";
 import { FaArrowLeftLong } from "react-icons/fa6";
 import { MdOutlineChevronRight } from "react-icons/md";
+import { Link, useLocation } from "react-router-dom";
 import { Attendance } from "../../../../../common/types/Attendance";
-import { GoDotFill } from "react-icons/go";
-import defaultAvatar from "../assets/default-avatar.jpeg";
-import AttendanceTable from "../../attendance/components/AttendanceRecordTable";
-import { useEffect, useState } from "react";
+import type Employee from "../../../../../common/types/Employee";
 import useAdminUser from "../../../../../store/auth.store";
+import AttendanceTable from "../../attendance/components/AttendanceRecordTable";
 
 type EmployeeState = {
   employee?: Employee;

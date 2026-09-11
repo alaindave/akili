@@ -13,23 +13,22 @@ interface Props {
 const PayslipItemDisplay = ({ itemName, amount, color, icon }: Props) => {
   const payrollSettings = usePayrollSettings();
   const currency = payrollSettings?.currency ?? "BIF";
-  const cardBgColor = `${color}.50`;
   const iconBgColor = `${color}.100`;
   const iconColor = `${color}.600`;
 
   return (
-    <HStack height="100px" width="300px" bg={cardBgColor} mt="1rem">
+    <HStack height="100px" width="300px" bg="transparent" mt="1rem">
       <Box
         ml="0.5rem"
-        height="3rem"
-        width="3rem"
+        height="2.1rem"
+        width="2.1rem"
         borderRadius="1.5rem"
         bg={iconBgColor}
       >
         <ChakraIcon
           as={icon}
           color={iconColor}
-          fontSize="1.8rem"
+          fontSize="1.1rem"
           position="relative"
           left="0.5rem"
           top="0.5rem"

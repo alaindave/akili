@@ -437,7 +437,7 @@ const EmployeeLeaveCard = ({ leave, onDelete, gridTemplate }: Props) => {
     <Grid
       templateColumns={gridTemplate}
       alignItems="center"
-      ml="0.5rem"
+      ml="1rem"
       px={3}
       py={3}
       bg="#ffffff"
@@ -465,7 +465,7 @@ const EmployeeLeaveCard = ({ leave, onDelete, gridTemplate }: Props) => {
           <Text
             color="gray.800"
             fontWeight="500"
-            fontSize="1.1rem"
+            fontSize="1rem"
             whiteSpace="normal"
             wordBreak="break-word"
             maxW="7rem"
@@ -481,7 +481,7 @@ const EmployeeLeaveCard = ({ leave, onDelete, gridTemplate }: Props) => {
       =================================================== */}
 
       <Box>
-        <Text ml="0.5rem" color="gray.600" fontWeight="500" fontSize="1.1rem">
+        <Text ml="0.5rem" color="gray.600" fontWeight="500" fontSize="1rem">
           {new Date(startDate).toLocaleDateString("fr-FR")}
         </Text>
       </Box>
@@ -491,7 +491,7 @@ const EmployeeLeaveCard = ({ leave, onDelete, gridTemplate }: Props) => {
       =================================================== */}
 
       <Box>
-        <Text color="gray.600" fontWeight="500" fontSize="1.1rem">
+        <Text color="gray.600" fontWeight="500" fontSize="1rem">
           {new Date(endDate).toLocaleDateString("fr-FR")}
         </Text>
       </Box>
@@ -529,7 +529,7 @@ const EmployeeLeaveCard = ({ leave, onDelete, gridTemplate }: Props) => {
                 : "yellow.500"
             }
             fontWeight="600"
-            fontSize="1.05rem"
+            fontSize="1rem"
             whiteSpace="normal"
             wordBreak="break-word"
           >
@@ -543,7 +543,7 @@ const EmployeeLeaveCard = ({ leave, onDelete, gridTemplate }: Props) => {
       =================================================== */}
 
       <Box position="relative" left="1rem">
-        <Text color="gray.800" fontSize="1.1rem">
+        <Text color="gray.800" fontSize="1rem">
           {remainingLeave}
         </Text>
       </Box>

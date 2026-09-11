@@ -337,12 +337,6 @@ export default function PayrollPage() {
           >
             Générer fiches de paye
           </Button>
-
-          <Box mt="1rem" mr="2rem">
-            <Link to="/employees_admin/payroll/settings">
-              <IoSettings fontSize="1.9rem" />
-            </Link>
-          </Box>
         </Flex>
 
         <Box mt="3rem" ml="1rem">
@@ -388,6 +382,7 @@ export default function PayrollPage() {
                 borderWidth="1px"
                 borderRadius="lg"
                 overflowY="auto"
+                mt="1.5rem"
               >
                 <Table mt="1rem" variant="simple" size="md">
                   <Thead position="sticky" top={0} zIndex={1} bg="gray.50">
@@ -558,15 +553,23 @@ export default function PayrollPage() {
           )}
         </Box>
       </Box>
-      <Box
-        ml="1rem"
-        fontSize="1.2rem"
-        fontFamily="monospace"
-        fontWeight="600"
-        width="250px"
-      >
-        <MonthDropDown onChange={(month) => setSubmissionMonth(month)} />
-      </Box>
+      <Flex justify="space-between">
+        <Box
+          ml="1rem"
+          mb="0.5rem"
+          fontSize="1.2rem"
+          fontFamily="monospace"
+          fontWeight="600"
+          width="250px"
+        >
+          <MonthDropDown onChange={(month) => setSubmissionMonth(month)} />
+        </Box>
+        <Box mr="2rem">
+          <Link to="/employees_admin/payroll/settings">
+            <IoSettings fontSize="1.9rem" />
+          </Link>
+        </Box>
+      </Flex>
     </Flex>
   );
 }

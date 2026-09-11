@@ -189,7 +189,7 @@ const EmployeeDetailsTab = ({ employee }: Props) => {
           bg="white"
           borderBottomColor="rgba(255,255,255,0.08)"
           overflowX="auto"
-          overflowY="hidden"
+          overflowY="auto"
           whiteSpace="nowrap"
           sx={{
             "&::-webkit-scrollbar": {
