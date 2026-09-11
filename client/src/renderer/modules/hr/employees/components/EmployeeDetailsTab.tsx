@@ -256,7 +256,6 @@ const EmployeeDetailsTab = ({ employee }: Props) => {
             px={{ base: 3, md: 5 }}
             _selected={{
               color: "blue.600",
-              borderColor: "#F2B705",
               bg: "transparent",
             }}
             _hover={{
@@ -500,11 +499,15 @@ const EmployeeDetailsTab = ({ employee }: Props) => {
       >
         <AlertDialogOverlay backdropFilter="auto" backdropBlur="0.5rem">
           <AlertDialogContent
-            bg="#08162b"
-            color="white"
+            bg="white"
+            color="#1F2937"
+            borderRadius="10px"
+            border="1px solid #CBD5E1"
+            boxShadow="0 12px 35px rgba(15, 23, 42, 0.18)"
+            overflow="hidden"
             mx={4}
             position="relative"
-            top="8rem"
+            top="6rem"
           >
             <AlertDialogHeader>Supprimer le document</AlertDialogHeader>
 

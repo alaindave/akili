@@ -1,5 +1,6 @@
 import { ipcMain, shell, dialog, app } from "electron";
-import fs from "fs/promises";
+import fs from "fs";
+import fsPromises from "fs/promises";
 import path from "path";
 
 import {
@@ -119,6 +120,15 @@ export function registerEmployeeDocumentIPC() {
       console.log("STORED PATH:", localPath);
       console.log("ABSOLUTE PATH:", absolutePath);
 
+      console.log("FILE EXISTS:", fs.existsSync(absolutePath));
+
+      if (!fs.existsSync(absolutePath)) {
+        console.error("DOCUMENT FILE DOES NOT EXIST");
+        console.error("Expected path:", absolutePath);
+
+        throw new Error(`Document file not found: ${absolutePath}`);
+      }
+
       const error = await shell.openPath(absolutePath);
 
       if (error) {
@@ -154,7 +164,7 @@ export function registerEmployeeDocumentIPC() {
 
       // Verify the local file exists first
       try {
-        await fs.access(absolutePath);
+        await fsPromises.access(absolutePath);
       } catch {
         throw new Error(`EMPLOYEE DOCUMENT DOES NOT EXIST: ${absolutePath}`);
       }
@@ -167,7 +177,7 @@ export function registerEmployeeDocumentIPC() {
         return false;
       }
 
-      await fs.copyFile(absolutePath, result.filePath);
+      await fsPromises.copyFile(absolutePath, result.filePath);
 
       return true;
     }
@@ -229,7 +239,7 @@ export function registerEmployeeDocumentIPC() {
           document.localPath
         );
 
-        await fs.unlink(absolutePath);
+        await fsPromises.unlink(absolutePath);
       } catch {
         // Ignore if the file has already been removed
       }

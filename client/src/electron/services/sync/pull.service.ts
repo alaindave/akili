@@ -1,5 +1,6 @@
 import axios from "axios";
 import { app } from "electron";
+import fs from "fs/promises";
 import path from "path";
 import { getEmployeeById } from "../../database/repositories/employees.repository.js";
 import { setSetting } from "../../database/repositories/settings.repository.js";
@@ -79,6 +80,7 @@ import {
   upsertCompany,
 } from "../../database/repositories/companies.repository.js";
 import { getToken } from "../../auth.js";
+import { getEmployeeDocumentsDir } from "../../storage/directories.js";
 
 const API_URL = app.isPackaged
   ? "https://leather-works.onrender.com"
@@ -487,15 +489,79 @@ async function syncEmployeeDocuments(
 
       const localVersion = localDocument?.serverVersion ?? 0;
 
+      /*
+       * =========================================================
+       * DOCUMENT DELETED ON SERVER
+       * =========================================================
+       */
+      if (document.isDeleted) {
+        console.log(`DOCUMENT DELETED ON SERVER: ${document._id}`);
+
+        /*
+         * Delete the physical local file first.
+         *
+         */
+        if (localDocument?.localPath) {
+          const employeeDocumentsDir = getEmployeeDocumentsDir();
+
+          const absolutePath = path.join(
+            employeeDocumentsDir,
+            localDocument.localPath
+          );
+
+          try {
+            await fs.unlink(absolutePath);
+            console.log("PHYSICALLY DELETED EMPLOYEE DOCUMENT:", absolutePath);
+          } catch (error: any) {
+            if (error?.code === "ENOENT") {
+              console.log("DOCUMENT FILE ALREADY DELETED:", absolutePath);
+            } else {
+              throw error;
+            }
+          }
+        } else {
+          console.log(
+            "NO LOCAL PATH FOUND FOR DELETED DOCUMENT:",
+            document._id
+          );
+        }
+
+        /*
+         * Update the local SQLite record with the server's
+         * deleted version.
+         */
+        await upsertEmployeeDocument(document);
+
+        await markEmployeeDocumentSynced(document.companyId, document._id);
+
+        console.log(
+          `DELETED DOCUMENT SYNCED: ${document._id} ` +
+            `(v${document.serverVersion})`
+        );
+
+        continue;
+      }
+
+      /*
+       * =========================================================
+       * DOCUMENT ALREADY UP TO DATE
+       * =========================================================
+       */
       if (localVersion >= document.serverVersion) {
         console.log(
           `DOCUMENT ALREADY UP TO DATE: ` +
             `${document.employeeId} ` +
             `(${document.documentType})`
         );
+
         continue;
       }
 
+      /*
+       * =========================================================
+       * GET EMPLOYEE
+       * =========================================================
+       */
       const employee = await getEmployeeById(
         document.companyId,
         document.employeeId
@@ -507,21 +573,36 @@ async function syncEmployeeDocuments(
         );
       }
 
+      /*
+       * =========================================================
+       * DOWNLOAD DOCUMENT
+       * =========================================================
+       */
       await downloadEmployeeDocument(employee, document);
 
-      const employeeFolderName =
-        `${employee.firstName}_${employee.lastName}_${employee._id}`
-          .replace(/[<>:"/\\|?*\x00-\x1F]/g, "")
-          .replace(/\s+/g, "_");
+      /*
+       * =========================================================
+       * LOCAL STORED PATH
+       *
+       * Keep this consistent with downloadEmployeeDocument().
+       *
+       * employees_documents/
+       *   companyId/
+       *     employeeId/
+       *       documentType/
+       *         fileName
+       * =========================================================
+       */
+      const localPath = [
+        document.companyId,
+        document.employeeId,
+        document.documentType,
+        document.fileName,
+      ].join("/");
 
       await upsertEmployeeDocument({
         ...document,
-        localPath: path.join(
-          "employees_documents",
-          employeeFolderName,
-          document.documentType,
-          document.fileName
-        ),
+        localPath,
       });
 
       await markEmployeeDocumentSynced(document.companyId, document._id);

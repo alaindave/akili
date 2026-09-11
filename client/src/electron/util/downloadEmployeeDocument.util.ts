@@ -18,40 +18,45 @@ export async function downloadEmployeeDocument(
     throw new Error(`Employee ${document.employeeId} not found`);
   }
 
+  if (!employee.companyId) {
+    throw new Error(`Employee ${employee._id} does not have a companyId`);
+  }
+
   const url = `${API_URL}/documents/${document._id}`;
 
   const response = await axios.get(url, {
     responseType: "arraybuffer",
   });
 
-  // Get installation-specific documents directory
   const employeeDocumentsDir = getEmployeeDocumentsDir();
 
-  const sanitizeFolderPart = (value: string) =>
+  const sanitizePathPart = (value: string) =>
     value
       .replace(/[<>:"/\\|?*\x00-\x1F]/g, "")
       .replace(/\s+/g, "_")
       .trim();
 
-  const employeeFolderName = [
-    sanitizeFolderPart(employee.firstName),
-    sanitizeFolderPart(employee.lastName),
-    employee._id,
-  ].join("_");
+  const companyId = sanitizePathPart(employee.companyId);
+  const employeeId = sanitizePathPart(employee._id);
+  const documentType = sanitizePathPart(document.documentType);
+  const fileName = sanitizePathPart(document.fileName);
 
-  const documentFolder = path.join(
-    employeeDocumentsDir,
-    employeeFolderName,
-    sanitizeFolderPart(document.documentType)
-  );
+  const documentFolder = path.join(employeeDocumentsDir, companyId, employeeId);
 
   await fs.mkdir(documentFolder, {
     recursive: true,
   });
 
-  const localPath = path.join(documentFolder, document.fileName);
+  const localPath = path.join(documentFolder, fileName);
 
   await fs.writeFile(localPath, Buffer.from(response.data));
+
+  console.log("EMPLOYEE DOCUMENT DOWNLOADED:");
+  console.log("COMPANY ID:", companyId);
+  console.log("EMPLOYEE ID:", employeeId);
+  console.log("DOCUMENT TYPE:", documentType);
+  console.log("FILE NAME:", fileName);
+  console.log("LOCAL PATH:", localPath);
 
   return localPath;
 }
