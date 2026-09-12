@@ -69,14 +69,14 @@ const EmployeeLeaveReport = () => {
             <Box>
               <MdOutlineChevronRight fontSize="1.3rem" />
             </Box>
-            <Text fontSize="1.1rem" fontWeight="500">
+            <Text fontSize="1.05rem" fontWeight="500">
               {" "}
               {employee?.firstName} {employee?.lastName}
             </Text>
             <Box>
               <MdOutlineChevronRight fontSize="1.3rem" />
             </Box>
-            <Text fontSize="1.1rem" fontWeight="500">
+            <Text fontSize="1rem" fontWeight="500">
               Congés
             </Text>
           </HStack>

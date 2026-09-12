@@ -152,7 +152,7 @@ const LeaveSubmissionModal = ({
                     Demande de congé
                   </Text>
 
-                  <Text fontSize="0.8rem" color="gray.500" fontWeight="400">
+                  <Text fontSize="0.9rem" color="gray.500" fontWeight="400">
                     Remplissez les informations de la demande
                   </Text>
                 </Box>
@@ -279,7 +279,7 @@ const LeaveSubmissionModal = ({
                     {/* Last name */}
                     <Box>
                       <FormLabel
-                        fontSize="0.78rem"
+                        fontSize="0.92rem"
                         fontWeight="600"
                         color="gray.600"
                         mb={1}
@@ -306,7 +306,7 @@ const LeaveSubmissionModal = ({
                     {/* First name */}
                     <Box>
                       <FormLabel
-                        fontSize="0.78rem"
+                        fontSize="0.92rem"
                         fontWeight="600"
                         color="gray.600"
                         mb={1}
@@ -333,7 +333,7 @@ const LeaveSubmissionModal = ({
                     {/* Role */}
                     <Box>
                       <FormLabel
-                        fontSize="0.78rem"
+                        fontSize="0.92rem"
                         fontWeight="600"
                         color="gray.600"
                         mb={1}
@@ -360,7 +360,7 @@ const LeaveSubmissionModal = ({
                     {/* Department */}
                     <Box>
                       <FormLabel
-                        fontSize="0.78rem"
+                        fontSize="0.92rem"
                         fontWeight="600"
                         color="gray.600"
                         mb={1}
@@ -406,7 +406,7 @@ const LeaveSubmissionModal = ({
                     {/* Start date */}
                     <Box>
                       <FormLabel
-                        fontSize="0.78rem"
+                        fontSize="0.92rem"
                         fontWeight="600"
                         color="gray.600"
                         mb={1}
@@ -472,7 +472,7 @@ const LeaveSubmissionModal = ({
                     {/* End date */}
                     <Box>
                       <FormLabel
-                        fontSize="0.78rem"
+                        fontSize="0.92rem"
                         fontWeight="600"
                         color="gray.600"
                         mb={1}
@@ -554,7 +554,7 @@ const LeaveSubmissionModal = ({
                       {/* Subject */}
                       <Box>
                         <FormLabel
-                          fontSize="0.78rem"
+                          fontSize="0.92rem"
                           fontWeight="600"
                           color="gray.600"
                           mb={1}
@@ -587,7 +587,7 @@ const LeaveSubmissionModal = ({
                       {/* Notes */}
                       <Box>
                         <FormLabel
-                          fontSize="0.78rem"
+                          fontSize="0.92rem"
                           fontWeight="600"
                           color="gray.600"
                           mb={1}

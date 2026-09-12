@@ -109,7 +109,7 @@ const EmployeePayrollReport = () => {
                 <Box>
                   <MdOutlineChevronRight fontSize="1.3rem" />
                 </Box>
-                <Text fontSize="1rem" fontWeight="500">
+                <Text fontSize="1.05rem" fontWeight="500">
                   {" "}
                   {employee?.firstName} {employee?.lastName}
                 </Text>
@@ -128,23 +128,37 @@ const EmployeePayrollReport = () => {
             }}
             state={{ employee, photo_url }}
           >
-            <Box position="absolute" top="1rem " right="1.5rem">
-              <IoSettings fontSize="1.7rem" />
+            <Box position="absolute" top="2rem " right="1.5rem">
+              <IoSettings fontSize="1.75rem" />
             </Box>
           </Link>
         </Flex>
         {payrollRuns.length !== 0 ? (
           <>
-            <Box mt="3rem" ml="5rem" mb="1rem">
-              <PayrollStatusFilter onFilterClicked={setStatusFilter} />
-            </Box>
+            <Flex ml="8rem" justify="space-between">
+              <Box mt="2rem" mb="1rem">
+                <PayrollStatusFilter onFilterClicked={setStatusFilter} />
+              </Box>
+              <Box
+                mt="2rem"
+                fontSize="1.2rem"
+                fontFamily="monospace"
+                fontWeight="600"
+                width="250px"
+              >
+                <MonthDropDown
+                  onChange={(month) => setSubmissionMonth(month)}
+                />
+              </Box>
+            </Flex>
             <TableContainer
               width="60vw"
               borderWidth="1px"
               borderRadius="lg"
               overflowX="auto"
               overflowY="auto"
-              ml="5rem"
+              ml="8rem"
+              mt="2rem"
             >
               <Table variant="simple" size="md">
                 <Thead position="sticky" top={0} zIndex={1} bg="gray.50">
@@ -237,16 +251,6 @@ const EmployeePayrollReport = () => {
             </Text>
           </Flex>
         )}
-      </Box>
-
-      <Box
-        ml="1rem"
-        fontSize="1.2rem"
-        fontFamily="monospace"
-        fontWeight="600"
-        width="250px"
-      >
-        <MonthDropDown onChange={(month) => setSubmissionMonth(month)} />
       </Box>
     </Flex>
   );

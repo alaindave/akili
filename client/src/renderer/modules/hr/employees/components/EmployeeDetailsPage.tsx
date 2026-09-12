@@ -1,6 +1,6 @@
 import { Box, Flex, HStack, Stack, Text, VStack } from "@chakra-ui/react";
 import { ErrorBoundary } from "react-error-boundary";
-import { CiCalendarDate } from "react-icons/ci";
+import { IoCalendarNumberSharp } from "react-icons/io5";
 import { FaDollarSign, FaRegClock } from "react-icons/fa";
 import { GoDotFill } from "react-icons/go";
 import { Link, useLocation, useParams } from "react-router-dom";
@@ -210,8 +210,7 @@ const EmployeeDetailsPage = () => {
                 borderRadius="0.4rem"
                 padding="0.4rem"
               >
-                <CiCalendarDate size="1.2rem" color="blue" />
-
+                <IoCalendarNumberSharp size="1.2rem" color="blue" />
                 <Text>Congés</Text>
               </HStack>
             </Link>

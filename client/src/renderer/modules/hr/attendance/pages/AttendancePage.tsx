@@ -32,6 +32,7 @@ import {
   useDeleteAttendance,
   useMarkAbsent,
 } from "../hooks/useAttendance";
+import useSyncStore from "../../../../../store/sync.store";
 
 /* ================= SHIMMER ================= */
 
@@ -137,6 +138,7 @@ const EmployeeAttendancePage = () => {
   /* ================= STORES ================= */
 
   const user = useAdminUser((store) => store.adminUser);
+  const syncVersion = useSyncStore((store) => store.syncVersion);
 
   /* ================= TOAST ================= */
 
@@ -218,8 +220,9 @@ const EmployeeAttendancePage = () => {
   ========================================================= */
 
   useEffect(() => {
+    refetchAttendance();
     loadDailyCheck();
-  }, [selectedDate]);
+  }, [syncVersion, selectedDate]);
 
   const loadDailyCheck = async () => {
     try {
@@ -580,12 +583,7 @@ const EmployeeAttendancePage = () => {
             <Text
               color="gray.500"
               fontWeight="500"
-              fontSize={{
-                base: "0.8rem",
-                sm: "0.8rem",
-                md: "0.8rem",
-                lg: "0.9rem",
-              }}
+              fontSize="0.93rem"
               position="relative"
               left="0.45rem"
               bottom="0.5rem"
@@ -596,7 +594,7 @@ const EmployeeAttendancePage = () => {
           </Box>
           <Spacer />
           {dailyCheck?.status === "LOCKED" && (
-            <Box mt="1.3rem">
+            <Box position="absolute" top="1.3rem" right="5rem">
               <FaLock size="2rem" color="#D4A017" />
             </Box>
           )}

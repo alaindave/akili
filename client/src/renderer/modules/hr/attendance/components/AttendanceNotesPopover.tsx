@@ -9,7 +9,7 @@ import {
   Text,
   useDisclosure,
 } from "@chakra-ui/react";
-import Attendance from "../../../../../common/types/Attendance";
+import { Attendance } from "../../../../../common/types/Attendance";
 
 interface Props {
   attendance: Attendance;
@@ -23,6 +23,8 @@ const AttendanceNotesPopover = ({ attendance }: Props) => {
     ABSENT: "red",
     CONGÉ: "blue",
   } as const;
+
+  if (!attendance.status) return;
 
   return (
     <>

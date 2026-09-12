@@ -33,19 +33,19 @@ const EmployeeDashboard = ({
       >
         <HStack position="relative" top="30px">
           <Box
-            width="2.7rem"
-            height="2.7rem"
+            width="2rem"
+            height="2rem"
             backgroundColor="#000080"
-            borderRadius="10px"
+            borderRadius="15px"
             padding="8px"
             marginLeft="8px"
           >
-            <BsFillPeopleFill color="#ffffff" size="1.6rem" />
+            <BsFillPeopleFill color="#ffffff" size="1.2rem" />
           </Box>
 
           <Text
             color="gray.700"
-            fontSize="22px"
+            fontSize="1.3rem"
             fontWeight="700"
             position="relative"
             left="1rem"
@@ -80,22 +80,22 @@ const EmployeeDashboard = ({
       >
         <HStack>
           <Box
-            width="2.7rem"
-            height="2.7rem"
-            backgroundColor=" #16833e"
-            borderRadius="10px"
-            padding="8px"
+            width="2rem"
+            height="2rem"
             position="relative"
             right="1.3rem"
+            padding="10px"
+            borderRadius="15px"
+            backgroundColor=" #16833e"
           >
-            <MdCoPresent color="#ffffff" size="1.6rem" />
+            <MdCoPresent color="#ffffff" size="1rem" />
           </Box>
           <Text
             color="gray.700"
-            fontSize="22px"
+            fontSize="1.3rem"
             fontWeight="700"
             position="relative"
-            right="1.5rem"
+            right="1rem"
           >
             Présents
           </Text>
@@ -124,20 +124,20 @@ const EmployeeDashboard = ({
       >
         <HStack>
           <Box
-            width="2.7rem"
-            height="2.7rem"
+            width="2rem"
+            height="2rem"
             backgroundColor="red.500"
-            borderRadius="10px"
+            borderRadius="15px"
             padding="8px"
             position="relative"
             right="1rem"
           >
-            <FaRegClock color="#ffffff" size="1.6rem" />
+            <FaRegClock color="#ffffff" size="1.1rem" />
           </Box>
           <Text
             color="gray.700"
             fontWeight="700"
-            fontSize="22px"
+            fontSize="1.3rem"
             marginLeft="0.8rem"
             position="relative"
             right="1.5rem"
@@ -169,20 +169,20 @@ const EmployeeDashboard = ({
       >
         <HStack>
           <Box
-            width="2.7rem"
-            height="2.7rem"
-            borderRadius="10px"
+            width="2rem"
+            height="2rem"
+            borderRadius="15px"
             padding="8px"
             backgroundColor="blue.500"
             position="relative"
             right="1rem"
           >
-            <CiCalendarDate color="#ffffff" size="1.6rem" />
+            <CiCalendarDate color="#ffffff" size="1.1rem" />
           </Box>
           <Text
             color="gray.700"
             fontWeight="700"
-            fontSize="22px"
+            fontSize="1.3rem"
             position="relative"
             right="1rem"
           >

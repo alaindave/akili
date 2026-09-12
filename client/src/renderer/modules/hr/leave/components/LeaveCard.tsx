@@ -465,7 +465,7 @@ const EmployeeLeaveCard = ({ leave, onDelete, gridTemplate }: Props) => {
           <Text
             color="gray.800"
             fontWeight="500"
-            fontSize="1rem"
+            fontSize="1.05rem"
             whiteSpace="normal"
             wordBreak="break-word"
             maxW="7rem"
@@ -481,7 +481,7 @@ const EmployeeLeaveCard = ({ leave, onDelete, gridTemplate }: Props) => {
       =================================================== */}
 
       <Box>
-        <Text ml="0.5rem" color="gray.600" fontWeight="500" fontSize="1rem">
+        <Text ml="0.5rem" color="gray.600" fontWeight="500" fontSize="1.05rem">
           {new Date(startDate).toLocaleDateString("fr-FR")}
         </Text>
       </Box>
@@ -491,7 +491,7 @@ const EmployeeLeaveCard = ({ leave, onDelete, gridTemplate }: Props) => {
       =================================================== */}
 
       <Box>
-        <Text color="gray.600" fontWeight="500" fontSize="1rem">
+        <Text color="gray.600" fontWeight="500" fontSize="1.05rem">
           {new Date(endDate).toLocaleDateString("fr-FR")}
         </Text>
       </Box>
@@ -513,7 +513,7 @@ const EmployeeLeaveCard = ({ leave, onDelete, gridTemplate }: Props) => {
           <Text
             color="yellow.600"
             fontWeight="600"
-            fontSize="1.05rem"
+            fontSize="1rem"
             whiteSpace="normal"
             wordBreak="break-word"
           >

@@ -69,7 +69,7 @@ const TaskPage = () => {
   };
 
   return (
-    <Flex bg="#F8FAFC" direction="column" width="100%">
+    <Flex bg="#F8FAFC" direction="column" height="100%" width="100%">
       <Flex width="100%" justify="space-between">
         <Box>
           <HStack>
@@ -98,7 +98,7 @@ const TaskPage = () => {
           </HStack>
           <Text
             fontWeight="500"
-            fontSize="clamp(1rem, 1vw + 0.8rem, 1rem)"
+            fontSize="0.9rem"
             color="gray.500"
             position="relative"
             bottom="0.5rem"

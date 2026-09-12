@@ -89,7 +89,6 @@ const EmployeeLeavePage = () => {
 
   useEffect(() => {
     if (syncVersion === undefined) return;
-
     refetch();
   }, [syncVersion, refetch]);
 
@@ -246,12 +245,7 @@ const EmployeeLeavePage = () => {
           <Text
             color="gray.500"
             fontWeight="500"
-            fontSize={{
-              base: "0.8rem",
-              sm: "0.8rem",
-              md: "0.8rem",
-              lg: "0.9rem",
-            }}
+            fontSize="0.93rem"
             position="relative"
             left="1rem"
             bottom="0.5rem"

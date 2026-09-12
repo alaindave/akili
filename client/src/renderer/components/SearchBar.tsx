@@ -31,8 +31,9 @@ const SearchBar = ({ placeholderText, onSearch }: Props) => {
           placeholder={placeholderText}
           _placeholder={{ color: "gray", fontSize: "1rem", fontWeight: "500" }}
           variant="filled"
-          width="28vw"
-          height="45px"
+          minW="20vw"
+          maxW="30vw"
+          height="40px"
           textColor="black"
           _focus={{ bg: "#FFFFFF" }}
           _hover={{ bg: "#FFFFFF", borderColor: "gray.600" }}

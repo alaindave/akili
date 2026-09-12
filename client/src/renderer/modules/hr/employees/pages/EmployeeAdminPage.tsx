@@ -303,7 +303,7 @@ const EmployeeAdminPage = () => {
           </HStack>
 
           <Text
-            fontSize="clamp(1rem, 1vw + 0.8rem, 1.1rem)"
+            fontSize="0.93rem"
             color="gray.500"
             position="relative"
             bottom="0.5rem"
@@ -359,7 +359,7 @@ const EmployeeAdminPage = () => {
 
         <Box
           border="1px solid rgba(255,255,255,0.12)"
-          boxShadow="0 2px 8px rgba(0,0,0,0.5)"
+          boxShadow="0 2px 8px rgba(0,0,0,0.2)"
           borderRadius="5px"
           bg="#FFFFFF"
           p={5}
@@ -401,9 +401,9 @@ const EmployeeAdminPage = () => {
             flex="1"
             resize="none"
             color="#ffffff"
-            fontSize="clamp(1.3rem, 1vw + 0.8rem, 1.3rem)"
-            fontWeight="700"
-            fontFamily="system-ui"
+            fontSize={{ base: "1rem", sm: "1rem", md: "1.1rem" }}
+            fontWeight="500"
+            fontFamily="body"
             _placeholder={{
               color: "#6B7280",
             }}

@@ -319,7 +319,7 @@ export default function PayrollPage() {
             </HStack>
             <Text
               fontWeight="500"
-              fontSize="clamp(1rem, 1vw + 0.8rem, 1rem)"
+              fontSize="0.93rem"
               color="gray.500"
               position="relative"
               bottom="0.5rem"

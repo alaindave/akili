@@ -1,9 +1,4 @@
-import {
-  Box,
-  Flex,
-  HStack,
-  Text
-} from "@chakra-ui/react";
+import { Box, Flex, HStack, Text } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { FaArrowLeftLong } from "react-icons/fa6";
 import { MdOutlineChevronRight } from "react-icons/md";
@@ -80,18 +75,22 @@ const EmployeeAttendanceReport = () => {
         </Link>
         <Box mt="0.3rem">
           <HStack ml="1rem" position="relative" bottom="1rem">
-            <Text>Employés</Text>
+            <Text fontWeight="600" fontSize="1.1rem">
+              Employés
+            </Text>
             <Box>
-              <MdOutlineChevronRight fontSize="1.3rem" />
+              <MdOutlineChevronRight fontSize="1.1rem" />
             </Box>
-            <Text>
+            <Text fontWeight="500" fontSize="1.03rem">
               {" "}
               {employee?.firstName} {employee?.lastName}
             </Text>
             <Box>
-              <MdOutlineChevronRight fontSize="1.3rem" />
+              <MdOutlineChevronRight fontSize="1.1rem" />
             </Box>
-            <Text>Présence</Text>
+            <Text fontWeight="500" fontSize="1rem">
+              Présence
+            </Text>
           </HStack>
         </Box>
       </HStack>

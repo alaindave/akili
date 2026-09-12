@@ -329,7 +329,7 @@ const AddEmployee = () => {
                     Nouveau employé
                   </Text>
 
-                  <Text color="gray.500" fontSize="0.82rem" mt="2px">
+                  <Text color="gray.500" fontSize="0.9rem" mt="2px">
                     Ajoutez les informations du nouvel employé
                   </Text>
                 </VStack>
@@ -368,7 +368,7 @@ const AddEmployee = () => {
                     <FormControl isInvalid={!!errors.lastName}>
                       <FormLabel
                         mb="3px"
-                        fontSize="0.78rem"
+                        fontSize="0.92rem"
                         fontWeight="600"
                         color="gray.600"
                       >
@@ -394,7 +394,7 @@ const AddEmployee = () => {
                     <FormControl isInvalid={!!errors.firstName}>
                       <FormLabel
                         mb="3px"
-                        fontSize="0.78rem"
+                        fontSize="0.92rem"
                         fontWeight="600"
                         color="gray.600"
                       >
@@ -420,7 +420,7 @@ const AddEmployee = () => {
                     <FormControl isInvalid={!!errors.dateBirth}>
                       <FormLabel
                         mb="3px"
-                        fontSize="0.78rem"
+                        fontSize="0.92rem"
                         fontWeight="600"
                         color="gray.600"
                       >
@@ -463,7 +463,7 @@ const AddEmployee = () => {
                     <FormControl isInvalid={!!errors.matricule}>
                       <FormLabel
                         mb="3px"
-                        fontSize="0.78rem"
+                        fontSize="0.92rem"
                         fontWeight="600"
                         color="gray.600"
                       >
@@ -505,7 +505,7 @@ const AddEmployee = () => {
                     <FormControl isInvalid={!!errors.idNum}>
                       <FormLabel
                         mb="3px"
-                        fontSize="0.78rem"
+                        fontSize="0.92rem"
                         fontWeight="600"
                         color="gray.600"
                       >
@@ -531,7 +531,7 @@ const AddEmployee = () => {
                     <FormControl isInvalid={!!errors.role}>
                       <FormLabel
                         mb="3px"
-                        fontSize="0.78rem"
+                        fontSize="0.92rem"
                         fontWeight="600"
                         color="gray.600"
                       >
@@ -557,7 +557,7 @@ const AddEmployee = () => {
                     <FormControl isInvalid={!!errors.department}>
                       <FormLabel
                         mb="3px"
-                        fontSize="0.78rem"
+                        fontSize="0.92rem"
                         fontWeight="600"
                         color="gray.600"
                       >
@@ -594,7 +594,7 @@ const AddEmployee = () => {
                     <FormControl isInvalid={!!errors.salary}>
                       <FormLabel
                         mb="3px"
-                        fontSize="0.78rem"
+                        fontSize="0.92rem"
                         fontWeight="600"
                         color="gray.600"
                       >
@@ -624,7 +624,7 @@ const AddEmployee = () => {
                     <FormControl isInvalid={!!errors.dateHired}>
                       <FormLabel
                         mb="3px"
-                        fontSize="0.78rem"
+                        fontSize="0.92rem"
                         fontWeight="600"
                         color="gray.600"
                       >
@@ -685,7 +685,7 @@ const AddEmployee = () => {
                     <FormControl isInvalid={!!errors.telephone}>
                       <FormLabel
                         mb="3px"
-                        fontSize="0.78rem"
+                        fontSize="0.92rem"
                         fontWeight="600"
                         color="gray.600"
                       >
@@ -714,7 +714,7 @@ const AddEmployee = () => {
                     >
                       <FormLabel
                         mb="3px"
-                        fontSize="0.78rem"
+                        fontSize="0.92rem"
                         fontWeight="600"
                         color="gray.600"
                       >
@@ -756,7 +756,7 @@ const AddEmployee = () => {
                     <FormControl isInvalid={!!errors.emergencyContact}>
                       <FormLabel
                         mb="3px"
-                        fontSize="0.78rem"
+                        fontSize="0.92rem"
                         fontWeight="600"
                         color="gray.600"
                       >
@@ -782,7 +782,7 @@ const AddEmployee = () => {
                     <FormControl isInvalid={!!errors.relationship}>
                       <FormLabel
                         mb="3px"
-                        fontSize="0.78rem"
+                        fontSize="0.92rem"
                         fontWeight="600"
                         color="gray.600"
                       >
@@ -808,7 +808,7 @@ const AddEmployee = () => {
                     <FormControl isInvalid={!!errors.contactPhone}>
                       <FormLabel
                         mb="3px"
-                        fontSize="0.78rem"
+                        fontSize="0.92rem"
                         fontWeight="600"
                         color="gray.600"
                       >

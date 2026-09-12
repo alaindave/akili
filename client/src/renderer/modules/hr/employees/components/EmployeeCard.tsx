@@ -429,14 +429,6 @@ const EmployeeCard = ({ employeeId }: Props) => {
     }
   };
 
-  const formatDepartment = (department: string) => {
-    if (department === "ADMINISTRATION") return "Administration";
-    if (department === "ATELIER") return "Atelier";
-    if (department === "USINE") return "Usine";
-    if (department === "MAGASIN") return "Magasin";
-    return "Sentinelle";
-  };
-
   /* =======================================================
      EMPLOYEE LOADING / NOT FOUND
   ======================================================= */
@@ -548,10 +540,10 @@ const EmployeeCard = ({ employeeId }: Props) => {
           color="gray.900"
           fontWeight="600"
           fontSize={{
-            base: "0.95rem",
+            base: "0.98rem",
             sm: "1.05rem",
-            md: "1.2rem",
-            lg: "1.35rem",
+            md: "1.15rem",
+            lg: "1.23rem",
           }}
           lineHeight="1.25"
           whiteSpace="nowrap"
@@ -573,9 +565,9 @@ const EmployeeCard = ({ employeeId }: Props) => {
           <Text
             color="gray.700"
             fontSize={{
-              base: "0.72rem",
-              sm: "0.8rem",
-              md: "0.9rem",
+              base: "0.75rem",
+              sm: "0.85rem",
+              md: "0.95rem",
             }}
             fontWeight="500"
             whiteSpace="nowrap"
@@ -621,7 +613,7 @@ const EmployeeCard = ({ employeeId }: Props) => {
               lg: "240px",
             }}
           >
-            {formatDepartment(employee.department)}
+            {employee.department}
           </Text>
         </Flex>
       </Box>

@@ -136,12 +136,7 @@ const EmployeeListPage = () => {
                 <Text
                   color="gray.500"
                   fontWeight="500"
-                  fontSize={{
-                    base: "0.8rem",
-                    sm: "0.8rem",
-                    md: "0.8rem",
-                    lg: "0.9rem",
-                  }}
+                  fontSize="0.93rem"
                   lineHeight="1.3"
                   noOfLines={1}
                   pos="relative"
@@ -185,7 +180,7 @@ const EmployeeListPage = () => {
                   base: 0,
                   md: "20rem",
                 }}
-                mt="5rem"
+                mt="4.5rem"
               >
                 <SearchBar
                   placeholderText="Rechercher un employé"

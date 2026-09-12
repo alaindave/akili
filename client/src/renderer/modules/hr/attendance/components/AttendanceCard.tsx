@@ -552,7 +552,7 @@ const EmployeeAttendanceCard = ({
         <Text
           color="gray.800"
           fontWeight="600"
-          fontSize="1rem"
+          fontSize="1.05rem"
           whiteSpace="normal"
           wordBreak="break-word"
           maxW="7rem"
@@ -567,7 +567,7 @@ const EmployeeAttendanceCard = ({
           EMPLOYEE ID
       ====================================================== */}
 
-      <Text color="gray.600" fontWeight="500" fontSize="1rem">
+      <Text color="gray.600" fontWeight="500" fontSize="1.05rem">
         {employee?.matricule ?? attendance.matricule}
       </Text>
 
@@ -575,7 +575,7 @@ const EmployeeAttendanceCard = ({
           ROLE
       ====================================================== */}
 
-      <Text color="gray.600" fontWeight="500" fontSize="1rem">
+      <Text color="gray.600" fontWeight="500" fontSize="1.05rem">
         {employee?.role ?? attendance.role}
       </Text>
 
@@ -583,7 +583,7 @@ const EmployeeAttendanceCard = ({
           DEPARTMENT
       ====================================================== */}
 
-      <Text color="gray.600" fontWeight="500" fontSize="1rem">
+      <Text color="gray.600" fontWeight="500" fontSize="1.05rem">
         {formatDepartment(employee?.department) ??
           formatDepartment(attendance.department)}
       </Text>
