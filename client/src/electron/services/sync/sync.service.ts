@@ -14,8 +14,8 @@ const API_URL = app.isPackaged
 
 let syncing = false;
 
-const MAX_SYNC_RETRIES = 3;
-const SYNC_RETRY_DELAY = 2000;
+const MAX_SYNC_RETRIES = 6;
+const SYNC_RETRY_DELAY = 3000;
 
 export default async function sync(companyId: string) {
   console.log("SYNC SERVICE API URL:", API_URL);
@@ -194,16 +194,7 @@ export default async function sync(companyId: string) {
 
     try {
       const pullResult = await pullLatestChanges(companyId);
-
       console.log("PULL RESULTS:", pullResult);
-
-      /*
-       * pullLatestChanges MUST throw if any pulled item fails
-       * to be upserted.
-       *
-       * Therefore reaching this point means all pulled items
-       * were successfully upserted.
-       */
       console.log("ALL PULLED CHANGES UPSERTED SUCCESSFULLY.");
     } catch (error) {
       console.error("PULL FAILED:", error);

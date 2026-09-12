@@ -202,9 +202,6 @@ const EmployeeAttendancePage = () => {
     1.6fr 1.5fr 1.3fr 1.3fr 1fr 1fr 0.8fr
   `;
 
-  const delay = (ms: number) =>
-    new Promise((resolve) => setTimeout(resolve, ms));
-
   /* =========================================================
      CLOCK
   ========================================================= */
@@ -334,8 +331,6 @@ const EmployeeAttendancePage = () => {
       const result = await markAbsentMutation();
 
       console.log("MARK ABSENT RESULT", result);
-
-      await delay(6000);
 
       await attendanceDailyCheckSync();
 
@@ -528,12 +523,6 @@ const EmployeeAttendancePage = () => {
 
   const attendanceAction = getAttendanceAction();
 
-  const isItWeekend = (date: Date | string) => {
-    const now = new Date(date);
-    const dayOfWeek = now.getDay();
-    if (dayOfWeek === 0 || dayOfWeek === 6) return true;
-    return false;
-  };
   /* =========================================================
      RENDER
   ========================================================= */
@@ -827,7 +816,7 @@ const EmployeeAttendancePage = () => {
 
         {/* MARK ABSENT */}
 
-        {attendanceAction === "MARK_ABSENT" && !isItWeekend(selectedDate) && (
+        {attendanceAction === "MARK_ABSENT" && (
           <Button
             colorScheme="red"
             onClick={markAbsent}

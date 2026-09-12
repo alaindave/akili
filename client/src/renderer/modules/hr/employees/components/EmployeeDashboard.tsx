@@ -56,10 +56,10 @@ const EmployeeDashboard = ({
 
         <Text
           color="black"
-          fontSize="1.4rem"
+          fontSize="1.5rem"
           position="relative"
           left="5.5rem"
-          top="1.5rem"
+          top="1.9rem"
           fontWeight="700"
         >
           {employeeCount}
