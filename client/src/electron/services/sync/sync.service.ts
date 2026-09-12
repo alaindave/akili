@@ -14,8 +14,8 @@ const API_URL = app.isPackaged
 
 let syncing = false;
 
-const MAX_SYNC_RETRIES = 6;
-const SYNC_RETRY_DELAY = 3000;
+const MAX_SYNC_RETRIES = 10;
+const SYNC_RETRY_DELAY = 5000;
 
 export default async function sync(companyId: string) {
   console.log("SYNC SERVICE API URL:", API_URL);
