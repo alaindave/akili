@@ -252,7 +252,7 @@ const EmployeeLeavePage = () => {
           >
             Gérez les demandes de congés
           </Text>
-          <Box mt="3rem" ml="1rem">
+          <Box mt="2rem" ml="1rem">
             <EmployeeFilterMenu onFilterClicked={setFilter} />
           </Box>
         </Box>
@@ -275,7 +275,7 @@ const EmployeeLeavePage = () => {
 
             <Text>Soumettre une demande</Text>
           </Button>
-          <Box mt="6rem">
+          <Box mt="5rem">
             <SearchBar
               placeholderText="Rechercher un employé"
               onSearch={setSearchText}
@@ -334,7 +334,7 @@ const EmployeeLeavePage = () => {
             width="80vw"
             overflowY="hidden"
             overflowX="hidden"
-            mt="2.3rem"
+            mt="2.1rem"
             ml="1rem"
           >
             <Text color="gray.800" fontSize="1rem" ml={8} mt={4}>

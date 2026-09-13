@@ -567,8 +567,8 @@ export default function PayrollPage() {
           )}
         </Box>
       </Box>
-      <Flex justify="flex-end">
-        <Box mr="2rem">
+      <Flex mb="1rem" mr="3rem" justify="flex-end">
+        <Box>
           <Link to="/employees_admin/payroll/settings">
             <IoSettings fontSize="1.9rem" />
           </Link>

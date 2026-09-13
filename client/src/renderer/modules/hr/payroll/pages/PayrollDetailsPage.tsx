@@ -293,7 +293,7 @@ const PayrollDetailsPage = () => {
           </Box>
           {/* Payroll results table */}
 
-          <Box mt="3rem" ml="1rem">
+          <Box mt="3rem">
             <PayrollResultsTable payrollResults={payrollResults} />
           </Box>
         </Box>
@@ -303,10 +303,10 @@ const PayrollDetailsPage = () => {
       {/* Buttons */}
 
       {payrollRun?.status !== "ANNULÉ" && payrollRun?.status !== "PAYÉ" && (
-        <Flex mr="2rem" mt="3rem" justify="flex-end">
+        <Flex mb="1rem" mr="2rem" justify="flex-end">
           <Button
             onClick={onConfirmationOpen}
-            width="10rem"
+            width="8rem"
             bg="#ffffff"
             border="1px solid gray"
           >
@@ -319,7 +319,7 @@ const PayrollDetailsPage = () => {
           {statusAction && (
             <Button
               onClick={statusAction.onClick}
-              width="10rem"
+              width="8rem"
               bg="#ffffff"
               border="1px solid gray"
               ml="0.3rem"

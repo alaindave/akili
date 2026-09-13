@@ -146,7 +146,7 @@ const EmployeeListPage = () => {
                 </Text>
               </Box>
 
-              <Box mt="4rem" flexShrink={0}>
+              <Box mt="3rem" flexShrink={0}>
                 <EmployeeFilterMenu onFilterClicked={setFilter} />
               </Box>
             </Box>
@@ -180,7 +180,7 @@ const EmployeeListPage = () => {
                   base: 0,
                   md: "20rem",
                 }}
-                mt="4.5rem"
+                mt="3rem"
               >
                 <SearchBar
                   placeholderText="Rechercher un employé"

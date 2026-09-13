@@ -616,12 +616,12 @@ const EmployeeAttendancePage = () => {
             FILTER + SEARCH
         =================================================== */}
 
-        <Flex mt="2rem" justify="space-between">
-          <Box mt="1.5rem" ml="0.5rem">
+        <Flex mt="1rem" justify="space-between">
+          <Box mt="1rem" ml="0.5rem">
             <EmployeeFilterMenu onFilterClicked={setFilter} />
           </Box>
 
-          <Box mt="1.5rem" mr="1rem">
+          <Box mt="1rem" mr="1rem">
             <SearchBar
               placeholderText="Rechercher un employé"
               onSearch={setSearchText}
@@ -645,7 +645,7 @@ const EmployeeAttendancePage = () => {
           width="78.5vw"
           overflowY="hidden"
           overflowX="hidden"
-          mt="3rem"
+          mt="2rem"
           ml="1rem"
         >
           <Text color="gray.800" fontSize="1rem" mt="0.7rem">
