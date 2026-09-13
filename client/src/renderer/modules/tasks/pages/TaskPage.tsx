@@ -109,7 +109,7 @@ const TaskPage = () => {
         </Box>
         <Button
           mt="1.2rem"
-          mr="2rem"
+          mr="4rem"
           colorScheme="blue"
           onClick={() => onCreateOpen()}
         >
@@ -130,7 +130,7 @@ const TaskPage = () => {
           <TaskStatusFilter onFilterClicked={setStatusFilter} />
         </Flex>
       </Grid>
-      <Box mt="4.5rem" ml="1rem">
+      <Box mt="2.5rem" ml="1rem">
         <TaskTable
           tasks={tasks}
           searchText={searchText}

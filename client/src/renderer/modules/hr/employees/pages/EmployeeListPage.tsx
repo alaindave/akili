@@ -94,7 +94,7 @@ const EmployeeListPage = () => {
             {/* TITLE */}
             <Box minWidth={0} flex="1">
               <Box>
-                <HStack spacing="4px" align="center">
+                <HStack mt="0.3rem" spacing="4px" align="center">
                   <Text
                     color="gray.800"
                     fontSize={{

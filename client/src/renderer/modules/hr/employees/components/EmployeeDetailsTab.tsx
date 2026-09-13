@@ -410,20 +410,21 @@ const EmployeeDetailsTab = ({ employee }: Props) => {
               onDownload={handleDownload}
               onDelete={handleDocumentDelete}
             />
-
-            <Button
-              position="absolute"
-              top="3rem"
-              right="0.01rem"
-              onClick={onOpen}
-              bg="transparent"
-              fontSize="1.4rem"
-              _hover={{
-                bg: "transparent",
-              }}
-            >
-              <LuPaperclip />
-            </Button>
+            {user.role === "MANAGER" ? (
+              <Button
+                position="absolute"
+                top="3rem"
+                right="0.01rem"
+                onClick={onOpen}
+                bg="transparent"
+                fontSize="1.4rem"
+                _hover={{
+                  bg: "transparent",
+                }}
+              >
+                <LuPaperclip />
+              </Button>
+            ) : null}
           </TabPanel>
         </TabPanels>
 

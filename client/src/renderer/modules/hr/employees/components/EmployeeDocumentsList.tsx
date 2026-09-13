@@ -13,6 +13,7 @@ import {
 } from "@chakra-ui/react";
 import { FiDownload, FiEye, FiFileText, FiTrash2 } from "react-icons/fi";
 import { EmployeeDocument } from "../../../../../common/types/EmployeeDocuments";
+import useAdminUser from "../../../../../store/auth.store";
 
 interface EmployeeDocumentsListProps {
   documents: EmployeeDocument[];
@@ -27,6 +28,8 @@ export default function EmployeeDocumentsList({
   onDownload,
   onDelete,
 }: EmployeeDocumentsListProps) {
+  const user = useAdminUser((store) => store.adminUser);
+
   if (documents.length === 0) {
     return (
       <Box
@@ -98,14 +101,15 @@ export default function EmployeeDocumentsList({
                 variant="ghost"
                 onClick={() => onDownload?.(document)}
               />
-
-              <IconButton
-                aria-label="Delete"
-                icon={<FiTrash2 />}
-                colorScheme="red"
-                variant="ghost"
-                onClick={() => onDelete?.(document)}
-              />
+              {user.role === "MANAGER" ? (
+                <IconButton
+                  aria-label="Delete"
+                  icon={<FiTrash2 />}
+                  colorScheme="red"
+                  variant="ghost"
+                  onClick={() => onDelete?.(document)}
+                />
+              ) : null}
             </HStack>
           </Flex>
         </ListItem>

@@ -438,13 +438,13 @@ export default function TaskDetailsDrawer({
                 </Text>
                 <Text
                   fontSize={{
-                    base: "0.95rem",
+                    base: "0.98rem",
                     sm: "1rem",
                     md: "1.05rem",
                   }}
                   fontWeight="400"
                   color="gray.700"
-                  fontFamily="system-ui"
+                  fontFamily="body"
                   whiteSpace="pre-wrap"
                   wordBreak="break-word"
                 >
@@ -553,20 +553,39 @@ export default function TaskDetailsDrawer({
                         Résolue le
                       </Text>
 
-                      <Text
-                        fontSize={{
-                          base: "0.8rem",
-                          md: "0.85rem",
-                        }}
-                        color="gray.700"
-                        wordBreak="break-word"
-                      >
-                        {currentTask.resolvedAt
-                          ? new Date(currentTask.resolvedAt)
-                              .toLocaleString("fr-FR")
-                              .replaceAll(" ", " à ")
-                          : "-"}
-                      </Text>
+                      <HStack>
+                        <Text
+                          fontSize={{
+                            base: "0.7rem",
+                            md: "0.75rem",
+                          }}
+                          color="gray.700"
+                          wordBreak="break-word"
+                        >
+                          {currentTask.resolvedAt
+                            ? new Date(
+                                currentTask.resolvedAt
+                              ).toLocaleDateString("fr-FR")
+                            : "-"}
+                        </Text>
+                        <Text
+                          fontSize={{
+                            base: "0.7rem",
+                            md: "0.75rem",
+                          }}
+                          color="gray.700"
+                          wordBreak="break-word"
+                        >
+                          {currentTask.resolvedAt
+                            ? new Date(currentTask.resolvedAt)
+                                .toLocaleTimeString("fr-FR", {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })
+                                .replaceAll(" ", " à ")
+                            : "-"}
+                        </Text>
+                      </HStack>
                     </Box>
                   </HStack>
 
@@ -719,10 +738,10 @@ export default function TaskDetailsDrawer({
                         <Text
                           mt="0.5rem"
                           ml="0.5rem"
-                          fontFamily="mono"
+                          fontFamily="body"
                           fontSize={{
-                            base: "0.9rem",
-                            md: "0.93rem",
+                            base: "0.95rem",
+                            md: "1rem",
                           }}
                           color="gray.700"
                           whiteSpace="pre-wrap"

@@ -193,7 +193,7 @@ const EmployeeDashboard = ({
           color="black"
           fontSize="1.5rem"
           position="relative"
-          left="4rem"
+          left="3rem"
           fontWeight="700"
         >
           {leaveCount}

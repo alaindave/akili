@@ -291,7 +291,7 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
         returnFocusOnClose={false}
         isCentered
       >
-        <ModalOverlay bg="rgba(15, 23, 42, 0.45)" />
+        <ModalOverlay backdropFilter="auto" backdropBlur="0.3rem" />
 
         <ModalContent
           bg="white"
@@ -323,46 +323,65 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
               px={6}
               py={4}
             >
-              <HStack spacing={3}>
-                <Flex
-                  height="44px"
-                  width="44px"
-                  borderRadius="8px"
-                  bg="#FFF8DD"
-                  border="1px solid #F2B705"
-                  justifyContent="center"
-                  alignItems="center"
-                  flexShrink={0}
-                >
-                  <FaUserEdit color={iconColor} size="1.5rem" />
-                </Flex>
-
-                <Box>
-                  <Text
-                    fontSize="19px"
-                    fontWeight="700"
-                    color="#1F2937"
-                    lineHeight="1.2"
+              <Flex justify="space-between">
+                <HStack spacing={3}>
+                  <Flex
+                    height="44px"
+                    width="44px"
+                    borderRadius="8px"
+                    bg="#FFF8DD"
+                    border="1px solid #F2B705"
+                    justifyContent="center"
+                    alignItems="center"
+                    flexShrink={0}
                   >
-                    Modification de l'employé
-                  </Text>
-
-                  <Text color="#64748B" fontSize="13px" mt={1} fontWeight="400">
-                    Modifiez les informations de l'employé
-                  </Text>
-                </Box>
-              </HStack>
+                    <FaUserEdit color={iconColor} size="1.5rem" />
+                  </Flex>
+                  <Box>
+                    <Text
+                      fontSize="19px"
+                      fontWeight="700"
+                      color="#1F2937"
+                      lineHeight="1.2"
+                    >
+                      Modification de l'employé
+                    </Text>
+                    <Text
+                      color="#64748B"
+                      fontSize="13px"
+                      mt={1}
+                      fontWeight="400"
+                    >
+                      Modifiez les informations de l'employé
+                    </Text>
+                  </Box>
+                </HStack>
+                <Button
+                  bg="#F2B705"
+                  color="#1F2937"
+                  height="38px"
+                  px={5}
+                  fontWeight="700"
+                  border="1px solid #D39A00"
+                  isLoading={updateEmployee.isPending}
+                  loadingText="Patientez..."
+                  spinnerPlacement="start"
+                  isDisabled={updateEmployee.isPending}
+                  type="submit"
+                  _hover={{
+                    bg: "#E0A900",
+                  }}
+                  _active={{
+                    bg: "#CC9900",
+                  }}
+                >
+                  <HStack spacing={2}>
+                    <FaSave size="14px" />
+                    <Text fontSize="14px">Enregistrer</Text>
+                  </HStack>
+                </Button>
+              </Flex>
             </ModalHeader>
-
-            <ModalCloseButton
-              color="#64748B"
-              top={4}
-              right={4}
-              _hover={{
-                bg: "#E2E8F0",
-                color: "#1F2937",
-              }}
-            />
 
             {/* ======================================================
             BODY
@@ -755,55 +774,6 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
                 <Text fontSize="12px" color="red.500" fontWeight="500">
                   {serverErrorMessage}
                 </Text>
-
-                <HStack spacing={2}>
-                  <Button
-                    variant="outline"
-                    borderColor="#CBD5E1"
-                    color="#475569"
-                    bg="white"
-                    height="38px"
-                    px={4}
-                    onClick={handleFormClosed}
-                    isDisabled={updateEmployee.isPending}
-                    _hover={{
-                      bg: "#F1F5F9",
-                      borderColor: "#94A3B8",
-                    }}
-                  >
-                    <HStack spacing={2}>
-                      <RxCrossCircled size="17px" />
-
-                      <Text fontSize="14px">Fermer</Text>
-                    </HStack>
-                  </Button>
-
-                  <Button
-                    bg="#F2B705"
-                    color="#1F2937"
-                    height="38px"
-                    px={5}
-                    fontWeight="700"
-                    border="1px solid #D39A00"
-                    isLoading={updateEmployee.isPending}
-                    loadingText="Patientez..."
-                    spinnerPlacement="start"
-                    isDisabled={updateEmployee.isPending}
-                    type="submit"
-                    _hover={{
-                      bg: "#E0A900",
-                    }}
-                    _active={{
-                      bg: "#CC9900",
-                    }}
-                  >
-                    <HStack spacing={2}>
-                      <FaSave size="14px" />
-
-                      <Text fontSize="14px">Enregistrer</Text>
-                    </HStack>
-                  </Button>
-                </HStack>
               </Flex>
             </ModalFooter>
           </form>

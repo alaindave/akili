@@ -135,30 +135,14 @@ const EmployeePayrollReport = () => {
         </Flex>
         {payrollRuns.length !== 0 ? (
           <>
-            <Flex ml="8rem" justify="space-between">
-              <Box mt="2rem" mb="1rem">
-                <PayrollStatusFilter onFilterClicked={setStatusFilter} />
-              </Box>
-              <Box
-                mt="2rem"
-                fontSize="1.2rem"
-                fontFamily="monospace"
-                fontWeight="600"
-                width="250px"
-              >
-                <MonthDropDown
-                  onChange={(month) => setSubmissionMonth(month)}
-                />
-              </Box>
-            </Flex>
             <TableContainer
               width="60vw"
               borderWidth="1px"
               borderRadius="lg"
               overflowX="auto"
               overflowY="auto"
-              ml="8rem"
-              mt="2rem"
+              ml="6rem"
+              mt="3rem"
             >
               <Table variant="simple" size="md">
                 <Thead position="sticky" top={0} zIndex={1} bg="gray.50">
@@ -252,6 +236,19 @@ const EmployeePayrollReport = () => {
           </Flex>
         )}
       </Box>
+      <Flex ml="6rem">
+        <Box
+          fontSize="1.2rem"
+          fontFamily="monospace"
+          fontWeight="600"
+          width="250px"
+        >
+          <MonthDropDown onChange={(month) => setSubmissionMonth(month)} />
+        </Box>
+        <Box ml="5rem">
+          <PayrollStatusFilter onFilterClicked={setStatusFilter} />
+        </Box>
+      </Flex>
     </Flex>
   );
 };
