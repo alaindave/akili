@@ -33,16 +33,29 @@ const requiredEnvVars = [
     name: "JWT Private Key",
   },
   {
-    key: "EMAIL_USER",
-    name: "Email user",
-  },
-  {
-    key: "EMAIL_PASS",
-    name: "Email password",
-  },
-  {
     key: "MANAGER_EMAIL",
     name: "Manager email",
+  },
+  {
+    key: "EMAIL_FROM",
+    name: "Resend email",
+  },
+  {
+    key: "RESEND_API_KEY",
+    name: "Resend API key",
+  },
+  {
+    key: "SUPABASE_URL",
+    name: "Supabase URL",
+  },
+  {
+    key: "SUPABASE_SERVICE_ROLE_KEY",
+    name: "Supabase service role key",
+  },
+
+  {
+    key: "CRON_SECRET",
+    name: "CRON secret",
   },
   {
     key: "MONGO_URI",

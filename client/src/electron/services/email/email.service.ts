@@ -1,10 +1,15 @@
+import axios from "axios";
+import { app } from "electron";
+import { getToken } from "../../auth.js";
 import type {
   EmailDeliveryResult,
   EmailNotification,
 } from "../../../common/types/EmailNotification.js";
-import { sendEmailNotification } from "../../database/repositories/email.repository.js";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const API_URL = app.isPackaged
+  ? "https://leather-works.onrender.com"
+  : process.env.VITE_API_URL;
 
 /** Validates notification requests before they leave the desktop application. */
 export async function sendNotificationEmail(
@@ -29,10 +34,36 @@ export async function sendNotificationEmail(
     throw new Error("Email title and message are required.");
   }
 
-  return sendEmailNotification({
+  return postEmailNotification({
     ...notification,
     to: recipients,
     title: notification.title.trim(),
     message: notification.message.trim(),
   });
+}
+
+/** Sends the validated notification to the authenticated cloud email endpoint. */
+async function postEmailNotification(
+  notification: EmailNotification
+): Promise<EmailDeliveryResult> {
+  if (!API_URL) {
+    throw new Error("VITE_API_URL is not configured");
+  }
+
+  const token = await getToken();
+
+  if (!token) {
+    throw new Error("You must be signed in to send email notifications.");
+  }
+
+  const response = await axios.post<EmailDeliveryResult>(
+    `${API_URL}/notifications/email`,
+    notification,
+    {
+      timeout: 15_000,
+      headers: { "x-auth-token": token },
+    }
+  );
+
+  return response.data;
 }

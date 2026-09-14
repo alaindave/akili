@@ -11,7 +11,7 @@ import {
   deleteLeave,
 } from "../db.js";
 
-import sendLeaveRequestEmail from "../utils/sendLeaveRequestEmail.js";
+import sendLeaveRequestEmail from "../services/leaveEmail.service.js";
 
 const router = express.Router();
 
@@ -42,7 +42,7 @@ router.post(
     try {
       const employee = await getEmployee(req.params.employeeId);
 
-      console.log("Employee submitting leave:", employee);
+      console.log("EMPLOYEE INFO:", employee);
 
       if (!employee) {
         return res.status(404).send("No employee found with the given ID.");
@@ -50,7 +50,7 @@ router.post(
 
       const pendingLeaves = await getPendingLeaves(req.params.employeeId);
 
-      console.log("Pending leaves found in db:", pendingLeaves);
+      console.log("PENDING LEAVES:", pendingLeaves);
 
       if (pendingLeaves.length !== 0) {
         return res
@@ -68,7 +68,7 @@ router.post(
         notes
       );
 
-      console.log("Employee leave success:", leave);
+      console.log("EMPLOYEE LEAVE SUCCESS:", leave);
 
       try {
         const emailResults = await sendLeaveRequestEmail({
@@ -79,7 +79,7 @@ router.post(
           notes,
         });
 
-        console.log("Leave email result:", emailResults);
+        console.log("LEAVE EMAIL RESULT:", emailResults);
       } catch (emailError) {
         console.error("Error sending leave email:", emailError);
       }
