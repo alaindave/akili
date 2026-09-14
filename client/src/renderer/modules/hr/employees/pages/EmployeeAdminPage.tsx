@@ -361,7 +361,7 @@ const EmployeeAdminPage = () => {
           border="1px solid rgba(255,255,255,0.12)"
           boxShadow="0 2px 8px rgba(0,0,0,0.2)"
           borderRadius="5px"
-          bg="#FFFFFF"
+          bg="#F8FAFC"
           p={5}
           display="flex"
           flexDir="column"

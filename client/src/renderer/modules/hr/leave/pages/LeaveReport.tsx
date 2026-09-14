@@ -25,12 +25,10 @@ const EmployeeLeaveReport = () => {
   const [statusFilter, setStatusFilter] = useState("");
   const [leaves, setLeaves] = useState<Leave[]>([]);
   const user = useAdminUser((store) => store.adminUser);
-  const today = new Date();
-  const thirtyDaysAgo = new Date(today);
-  thirtyDaysAgo.setDate(today.getDate() - 30);
+
   const [dateRange, setDateRange] = useState<DateRange>({
-    startDate: new Date(thirtyDaysAgo),
-    endDate: new Date(today),
+    startDate: null,
+    endDate: null,
   });
 
   useEffect(() => {
@@ -47,12 +45,16 @@ const EmployeeLeaveReport = () => {
       .filter(
         (a) =>
           (!dateRange.startDate && !dateRange.endDate) ||
-          (a.submittedAt >= dateRange.startDate &&
-            a.submittedAt <= dateRange.endDate)
+          (a.submittedAt >= dateRange.startDate! &&
+            a.submittedAt <= dateRange.endDate!)
       )
       .filter((l) => !statusFilter || l.status === statusFilter);
     setLeaves(filteredLeaves);
   };
+
+  console.log("DAT RANGE", dateRange.endDate);
+  console.log("DAT RANGE", dateRange.startDate);
+  console.log("LEAVES", leaves);
 
   return (
     <Flex

@@ -40,16 +40,14 @@ const PayrollDashboard = ({
       >
         <HStack>
           <Box
-            width="2rem"
-            height="2rem"
+            width="1.2rem"
+            height="1.2rem"
             backgroundColor="#000080"
             borderRadius="10px"
             padding="8px"
             ml="0.5rem"
             mt="1rem"
-          >
-            <BsFillPeopleFill color="#ffffff" size="1rem" />
-          </Box>
+          ></Box>
 
           <Text
             color="gray.700"
@@ -57,7 +55,7 @@ const PayrollDashboard = ({
             fontWeight="600"
             position="relative"
             left="1rem"
-            top="0.3rem"
+            top="0.5rem"
           >
             Employés
           </Text>
@@ -67,7 +65,8 @@ const PayrollDashboard = ({
           color="gray.600"
           fontSize="1.3rem"
           position="relative"
-          left="5.5rem"
+          top="0.3rem"
+          left="5rem"
           fontWeight="700"
         >
           {employeeCount}
@@ -88,16 +87,14 @@ const PayrollDashboard = ({
       >
         <HStack>
           <Box
-            width="2rem"
-            height="2rem"
+            width="1.2rem"
+            height="1.2rem"
             backgroundColor="#000080"
             borderRadius="10px"
             padding="8px"
             mt="1rem"
             ml="0.5rem"
-          >
-            <FaDollarSign color="#ffffff" size="1rem" />
-          </Box>
+          ></Box>
 
           <Text
             color="gray.700"
@@ -105,7 +102,7 @@ const PayrollDashboard = ({
             fontWeight="600"
             position="relative"
             left="1rem"
-            top="0.3rem"
+            top="0.5rem"
           >
             Salaires
           </Text>
@@ -115,6 +112,7 @@ const PayrollDashboard = ({
           color="gray.600"
           fontSize="1.15rem"
           position="relative"
+          top="0.4rem"
           left="3rem"
           fontWeight="700"
         >
@@ -136,16 +134,14 @@ const PayrollDashboard = ({
       >
         <HStack position="relative" bottom="1rem">
           <Box
-            width="2rem"
-            height="2rem"
+            width="1.2rem"
+            height="1.2rem"
             backgroundColor=" #16833e"
             borderRadius="10px"
             padding="8px"
             position="relative"
             right="1.3rem"
-          >
-            <IoWalletOutline color="#ffffff" size="1rem" />
-          </Box>
+          ></Box>
           <Text color="gray.700" fontSize="1.1rem" fontWeight="600">
             Remunerations
           </Text>
@@ -175,17 +171,15 @@ const PayrollDashboard = ({
       >
         <HStack>
           <Box
-            width="2rem"
-            height="2rem"
+            width="1.2rem"
+            height="1.2rem"
             backgroundColor="red.500"
             borderRadius="10px"
             padding="8px"
             position="relative"
             right="1rem"
             bottom="1rem"
-          >
-            <FaRegArrowAltCircleDown color="#ffffff" size="1.1rem" />
-          </Box>
+          ></Box>
           <Text
             color="gray.700"
             fontSize="1.1rem"
@@ -223,25 +217,20 @@ const PayrollDashboard = ({
       >
         <HStack>
           <Box
-            width="2rem"
-            height="2rem"
+            width="1.2rem"
+            height="1.2rem"
             borderRadius="10px"
             padding="8px"
             backgroundColor="blue.500"
             position="relative"
-            right="1rem"
             bottom="1rem"
-          >
-            <FaRegCreditCard color="#ffffff" size="1rem" />
-          </Box>
+          ></Box>
           <Text
             color="gray.700"
             fontSize="1.1rem"
             fontWeight="600"
             position="relative"
-            left="1rem"
-            right="1rem"
-            bottom="1rem"
+            bottom="0.9rem"
           >
             Net
           </Text>
@@ -251,7 +240,7 @@ const PayrollDashboard = ({
           fontSize="1.15rem"
           position="relative"
           left="1.5rem"
-          bottom="1rem"
+          bottom="0.9rem"
           fontWeight="700"
         >
           {formatCurrency(totalNetSalary, currency)}

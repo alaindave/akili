@@ -14,6 +14,10 @@ import type {
   PayrollStatus,
 } from "../../common/types/payroll/Payroll";
 import PayrollItem from "./payroll/PayrollItem";
+import type {
+  EmailDeliveryResult,
+  EmailNotification,
+} from "./EmailNotification";
 
 interface SaveFileResult {
   success: boolean;
@@ -47,6 +51,9 @@ interface Reminder {
 declare global {
   interface Window {
     electron: {
+      email: {
+        send: (notification: EmailNotification) => Promise<EmailDeliveryResult>;
+      };
       app: {
         getUserDataPath: () => Promise<String>;
       };

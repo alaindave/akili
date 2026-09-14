@@ -29,8 +29,8 @@ const EmployeeAttendanceReport = () => {
   const thirtyDaysAgo = new Date(today);
   thirtyDaysAgo.setDate(today.getDate() - 30);
   const [dateRange, setDateRange] = useState<DateRange>({
-    startDate: new Date(thirtyDaysAgo),
-    endDate: new Date(today),
+    startDate: null,
+    endDate: null,
   });
 
   useEffect(() => {
@@ -47,7 +47,7 @@ const EmployeeAttendanceReport = () => {
       .filter(
         (a) =>
           (!dateRange.startDate && !dateRange.endDate) ||
-          (a.date >= dateRange.startDate && a.date <= dateRange.endDate)
+          (a.date >= dateRange.startDate! && a.date <= dateRange.endDate!)
       )
       .filter((a) => !statusFilter || a.status === statusFilter);
     setAttendances(filteredAttendances);

@@ -9,7 +9,6 @@ import {
 } from "@chakra-ui/react";
 import { useState } from "react";
 import { GoDotFill } from "react-icons/go";
-import { MdTask } from "react-icons/md";
 
 interface Props {
   onFilterClicked: (filter: string) => void;

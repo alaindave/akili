@@ -14,8 +14,8 @@ registerLocale("fr", fr);
  */
 
 export interface DateRange {
-  startDate: string | Date;
-  endDate: string | Date;
+  startDate: string | Date | null;
+  endDate: string | Date | null;
 }
 
 interface DateRangePickerProps {
@@ -109,7 +109,7 @@ function formatDatabaseDate(date: Date | null): string {
   return `${year}-${month}-${day}`;
 }
 
-function normalizeDateValue(value?: string | Date): string {
+function normalizeDateValue(value?: string | Date | null): string {
   if (!value) {
     return "";
   }

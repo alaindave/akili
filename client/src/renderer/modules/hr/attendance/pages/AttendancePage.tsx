@@ -33,6 +33,7 @@ import {
   useMarkAbsent,
 } from "../hooks/useAttendance";
 import useSyncStore from "../../../../../store/sync.store";
+import AttendanceStatusFilter from "../components/AttendanceStatusFilter";
 
 /* ================= SHIMMER ================= */
 
@@ -105,6 +106,8 @@ const EmployeeAttendancePage = () => {
   const [selectedDate, setSelectedDate] = useState(formattedDate);
 
   const [searchText, setSearchText] = useState("");
+
+  const [statusFilter, setStatusFilter] = useState("");
 
   const [filter, setFilter] = useState("");
 
@@ -219,7 +222,7 @@ const EmployeeAttendancePage = () => {
   useEffect(() => {
     refetchAttendance();
     loadDailyCheck();
-  }, [syncVersion, selectedDate]);
+  }, [syncVersion, selectedDate, statusFilter]);
 
   const loadDailyCheck = async () => {
     try {
@@ -332,8 +335,6 @@ const EmployeeAttendancePage = () => {
 
       console.log("MARK ABSENT RESULT", result);
 
-      await attendanceDailyCheckSync();
-
       toast({
         title: "Absences enregistrées",
         description: "Les absences ont été enregistrées avec succès.",
@@ -342,6 +343,8 @@ const EmployeeAttendancePage = () => {
         isClosable: true,
         position: "top-left",
       });
+
+      await attendanceDailyCheckSync();
 
       return;
     } catch (error) {
@@ -444,8 +447,6 @@ const EmployeeAttendancePage = () => {
 
       console.log("LOCKED ATTENDANCE", result);
 
-      await attendanceDailyCheckSync();
-
       toast({
         title: "Présence confirmée",
         description: "La liste de présence a été confirmée et verrouillée.",
@@ -454,6 +455,8 @@ const EmployeeAttendancePage = () => {
         isClosable: true,
         position: "top-left",
       });
+
+      await attendanceDailyCheckSync();
     } catch (error) {
       showActionError(
         "Échec de la confirmation",
@@ -616,16 +619,18 @@ const EmployeeAttendancePage = () => {
             FILTER + SEARCH
         =================================================== */}
 
-        <Flex mt="1rem" justify="space-between">
-          <Box mt="1rem" ml="0.5rem">
-            <EmployeeFilterMenu onFilterClicked={setFilter} />
-          </Box>
-
-          <Box mt="1rem" mr="1rem">
+        <Flex mr="1rem" mt="1rem" justify="space-between">
+          <Box ml="0.5rem" mt="1rem">
             <SearchBar
               placeholderText="Rechercher un employé"
               onSearch={setSearchText}
             />
+          </Box>
+          <Box mt="1rem" ml="0.5rem">
+            <EmployeeFilterMenu onFilterClicked={setFilter} />
+          </Box>
+          <Box mt="1rem" ml="1rem">
+            <AttendanceStatusFilter onFilterClicked={setStatusFilter} />
           </Box>
         </Flex>
       </Flex>
@@ -726,6 +731,7 @@ const EmployeeAttendancePage = () => {
         ) : (
           attendances
             .filter((a) => !filter || a.department === filter)
+            .filter((a) => !statusFilter || a.status === statusFilter)
             .filter((a) =>
               `${a.firstName} ${a.lastName}`
                 .toLowerCase()
@@ -835,7 +841,7 @@ const EmployeeAttendancePage = () => {
           <DateRangePicker value={dateRange} onChange={setDateRange} />
         </Box>
 
-        <Box fontSize="1.2rem" fontFamily="monospace" fontWeight="600">
+        <Box fontSize="1.1rem" fontFamily="monospace" fontWeight="600">
           <DateDropdown
             startDate={dateRange.startDate}
             endDate={dateRange.endDate}

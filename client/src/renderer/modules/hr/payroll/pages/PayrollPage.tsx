@@ -373,23 +373,6 @@ export default function PayrollPage() {
             </Flex>
           ) : (
             <Box mb="2rem" ml="2rem">
-              <Flex justify="space-between" width="70vw">
-                <Box mb="0.7rem">
-                  <PayrollStatusFilter onFilterClicked={setStatusFilter} />
-                </Box>
-                <Box
-                  ml="1rem"
-                  mb="0.5rem"
-                  fontSize="1.2rem"
-                  fontFamily="monospace"
-                  fontWeight="600"
-                  width="250px"
-                >
-                  <MonthDropDown
-                    onChange={(month) => setSubmissionMonth(month)}
-                  />
-                </Box>
-              </Flex>
               <TableContainer
                 maxW="70vw"
                 maxH="60vh"
@@ -567,7 +550,22 @@ export default function PayrollPage() {
           )}
         </Box>
       </Box>
-      <Flex mb="1rem" mr="3rem" justify="flex-end">
+
+      <Flex justify="space-between" width="80vw">
+        <HStack ml="3rem">
+          <Box
+            mb="0.5rem"
+            fontSize="1rem"
+            fontFamily="monospace"
+            fontWeight="600"
+            width="250px"
+          >
+            <MonthDropDown onChange={(month) => setSubmissionMonth(month)} />
+          </Box>
+          <Box ml="2rem" mb="0.7rem">
+            <PayrollStatusFilter onFilterClicked={setStatusFilter} />
+          </Box>
+        </HStack>
         <Box>
           <Link to="/employees_admin/payroll/settings">
             <IoSettings fontSize="1.9rem" />

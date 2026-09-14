@@ -16,6 +16,7 @@ import { registerTaskIPC } from "./ipc/tasks.ipc.js";
 import { registerTaskCommentIPC } from "./ipc/tasks_comments.ipc.js";
 import { registerPayrollSettingsIPC } from "./ipc/payroll_settings.ipc.js";
 import { registerAttendanceDailyCheckIPC } from "./ipc/attendance_daily_check.ipc.js";
+import { registerEmailIPC } from "./ipc/email.ipc.js";
 
 export function registerIPCHandlers() {
   registerAuthIPC();
@@ -36,4 +37,5 @@ export function registerIPCHandlers() {
   registerPayrollEmployeeProfileIPC();
   registerPayrollGenerationIPC();
   registerNotificationIPC();
+  registerEmailIPC();
 }

@@ -27,7 +27,11 @@ const start = "2026-08-01";
 const end = "2026-08-30";
 console.log(getDaysBetweenDates(start, end)); // Output: 29
 
-function getSelectedDays(startDate: Date | string, endDate: Date | string) {
+function getSelectedDays(
+  startDate: Date | string | null,
+  endDate: Date | string | null
+) {
+  if (!startDate || !endDate) return;
   const days = [];
   let i = 0;
 
@@ -62,8 +66,8 @@ function formatDate(date: Date) {
 }
 
 interface Props {
-  startDate: Date | string;
-  endDate: Date | string;
+  startDate: Date | string | null;
+  endDate: Date | string | null;
   onChange?: (date: string) => void;
 }
 
@@ -73,7 +77,8 @@ interface Option {
 }
 
 export default function DateDropdown({ startDate, endDate, onChange }: Props) {
-  const options: Option[] = getSelectedDays(startDate, endDate);
+  const options: Option[] | undefined = getSelectedDays(startDate, endDate);
+  if (!options) return;
   const [selected, setSelected] = useState<Option | null>(options[0]);
   function handleChange(option: Option | null) {
     if (option) {

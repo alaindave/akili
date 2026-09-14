@@ -23,6 +23,7 @@ import EmployeeFilterMenu from "../../employees/components/EmployeeFilterMenu";
 import SearchBar from "../../../../components/SearchBar";
 import useAdminUser from "../../../../../store/auth.store";
 import { LeaveWithEmployee } from "../../../../../common/types/LeaveWithEmployee";
+import LeaveStatusFilter from "../components/LeaveStatusFilter";
 
 const shimmerKeyframes = `
 @keyframes shimmer {
@@ -87,10 +88,12 @@ const EmployeeLeavePage = () => {
 
   const deleteLeaveMutation = useDeleteLeave(user.companyId);
 
+  const [statusFilter, setStatusFilter] = useState("");
+
   useEffect(() => {
     if (syncVersion === undefined) return;
     refetch();
-  }, [syncVersion, refetch]);
+  }, [syncVersion, refetch, statusFilter]);
 
   /* =========================================================
      DELETE LEAVE
@@ -377,14 +380,16 @@ const EmployeeLeavePage = () => {
             ================================================= */}
 
           <Box height="80vh" overflowX="hidden" overflowY="auto">
-            {leaves.map((leave: LeaveWithEmployee) => (
-              <EmployeeLeaveCard
-                key={leave._id}
-                leave={leave}
-                gridTemplate={gridTemplate}
-                onDelete={() => handleDeleteConfirmation(leave)}
-              />
-            ))}
+            {leaves
+              .filter((l) => !statusFilter || l.status === statusFilter)
+              .map((leave: LeaveWithEmployee) => (
+                <EmployeeLeaveCard
+                  key={leave._id}
+                  leave={leave}
+                  gridTemplate={gridTemplate}
+                  onDelete={() => handleDeleteConfirmation(leave)}
+                />
+              ))}
           </Box>
         </>
       )}
@@ -395,18 +400,21 @@ const EmployeeLeavePage = () => {
 
       <Flex
         position="absolute"
-        bottom="2rem"
+        bottom="2.3rem"
         height="4rem"
         width="80vw"
-        justify="space-between"
+        justify="space-around"
       >
         <Box
           ml="1rem"
-          fontSize="1.2rem"
+          fontSize="1.1rem"
           fontFamily="monospace"
           fontWeight="600"
         >
           <MonthDropDown onChange={(month) => setSubmissionMonth(month)} />
+        </Box>
+        <Box ml="2rem">
+          <LeaveStatusFilter onFilterClicked={setStatusFilter} />
         </Box>
       </Flex>
 

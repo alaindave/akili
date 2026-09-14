@@ -16,6 +16,7 @@ import tasks from "./routes/task.route.js";
 import employee_photos from "./routes/employees_photos.route.js";
 import employee_documents from "./routes/employees_documents.route.js";
 import jobsRouter from "./routes/jobs.route.js";
+import notifications from "./routes/notification.route.js";
 import { initializeSocketService } from "./services/socket.service.js";
 
 const app = express();
@@ -83,6 +84,7 @@ app.use("/tasks", tasks);
 app.use("/auth", auth);
 app.use("/sync", sync);
 app.use("/api/jobs", jobsRouter);
+app.use("/notifications", notifications);
 
 /*
 |--------------------------------------------------------------------------

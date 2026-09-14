@@ -303,7 +303,7 @@ export default function PayrollComponentList({ type, showTaxable }: Props) {
                   >
                     <option value="FIXE">Montant fixe</option>
                     <option value="MANUEL">Manuel</option>
-                    <option value="FORMULE_IPR">Formule-IPR</option>
+                    <option value="FORMULE_IPR">Formule-IPR-OBR</option>
                     <option value="FORMULE_ABSENCE">Formule-ABSENCE</option>
                     <option value="FORMULE_RETARD">Formule-RETARD</option>
                     <option value="POURCENTAGE_BASE">% - sal.base</option>

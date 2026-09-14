@@ -329,6 +329,14 @@ export default function TaskDetailsPage() {
                 p={4}
               >
                 <Flex justify="space-between">
+                  <Text
+                    ml="0.5rem"
+                    mt="0.5rem"
+                    fontWeight="600"
+                    color="green.700"
+                  >
+                    Tâche résolue
+                  </Text>
                   <Box mb={3}>
                     {task.resolvedBy && (
                       <Text ml="1rem" fontSize="md" color="gray.800" mt={1}>
@@ -346,15 +354,6 @@ export default function TaskDetailsPage() {
                       </Text>
                     )}
                   </Box>
-
-                  <Text
-                    ml="1rem"
-                    mt="0.5rem"
-                    fontWeight="600"
-                    color="green.700"
-                  >
-                    Tâche résolue
-                  </Text>
                 </Flex>
 
                 {task.resolutionNotes && (

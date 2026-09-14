@@ -24,6 +24,10 @@ type Task = import("../common/types/Task", {
   with: { "resolution-mode": "require" },
 }).default;
 
+type EmailNotification = import("../common/types/EmailNotification", {
+  with: { "resolution-mode": "require" },
+}).EmailNotification;
+
 type EmployeeDocument = typeof import("../common/types/EmployeeDocuments", {
   with: { "resolution-mode": "require" },
 });
@@ -112,6 +116,11 @@ interface SignUpCredentials {
 console.log("PRELOAD LOADED!!!");
 
 contextBridge.exposeInMainWorld("electron", {
+  email: {
+    send: (notification: EmailNotification) =>
+      ipcRenderer.invoke("email:send", notification),
+  },
+
   // ============================================================
   // APP
   // ============================================================
@@ -1580,4 +1589,3 @@ contextBridge.exposeInMainWorld("electron", {
       ),
   },
 }) satisfies Window["electron"];
-

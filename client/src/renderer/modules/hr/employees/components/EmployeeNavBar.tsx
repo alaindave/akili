@@ -401,7 +401,7 @@ const EmployeeNavBar = () => {
                     lineHeight="1"
                     whiteSpace="nowrap"
                   >
-                    Rapports
+                    Paramètres
                   </Text>
                 </HStack>
               </NavLink>
@@ -537,8 +537,9 @@ const EmployeeNavBar = () => {
   ================================================= */}
         <Text
           justifySelf="start"
-          fontSize={{ base: "1rem", md: "1.1rem" }}
+          fontSize={{ base: "0.96rem", md: "1rem" }}
           fontWeight="700"
+          fontStyle="revert-layer"
           whiteSpace="nowrap"
           overflow="hidden"
           textOverflow="ellipsis"
