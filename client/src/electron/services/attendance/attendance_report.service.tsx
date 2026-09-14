@@ -5,16 +5,18 @@ import { getDailyAttendanceReport } from "../../database/repositories/attendance
 import { AttendanceReportDocument } from "../../reports/attendance-report.js";
 import { DailyAttendanceReport } from "../../../common/types/AttendanceReport.js";
 
-export async function saveAttendanceReport(companyId: string, date: string) {
-  /*
-   * Get attendance + employee information
-   */
+export interface GeneratedAttendanceReport {
+  filename: string;
+  pdfBuffer: Buffer;
+}
+
+/** Generates the daily attendance PDF without opening a save dialog. */
+export async function generateAttendanceReport(
+  companyId: string,
+  date: string
+): Promise<GeneratedAttendanceReport> {
   const rows = await getDailyAttendanceReport(companyId, date);
 
-  /*
-   * Convert records for PDF
-  
-   */
   const employees = rows.map((row) => ({
     employeeId: row.employeeId,
     matricule: row.matricule ?? "--",
@@ -37,6 +39,19 @@ export async function saveAttendanceReport(companyId: string, date: string) {
     },
   };
 
+  const pdfBuffer = await renderToBuffer(
+    <AttendanceReportDocument report={report} />
+  );
+
+  return {
+    filename: `rapport-presences-${new Date(date).toLocaleDateString(
+      "fr-FR"
+    )}.pdf`,
+    pdfBuffer: Buffer.from(pdfBuffer),
+  };
+}
+
+export async function saveAttendanceReport(companyId: string, date: string) {
   /*
    * Ask where to save the PDF.
    */
@@ -57,12 +72,7 @@ export async function saveAttendanceReport(companyId: string, date: string) {
     };
   }
 
-  /*
-   * Render PDF.
-   */
-  const pdfBuffer = await renderToBuffer(
-    <AttendanceReportDocument report={report} />
-  );
+  const { pdfBuffer } = await generateAttendanceReport(companyId, date);
 
   /*
    * Save PDF.

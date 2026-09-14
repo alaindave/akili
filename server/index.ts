@@ -17,6 +17,7 @@ import employee_photos from "./routes/employees_photos.route.js";
 import employee_documents from "./routes/employees_documents.route.js";
 import jobsRouter from "./routes/jobs.route.js";
 import notifications from "./routes/notification.route.js";
+
 import { initializeSocketService } from "./services/socket.service.js";
 
 const app = express();
@@ -74,7 +75,7 @@ const mongoUri = process.env.MONGO_URI as string;
 |--------------------------------------------------------------------------
 */
 
-app.use(express.json());
+app.use(express.json({ limit: "15mb" }));
 app.use(cors());
 
 /*

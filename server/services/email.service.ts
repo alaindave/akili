@@ -2,12 +2,19 @@ import { Resend } from "resend";
 
 export type EmailNotificationType = "attendance" | "leave" | "payroll" | "task";
 
+export interface EmailAttachment {
+  filename: string;
+  content: string;
+  contentType?: string;
+}
+
 export interface EmailNotificationRequest {
   type: EmailNotificationType;
   companyId: string;
   recipientEmail: string;
   title: string;
   message: string;
+  attachments?: EmailAttachment[];
 }
 
 export interface EmailDeliveryResult {
@@ -57,6 +64,18 @@ export function validateEmailNotification(
     errors.push("Email message is required.");
   }
 
+  if (
+    notification?.attachments?.some(
+      (attachment) =>
+        !attachment?.filename?.trim() ||
+        !attachment?.content?.trim() ||
+        (attachment.contentType !== undefined &&
+          !attachment.contentType.trim())
+    )
+  ) {
+    errors.push("Email attachments must include a filename and content.");
+  }
+
   return errors;
 }
 
@@ -69,7 +88,7 @@ export async function sendEmailNotification(
   notification: EmailNotificationRequest
 ): Promise<EmailDeliveryResult> {
   const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.RESEND_FROM_EMAIL;
+  const from = process.env.EMAIL_FROM;
 
   if (!apiKey) {
     throw new Error("RESEND_API_KEY must be configured.");
@@ -85,6 +104,12 @@ export async function sendEmailNotification(
     throw new Error("Recipient email is invalid.");
   }
 
+  const validationErrors = validateEmailNotification(notification);
+
+  if (validationErrors.length > 0) {
+    throw new Error(validationErrors.join(" "));
+  }
+
   const result = await new Resend(apiKey).emails.send({
     from,
     to: recipientEmail,
@@ -92,15 +117,15 @@ export async function sendEmailNotification(
     text: notification.message.trim(),
     html: `<main style="font-family:Arial,sans-serif;padding:20px">
       <h2>${escapeHtml(notification.title.trim())}</h2>
-
       <p style="white-space:pre-line">${escapeHtml(
         notification.message.trim()
       )}</p>
-
-      <p style="color:#6b7280;font-size:12px">
-        Notification: ${escapeHtml(notification.type)}
-      </p>
     </main>`,
+    attachments: notification.attachments?.map((attachment) => ({
+      filename: attachment.filename,
+      content: attachment.content,
+      contentType: attachment.contentType,
+    })),
   });
 
   if (result.error) {

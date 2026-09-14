@@ -10,6 +10,7 @@ import { createEmployeesDocumentsTable } from "./schemas/employees_documents.sch
 import { createPayrollTables } from "./schemas/payroll.schema.js";
 import { createCompanyTable } from "./schemas/companies.schema.js";
 import { createAuditLogsTable } from "./schemas/audit_logs.schema.js";
+import { createNotificationTable } from "./schemas/notification_queue.schema.js";
 
 export async function initializeDatabase() {
   await createCompanyTable();
@@ -24,5 +25,6 @@ export async function initializeDatabase() {
   await createSettingsTable();
   await createPayrollTables();
   await createAuditLogsTable();
+  await createNotificationTable();
   console.log("DATABASE INITIALIZED");
 }

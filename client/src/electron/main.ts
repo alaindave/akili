@@ -25,6 +25,7 @@ import { ensureStorageDirectories } from "./storage/directories.js";
 import { isDev } from "./util/env.util.js";
 import { getCompanyId } from "./database/repositories/companies.repository.js";
 import { getInstallationId } from "./util/installationId.js";
+import { processNotificationQueue } from "./services/email/notificationQueue.service.js";
 
 /* =========================================================
    PATHS
@@ -378,17 +379,52 @@ async function initializeAttendance(): Promise<void> {
    BACKGROUND SERVICES
 ========================================================= */
 
+/* =========================================================
+   BACKGROUND SERVICES
+========================================================= */
+
 async function startBackgroundServices(): Promise<void> {
   console.log("STARTING BACKGROUND SERVICES...");
 
   try {
     const companyId = await getCompanyId();
 
+    /*
+     * -----------------------------------------------------
+     * NOTIFICATION QUEUE
+     * -----------------------------------------------------
+     *
+     * Process notifications that may have been queued
+     * during a previous session while the computer was
+     * offline or the application was closed.
+     *
+     * The queue processor should handle its own pending
+     * items and failures without preventing the app from
+     * starting.
+     */
+    try {
+      console.log("PROCESSING NOTIFICATION QUEUE...");
+
+      await processNotificationQueue();
+
+      console.log("NOTIFICATION QUEUE PROCESSING COMPLETE.");
+    } catch (error) {
+      /*
+       * Notification failure should NEVER prevent
+       * the ERP from starting.
+       */
+      console.error("FAILED TO PROCESS NOTIFICATION QUEUE:", error);
+    }
+
+    /*
+     * -----------------------------------------------------
+     * BACKGROUND SYNC
+     * -----------------------------------------------------
+     */
+
     if (companyId) {
       console.log(`STARTING BACKGROUND SYNC FOR COMPANY: ${companyId}`);
-
       startBackgroundSync(companyId);
-
       console.log(`BACKGROUND SERVICES STARTED FOR COMPANY: ${companyId}`);
     } else {
       console.log("NO COMPANY ID FOUND. BACKGROUND SYNC WILL NOT START.");

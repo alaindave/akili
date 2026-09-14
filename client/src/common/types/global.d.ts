@@ -242,7 +242,17 @@ declare global {
       leave: {
         create: (
           companyId: string,
-          leave: Partial<Leave>
+          leave: Pick<
+            Leave,
+            | "managerEmail"
+            | "employeeId"
+            | "employeeFirstName"
+            | "employeeLastName"
+            | "startDate"
+            | "endDate"
+            | "notes"
+            | "subject"
+          >
         ) => Promise<LeaveWithEmployee>;
         getLeaveByEmployeeId: (
           companyId: string,

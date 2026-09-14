@@ -46,19 +46,19 @@ router.post(
         return res.status(409).send("The employee has already clocked in");
       }
 
-      console.log("Employee to attend:", employee);
-      console.log("Submitted clock in time:", req.body.clockIn);
+      console.log("EMPLOYEE INFO-ATTENDANCE:", employee);
+      console.log("SUBMITTED CLOCK IN TIME:", req.body.clockIn);
 
       const attendanceReport = await addAttendance(
         req.params.employeeId,
         req.body.clockIn
       );
 
-      console.log("Employee attendance success:", attendanceReport);
+      console.log("EMPLOYEE ATTENDANCE REPORT:", attendanceReport);
 
       return res.status(200).send(attendanceReport);
     } catch (error) {
-      console.error("An error occurred during attendance entry:", error);
+      console.error("AN ERROR OCCURED DURING ATTENDANCE ENTRY:", error);
 
       return res.status(500).send(error);
     }

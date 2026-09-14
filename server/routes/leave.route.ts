@@ -11,8 +11,6 @@ import {
   deleteLeave,
 } from "../db.js";
 
-import sendLeaveRequestEmail from "../services/leaveEmail.service.js";
-
 const router = express.Router();
 
 interface EmployeeParams {
@@ -28,7 +26,8 @@ interface LeaveQuery {
   year?: string;
 }
 
-interface LeaveRequestBody {
+export interface LeaveRequestBody {
+  managerEmail: string;
   startDate: Date;
   endDate: Date;
   notes: string;
@@ -69,25 +68,9 @@ router.post(
       );
 
       console.log("EMPLOYEE LEAVE SUCCESS:", leave);
-
-      try {
-        const emailResults = await sendLeaveRequestEmail({
-          employeeName: `${employee.firstName} ${employee.lastName}`,
-          startDate,
-          endDate,
-          subject,
-          notes,
-        });
-
-        console.log("LEAVE EMAIL RESULT:", emailResults);
-      } catch (emailError) {
-        console.error("Error sending leave email:", emailError);
-      }
-
       return res.status(200).send(leave);
     } catch (error) {
-      console.error("Unable to save leave:", error);
-
+      console.error("UNABLE TO SAVE LEAVE:", error);
       return res.status(500).send(error);
     }
   }

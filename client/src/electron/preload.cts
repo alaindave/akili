@@ -661,11 +661,22 @@ contextBridge.exposeInMainWorld("electron", {
   leave: {
     create: (
       companyId: string,
-      leave: Partial<Leave>
+      managerEmail:string,
+      leave: Pick<
+              Leave,
+              | "employeeId"
+              | "employeeFirstName"
+              | "employeeLastName"
+              | "startDate"
+              | "endDate"
+              | "notes"
+              | "subject"
+            >
     ) =>
       ipcRenderer.invoke(
         "leave:create",
         companyId,
+        managerEmail,
         leave
       ),
 

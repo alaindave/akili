@@ -12,7 +12,6 @@ import {
   MenuList,
   Modal,
   ModalBody,
-  ModalCloseButton,
   ModalContent,
   ModalFooter,
   ModalHeader,
@@ -92,8 +91,11 @@ const LeaveSubmissionModal = ({
     }
     try {
       const leave = await window.electron.leave.create(user.companyId, {
-        employeeId: employee._id,
         ...leaveData,
+        managerEmail: "alainbedetse@gmail.com",
+        employeeId: employee._id,
+        employeeFirstName: employee.firstName,
+        employeeLastName: employee.lastName,
       });
       console.log("LEAVE CREATION SUCCESS:", leave);
       setEmployee(null);

@@ -10,6 +10,7 @@ import {
   deleteLeave,
   cancelLeave,
 } from "../database/repositories/leaves.repository.js";
+
 import Leave from "../../common/types/Leave.js";
 
 export function registerLeaveIPC() {
@@ -17,10 +18,25 @@ export function registerLeaveIPC() {
 
   ipcMain.handle(
     "leave:create",
-    async (_, companyId: string, leave: Partial<Leave>) => {
-      console.log("LEAVE IPC RECEIVED:", companyId, leave);
+    async (
+      _,
+      companyId: string,
+      leave: Pick<
+        Leave,
+        | "managerEmail"
+        | "employeeId"
+        | "employeeFirstName"
+        | "employeeLastName"
+        | "startDate"
+        | "endDate"
+        | "notes"
+        | "subject"
+      >
+    ) => {
+      console.log("LEAVE IPC RECEIVED:", companyId, leave.managerEmail, leave);
 
-      return createLeave(companyId, leave);
+      const createdLeave = await createLeave(companyId, leave);
+      return createdLeave;
     }
   );
 

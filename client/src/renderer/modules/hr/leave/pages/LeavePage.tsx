@@ -380,7 +380,7 @@ const EmployeeLeavePage = () => {
                 LEAVE ROWS
             ================================================= */}
 
-          <Box height="80vh" overflowX="hidden" overflowY="auto">
+          <Box height="50vh" overflowX="hidden" overflowY="auto">
             {leaves
               .filter((l) => !statusFilter || l.status === statusFilter)
               .map((leave: LeaveWithEmployee) => (

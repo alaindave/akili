@@ -10,6 +10,8 @@ const API_URL = app.isPackaged
   ? "https://leather-works.onrender.com"
   : process.env.VITE_API_URL;
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 /** Validates notification requests before they leave the desktop application. */
 export async function sendNotificationEmail(
   notification: EmailNotification
@@ -18,12 +20,26 @@ export async function sendNotificationEmail(
     throw new Error("Company ID is required.");
   }
 
-  if (!notification.title.trim() || !notification.message.trim()) {
-    throw new Error("Email title and message are required.");
+  if (!notification.recipientEmail?.trim()) {
+    throw new Error("Recipient email is required.");
+  }
+
+  if (!EMAIL_PATTERN.test(notification.recipientEmail.trim())) {
+    throw new Error("Recipient email is invalid.");
+  }
+
+  if (!notification.title?.trim()) {
+    throw new Error("Email title is required.");
+  }
+
+  if (!notification.message?.trim()) {
+    throw new Error("Email message is required.");
   }
 
   return postEmailNotification({
     ...notification,
+    companyId: notification.companyId.trim(),
+    recipientEmail: notification.recipientEmail.trim(),
     title: notification.title.trim(),
     message: notification.message.trim(),
   });
@@ -48,7 +64,9 @@ async function postEmailNotification(
     notification,
     {
       timeout: 15_000,
-      headers: { "x-auth-token": token },
+      headers: {
+        "x-auth-token": token,
+      },
     }
   );
 

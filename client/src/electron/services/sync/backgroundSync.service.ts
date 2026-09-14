@@ -1,6 +1,7 @@
 import { BrowserWindow } from "electron";
 import { NetworkService } from "./network.service.js";
 import sync from "./sync.service.js";
+import { processNotificationQueue } from "../email/notificationQueue.service.js";
 
 const SYNC_INTERVAL = 2 * 60 * 1000;
 
@@ -12,6 +13,7 @@ export function startBackgroundSync(companyId: string) {
     console.log("NO COMPANY CONFIGURED. BACKGROUND SYNC WAITING.");
     return;
   }
+
   if (syncInterval) {
     console.log("BACKGROUND SYNC ALREADY STARTED");
     return;
@@ -41,10 +43,12 @@ export function stopBackgroundSync() {
 async function runBackgroundSync(companyId: string) {
   if (syncing) {
     console.log("SYNC ALREADY IN PROGRESS. SKIPPING...");
+
     notifyRenderer({
       status: "SYNCING",
       timestamp: new Date().toISOString(),
     });
+
     return;
   }
 
@@ -66,9 +70,29 @@ async function runBackgroundSync(companyId: string) {
 
     console.log("BACKGROUND SYNC STARTED...");
 
+    /*
+     * -----------------------------------------------------
+     * SYNC
+     * -----------------------------------------------------
+     */
     await sync(companyId);
 
     console.log("BACKGROUND SYNC COMPLETED");
+
+    /*
+     * -----------------------------------------------------
+     * NOTIFICATION QUEUE
+     * -----------------------------------------------------
+     */
+    try {
+      console.log("PROCESSING NOTIFICATION QUEUE AFTER SYNC...");
+
+      await processNotificationQueue();
+
+      console.log("NOTIFICATION QUEUE PROCESSING AFTER SYNC COMPLETED.");
+    } catch (error) {
+      console.error("FAILED TO PROCESS NOTIFICATION QUEUE AFTER SYNC:", error);
+    }
   } catch (error) {
     console.error("BACKGROUND SYNC FAILED:", error);
 

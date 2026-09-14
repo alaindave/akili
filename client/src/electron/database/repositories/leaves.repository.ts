@@ -4,11 +4,26 @@ import { all, get, run } from "../db.js";
 import { getEmployeeById } from "./employees.repository.js";
 import { addToSyncQueue } from "./sync.repository.js";
 
-export async function createLeave(companyId: string, leave: Partial<Leave>) {
+export async function createLeave(
+  companyId: string,
+  leave: Pick<
+    Leave,
+    | "managerEmail"
+    | "employeeId"
+    | "employeeFirstName"
+    | "employeeLastName"
+    | "startDate"
+    | "endDate"
+    | "notes"
+    | "subject"
+  >
+) {
   if (!companyId) {
     throw new Error("COMPANY ID IS REQUIRED");
   }
-
+  if (!leave.managerEmail) {
+    throw new Error("MANAGER EMAIL IS REQUIRED");
+  }
   if (!leave.employeeId) {
     throw new Error("EMPLOYEE ID IS REQUIRED");
   }
@@ -68,7 +83,7 @@ export async function createLeave(companyId: string, leave: Partial<Leave>) {
       submittedMonth,
       leave.startDate,
       leave.endDate,
-      leave.status ?? "ATTENTE_APPROBATION",
+      "ATTENTE_APPROBATION",
       leave.subject,
       leave.notes,
       serverVersion,
@@ -82,7 +97,7 @@ export async function createLeave(companyId: string, leave: Partial<Leave>) {
     _id,
     ...leave,
     employeeId: leave.employeeId,
-    status: leave.status ?? "ATTENTE_APPROBATION",
+    status: "ATTENTE_APPROBATION",
     submittedAt,
     submittedMonth,
     serverVersion,
