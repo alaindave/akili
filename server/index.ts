@@ -33,10 +33,6 @@ const requiredEnvVars = [
     name: "JWT Private Key",
   },
   {
-    key: "MANAGER_EMAIL",
-    name: "Manager email",
-  },
-  {
     key: "EMAIL_FROM",
     name: "Resend email",
   },

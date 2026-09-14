@@ -6,15 +6,15 @@ export interface EmailNotification {
   /** Tenant boundary, verified against the authenticated user by the API. */
   companyId: string;
   /** One or more intended recipients. */
-  to: string | string[];
+  // to: string | string[];
   /** Optional reply-to address passed to the email provider. */
-  replyTo?: string;
+  // replyTo?: string;
   /** A short, human-readable summary of the event. */
   title: string;
   /** The notification body. Plain text is converted to safe HTML on the server. */
   message: string;
   /** Local record identifier, useful for delivery tracing. */
-  entityId?: string;
+  // entityId?: string;
 }
 
 export interface EmailDeliveryResult {

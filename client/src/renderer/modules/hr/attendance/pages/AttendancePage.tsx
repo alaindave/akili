@@ -457,6 +457,15 @@ const EmployeeAttendancePage = () => {
       });
 
       await attendanceDailyCheckSync();
+      const email_results = await window.electron.email.send({
+        type: "attendance",
+        companyId: user.companyId,
+        title: "Présence verrouillée",
+        message: `La liste de présence du ${date.toLocaleDateString(
+          "fr-FR"
+        )}est maintenant verrouillée`,
+      });
+      console.log("EMAIL RESULTS", email_results);
     } catch (error) {
       showActionError(
         "Échec de la confirmation",

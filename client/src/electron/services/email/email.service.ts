@@ -6,7 +6,6 @@ import type {
   EmailNotification,
 } from "../../../common/types/EmailNotification.js";
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const API_URL = app.isPackaged
   ? "https://leather-works.onrender.com"
   : process.env.VITE_API_URL;
@@ -19,24 +18,12 @@ export async function sendNotificationEmail(
     throw new Error("Company ID is required.");
   }
 
-  const recipients = (Array.isArray(notification.to)
-    ? notification.to
-    : [notification.to]
-  )
-    .map((email) => email.trim())
-    .filter(Boolean);
-
-  if (recipients.length === 0 || recipients.some((email) => !EMAIL_PATTERN.test(email))) {
-    throw new Error("At least one valid recipient email is required.");
-  }
-
   if (!notification.title.trim() || !notification.message.trim()) {
     throw new Error("Email title and message are required.");
   }
 
   return postEmailNotification({
     ...notification,
-    to: recipients,
     title: notification.title.trim(),
     message: notification.message.trim(),
   });
