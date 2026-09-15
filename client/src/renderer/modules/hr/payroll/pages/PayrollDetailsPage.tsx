@@ -160,7 +160,7 @@ const PayrollDetailsPage = () => {
     try {
       const results = await window.electron.payrollRun.submitForVerification(
         user.companyId,
-        "alainbedetse@gmail.com",
+        "afritanleather@yahoo.fr",
         _id,
         user
       );
@@ -207,7 +207,7 @@ const PayrollDetailsPage = () => {
     try {
       const results = await window.electron.payrollRun.markPayrollAsPaid(
         user.companyId,
-        "alainbedetse@gmail.com",
+        "afritanleather@yahoo.fr",
         _id,
         user
       );

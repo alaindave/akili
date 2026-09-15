@@ -202,7 +202,7 @@ export default function PayrollPage() {
       const payroll_results =
         await window.electron.payrollRun.createPayrollDraft({
           companyId: user.companyId,
-          managerEmail: "alainbedetse@gmail.com",
+          managerEmail: "afritanleather@yahoo.fr",
           admin: user,
           year: Number(year),
           month: Number(month),

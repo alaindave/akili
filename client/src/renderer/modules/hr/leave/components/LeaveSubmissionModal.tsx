@@ -92,7 +92,7 @@ const LeaveSubmissionModal = ({
     try {
       const leave = await window.electron.leave.create(user.companyId, {
         ...leaveData,
-        managerEmail: "alainbedetse@gmail.com",
+        managerEmail: "afritanleather@yahoo.fr",
         employeeId: employee._id,
         employeeFirstName: employee.firstName,
         employeeLastName: employee.lastName,
