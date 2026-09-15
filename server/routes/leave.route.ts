@@ -80,20 +80,15 @@ router.post(
 router.get("/", async (req, res) => {
   try {
     const { month, year } = req.query;
-
     if (!month || !year) {
       return res.status(400).send("The month and year are required");
     }
-
     const monthNumber = Number(month);
     const yearNumber = Number(year);
-
     if (isNaN(monthNumber) || isNaN(yearNumber)) {
       return res.status(400).send("Invalid month or year");
     }
-
     const leaves = await getLeavesByMonth(monthNumber, yearNumber);
-
     res.send(leaves);
   } catch (error) {
     console.error("Error retrieving leaves:", error);
@@ -105,13 +100,10 @@ router.get("/", async (req, res) => {
 router.get("/ongoing", async (req: Request, res: Response) => {
   try {
     const onGoingLeaves = await getOnGoingLeaves();
-
     console.log("Fetched ongoing leaves", onGoingLeaves);
-
     return res.status(200).send(onGoingLeaves);
   } catch (error) {
     console.error("An error occurred while fetching ongoing leaves:", error);
-
     return res.status(500).send("Server error");
   }
 });
@@ -120,13 +112,10 @@ router.get("/ongoing", async (req: Request, res: Response) => {
 router.get("/:leaveId", async (req: Request<LeaveParams>, res: Response) => {
   try {
     const leave = await getLeaveByID(req.params.leaveId);
-
     console.log("Leave fetched:", leave);
-
     return res.status(200).send(leave);
   } catch (error) {
     console.error("An error occurred while fetching leave:", error);
-
     return res.status(500).send("Server error");
   }
 });
@@ -135,21 +124,15 @@ router.get("/:leaveId", async (req: Request<LeaveParams>, res: Response) => {
 router.put("/:leaveId", async (req: Request<LeaveParams>, res: Response) => {
   try {
     const leave = await getLeaveByID(req.params.leaveId);
-
     if (!leave) {
       return res.status(404).send("No leave found with the given ID.");
     }
-
     console.log("Leave to edit:", leave);
-
     const leaveEdit = await editLeave(req.params.leaveId, req.body);
-
     console.log("Leave edit success:", leaveEdit);
-
     return res.status(200).send(leaveEdit);
   } catch (error) {
     console.error("Leave edit error:", error);
-
     return res.status(500).send("Unable to edit leave");
   }
 });
@@ -158,21 +141,15 @@ router.put("/:leaveId", async (req: Request<LeaveParams>, res: Response) => {
 router.delete("/:leaveId", async (req: Request<LeaveParams>, res: Response) => {
   try {
     const leave = await getLeaveByID(req.params.leaveId);
-
     if (!leave) {
       return res.status(404).send("No leave found with the given ID.");
     }
-
     console.log("Leave to delete:", leave);
-
     const leaveDeleted = await deleteLeave(req.params.leaveId);
-
     console.log("Leave delete success:", leaveDeleted);
-
     return res.status(200).send(leaveDeleted);
   } catch (error) {
     console.error("Deletion request to database failed:", error);
-
     return res.status(500).send("Leave deletion error");
   }
 });

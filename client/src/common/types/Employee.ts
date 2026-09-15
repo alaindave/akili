@@ -16,7 +16,7 @@ export default interface Employee {
   dateBirth: string;
   dateHired: string;
   role: string;
-  department: string;
+  department: "Administration" | "Atelier" | "Usine" | "Magasin" | "Sentinelle";
   salary: number;
   remainingLeave: number;
   status: "ACTIF" | "INACTIF";

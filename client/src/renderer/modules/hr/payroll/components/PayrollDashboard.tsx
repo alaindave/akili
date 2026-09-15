@@ -40,8 +40,8 @@ const PayrollDashboard = ({
       >
         <HStack>
           <Box
-            width="1.2rem"
-            height="1.2rem"
+            width="0.5rem"
+            height="0.5rem"
             backgroundColor="#000080"
             borderRadius="10px"
             padding="8px"
@@ -87,8 +87,8 @@ const PayrollDashboard = ({
       >
         <HStack>
           <Box
-            width="1.2rem"
-            height="1.2rem"
+            width="0.5rem"
+            height="0.5rem"
             backgroundColor="#000080"
             borderRadius="10px"
             padding="8px"
@@ -134,8 +134,8 @@ const PayrollDashboard = ({
       >
         <HStack position="relative" bottom="1rem">
           <Box
-            width="1.2rem"
-            height="1.2rem"
+            width="0.5rem"
+            height="0.5rem"
             backgroundColor=" #16833e"
             borderRadius="10px"
             padding="8px"
@@ -171,8 +171,8 @@ const PayrollDashboard = ({
       >
         <HStack>
           <Box
-            width="1.2rem"
-            height="1.2rem"
+            width="0.5rem"
+            height="0.5rem"
             backgroundColor="red.500"
             borderRadius="10px"
             padding="8px"
@@ -217,8 +217,8 @@ const PayrollDashboard = ({
       >
         <HStack>
           <Box
-            width="1.2rem"
-            height="1.2rem"
+            width="0.5rem"
+            height="0.5rem"
             borderRadius="10px"
             padding="8px"
             backgroundColor="blue.500"

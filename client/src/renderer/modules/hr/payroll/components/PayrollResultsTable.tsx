@@ -37,7 +37,7 @@ export default function PayrollResultsTable({ payrollResults }: Props) {
   return (
     <TableContainer
       maxH="50vh"
-      maxW="85vw"
+      maxW="80vw"
       borderWidth="1px"
       borderRadius="lg"
       overflowY="auto"

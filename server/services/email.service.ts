@@ -69,8 +69,7 @@ export function validateEmailNotification(
       (attachment) =>
         !attachment?.filename?.trim() ||
         !attachment?.content?.trim() ||
-        (attachment.contentType !== undefined &&
-          !attachment.contentType.trim())
+        (attachment.contentType !== undefined && !attachment.contentType.trim())
     )
   ) {
     errors.push("Email attachments must include a filename and content.");
@@ -117,7 +116,7 @@ export async function sendEmailNotification(
     text: notification.message.trim(),
     html: `<main style="font-family:Arial,sans-serif;padding:20px">
       <h2>${escapeHtml(notification.title.trim())}</h2>
-      <p style="white-space:pre-line">${escapeHtml(
+      <p style="white-space:pre-line;font-size:15px">${escapeHtml(
         notification.message.trim()
       )}</p>
     </main>`,

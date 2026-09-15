@@ -438,12 +438,7 @@ declare global {
       };
 
       payrollRun: {
-        createPayrollDraft(
-          companyId: string,
-          admin: AdminUser,
-          year: number,
-          month: number
-        ): Promise<PayrollRun>;
+        createPayrollDraft(payroll_run: PayrollRunDto): Promise<PayrollRun>;
 
         getPayrollRuns(
           companyId: string,
@@ -459,6 +454,7 @@ declare global {
         // BROUILLON → EN_VERIFICATION
         submitForVerification(
           companyId: string,
+          managerEmail: string,
           payrollRunId: string,
           admin: AdminUser
         ): Promise<void>;
@@ -476,6 +472,7 @@ declare global {
         // APPROUVÉ → PAYÉ
         markPayrollAsPaid(
           companyId: string,
+          managerEmail: string,
           payrollRunId: string,
           admin: AdminUser
         ): Promise<void>;

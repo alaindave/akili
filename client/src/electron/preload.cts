@@ -1,3 +1,4 @@
+
 const { contextBridge, ipcRenderer } = require("electron");
 
 type OfflineUser = import("../common/types/OfflineUser", {
@@ -63,6 +64,14 @@ type EmployeePayrollProfile = import(
     with: { "resolution-mode": "require" },
   }
 ).default;
+
+export interface PayrollRunDto {
+  companyId: string;
+  managerEmail: string;
+  admin: AdminUser;
+  year: number;
+  month: number;
+}
 
 type AttendanceDailyCheckPreparationInput = typeof import(
   "../common/types/AttendanceDailyCheck",
@@ -1433,17 +1442,11 @@ contextBridge.exposeInMainWorld("electron", {
 
   payrollRun: {
     createPayrollDraft: (
-      companyId: string,
-      admin: AdminUser,
-      year: number,
-      month: number
+   payroll_run: PayrollRunDto
     ) =>
       ipcRenderer.invoke(
         "payroll:createDraft",
-        companyId,
-        admin,
-        year,
-        month
+      payroll_run
       ),
 
     getPayrollRuns: (
@@ -1469,13 +1472,15 @@ contextBridge.exposeInMainWorld("electron", {
       ),
 
     submitForVerification: (
-      companyId: string,
+      companyId:string,
+      managerEmail:string,
       payrollRunId: string,
       admin: AdminUser
     ) =>
       ipcRenderer.invoke(
         "payroll:submitForVerification",
         companyId,
+        managerEmail,
         payrollRunId,
         admin
       ),
@@ -1504,12 +1509,14 @@ contextBridge.exposeInMainWorld("electron", {
 
     markPayrollAsPaid: (
       companyId: string,
+      managerEmail:string,
       payrollRunId: string,
       adminUser: AdminUser
     ) =>
       ipcRenderer.invoke(
         "payroll:markAsPaid",
         companyId,
+        managerEmail,
         payrollRunId,
         adminUser
       ),

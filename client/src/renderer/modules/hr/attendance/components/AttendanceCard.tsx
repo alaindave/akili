@@ -509,15 +509,6 @@ const EmployeeAttendanceCard = ({
     toggleOff?.();
   };
 
-  const formatDepartment = (department: string | null | undefined) => {
-    if (!department) return null;
-    if (department === "ADMINISTRATION") return "Administration";
-    if (department === "ATELIER") return "Atelier";
-    if (department === "USINE") return "Usine";
-    if (department === "MAGASIN") return "Magasin";
-    return "Sentinelle";
-  };
-
   /* =========================================================
      RENDER
   ========================================================= */
@@ -584,8 +575,7 @@ const EmployeeAttendanceCard = ({
       ====================================================== */}
 
       <Text color="gray.600" fontWeight="500" fontSize="1.05rem">
-        {formatDepartment(employee?.department) ??
-          formatDepartment(attendance.department)}
+        {employee?.department ?? attendance.department}
       </Text>
 
       {/* =====================================================

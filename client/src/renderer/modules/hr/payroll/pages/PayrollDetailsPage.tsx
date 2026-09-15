@@ -160,6 +160,7 @@ const PayrollDetailsPage = () => {
     try {
       const results = await window.electron.payrollRun.submitForVerification(
         user.companyId,
+        "alainbedetse@gmail.com",
         _id,
         user
       );
@@ -206,6 +207,7 @@ const PayrollDetailsPage = () => {
     try {
       const results = await window.electron.payrollRun.markPayrollAsPaid(
         user.companyId,
+        "alainbedetse@gmail.com",
         _id,
         user
       );
@@ -293,7 +295,7 @@ const PayrollDetailsPage = () => {
           </Box>
           {/* Payroll results table */}
 
-          <Box mt="3rem">
+          <Box mt="3rem" ml="0.4rem">
             <PayrollResultsTable payrollResults={payrollResults} />
           </Box>
         </Box>

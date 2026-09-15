@@ -380,8 +380,14 @@ const EmployeeLeavePage = () => {
                 LEAVE ROWS
             ================================================= */}
 
-          <Box height="50vh" overflowX="hidden" overflowY="auto">
+          <Box height="55vh" overflowX="hidden" overflowY="auto">
             {leaves
+              .filter((l) =>
+                `${l.firstName} ${l.lastName}`
+                  .toLowerCase()
+                  .includes(searchText.toLowerCase())
+              )
+              .filter((l) => !filter || l.department === filter)
               .filter((l) => !statusFilter || l.status === statusFilter)
               .map((leave: LeaveWithEmployee) => (
                 <EmployeeLeaveCard

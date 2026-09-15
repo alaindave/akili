@@ -8,12 +8,10 @@ import {
   PayrollRun,
   PayrollStatus,
 } from "../../../common/types/payroll/Payroll.js";
-
-import User from "../../../common/types/User.js";
 import AdminUser from "../../../common/types/AdminUser.js";
-
 import { addToSyncQueue } from "./sync.repository.js";
 import { createAuditLog } from "./audit_log.repository.js";
+import { PayrollRunDto } from "../../preload.cjs";
 
 function getAdminName(
   admin: Pick<AdminUser, "firstName" | "lastName">
@@ -46,13 +44,10 @@ async function createPayrollStatusAudit(
 // ============================================================
 
 export async function createPayrollRun(
-  companyId: string,
   input: PayrollBatchResult,
-  admin: Omit<User, "password" | "notes">,
-  year: number,
-  month: number
+  payrollRunDto: PayrollRunDto
 ) {
-  if (!companyId) {
+  if (!payrollRunDto.companyId) {
     throw new Error("Company ID is required.");
   }
 
@@ -60,11 +55,19 @@ export async function createPayrollRun(
   // Validate payroll period
   // ----------------------------------------------------------
 
-  if (!Number.isInteger(month) || month < 1 || month > 12) {
+  if (
+    !Number.isInteger(payrollRunDto.month) ||
+    payrollRunDto.month < 1 ||
+    payrollRunDto.month > 12
+  ) {
     throw new Error("Invalid payroll month. Month must be between 1 and 12.");
   }
 
-  if (!Number.isInteger(year) || year < 2000 || year > 2100) {
+  if (
+    !Number.isInteger(payrollRunDto.year) ||
+    payrollRunDto.year < 2000 ||
+    payrollRunDto.year > 2100
+  ) {
     throw new Error("Invalid payroll year.");
   }
 
@@ -85,11 +88,13 @@ export async function createPayrollRun(
       AND status <> 'ANNULÉ'
     LIMIT 1
     `,
-    [companyId, year, month]
+    [payrollRunDto.companyId, payrollRunDto.year, payrollRunDto.month]
   );
 
   if (existingPayrollRun) {
-    throw new Error(`Une fiche de paye existe déjà pour ${month}/${year}.`);
+    throw new Error(
+      `Une fiche de paye existe déjà pour ${payrollRunDto.month}/${payrollRunDto.year}.`
+    );
   }
 
   // ----------------------------------------------------------
@@ -98,10 +103,11 @@ export async function createPayrollRun(
 
   const payrollRun: PayrollRun = {
     _id: randomUUID(),
-    companyId,
-    generatedBy: admin._id,
-    month,
-    year,
+    companyId: payrollRunDto.companyId,
+    managerEmail: payrollRunDto.managerEmail,
+    generatedBy: payrollRunDto.admin._id,
+    month: payrollRunDto.month,
+    year: payrollRunDto.year,
     employeeCount: input.employeeCount,
     totalBasicSalary: input.totalBasicSalary,
     totalEarnings: input.totalEarnings,
@@ -158,7 +164,7 @@ export async function createPayrollRun(
   );
 
   await addToSyncQueue({
-    companyId,
+    companyId: payrollRun.companyId,
     entity: "payroll_run",
     entityId: payrollRun._id,
     operation: "create",
@@ -166,9 +172,9 @@ export async function createPayrollRun(
   });
 
   await createAuditLog({
-    companyId,
-    userId: admin._id,
-    userName: getAdminName(admin),
+    companyId: payrollRun.companyId,
+    userId: payrollRunDto.admin._id,
+    userName: getAdminName(payrollRunDto.admin),
     action: "CREATE",
     entity: "PAYROLL_RUN",
     entityId: payrollRun._id,
@@ -1012,9 +1018,9 @@ export async function updatePayrollStatus(
   // Make sure payroll run belongs to this company
   // ----------------------------------------------------------
 
-  const payrollRun = await get<{ _id: string }>(
+  const payrollRun: PayrollRun | null = await get(
     `
-    SELECT _id
+    SELECT *
     FROM payroll_runs
     WHERE companyId = ?
       AND _id = ?
@@ -1028,9 +1034,9 @@ export async function updatePayrollStatus(
     throw new Error(`Payroll run not found for company: ${payrollRunId}`);
   }
 
-  const results = await all<{ _id: string }>(
+  const results: PayrollResult[] = await all(
     `
-    SELECT _id
+    SELECT *
     FROM payroll_results
     WHERE companyId = ?
       AND payrollRunId = ?
@@ -1076,23 +1082,21 @@ export async function updatePayrollStatus(
     entityId: payrollRunId,
     operation: "update",
     payload: JSON.stringify({
-      companyId,
-      _id: payrollRunId,
+      ...payrollRun,
       status,
       updatedAt: now,
     }),
   });
 
   for (const result of results) {
+    if (!result._id) return;
     await addToSyncQueue({
       companyId,
       entity: "payroll_result",
       entityId: result._id,
       operation: "update",
       payload: JSON.stringify({
-        companyId,
-        _id: result._id,
-        payrollRunId,
+        ...result,
         status,
         updatedAt: now,
       }),
@@ -1117,9 +1121,9 @@ export async function cancelPayrollRun(
 
   const now = new Date().toISOString();
 
-  const payrollRun = await get<{ _id: string; status: PayrollStatus }>(
+  const payrollRun: PayrollRun | null = await get(
     `
-    SELECT _id, status
+    SELECT *
     FROM payroll_runs
     WHERE companyId = ?
       AND _id = ?
@@ -1133,9 +1137,9 @@ export async function cancelPayrollRun(
     throw new Error(`Payroll run not found for company: ${payrollRunId}`);
   }
 
-  const results = await all<{ _id: string }>(
+  const results: PayrollResult[] = await all(
     `
-    SELECT _id
+    SELECT *
     FROM payroll_results
     WHERE companyId = ?
       AND payrollRunId = ?
@@ -1182,8 +1186,8 @@ export async function cancelPayrollRun(
     entityId: payrollRunId,
     operation: "update",
     payload: JSON.stringify({
+      ...payrollRun,
       companyId,
-      _id: payrollRunId,
       status: "ANNULÉ",
       cancelledBy: admin._id,
       cancelledAt: now,
@@ -1192,15 +1196,15 @@ export async function cancelPayrollRun(
   });
 
   for (const result of results) {
+    if (!result._id) return;
     await addToSyncQueue({
       companyId,
       entity: "payroll_result",
       entityId: result._id,
       operation: "update",
       payload: JSON.stringify({
+        ...result,
         companyId,
-        _id: result._id,
-        payrollRunId,
         status: "ANNULÉ",
         cancelledAt: now,
         updatedAt: now,
@@ -1226,6 +1230,7 @@ export async function cancelPayrollRun(
 
 export async function verifyPayrollRun(
   companyId: string,
+  managerEmail: string,
   payrollRunId: string,
   admin: AdminUser
 ) {
@@ -1235,9 +1240,9 @@ export async function verifyPayrollRun(
 
   const now = new Date().toISOString();
 
-  const payrollRun = await get<{ _id: string; status: PayrollStatus }>(
+  const payrollRun: PayrollRun | null = await get(
     `
-    SELECT _id, status
+    SELECT *
     FROM payroll_runs
     WHERE companyId = ?
       AND _id = ?
@@ -1253,7 +1258,7 @@ export async function verifyPayrollRun(
 
   const results = await all<{ _id: string }>(
     `
-    SELECT _id
+    SELECT *
     FROM payroll_results
     WHERE companyId = ?
       AND payrollRunId = ?
@@ -1298,8 +1303,8 @@ export async function verifyPayrollRun(
     entityId: payrollRunId,
     operation: "update",
     payload: JSON.stringify({
-      companyId,
-      _id: payrollRunId,
+      ...payrollRun,
+      managerEmail,
       status: "VERIFICATION",
       submittedForVerificationBy: admin._id,
       submittedForVerificationAt: now,
@@ -1315,8 +1320,8 @@ export async function verifyPayrollRun(
       operation: "update",
       payload: JSON.stringify({
         companyId,
-        _id: result._id,
         payrollRunId,
+        managerEmail,
         status: "VERIFICATION",
         verifiedAt: now,
         updatedAt: now,
@@ -1458,6 +1463,7 @@ export async function approvePayrollRun(
 
 export async function paymentPayrollRun(
   companyId: string,
+  managerEmail: string,
   payrollRunId: string,
   admin: AdminUser
 ) {
@@ -1467,9 +1473,9 @@ export async function paymentPayrollRun(
 
   const now = new Date().toISOString();
 
-  const payrollRun = await get<{ _id: string; status: PayrollStatus }>(
+  const payrollRun: PayrollRun | null = await get(
     `
-    SELECT _id, status
+    SELECT *
     FROM payroll_runs
     WHERE companyId = ?
       AND _id = ?
@@ -1483,9 +1489,9 @@ export async function paymentPayrollRun(
     throw new Error(`Payroll run not found for company: ${payrollRunId}`);
   }
 
-  const results = await all<{ _id: string }>(
+  const results: PayrollResult[] = await all(
     `
-    SELECT _id
+    SELECT *
     FROM payroll_results
     WHERE companyId = ?
       AND payrollRunId = ?
@@ -1530,8 +1536,9 @@ export async function paymentPayrollRun(
     entityId: payrollRunId,
     operation: "update",
     payload: JSON.stringify({
+      ...payrollRun,
       companyId,
-      _id: payrollRunId,
+      managerEmail,
       status: "PAYÉ",
       paidBy: admin._id,
       paidAt: now,
@@ -1540,16 +1547,17 @@ export async function paymentPayrollRun(
   });
 
   for (const result of results) {
+    if (!result._id) continue;
     await addToSyncQueue({
       companyId,
       entity: "payroll_result",
       entityId: result._id,
       operation: "update",
       payload: JSON.stringify({
+        ...result,
         companyId,
-        _id: result._id,
+        managerEmail,
         status: "PAYÉ",
-        payrollRunId,
         paidAt: now,
         updatedAt: now,
       }),

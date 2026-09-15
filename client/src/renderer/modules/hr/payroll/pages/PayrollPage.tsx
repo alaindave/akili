@@ -200,12 +200,13 @@ export default function PayrollPage() {
 
     try {
       const payroll_results =
-        await window.electron.payrollRun.createPayrollDraft(
-          user.companyId,
-          user,
-          Number(year),
-          Number(month)
-        );
+        await window.electron.payrollRun.createPayrollDraft({
+          companyId: user.companyId,
+          managerEmail: "alainbedetse@gmail.com",
+          admin: user,
+          year: Number(year),
+          month: Number(month),
+        });
       console.log("PAYROLL RESULTS", payroll_results);
       toast({
         title: "Paie générée",

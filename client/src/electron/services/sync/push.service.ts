@@ -44,6 +44,7 @@ import { getEmployeeDocument } from "../../database/repositories/employees_docum
 import { enqueueNotification } from "../../database/repositories/notificationQueue.repository.js";
 import { processNotificationQueue } from "../email/notificationQueue.service.js";
 import { notifyManagerOfAttendanceDailyCheck } from "../attendance/attendanceNotification.service.js";
+import { getMonthName } from "../../util/monthFormatter.util.js";
 
 // Notification queue
 
@@ -474,13 +475,13 @@ export async function pushPendingChanges(
             recipientEmail: data.managerEmail,
             title: `Demande de congé - ${data.employeeFirstName} ${data.employeeLastName}`,
             message: `
-            Employé :${data.employeeFirstName} ${data.employeeLastName}
+            Employé: ${data.employeeFirstName} ${data.employeeLastName}
 
-            Période :Du ${new Date(data.startDate).toLocaleDateString(
+            Période: Du ${new Date(data.startDate).toLocaleDateString(
               "fr-FR"
             )} au ${new Date(data.endDate).toLocaleDateString("fr-FR")}
          
-            Motif:${data.notes || "Aucune note fournie."}
+            Motif: ${data.notes || "Aucune note fournie."}
 
             Veuillez vous connecter sur Akili pour approuver 
             ou refuser la demande.
@@ -565,9 +566,97 @@ export async function pushPendingChanges(
        * -----------------------------------------------------
        */
 
-      case "payroll_run":
+      /*
+       * -----------------------------------------------------
+       * PAYROLL RUN
+       * -----------------------------------------------------
+       */
+
+      case "payroll_run": {
         await markPayrollRunSynced(companyId, data._id);
+
+        /*
+         * ---------------------------------------------------
+         * MANAGER NOTIFIED
+         * ---------------------------------------------------
+         *
+         * Ask the manager to confirm the payroll.
+         */
+
+        if (data.status === "VERIFICATION") {
+          if (!data.managerEmail) {
+            throw new Error(
+              `Cannot queue payroll confirmation notification: ` +
+                `managerEmail is missing for payroll run ${data._id}`
+            );
+          }
+
+          await enqueueNotification({
+            companyId,
+            type: "payroll",
+            recipientEmail: data.managerEmail,
+            title: `Verification de fiches de paie - ${getMonthName(
+              data.month
+            )} ${data.year}`,
+            message:
+              `Les fiches de paie pour le mois de ${getMonthName(data.month)} ${
+                data.year
+              } ` +
+              "sont prêtes pour votre vérification sur Akili.\n" +
+              "Veuillez vérifier les informations et confirmer.\n\n" +
+              "L'équipe Akili",
+            entityId: data._id,
+          });
+          await processNotificationQueue();
+
+          console.log("PAYROLL MANAGER CONFIRMATION NOTIFICATION QUEUED:", {
+            companyId,
+            payrollRunId: data._id,
+            managerEmail: data.managerEmail,
+          });
+        }
+
+        /*
+         * ---------------------------------------------------
+         * PAYE
+         * ---------------------------------------------------
+         *
+         * Inform the manager that payroll has been paid.
+         */
+
+        if (data.status === "PAYÉ") {
+          if (!data.managerEmail) {
+            throw new Error(
+              `Cannot queue payroll paid notification: ` +
+                `managerEmail is missing for payroll run ${data._id}`
+            );
+          }
+
+          await enqueueNotification({
+            companyId,
+            type: "payroll",
+            recipientEmail: data.managerEmail,
+            title: `Paiements effectués - ${getMonthName(data.month)} ${
+              data.year
+            }`,
+            message:
+              `Paiements effectués avec succès pour la période de ${getMonthName(
+                data.month
+              )} ${data.year}. \n\n` + `L'équipe Akili`,
+            entityId: data._id,
+          });
+
+          await processNotificationQueue();
+
+          console.log("PAYROLL PAID NOTIFICATION QUEUED:", {
+            companyId,
+            payrollRunId: data._id,
+            managerEmail: data.managerEmail,
+          });
+        }
+
         break;
+      }
 
       /*
        * -----------------------------------------------------

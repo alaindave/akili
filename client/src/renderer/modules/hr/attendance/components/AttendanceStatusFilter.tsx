@@ -54,7 +54,7 @@ const AttendanceStatusFilter = ({ onFilterClicked }: Props) => {
           <Box>
             <GoDotFill />
           </Box>
-          <Text ml="1rem"> Afficher tout</Text>
+          <Text ml="1rem"> Tout afficher </Text>
         </MenuItem>
         <MenuItem
           color="gray.800"

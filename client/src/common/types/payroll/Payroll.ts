@@ -22,6 +22,7 @@ export type PayrollStatus =
 
 export interface PayrollRun {
   companyId: string;
+  managerEmail: string;
   _id: string;
   month: number;
   year: number;
