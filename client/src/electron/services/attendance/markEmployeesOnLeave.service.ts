@@ -3,7 +3,7 @@ import {
   createAbsenceLeaveAttendance,
   getAttendanceRecord,
 } from "../../database/repositories/attendances.repository.js";
-import Leave from "../../../common/types/Leave.js";
+import Leave from "../../../common/types/leave/Leave.js";
 import { createAttendanceDailyCheck } from "../../database/repositories/attendanceDailyCheck.repository.js";
 
 export async function markEmployeesOnLeave(

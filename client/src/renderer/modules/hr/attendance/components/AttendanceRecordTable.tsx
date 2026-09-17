@@ -7,7 +7,7 @@ import {
   Thead,
   Tr,
 } from "@chakra-ui/react";
-import { Attendance } from "../../../../../common/types/Attendance";
+import { Attendance } from "../../../../../common/types/attendance/Attendance";
 import AttendanceNotesPopover from "./AttendanceNotesPopover";
 import { formatLateMinutes } from "./ClockIn";
 

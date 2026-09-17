@@ -11,7 +11,7 @@ import {
   useDisclosure,
   Portal,
 } from "@chakra-ui/react";
-import { keyframes } from "@emotion/react";
+import { useErrorToast } from "../../../../hooks/useErrorToast";
 
 interface Props {
   onSubmit: (notes: string | undefined) => Promise<boolean>;
@@ -23,6 +23,7 @@ const AddClockInNotesPopover = ({ onSubmit, existingNotes }: Props) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [lateNote, setLateNote] = useState(existingNotes);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const showErrorMessage = useErrorToast();
 
   useEffect(() => {
     setLateNote(existingNotes);
@@ -38,14 +39,21 @@ const AddClockInNotesPopover = ({ onSubmit, existingNotes }: Props) => {
     setIsSubmitting(true);
 
     try {
-      console.log("Notes to save:", lateNote);
+      console.log("NOTES TO SAVE:", lateNote);
       const success = await onSubmit(lateNote);
       if (success) {
         setIsSubmitting(false);
         onClose();
       }
     } catch (error) {
-      console.error("Failed to save late notes:", error);
+      console.error("FAILED TO SAVE LATE NOTES:", error);
+      showErrorMessage(
+        "Échec d'enregistrement",
+        error,
+        "Impossible d'enregistrer les notes."
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

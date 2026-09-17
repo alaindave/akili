@@ -8,7 +8,7 @@ import EmployeeAdminLayout from "../modules/hr/employees/components/EmployeeAdmi
 import EmployeeLeavePage from "../modules/hr/leave/pages/LeavePage";
 import EmployeeAttendancePage from "../modules/hr/attendance/pages/AttendancePage";
 import PageErrorFallback from "../components/PageErrorFallback";
-import EmployeeAttendanceReport from "../modules/hr/leave/pages/AttendanceReportPage";
+import EmployeeAttendanceReport from "../modules/hr/attendance/pages/AttendanceReportPage";
 import EmployeeLeaveReport from "../modules/hr/leave/pages/LeaveReport";
 import PayrollPage from "../modules/hr/payroll/pages/PayrollPage";
 import EmployeePayslips from "../modules/hr/payroll/pages/PayslipsPage";
@@ -18,6 +18,9 @@ import PayrollDetailsPage from "../modules/hr/payroll/pages/PayrollDetailsPage";
 import EmployeePayslipDetails from "../modules/hr/payroll/pages/PayslipDetailsPage";
 import TaskPage from "../modules/tasks/pages/TaskPage";
 import TaskDetailsPage from "../modules/tasks/pages/TaskDetailsPage";
+import ReportPage from "../modules/hr/reports/pages/ReportPage";
+import TransportAllowancePage from "../modules/hr/attendance/pages/TransportAllowancePage";
+import TransportAllowanceWeeklyReportPage from "../modules/hr/attendance/pages/TransportAllowanceWeeklyPage";
 
 const router = createHashRouter([
   {
@@ -95,6 +98,21 @@ const router = createHashRouter([
       {
         path: "payroll",
         element: <PayrollPage />,
+        errorElement: <PageErrorFallback />,
+      },
+      {
+        path: "reports",
+        element: <ReportPage />,
+        errorElement: <PageErrorFallback />,
+      },
+      {
+        path: "reports/transport_allowance",
+        element: <TransportAllowancePage />,
+        errorElement: <PageErrorFallback />,
+      },
+      {
+        path: "reports/transport_allowance/transport_allowance_weekly",
+        element: <TransportAllowanceWeeklyReportPage />,
         errorElement: <PageErrorFallback />,
       },
       {

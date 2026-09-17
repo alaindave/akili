@@ -9,12 +9,12 @@ import {
   lockAttendanceDailyCheck,
   markAttendanceManagerNotified,
 } from "../database/repositories/attendanceDailyCheck.repository.js";
-import type { AttendanceDailyCheckPreparationInput } from "../../common/types/AttendanceDailyCheck.js";
+import type { AttendanceDailyCheckPreparationInput } from "../../common/types/attendance/AttendanceDailyCheck.js";
 import {
   LockAttendanceDailyCheckInput,
   MarkManagerNotifiedInput,
   VerifyAttendanceDailyCheckInput,
-} from "../../common/types/AttendanceDailyCheck.js";
+} from "../../common/types/attendance/AttendanceDailyCheck.js";
 import { verifyDailyAttendance } from "../services/attendance/attendanceDailyCheck.service.js";
 
 export function registerAttendanceDailyCheckIPC() {

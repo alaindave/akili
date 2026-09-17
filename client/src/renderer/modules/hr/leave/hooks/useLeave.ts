@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import type Leave from "../../../../../common/types/Leave";
+import type Leave from "../../../../../common/types/leave/Leave";
 
 /* =========================================================
    QUERY KEYS
@@ -139,7 +139,20 @@ export const useCreateLeave = (companyId: string) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (leave: Partial<Leave>) => {
+    mutationFn: async (
+      leave: Pick<
+        Leave,
+        | "managerEmail"
+        | "employeeId"
+        | "employeeFirstName"
+        | "employeeLastName"
+        | "startDate"
+        | "endDate"
+        | "notes"
+        | "subject"
+        | "status"
+      >
+    ) => {
       if (!companyId) {
         throw new Error("Company ID is required");
       }

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import LeaveHistoryTable from "../components/LeaveHistoryTable";
 import { Link, useLocation } from "react-router-dom";
 import Employee from "../../../../../common/types/Employee";
-import Leave from "../../../../../common/types/Leave";
+import Leave from "../../../../../common/types/leave/Leave";
 import { MdOutlineChevronRight } from "react-icons/md";
 import { FaArrowLeftLong } from "react-icons/fa6";
 import useAdminUser from "../../../../../store/auth.store";

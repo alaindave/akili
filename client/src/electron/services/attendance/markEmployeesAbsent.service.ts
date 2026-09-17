@@ -52,11 +52,9 @@ export async function markEmployeesAbsent(
 
   if (backendAvailable) {
     try {
-      const absentAttendance = await markEmployeesAbsentOnline(companyId, date);
-
-      console.log("ONLINE ABSENT ATTENDANCE", absentAttendance);
-
       await completeMarkAbsent(companyId, now, date);
+      const absentAttendance = await markEmployeesAbsentOnline(companyId, date);
+      console.log("ONLINE ABSENT ATTENDANCE", absentAttendance);
 
       return {
         companyId,
@@ -79,11 +77,9 @@ export async function markEmployeesAbsent(
    * ---------------------------------------------------------
    */
 
-  const absentAttendance = await markEmployeesAbsentLocally(companyId, date);
-
-  console.log("OFFLINE ABSENT ATTENDANCE", absentAttendance);
-
   await completeMarkAbsent(companyId, now, date);
+  const absentAttendance = await markEmployeesAbsentLocally(companyId, date);
+  console.log("OFFLINE ABSENT ATTENDANCE", absentAttendance);
 
   return {
     companyId,

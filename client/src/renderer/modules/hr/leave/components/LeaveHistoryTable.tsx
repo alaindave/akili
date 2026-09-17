@@ -9,7 +9,7 @@ import {
   Badge,
   Text,
 } from "@chakra-ui/react";
-import Leave from "../../../../../common/types/Leave";
+import Leave from "../../../../../common/types/leave/Leave";
 
 const statusColor = (status: string) => {
   switch (status) {

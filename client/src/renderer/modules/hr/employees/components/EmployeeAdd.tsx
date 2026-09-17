@@ -45,6 +45,51 @@ registerLocale("fr", fr);
 
 const errorMessage = "Ce champ est obligatoire";
 
+export enum Department {
+  ADMINISTRATION = "Administration",
+  ATELIER = "Atelier",
+  USINE = "Usine",
+  MAGASIN = "Magasin",
+  SENTINELLE = "Sentinelle",
+}
+
+/**
+ * Calculate the employee's annual leave entitlement
+ * based on their years of service.
+ *
+ * Less than 5 years  -> 20 days
+ * 5 to less than 10  -> 21 days
+ * 10 years or more   -> 22 days
+ */
+const calculateRemainingLeave = (dateHired: string): number => {
+  if (!dateHired) return 0;
+
+  const hireDate = new Date(dateHired);
+  const today = new Date();
+
+  let yearsOfService = today.getFullYear() - hireDate.getFullYear();
+
+  const anniversaryThisYear = new Date(
+    today.getFullYear(),
+    hireDate.getMonth(),
+    hireDate.getDate()
+  );
+
+  if (today < anniversaryThisYear) {
+    yearsOfService--;
+  }
+
+  if (yearsOfService < 5) {
+    return 20;
+  }
+
+  if (yearsOfService < 10) {
+    return 21;
+  }
+
+  return 22;
+};
+
 const schema = z.object({
   firstName: z.string().trim().min(1, { message: errorMessage }),
 
@@ -58,9 +103,13 @@ const schema = z.object({
 
   role: z.string().trim().min(1, { message: errorMessage }),
 
-  department: z.string().min(1, { message: errorMessage }),
-
+  department: z.nativeEnum(Department, {
+    required_error: errorMessage,
+    invalid_type_error: errorMessage,
+  }),
   dateHired: z.string().min(1, { message: errorMessage }),
+
+  remainingLeave: z.number().min(0),
 
   telephone: z
     .string()
@@ -125,11 +174,18 @@ const AddEmployee = () => {
     handleSubmit,
     control,
     reset,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<EmployeeData>({
     resolver: zodResolver(schema),
     mode: "onSubmit",
+    defaultValues: {
+      remainingLeave: 0,
+    },
   });
+
+  const remainingLeave = watch("remainingLeave");
 
   const onSubmit = async (employeeData: EmployeeData) => {
     setIsSaving(true);
@@ -229,7 +285,9 @@ const AddEmployee = () => {
     if (isSaving) return;
 
     setServerErrorMessage("");
-    reset();
+    reset({
+      remainingLeave: 0,
+    });
     onClose();
   };
 
@@ -576,15 +634,25 @@ const AddEmployee = () => {
                         iconColor="#F2B705"
                         {...register("department")}
                       >
-                        <option value="Administration">Administration</option>
+                        <option value={Department.ADMINISTRATION}>
+                          {Department.ADMINISTRATION}
+                        </option>
 
-                        <option value="Atelier">Atelier</option>
+                        <option value={Department.ATELIER}>
+                          {Department.ATELIER}
+                        </option>
 
-                        <option value="Usine">Usine</option>
+                        <option value={Department.USINE}>
+                          {Department.USINE}
+                        </option>
 
-                        <option value="Magasin">Magasin</option>
+                        <option value={Department.MAGASIN}>
+                          {Department.MAGASIN}
+                        </option>
 
-                        <option value="Sentinelle">Sentinelle</option>
+                        <option value={Department.SENTINELLE}>
+                          {Department.SENTINELLE}
+                        </option>
                       </Select>
 
                       <FieldError message={errors.department?.message} />
@@ -646,9 +714,20 @@ const AddEmployee = () => {
                               field.value ? new Date(field.value) : null
                             }
                             onChange={(date: Date | null) => {
-                              field.onChange(
-                                date ? date.toISOString().split("T")[0] : ""
-                              );
+                              const dateValue = date
+                                ? date.toISOString().split("T")[0]
+                                : "";
+
+                              field.onChange(dateValue);
+
+                              /*
+                               * Automatically calculate the
+                               * employee's annual leave entitlement.
+                               */
+                              const leaveDays =
+                                calculateRemainingLeave(dateValue);
+
+                              setValue("remainingLeave", leaveDays);
                             }}
                             locale="fr"
                             dateFormat="dd/MM/yyyy"
@@ -663,6 +742,32 @@ const AddEmployee = () => {
                       />
 
                       <FieldError message={errors.dateHired?.message} />
+                    </FormControl>
+
+                    {/* Jours de congé */}
+                    <FormControl>
+                      <FormLabel
+                        mb="3px"
+                        fontSize="0.92rem"
+                        fontWeight="600"
+                        color="gray.600"
+                      >
+                        <HStack spacing="5px">
+                          <IoCalendarNumberSharp color="#F2B705" size="1rem" />
+
+                          <Text>Jours de congé</Text>
+                        </HStack>
+                      </FormLabel>
+
+                      <Input
+                        {...fieldStyles}
+                        type="number"
+                        value={remainingLeave ?? 0}
+                        isReadOnly
+                        bg="gray.50"
+                        color="gray.700"
+                        cursor="not-allowed"
+                      />
                     </FormControl>
                   </SimpleGrid>
                 </Box>

@@ -13,21 +13,25 @@ type AdminUser = import("../common/types/AdminUser", {
   with: { "resolution-mode": "require" },
 }).default;
 
-type AttendanceWithEmployee = typeof import("../common/types/Attendance", {
+type AttendanceWithEmployee = typeof import("../common/types/attendance/Attendance", {
   with: { "resolution-mode": "require" },
 });
 
-type Leave = import("../common/types/Leave", {
+type Leave = import("../common/types/leave/Leave", {
   with: { "resolution-mode": "require" },
 }).default;
 
-type Task = import("../common/types/Task", {
+type Task = import("../common/types/task/Task", {
   with: { "resolution-mode": "require" },
 }).default;
 
 type EmailNotification = import("../common/types/EmailNotification", {
   with: { "resolution-mode": "require" },
 }).EmailNotification;
+
+type AppNotification = import("../common/types/AppNotification", {
+  with: { "resolution-mode": "require" },
+}).AppNotification;
 
 type EmployeeDocument = typeof import("../common/types/EmployeeDocuments", {
   with: { "resolution-mode": "require" },
@@ -65,6 +69,8 @@ type EmployeePayrollProfile = import(
   }
 ).default;
 
+type TransportAllowanceWeeklyReport = import( "../common/types/TransportAllowance", { with: { "resolution-mode": "require" }, } ).TransportAllowanceWeeklyReport;
+
 export interface PayrollRunDto {
   companyId: string;
   managerEmail: string;
@@ -74,34 +80,34 @@ export interface PayrollRunDto {
 }
 
 type AttendanceDailyCheckPreparationInput = typeof import(
-  "../common/types/AttendanceDailyCheck",
+  "../common/types/attendance/AttendanceDailyCheck",
   {
     with: { "resolution-mode": "require" },
   }
 );
 
 type LockAttendanceDailyCheckInput = typeof import(
-  "../common/types/AttendanceDailyCheck",
+  "../common/types/attendance/AttendanceDailyCheck",
   {
     with: { "resolution-mode": "require" },
   }
 );
 
 type MarkManagerNotifiedInput = typeof import(
-  "../common/types/AttendanceDailyCheck",
+  "../common/types/attendance/AttendanceDailyCheck",
   {
     with: { "resolution-mode": "require" },
   }
 );
 
 type VerifyAttendanceDailyCheckInput = typeof import(
-  "../common/types/AttendanceDailyCheck",
+  "../common/types/attendance/AttendanceDailyCheck",
   {
     with: { "resolution-mode": "require" },
   }
 );
 
-type CreateAttendanceDto = typeof import("../common/types/Attendance", {
+type CreateAttendanceDto = typeof import("../common/types/attendance/Attendance", {
   with: { "resolution-mode": "require" },
 });
 
@@ -568,6 +574,11 @@ contextBridge.exposeInMainWorld("electron", {
   },
 
   // ============================================================
+  //TRANSPORT ALLOWANCE
+  // ============================================================
+transportAllowance: { createWeeklyReport: ( companyId: string, weekStart: string ): Promise<TransportAllowanceWeeklyReport> => ipcRenderer.invoke( "transportAllowance:createWeeklyReport", companyId, weekStart ), },
+
+  // ============================================================
   // ATTENDANCE DAILY CHECK
   // ============================================================
 
@@ -670,9 +681,9 @@ contextBridge.exposeInMainWorld("electron", {
   leave: {
     create: (
       companyId: string,
-      managerEmail:string,
       leave: Pick<
               Leave,
+              |"managerEmail"
               | "employeeId"
               | "employeeFirstName"
               | "employeeLastName"
@@ -680,12 +691,12 @@ contextBridge.exposeInMainWorld("electron", {
               | "endDate"
               | "notes"
               | "subject"
+              |"status"
             >
     ) =>
       ipcRenderer.invoke(
         "leave:create",
         companyId,
-        managerEmail,
         leave
       ),
 
@@ -1605,5 +1616,8 @@ contextBridge.exposeInMainWorld("electron", {
       ipcRenderer.invoke(
         "notifications:cancel-all-reminders"
       ),
+
+onNew: ( callback: (notification: AppNotification) => void ) => { const listener = ( _: Electron.IpcRendererEvent, notification: AppNotification ) => { callback(notification); }; ipcRenderer.on( "notifications:new", listener ); return () => { ipcRenderer.removeListener( "notifications:new", listener ); }; },
+
   },
 }) satisfies Window["electron"];

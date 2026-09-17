@@ -2,11 +2,8 @@ import {
   Box,
   Button,
   Flex,
-  Grid,
-  HStack,
   Text,
-  Textarea,
-  useDisclosure,
+  useToast,
   Modal,
   ModalOverlay,
   ModalContent,
@@ -14,7 +11,6 @@ import {
   ModalBody,
   ModalFooter,
   ModalCloseButton,
-  useToast,
 } from "@chakra-ui/react";
 import ReminderDateControl from "./ReminderDateControl";
 import ReminderTimeControl from "./ReminderTimeControl";
@@ -39,6 +35,12 @@ const ReminderModal = ({ isReminderOpen, onReminderClose, notes }: Props) => {
 
   const toast = useToast();
 
+  const [reminderDate, setReminderDate] = useState<Date>(new Date());
+
+  const [reminderTime, setReminderTime] = useState<string>(
+    getDefaultReminderTime()
+  );
+
   const handleCreateReminder = async () => {
     if (!notes.trim()) {
       toast({
@@ -52,7 +54,26 @@ const ReminderModal = ({ isReminderOpen, onReminderClose, notes }: Props) => {
       return;
     }
 
-    const [hours, minutes] = String(reminderTime).split(":").map(Number);
+    const [hours, minutes] = reminderTime.split(":").map(Number);
+
+    if (
+      Number.isNaN(hours) ||
+      Number.isNaN(minutes) ||
+      hours < 0 ||
+      hours > 23 ||
+      minutes < 0 ||
+      minutes > 59
+    ) {
+      toast({
+        title: "Heure invalide",
+        description: "Veuillez sélectionner une heure valide.",
+        status: "warning",
+        duration: 3000,
+        isClosable: true,
+      });
+
+      return;
+    }
 
     const remindAt = new Date(reminderDate);
 
@@ -118,11 +139,6 @@ const ReminderModal = ({ isReminderOpen, onReminderClose, notes }: Props) => {
     }
   };
 
-  const [reminderDate, setReminderDate] = useState<Date>(new Date());
-  const [reminderTime, setReminderTime] = useState<Date | string>(
-    getDefaultReminderTime()
-  );
-
   return (
     <Modal isOpen={isReminderOpen} onClose={onReminderClose} isCentered>
       <ModalOverlay backdropFilter="auto" backdropBlur="0.3rem" />
@@ -156,7 +172,7 @@ const ReminderModal = ({ isReminderOpen, onReminderClose, notes }: Props) => {
 
         <ModalBody py={5}>
           <Text fontSize="0.85rem" fontWeight="600" color="#374151" mb={2}>
-            Note
+            Notes
           </Text>
 
           <Box
@@ -177,15 +193,27 @@ const ReminderModal = ({ isReminderOpen, onReminderClose, notes }: Props) => {
           </Box>
 
           <Flex gap={4} direction={{ base: "column", sm: "row" }}>
-            {" "}
-            <ReminderDateControl
-              value={reminderDate}
-              onChange={setReminderDate}
-            />
-            <ReminderTimeControl
-              value={new Date(reminderTime).toLocaleString()}
-              onChange={setReminderTime}
-            />
+            <Box flex={1} minW={0}>
+              <ReminderDateControl
+                value={reminderDate}
+                onChange={setReminderDate}
+              />
+            </Box>
+
+            <Box flex={1} minW={0}>
+              <ReminderTimeControl
+                value={reminderTime}
+                onChange={(time) => {
+                  setReminderTime(
+                    typeof time === "string"
+                      ? time
+                      : `${String(time.getHours()).padStart(2, "0")}:${String(
+                          time.getMinutes()
+                        ).padStart(2, "0")}`
+                  );
+                }}
+              />
+            </Box>
           </Flex>
         </ModalBody>
 

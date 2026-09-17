@@ -11,7 +11,7 @@ import {
   cancelLeave,
 } from "../database/repositories/leaves.repository.js";
 
-import Leave from "../../common/types/Leave.js";
+import Leave from "../../common/types/leave/Leave.js";
 
 export function registerLeaveIPC() {
   console.log("REGISTERING LEAVES IPC");
@@ -31,6 +31,7 @@ export function registerLeaveIPC() {
         | "endDate"
         | "notes"
         | "subject"
+        | "status"
       >
     ) => {
       console.log("LEAVE IPC RECEIVED:", companyId, leave.managerEmail, leave);

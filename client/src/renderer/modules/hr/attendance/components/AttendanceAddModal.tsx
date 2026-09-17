@@ -195,10 +195,13 @@ const AddAttendanceModal = ({
          */
         await window.electron.leave.create(user.companyId, {
           employeeId: employee._id,
+          employeeFirstName: employee.firstName,
+          employeeLastName: employee.lastName,
+          managerEmail: "alainbedetse@gmail.com",
           startDate: date,
           endDate: date,
-          subject: "Congé",
-          notes: "Absence convertie en congé.",
+          subject: "Billet de sortie",
+          notes: "Billet de sortie approuvé.",
           status: "APPROUVÉ",
         });
 
@@ -411,15 +414,15 @@ const AddAttendanceModal = ({
               >
                 <Stack direction="row" spacing={6}>
                   <Radio value="PRESENT" isDisabled={saving}>
-                    PRÉSENT
+                    Présent
                   </Radio>
 
                   <Radio value="ABSENT" isDisabled={saving || !employeeId}>
-                    ABSENT
+                    Absent
                   </Radio>
 
                   <Radio value="CONGÉ" isDisabled={saving || !employeeId}>
-                    CONGÉ
+                    Billet de sortie
                   </Radio>
                 </Stack>
               </RadioGroup>

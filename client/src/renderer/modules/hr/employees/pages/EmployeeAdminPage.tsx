@@ -13,10 +13,10 @@ import { FaBell } from "react-icons/fa";
 import { IoReloadOutline } from "react-icons/io5";
 
 import type AdminUser from "../../../../../common/types/AdminUser";
-import type { Attendance } from "../../../../../common/types/Attendance";
+import type { Attendance } from "../../../../../common/types/attendance/Attendance";
 import type Employee from "../../../../../common/types/Employee";
-import type Leave from "../../../../../common/types/Leave";
-import type Task from "../../../../../common/types/Task";
+import type Leave from "../../../../../common/types/leave/Leave";
+import type Task from "../../../../../common/types/task/Task";
 
 import useAdminUser from "../../../../../store/auth.store";
 import useSyncStore from "../../../../../store/sync.store";

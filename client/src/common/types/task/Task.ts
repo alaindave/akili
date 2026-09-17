@@ -1,6 +1,6 @@
-import AdminUser from "./AdminUser.js";
+import AdminUser from "../AdminUser.js";
 import PopulatedTaskComment from "./PopulatedTaskComment.js";
-import User from "./User.js";
+import User from "../User.js";
 
 export type Priority = "HAUTE" | "MOYENNE" | "BASSE";
 

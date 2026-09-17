@@ -13,7 +13,7 @@ import {
   useToast,
 } from "@chakra-ui/react";
 import { keyframes } from "@emotion/react";
-import Leave from "../../../../../common/types/Leave";
+import Leave from "../../../../../common/types/leave/Leave";
 
 interface Props {
   onSubmit: (notes?: string | undefined) => Promise<boolean>;

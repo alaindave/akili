@@ -22,7 +22,7 @@ import { GiClockwork } from "react-icons/gi";
 import { GoDotFill } from "react-icons/go";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { Link } from "react-router-dom";
-import Leave from "../../../../../common/types/Leave";
+import Leave from "../../../../../common/types/leave/Leave";
 import "../../../../styles/App.css";
 import AddClockInNotesPopover from "../../attendance/components/AddClockInNotesPopover";
 import AbsenceNotesPopover from "../../attendance/components/AbsenceNotesPopover";
@@ -292,7 +292,11 @@ const EmployeeCard = ({ employeeId }: Props) => {
       return true;
     } catch (error) {
       console.error("AN ERROR OCCURED WHILE SAVING NOTES:", error);
-
+      showErrorMessage(
+        "Échec de l'enregistrement de notes",
+        error,
+        "Impossible d'enregistrer les notes."
+      );
       return false;
     }
   };
@@ -342,12 +346,26 @@ const EmployeeCard = ({ employeeId }: Props) => {
 
         const leaveDate = today.toISOString().split("T")[0];
 
-        const leave: Partial<Leave> = {
+        const leave: Pick<
+          Leave,
+          | "managerEmail"
+          | "employeeFirstName"
+          | "employeeLastName"
+          | "employeeId"
+          | "startDate"
+          | "endDate"
+          | "subject"
+          | "notes"
+          | "status"
+        > = {
+          managerEmail: "alainbedetse@gmail.com",
           employeeId: employee._id,
+          employeeFirstName: employee.firstName,
+          employeeLastName: employee.lastName,
           startDate: leaveDate,
           endDate: leaveDate,
-          subject: "Absence approuvée",
-          notes: "Absence convertie en congé.",
+          subject: "Billet de sortie",
+          notes: "Billet de sortie approuvé",
           status: "APPROUVÉ",
         };
 
@@ -388,8 +406,8 @@ const EmployeeCard = ({ employeeId }: Props) => {
         console.log("ATTENDANCE RESULTS:", attendanceResult);
 
         toast({
-          title: "Demande de congé",
-          description: "Congé enregistré avec succès.",
+          title: "Billet de sortie",
+          description: "Billet de sortie enregistré avec succès.",
           status: "success",
           duration: 4000,
           isClosable: true,
@@ -397,9 +415,9 @@ const EmployeeCard = ({ employeeId }: Props) => {
         });
       } catch (error) {
         showErrorMessage(
-          "Échec d'enregistrement de congé",
+          "Échec d'enregistrement du billet de sortie",
           error,
-          "Impossible d'enregistrer le congé."
+          "Impossible d'enregistrer le billet de sortie."
         );
       }
 
@@ -420,6 +438,7 @@ const EmployeeCard = ({ employeeId }: Props) => {
 
         console.log("ATTENDANCE RESULTS:", results);
       } catch (error) {
+        console.error("AN ERROR OCCURED WHILE SAVING ABSENCE", error);
         showErrorMessage(
           "Échec d'enregistrement",
           error,
@@ -471,7 +490,7 @@ const EmployeeCard = ({ employeeId }: Props) => {
       minWidth={0}
       minHeight={{
         base: "auto",
-        sm: "5.2rem",
+        sm: "3.5rem",
       }}
       bg="#ffffff"
       px={{
@@ -499,7 +518,7 @@ const EmployeeCard = ({ employeeId }: Props) => {
         width={{
           base: "48px",
           sm: "56px",
-          md: "64px",
+          md: "60px",
         }}
       >
         <Link
@@ -833,7 +852,7 @@ const EmployeeCard = ({ employeeId }: Props) => {
                   color: "#ffffff",
                 }}
               >
-                Congé
+                Billet de sortie
               </MenuItem>
 
               <MenuItem

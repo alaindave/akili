@@ -2,8 +2,8 @@ import { dialog } from "electron";
 import fs from "fs/promises";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { getDailyAttendanceReport } from "../../database/repositories/attendances.repository.js";
-import { AttendanceReportDocument } from "../../reports/attendance-report.js";
-import { DailyAttendanceReport } from "../../../common/types/AttendanceReport.js";
+import { AttendanceReportDocument } from "../../reports/attendance/attendance-report.js";
+import { DailyAttendanceReport } from "../../../common/types/attendance/AttendanceReport.js";
 
 export interface GeneratedAttendanceReport {
   filename: string;

@@ -20,6 +20,8 @@ import {
   FaSignOutAlt,
   FaTasks,
 } from "react-icons/fa";
+import { BiSolidReport } from "react-icons/bi";
+import { CgDanger } from "react-icons/cg";
 import { FaFileSignature, FaRegClock } from "react-icons/fa6";
 import { IoPeopleSharp } from "react-icons/io5";
 import { MdPersonOutline } from "react-icons/md";
@@ -328,6 +330,86 @@ const EmployeeNavBar = () => {
               </NavLink>
             </ListItem>
 
+            {/* Rapports */}
+            <ListItem flex="1" display="flex" alignItems="center">
+              <NavLink
+                className="nav-button"
+                to="/employees_admin/reports"
+                style={{
+                  display: "flex",
+                  width: "100%",
+                  height: "100%",
+                  alignItems: "center",
+                }}
+              >
+                <HStack
+                  width="100%"
+                  minHeight="42px"
+                  px="12px"
+                  spacing="12px"
+                  align="center"
+                >
+                  <Flex
+                    width="24px"
+                    minWidth="24px"
+                    justify="center"
+                    align="center"
+                  >
+                    <BiSolidReport size="1.25rem" />
+                  </Flex>
+
+                  <Text
+                    fontSize={{ base: "1rem", md: "1.15rem" }}
+                    fontWeight="500"
+                    lineHeight="1"
+                    whiteSpace="nowrap"
+                  >
+                    Rapports
+                  </Text>
+                </HStack>
+              </NavLink>
+            </ListItem>
+
+            {/* Incidents */}
+            <ListItem flex="1" display="flex" alignItems="center">
+              <NavLink
+                className="nav-button"
+                to="/admin"
+                style={{
+                  display: "flex",
+                  width: "100%",
+                  height: "100%",
+                  alignItems: "center",
+                }}
+              >
+                <HStack
+                  width="100%"
+                  minHeight="42px"
+                  px="12px"
+                  spacing="12px"
+                  align="center"
+                >
+                  <Flex
+                    width="24px"
+                    minWidth="24px"
+                    justify="center"
+                    align="center"
+                  >
+                    <CgDanger size="1.25rem" />
+                  </Flex>
+
+                  <Text
+                    fontSize={{ base: "1rem", md: "1.15rem" }}
+                    fontWeight="500"
+                    lineHeight="1"
+                    whiteSpace="nowrap"
+                  >
+                    Incidents
+                  </Text>
+                </HStack>
+              </NavLink>
+            </ListItem>
+
             {/* Tasks */}
             <ListItem flex="1" display="flex" alignItems="center">
               <NavLink
@@ -363,45 +445,6 @@ const EmployeeNavBar = () => {
                     whiteSpace="nowrap"
                   >
                     Tâches
-                  </Text>
-                </HStack>
-              </NavLink>
-            </ListItem>
-            {/* Reports */}
-            <ListItem flex="1" display="flex" alignItems="center">
-              <NavLink
-                className="nav-button"
-                to="/admin"
-                style={{
-                  display: "flex",
-                  width: "100%",
-                  height: "100%",
-                  alignItems: "center",
-                }}
-              >
-                <HStack
-                  width="100%"
-                  minHeight="42px"
-                  px="12px"
-                  spacing="12px"
-                  align="center"
-                >
-                  <Flex
-                    width="24px"
-                    minWidth="24px"
-                    justify="center"
-                    align="center"
-                  >
-                    <FaTasks size="1.25rem" />
-                  </Flex>
-
-                  <Text
-                    fontSize={{ base: "1rem", md: "1.15rem" }}
-                    fontWeight="500"
-                    lineHeight="1"
-                    whiteSpace="nowrap"
-                  >
-                    Paramètres
                   </Text>
                 </HStack>
               </NavLink>

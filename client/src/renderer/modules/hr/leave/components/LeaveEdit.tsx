@@ -22,7 +22,7 @@ import { Controller, useForm } from "react-hook-form";
 import { FaSave } from "react-icons/fa";
 import { RxCrossCircled } from "react-icons/rx";
 import { z } from "zod";
-import { LeaveWithEmployee } from "../../../../../common/types/LeaveWithEmployee";
+import { LeaveWithEmployee } from "../../../../../common/types/leave/LeaveWithEmployee";
 import useAdminUser from "../../../../../store/auth.store";
 import { useEffect } from "react";
 import { useUpdateLeave } from "../hooks/useLeave";

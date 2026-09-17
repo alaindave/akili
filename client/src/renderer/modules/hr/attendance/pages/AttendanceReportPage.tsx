@@ -6,9 +6,9 @@ import { Link, useLocation } from "react-router-dom";
 import { Attendance } from "../../../../../common/types/Attendance";
 import type Employee from "../../../../../common/types/Employee";
 import useAdminUser from "../../../../../store/auth.store";
-import AttendanceTable from "../../attendance/components/AttendanceRecordTable";
+import AttendanceTable from "../components/AttendanceRecordTable";
 import DateRangePicker, { DateRange } from "../../../../components/DatePicker";
-import AttendanceStatusFilter from "../../attendance/components/AttendanceStatusFilter";
+import AttendanceStatusFilter from "../components/AttendanceStatusFilter";
 
 type EmployeeState = {
   employee?: Employee;

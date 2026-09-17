@@ -1,5 +1,5 @@
-import type { AttendanceDailyCheck } from "../../../common/types/AttendanceDailyCheck.js";
-import type NotificationQueueItem from "../../../common/types/NotificationQueueItem.js";
+import type { AttendanceDailyCheck } from "../../../common/types/attendance/AttendanceDailyCheck.js";
+import type NotificationQueueItem from "../../../common/types/EmailNotificationQueueItem.js";
 import { getAllAdminUsers } from "../../database/repositories/admin_users.repository.js";
 import {
   enqueueNotification,

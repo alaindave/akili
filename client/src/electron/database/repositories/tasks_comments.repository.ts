@@ -1,5 +1,5 @@
-import TaskComment from "../../../common/types/TaskComment.js";
-import PopulatedTaskComment from "../../../common/types/PopulatedTaskComment.js";
+import TaskComment from "../../../common/types/task/TaskComment.js";
+import PopulatedTaskComment from "../../../common/types/task/PopulatedTaskComment.js";
 import { randomUUID } from "crypto";
 import { run, all, get } from "../db.js";
 import { addToSyncQueue } from "./sync.repository.js";

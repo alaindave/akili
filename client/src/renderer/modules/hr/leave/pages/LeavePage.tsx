@@ -22,7 +22,7 @@ import useSyncStore from "../../../../../store/sync.store";
 import EmployeeFilterMenu from "../../employees/components/EmployeeFilterMenu";
 import SearchBar from "../../../../components/SearchBar";
 import useAdminUser from "../../../../../store/auth.store";
-import { LeaveWithEmployee } from "../../../../../common/types/LeaveWithEmployee";
+import type { LeaveWithEmployee } from "../../../../../common/types/leave/LeaveWithEmployee";
 import LeaveStatusFilter from "../components/LeaveStatusFilter";
 
 const shimmerKeyframes = `
@@ -334,7 +334,7 @@ const EmployeeLeavePage = () => {
             borderWidth="0.3px"
             border="1px solid #E2E8F0"
             boxShadow="0 2px 10px rgba(15,23,42,.06)"
-            height="4.7rem"
+            height="3.5rem"
             width="80vw"
             overflowY="hidden"
             overflowX="hidden"
@@ -380,7 +380,7 @@ const EmployeeLeavePage = () => {
                 LEAVE ROWS
             ================================================= */}
 
-          <Box height="55vh" overflowX="hidden" overflowY="auto">
+          <Box height="57vh" overflowX="hidden" overflowY="auto">
             {leaves
               .filter((l) =>
                 `${l.firstName} ${l.lastName}`

@@ -25,7 +25,7 @@ import { FaRegEdit } from "react-icons/fa";
 import LeaveNotesPopover from "./LeaveNotesPopover";
 import LeaveEdit from "./LeaveEdit";
 
-import type { LeaveWithEmployee } from "../../../../../common/types/LeaveWithEmployee";
+import type { LeaveWithEmployee } from "../../../../../common/types/leave/LeaveWithEmployee";
 
 import defaultAvatar from "../../../../assets/default-avatar.jpeg";
 import DeletionDialog from "../../../../components/DeletionDialog";
@@ -444,7 +444,7 @@ const EmployeeLeaveCard = ({ leave, onDelete, gridTemplate }: Props) => {
       border="1px solid #E2E8F0"
       borderWidth="0.3px"
       boxShadow="0 2px 10px rgba(15,23,42,.06)"
-      minH="5rem"
+      maxH="5.5rem"
       width="80vw"
       marginBottom="0.8px"
     >

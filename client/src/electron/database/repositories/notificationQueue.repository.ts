@@ -1,7 +1,7 @@
 import crypto from "crypto";
 
 import type { EmailAttachment } from "../../../common/types/EmailNotification.js";
-import NotificationQueueItem from "../../../common/types/NotificationQueueItem.js";
+import NotificationQueueItem from "../../../common/types/EmailNotificationQueueItem.js";
 import { all, get, runDirect } from "../db.js";
 
 function generateQueueId(): string {
@@ -38,7 +38,9 @@ function deserializeAttachments(
   }
 }
 
-function toNotificationQueueItem(row: NotificationQueueRow): NotificationQueueItem {
+function toNotificationQueueItem(
+  row: NotificationQueueRow
+): NotificationQueueItem {
   const { attachmentsJson, ...item } = row;
 
   return {

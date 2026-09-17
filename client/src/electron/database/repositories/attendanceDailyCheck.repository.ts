@@ -7,7 +7,7 @@ import {
   LockAttendanceDailyCheckInput,
   MarkManagerNotifiedInput,
   VerifyAttendanceDailyCheckInput,
-} from "../../../common/types/AttendanceDailyCheck.js";
+} from "../../../common/types/attendance/AttendanceDailyCheck.js";
 import { addToSyncQueue } from "./sync.repository.js";
 import { markEmployeesAbsent } from "../../services/attendance/markEmployeesAbsent.service.js";
 import { markEmployeesOnLeave } from "../../services/attendance/markEmployeesOnLeave.service.js";

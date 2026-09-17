@@ -12,9 +12,9 @@ import {
   createAbsenceLeaveAttendance,
   getEmployeesWithoutAttendance,
 } from "../database/repositories/attendances.repository.js";
-import { AttendanceWithEmployee } from "../../common/types/Attendance.js";
+import { AttendanceWithEmployee } from "../../common/types/attendance/Attendance.js";
 import { markEmployeesAbsent } from "../services/attendance/markEmployeesAbsent.service.js";
-import { CreateAttendanceDto } from "../../common/types/Attendance.js";
+import { CreateAttendanceDto } from "../../common/types/attendance/Attendance.js";
 
 export function registerAttendanceIPC() {
   console.log("REGISTERING ATTENDANCES IPC");

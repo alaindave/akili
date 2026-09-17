@@ -1,4 +1,4 @@
-import type { Attendance } from "../../../common/types/Attendance.js";
+import type { Attendance } from "../../../common/types/attendance/Attendance.js";
 import { randomUUID } from "crypto";
 import { all, get, run } from "../db.js";
 import { getEmployeeById } from "./employees.repository.js";
@@ -7,9 +7,9 @@ import Employee from "../../../common/types/Employee.js";
 import {
   CreateAttendanceDto,
   PayrollAttendanceSummary,
-} from "../../../common/types/Attendance.js";
+} from "../../../common/types/attendance/Attendance.js";
 import { isAttendanceDateLocked } from "./attendanceDailyCheck.repository.js";
-import { AttendanceWithEmployee } from "../../../common/types/Attendance.js";
+import { AttendanceWithEmployee } from "../../../common/types/attendance/Attendance.js";
 import { getLeaveByEmployeeId } from "./leaves.repository.js";
 
 /**
@@ -31,7 +31,9 @@ export async function createAttendance(
 
   if (locked) {
     throw new Error(
-      `La présence du ${date} est vérouillée et ne peut pas être modifiée`
+      `La liste présence du  ${new Date(date).toLocaleDateString(
+        "fr-FR"
+      )} est vérouillée et ne peut pas être modifiée`
     );
   }
 
@@ -147,7 +149,11 @@ export async function createAbsenceLeaveAttendance(
   const locked = await isAttendanceDateLocked(date);
 
   if (locked) {
-    throw new Error(`ATTENDANCE FOR ${date} IS LOCKED AND CANNOT BE MODIFIED`);
+    throw new Error(
+      `La liste de présence du ${new Date(date).toLocaleDateString(
+        "fr-FR"
+      )} est vérouillée et ne peut pas être modifiée`
+    );
   }
 
   const existingAttendance = await getAttendanceRecord(
@@ -386,7 +392,9 @@ export async function createAbsentAttendance(
 
   if (locked) {
     throw new Error(
-      `ATTENDANCE FOR ${attendance.date} IS LOCKED AND CANNOT BE MODIFIED`
+      `La liste présence du ${new Date(attendance.date).toLocaleDateString(
+        "fr-FR"
+      )} est vérouillée et ne peut pas être modifiée`
     );
   }
 
@@ -702,7 +710,11 @@ export async function updateAttendance(
   const locked = await isAttendanceDateLocked(date);
 
   if (locked) {
-    throw new Error(`ATTENDANCE FOR ${date} IS LOCKED AND CANNOT BE MODIFIED`);
+    throw new Error(
+      `La liste de présence du ${new Date(date).toLocaleDateString(
+        "fr-FR"
+      )} est verouillée et ne peut pas être modifiée.`
+    );
   }
 
   const existing = await getAttendanceById(companyId, _id);
@@ -882,7 +894,11 @@ export async function deleteAttendance(companyId: string, _id: string) {
   const locked = await isAttendanceDateLocked(date);
 
   if (locked) {
-    throw new Error(`LA LISTE DE PRESENCE DU ${date} EST VERROUILLEE.`);
+    throw new Error(
+      `La liste de présence du ${new Date(date).toLocaleDateString(
+        "fr-FR"
+      )} est vérouillée et ne peut pas être modifiée`
+    );
   }
 
   /*

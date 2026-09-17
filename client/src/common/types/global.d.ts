@@ -1,9 +1,9 @@
 export {};
 import type Employee from "./Employee";
 import type Attendance from "./Attendance";
-import type Leave from "./Leave";
+import type Leave from "./leave/Leave";
 import type AttendanceWithEmployee from "./AttendanceWithEmployee";
-import type LeaveWithEmployee from "./LeaveWithEmployee";
+import type LeaveWithEmployee from "./leave/LeaveWithEmployee";
 import type Task from "./Task";
 import type AdminUser from "./AdminUser";
 import type TaskRecipient from "./AdminUser";
@@ -139,6 +139,13 @@ declare global {
         upsert: (document: EmployeeDocument) => Promise<EmployeeDocument>;
       };
 
+      transportAllowance: {
+        createWeeklyReport: (
+          companyId: string,
+          weekStart: string
+        ) => Promise<TransportAllowanceWeeklyReport>;
+      };
+
       attendanceDailyCheck: {
         create(
           companyId: string,
@@ -252,6 +259,7 @@ declare global {
             | "endDate"
             | "notes"
             | "subject"
+            | "status"
           >
         ) => Promise<LeaveWithEmployee>;
         getLeaveByEmployeeId: (
@@ -568,6 +576,10 @@ declare global {
         cancelAllReminders(): Promise<{
           success: boolean;
         }>;
+
+        onNew: (
+          callback: (notification: AppNotification) => void
+        ) => () => void;
       };
     };
   }

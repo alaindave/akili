@@ -1,4 +1,4 @@
-import type Leave from "../../../common/types/Leave.js";
+import type Leave from "../../../common/types/leave/Leave.js";
 import { randomUUID } from "crypto";
 import { all, get, run } from "../db.js";
 import { getEmployeeById } from "./employees.repository.js";
@@ -16,6 +16,7 @@ export async function createLeave(
     | "endDate"
     | "notes"
     | "subject"
+    | "status"
   >
 ) {
   if (!companyId) {
@@ -83,7 +84,7 @@ export async function createLeave(
       submittedMonth,
       leave.startDate,
       leave.endDate,
-      "ATTENTE_APPROBATION",
+      leave.status ?? "ATTENTE_APPROBATION",
       leave.subject,
       leave.notes,
       serverVersion,
@@ -97,7 +98,7 @@ export async function createLeave(
     _id,
     ...leave,
     employeeId: leave.employeeId,
-    status: "ATTENTE_APPROBATION",
+    status: leave.status ?? "ATTENTE_APPROBATION",
     submittedAt,
     submittedMonth,
     serverVersion,

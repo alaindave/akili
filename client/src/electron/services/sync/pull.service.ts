@@ -18,10 +18,10 @@ import {
   upsertLeave,
 } from "../../database/repositories/leaves.repository.js";
 import Employee from "../../../common/types/Employee.js";
-import { Attendance } from "../../../common/types/Attendance.js";
-import Leave from "../../../common/types/Leave.js";
+import { Attendance } from "../../../common/types/attendance/Attendance.js";
+import Leave from "../../../common/types/leave/Leave.js";
 import AdminUser from "../../../common/types/AdminUser.js";
-import Task from "../../../common/types/Task.js";
+import Task from "../../../common/types/task/Task.js";
 import PayrollComponent from "../../../common/types/payroll/PayrollComponent.js";
 import {
   markTaskSynced,
@@ -64,7 +64,7 @@ import {
   markPayrollSettingsSynced,
   upsertPayrollSettings,
 } from "../../database/repositories/payroll_settings.repository.js";
-import { AttendanceDailyCheck } from "../../../common/types/AttendanceDailyCheck.js";
+import { AttendanceDailyCheck } from "../../../common/types/attendance/AttendanceDailyCheck.js";
 import {
   markAttendanceDailyCheckSynced,
   upsertAttendanceDailyCheck,

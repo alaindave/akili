@@ -197,7 +197,7 @@ const EmployeeListPage = () => {
       ===================================================== */}
       <Box
         flex="1"
-        minH={0}
+        maxH="67vh"
         width="100%"
         overflowY="auto"
         overflowX="hidden"
@@ -290,14 +290,14 @@ const EmployeeListPage = () => {
               display="flex"
               flexDirection="column"
               gap={{
-                base: "6px",
-                md: "8px",
+                base: "2px",
+                md: "3px",
               }}
               m="0"
               p="0"
               listStyleType="none"
               flexShrink={0}
-              mt="0.2rem"
+              mt="0.3rem"
             >
               {filteredEmployees.map((employee) => (
                 <ListItem

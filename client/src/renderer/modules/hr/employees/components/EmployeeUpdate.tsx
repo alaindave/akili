@@ -14,7 +14,6 @@ import {
   Input,
   Modal,
   ModalBody,
-  ModalCloseButton,
   ModalContent,
   ModalFooter,
   ModalHeader,
@@ -37,7 +36,6 @@ import { GiRelationshipBounds, GiRotaryPhone } from "react-icons/gi";
 import { IoCalendarNumberSharp, IoHome } from "react-icons/io5";
 import { LuCircleDollarSign } from "react-icons/lu";
 import { MdFactory, MdOutlineNumbers, MdPerson2, MdWork } from "react-icons/md";
-import { RxCrossCircled } from "react-icons/rx";
 
 import { z } from "zod";
 
@@ -49,6 +47,14 @@ registerLocale("fr", fr);
 interface Props {
   _id: string | undefined;
   employee: Employee | null;
+}
+
+export enum Department {
+  ADMINISTRATION = "Administration",
+  ATELIER = "Atelier",
+  USINE = "Usine",
+  MAGASIN = "Magasin",
+  SENTINELLE = "Sentinelle",
 }
 
 const errorMessage = "Ce champ est obligatoire";
@@ -64,9 +70,16 @@ const schema = z.object({
 
   role: z.string().min(1, { message: errorMessage }),
 
-  department: z.string().min(1, { message: errorMessage }),
+  department: z.nativeEnum(Department, {
+    required_error: errorMessage,
+    invalid_type_error: errorMessage,
+  }),
 
   dateHired: z.string().min(1, { message: errorMessage }),
+
+  remainingLeave: z.number().min(0, {
+    message: "Le nombre de jours de congé doit être supérieur ou égal à 0",
+  }),
 
   telephone: z
     .string()
@@ -85,6 +98,19 @@ const schema = z.object({
 });
 
 type EmployeeData = z.infer<typeof schema>;
+
+const fieldStyles = {
+  bg: "white",
+  borderColor: "#CBD5E0",
+  borderRadius: "6px",
+  _hover: {
+    borderColor: "#A0AEC0",
+  },
+  _focus: {
+    borderColor: "#F2B705",
+    boxShadow: "0 0 0 1px #F2B705",
+  },
+};
 
 const inputStyles = {
   bg: "white",
@@ -130,7 +156,6 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
     matricule,
     dateBirth,
     role,
-    department,
     dateHired,
     salary,
     address,
@@ -139,6 +164,17 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
     relationship,
     contactPhone,
   } = employee;
+
+  const department = employee.department as Department;
+
+  /*
+   * Jours de congé is completely independent from Date d'embauche.
+   *
+   * We simply load the employee's existing value.
+   * If no value exists, use 20 as the default.
+   */
+  const initialRemainingLeave =
+    typeof employee.remainingLeave === "number" ? employee.remainingLeave : 20;
 
   const {
     register,
@@ -157,6 +193,7 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
       role,
       department,
       dateHired,
+      remainingLeave: initialRemainingLeave,
       salary,
       address,
       telephone,
@@ -172,7 +209,7 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
       lastName: employee.lastName,
       matricule: employee.matricule,
       role: employee.role,
-      department: employee.department,
+      department: employee.department as Department,
       salary: employee.salary,
       telephone: employee.telephone,
       emergencyContact: employee.emergencyContact,
@@ -181,6 +218,15 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
       address: employee.address,
       dateHired: employee.dateHired,
       dateBirth: employee.dateBirth,
+
+      /*
+       * Completely independent from dateHired.
+       * Load the value stored on the employee.
+       */
+      remainingLeave:
+        typeof employee.remainingLeave === "number"
+          ? employee.remainingLeave
+          : 20,
     });
   }, [employee, reset]);
 
@@ -211,8 +257,18 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
         matricule: updatedEmployee.matricule,
         dateBirth: updatedEmployee.dateBirth,
         role: updatedEmployee.role,
-        department: updatedEmployee.department,
+        department: updatedEmployee.department as Department,
         dateHired: updatedEmployee.dateHired,
+
+        /*
+         * Keep the saved leave value.
+         * Do NOT calculate it from dateHired.
+         */
+        remainingLeave:
+          typeof updatedEmployee.remainingLeave === "number"
+            ? updatedEmployee.remainingLeave
+            : 20,
+
         salary: updatedEmployee.salary,
         address: updatedEmployee.address,
         telephone: updatedEmployee.telephone,
@@ -248,6 +304,13 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
         <DatePicker
           selected={field.value ? new Date(field.value) : null}
           onChange={(date: Date | null) => {
+            /*
+             * Date d'embauche and Jours de congé are
+             * completely independent.
+             *
+             * Changing this date does NOT modify
+             * remainingLeave.
+             */
             field.onChange(date ? date.toISOString().split("T")[0] : "");
           }}
           locale="fr"
@@ -277,8 +340,8 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
         }}
         onClick={onOpen}
       >
-        {" "}
         <FaEdit size="1rem" />
+
         <Text ml="0.6rem" fontSize="14px">
           Modifier
         </Text>
@@ -306,6 +369,7 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
             onSubmit={handleSubmit(
               (data) => {
                 console.log("VALID SUBMIT", data);
+
                 onSubmit(data);
               },
               (errors) => {
@@ -314,8 +378,8 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
             )}
           >
             {/* ======================================================
-            HEADER
-        ====================================================== */}
+                HEADER
+            ====================================================== */}
 
             <ModalHeader
               bg="#F8FAFC"
@@ -337,6 +401,7 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
                   >
                     <FaUserEdit color={iconColor} size="1.5rem" />
                   </Flex>
+
                   <Box>
                     <Text
                       fontSize="19px"
@@ -346,6 +411,7 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
                     >
                       Modification de l'employé
                     </Text>
+
                     <Text
                       color="#64748B"
                       fontSize="13px"
@@ -356,6 +422,7 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
                     </Text>
                   </Box>
                 </HStack>
+
                 <Button
                   bg="#F2B705"
                   color="#1F2937"
@@ -377,6 +444,7 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
                 >
                   <HStack spacing={2}>
                     <FaSave size="14px" />
+
                     <Text fontSize="14px">Enregistrer</Text>
                   </HStack>
                 </Button>
@@ -384,14 +452,14 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
             </ModalHeader>
 
             {/* ======================================================
-            BODY
-        ====================================================== */}
+                BODY
+            ====================================================== */}
 
             <ModalBody px={6} py={4} overflow="hidden">
               <VStack spacing={3} align="stretch">
                 {/* ==================================================
-                PERSONAL INFORMATION
-            ================================================== */}
+                    PERSONAL INFORMATION
+                ================================================== */}
 
                 <Box>
                   <Text
@@ -412,6 +480,7 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
                       <FormLabel {...labelStyles}>
                         <HStack spacing={1.5}>
                           <MdPerson2 color={iconColor} size="15px" />
+
                           <Text>Nom</Text>
                         </HStack>
                       </FormLabel>
@@ -435,6 +504,7 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
                       <FormLabel {...labelStyles}>
                         <HStack spacing={1.5}>
                           <MdPerson2 color={iconColor} size="15px" />
+
                           <Text>Prénom</Text>
                         </HStack>
                       </FormLabel>
@@ -461,6 +531,7 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
                             color={iconColor}
                             size="15px"
                           />
+
                           <Text>Date de naissance</Text>
                         </HStack>
                       </FormLabel>
@@ -477,8 +548,8 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
                 </Box>
 
                 {/* ==================================================
-                EMPLOYMENT INFORMATION
-            ================================================== */}
+                    EMPLOYMENT INFORMATION
+                ================================================== */}
 
                 <Box borderTop="1px solid #E5E7EB" pt={3}>
                   <Text
@@ -499,6 +570,7 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
                       <FormLabel {...labelStyles}>
                         <HStack spacing={1.5}>
                           <MdOutlineNumbers color={iconColor} size="15px" />
+
                           <Text>Matricule</Text>
                         </HStack>
                       </FormLabel>
@@ -522,6 +594,7 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
                       <FormLabel {...labelStyles}>
                         <HStack spacing={1.5}>
                           <MdWork color={iconColor} size="15px" />
+
                           <Text>Poste</Text>
                         </HStack>
                       </FormLabel>
@@ -545,26 +618,36 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
                       <FormLabel {...labelStyles}>
                         <HStack spacing={1.5}>
                           <MdFactory color={iconColor} size="15px" />
+
                           <Text>Département</Text>
                         </HStack>
                       </FormLabel>
 
                       <Select
-                        {...inputStyles}
-                        placeholder="Choisissez un département"
-                        focusBorderColor="#F2B705"
-                        iconColor={iconColor}
+                        {...fieldStyles}
+                        placeholder="Choisir"
+                        iconColor="#F2B705"
                         {...register("department")}
                       >
-                        <option value="Administration">Administration</option>
+                        <option value={Department.ADMINISTRATION}>
+                          {Department.ADMINISTRATION}
+                        </option>
 
-                        <option value="Atelier">Atelier</option>
+                        <option value={Department.ATELIER}>
+                          {Department.ATELIER}
+                        </option>
 
-                        <option value="Usine">Usine</option>
+                        <option value={Department.USINE}>
+                          {Department.USINE}
+                        </option>
 
-                        <option value="Magasin">Magasin</option>
+                        <option value={Department.MAGASIN}>
+                          {Department.MAGASIN}
+                        </option>
 
-                        <option value="Sentinelle">Sentinelle</option>
+                        <option value={Department.SENTINELLE}>
+                          {Department.SENTINELLE}
+                        </option>
                       </Select>
 
                       <Box minH="18px">
@@ -580,6 +663,7 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
                       <FormLabel {...labelStyles}>
                         <HStack spacing={1.5}>
                           <LuCircleDollarSign color={iconColor} size="15px" />
+
                           <Text>Salaire</Text>
                         </HStack>
                       </FormLabel>
@@ -605,6 +689,7 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
                       <FormLabel {...labelStyles}>
                         <HStack spacing={1.5}>
                           <GiRotaryPhone color={iconColor} size="15px" />
+
                           <Text>Téléphone</Text>
                         </HStack>
                       </FormLabel>
@@ -628,6 +713,7 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
                       <FormLabel {...labelStyles}>
                         <HStack spacing={1.5}>
                           <FaCalendarDays color={iconColor} size="14px" />
+
                           <Text>Date d'embauche</Text>
                         </HStack>
                       </FormLabel>
@@ -640,12 +726,40 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
                         </FormErrorMessage>
                       </Box>
                     </FormControl>
+
+                    {/* JOURS DE CONGE */}
+
+                    <FormControl isInvalid={!!errors.remainingLeave}>
+                      <FormLabel {...labelStyles}>
+                        <HStack spacing={1.5}>
+                          <FaCalendarDays color={iconColor} size="14px" />
+
+                          <Text>Jours de congé</Text>
+                        </HStack>
+                      </FormLabel>
+
+                      <Input
+                        type="number"
+                        {...inputStyles}
+                        min={0}
+                        step={1}
+                        {...register("remainingLeave", {
+                          valueAsNumber: true,
+                        })}
+                      />
+
+                      <Box minH="18px">
+                        <FormErrorMessage fontSize="11px">
+                          {errors.remainingLeave?.message}
+                        </FormErrorMessage>
+                      </Box>
+                    </FormControl>
                   </Grid>
                 </Box>
 
                 {/* ==================================================
-                EMERGENCY CONTACT
-            ================================================== */}
+                    EMERGENCY CONTACT
+                ================================================== */}
 
                 <Box borderTop="1px solid #E5E7EB" pt={3}>
                   <Text
@@ -666,6 +780,7 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
                       <FormLabel {...labelStyles}>
                         <HStack spacing={1.5}>
                           <MdPerson2 color={iconColor} size="15px" />
+
                           <Text>Contact</Text>
                         </HStack>
                       </FormLabel>
@@ -689,6 +804,7 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
                       <FormLabel {...labelStyles}>
                         <HStack spacing={1.5}>
                           <GiRelationshipBounds color={iconColor} size="15px" />
+
                           <Text>Relation</Text>
                         </HStack>
                       </FormLabel>
@@ -712,6 +828,7 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
                       <FormLabel {...labelStyles}>
                         <HStack spacing={1.5}>
                           <MdOutlineNumbers color={iconColor} size="15px" />
+
                           <Text>Téléphone</Text>
                         </HStack>
                       </FormLabel>
@@ -732,14 +849,15 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
                 </Box>
 
                 {/* ==================================================
-                ADDRESS
-            ================================================== */}
+                    ADDRESS
+                ================================================== */}
 
                 <Box borderTop="1px solid #E5E7EB" pt={3}>
                   <FormControl isInvalid={!!errors.address}>
                     <FormLabel {...labelStyles}>
                       <HStack spacing={1.5}>
                         <IoHome color={iconColor} size="15px" />
+
                         <Text>Adresse</Text>
                       </HStack>
                     </FormLabel>
@@ -761,8 +879,8 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
             </ModalBody>
 
             {/* ======================================================
-            FOOTER
-        ====================================================== */}
+                FOOTER
+            ====================================================== */}
 
             <ModalFooter
               bg="#F8FAFC"

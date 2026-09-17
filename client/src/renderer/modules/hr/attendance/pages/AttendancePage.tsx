@@ -17,8 +17,8 @@ import { FaCirclePlus } from "react-icons/fa6";
 import { GiConfirmed } from "react-icons/gi";
 import { PiSealCheck } from "react-icons/pi";
 import { RiPresentationFill } from "react-icons/ri";
-import { AttendanceWithEmployee } from "../../../../../common/types/Attendance";
-import { AttendanceDailyCheck } from "../../../../../common/types/AttendanceDailyCheck";
+import { AttendanceWithEmployee } from "../../../../../common/types/attendance/Attendance";
+import { AttendanceDailyCheck } from "../../../../../common/types/attendance/AttendanceDailyCheck";
 import useAdminUser from "../../../../../store/auth.store";
 import DateDropdown from "../../../../components/DateDropdown";
 import DateRangePicker, { DateRange } from "../../../../components/DatePicker";
@@ -34,6 +34,7 @@ import {
 } from "../hooks/useAttendance";
 import useSyncStore from "../../../../../store/sync.store";
 import AttendanceStatusFilter from "../components/AttendanceStatusFilter";
+import { useErrorToast } from "../../../../hooks/useErrorToast";
 
 /* ================= SHIMMER ================= */
 
@@ -76,21 +77,6 @@ const today = new Date();
 
 const thirtyDaysAgo = new Date(today);
 thirtyDaysAgo.setDate(today.getDate() - 30);
-
-/* ================= ERROR FORMATTER ================= */
-
-const formatErrorMessage = (error: Error | string): string => {
-  const message =
-    error instanceof Error
-      ? error.message
-      : typeof error === "string"
-      ? error
-      : "Une erreur est survenue.";
-
-  const ipcErrorPrefix = /^Error invoking remote method '[^']+':\s*Error:\s*/;
-
-  return message.replace(ipcErrorPrefix, "").trim();
-};
 
 /* =========================================================
    PAGE
@@ -146,6 +132,7 @@ const EmployeeAttendancePage = () => {
   /* ================= TOAST ================= */
 
   const toast = useToast();
+  const showErrorMessage = useErrorToast();
 
   /* =========================================================
      REACT QUERY
@@ -174,28 +161,6 @@ const EmployeeAttendancePage = () => {
   /* =========================================================
      ERROR HANDLING
   ========================================================= */
-
-  const showActionError = (
-    title: string,
-    error: unknown,
-    fallbackMessage: string
-  ) => {
-    console.error(title, error);
-
-    const message =
-      error instanceof Error || typeof error === "string"
-        ? formatErrorMessage(error)
-        : fallbackMessage;
-
-    toast({
-      title,
-      description: message,
-      status: "error",
-      duration: 3000,
-      isClosable: true,
-      position: "top-left",
-    });
-  };
 
   /* =========================================================
      GRID
@@ -348,7 +313,7 @@ const EmployeeAttendancePage = () => {
 
       return;
     } catch (error) {
-      showActionError(
+      showErrorMessage(
         "Échec d'enregistrement d'absences",
         error,
         "Impossible d'enregistrer les absents."
@@ -383,7 +348,7 @@ const EmployeeAttendancePage = () => {
 
       await attendanceDailyCheckSync();
     } catch (error) {
-      showActionError(
+      showErrorMessage(
         "Échec de la vérification",
         error,
         "Impossible de vérifier la liste de présence."
@@ -420,7 +385,7 @@ const EmployeeAttendancePage = () => {
 
       await attendanceDailyCheckSync();
     } catch (error) {
-      showActionError(
+      showErrorMessage(
         "Échec de la notification",
         error,
         "Impossible de notifier le manager."
@@ -458,7 +423,7 @@ const EmployeeAttendancePage = () => {
 
       await attendanceDailyCheckSync();
     } catch (error) {
-      showActionError(
+      showErrorMessage(
         "Échec de la confirmation",
         error,
         "Impossible de confirmer et verrouiller la liste de présence."
@@ -531,237 +496,236 @@ const EmployeeAttendancePage = () => {
   ========================================================= */
 
   return (
-    <Flex direction="column" ml="0.02rem" width="100vw" h="95.1vh" bg="#F8FAFC">
+    <Flex
+      position="relative"
+      direction="column"
+      ml="0.02rem"
+      w="100vw"
+      h="93vh"
+      bg="#F8FAFC"
+    >
       {/* =====================================================
           HEADER
       ===================================================== */}
-      <Flex
-        ml="0.5rem"
-        direction="column"
-        bg="#F8F9FB"
-        height="10rem"
-        width="80vw"
-      >
-        <Flex>
-          <Box>
-            <HStack>
-              <Text
-                color="#1F2937"
-                fontSize="clamp(1.3rem, 1vw + 0.8rem, 1.4rem)"
-                fontWeight="700"
-                ml="1rem"
-                mt="1.3rem"
-              >
-                Présences
-              </Text>
-
-              <Button
-                bg="transparent"
-                color="gray.800"
-                _hover={{
-                  bg: "transparent",
-                }}
-                fontSize="1rem"
-                right="1rem"
-                onClick={loadData}
-                isLoading={loading}
-                position="relative"
-                top="0.8rem"
-              >
-                <FaSyncAlt />
-              </Button>
-            </HStack>
-
-            <Text
-              color="gray.500"
-              fontWeight="500"
-              fontSize="0.93rem"
-              position="relative"
-              left="0.45rem"
-              bottom="0.5rem"
-              ml="0.5rem"
-            >
-              Gérez la liste de présence
-            </Text>
-          </Box>
-          <Spacer />
-          {dailyCheck?.status === "LOCKED" && (
-            <Box position="absolute" top="1.3rem" right="5rem">
-              <FaLock size="2rem" color="#D4A017" />
-            </Box>
-          )}
-          <Spacer />
-          {/* ADD EMPLOYEE */}
-          <Box>
-            {dailyCheck?.status !== "LOCKED" ? (
-              <Button
-                colorScheme="blue"
-                size="md"
-                onClick={onAddAttendanceOpen}
-                zIndex="1"
-                mt="1.2rem"
-                mr="1rem"
-                _hover={{
-                  backgroundColor: "#4F46E5",
-                }}
-              >
-                <Box mr="0.5rem">
-                  <FaCirclePlus size="1.2rem" />
-                </Box>
-
-                <Text>Ajouter un employé</Text>
-              </Button>
-            ) : null}
-          </Box>
-        </Flex>
-
-        {/* ===================================================
-            FILTER + SEARCH
-        =================================================== */}
-
-        <Flex mr="1rem" mt="1rem" justify="space-between">
-          <Box ml="0.5rem" mt="1rem">
-            <SearchBar
-              placeholderText="Rechercher un employé"
-              onSearch={setSearchText}
-            />
-          </Box>
-          <Box mt="1rem" ml="0.5rem">
-            <EmployeeFilterMenu onFilterClicked={setFilter} />
-          </Box>
-          <Box mt="1rem" ml="1rem">
-            <AttendanceStatusFilter onFilterClicked={setStatusFilter} />
-          </Box>
-        </Flex>
-      </Flex>
-      {/* =====================================================
-          TABLE HEADER
-      ===================================================== */}
-      {attendances.length !== 0 && (
-        <Grid
-          templateColumns={gridTemplate}
-          px={10}
-          fontWeight="600"
+      <Box>
+        <Flex
+          ml="0.5rem"
+          direction="column"
           bg="#F8F9FB"
-          borderWidth="0.3px"
-          border="1px solid #E2E8F0"
-          boxShadow="0 2px 10px rgba(15,23,42,.06)"
-          height="4.7rem"
-          width="78.5vw"
-          overflowY="hidden"
-          overflowX="hidden"
-          mt="2rem"
-          ml="1rem"
+          height="10rem"
+          width="80vw"
         >
-          <Text color="gray.800" fontSize="1rem" mt="0.7rem">
-            Employé
-          </Text>
-
-          <Text color="gray.800" fontSize="1rem" mt="0.7rem">
-            ID
-          </Text>
-
-          <Text color="gray.800" fontSize="1rem" mt="0.7rem">
-            Poste
-          </Text>
-
-          <Text color="gray.800" fontSize="1rem" mt="0.7rem">
-            Departement
-          </Text>
-
-          <Text color="gray.800" fontSize="1rem" mt="0.7rem">
-            Arrivée
-          </Text>
-
-          <Text color="gray.800" fontSize="1rem" mt="0.7rem">
-            Départ
-          </Text>
-
-          <Text color="gray.800" fontSize="1rem" mt="0.7rem">
-            Actions
-          </Text>
-        </Grid>
-      )}
-
-      {/* =====================================================
-          BODY
-      ===================================================== */}
-      <Box height="90vh" overflowY="auto" overflowX="hidden">
-        {loading ? (
-          <>
-            <Box as="style">{shimmerKeyframes}</Box>
-
-            <VStack spacing={3}>
-              {[...Array(6)].map((_, i) => (
-                <Shimmer key={i} height="40px" />
-              ))}
-            </VStack>
-          </>
-        ) : attendances.length === 0 ? (
-          <Flex
-            ml="1rem"
-            mt="4rem"
-            width="78vw"
-            minHeight={{
-              base: "180px",
-              md: "220px",
-            }}
-            align="center"
-            justify="center"
-            bg="#ffffff"
-            border="1px solid #A0AEC0"
-            borderRadius="8px"
-            px="20px"
-            flexShrink={0}
-          >
-            <VStack spacing="6px">
+          <Flex>
+            <Box>
+              <HStack>
+                <Text
+                  color="#1F2937"
+                  fontSize="clamp(1.3rem, 1vw + 0.8rem, 1.4rem)"
+                  fontWeight="700"
+                  ml="1rem"
+                  mt="1.3rem"
+                >
+                  Présences
+                </Text>
+                <Button
+                  bg="transparent"
+                  color="gray.800"
+                  _hover={{
+                    bg: "transparent",
+                  }}
+                  fontSize="1rem"
+                  right="1rem"
+                  onClick={loadData}
+                  isLoading={loading}
+                  position="relative"
+                  top="0.8rem"
+                >
+                  <FaSyncAlt />
+                </Button>
+              </HStack>
               <Text
-                fontSize={{
-                  base: "1rem",
-                  md: "1.1rem",
-                }}
-                fontWeight="500"
                 color="gray.500"
-                textAlign="center"
+                fontWeight="500"
+                fontSize="0.93rem"
+                position="relative"
+                left="0.45rem"
+                bottom="0.5rem"
+                ml="0.5rem"
               >
-                Pas de présence enregistrée
+                Gérez la liste de présence
               </Text>
-            </VStack>
+            </Box>
+            <Spacer />
+
+            <Spacer />
+            {/* LOCKED ATTENDANCE  */}
+            {dailyCheck?.status === "LOCKED" && (
+              <Box mt="1.3rem" mr="0.5rem">
+                <FaLock size="2rem" color="#D4A017" />
+              </Box>
+            )}
+            {/* ADD EMPLOYEE */}
+            <Box>
+              {dailyCheck?.status !== "LOCKED" ? (
+                <Button
+                  colorScheme="blue"
+                  size="md"
+                  onClick={onAddAttendanceOpen}
+                  zIndex="1"
+                  mt="1.2rem"
+                  mr="1rem"
+                  _hover={{
+                    backgroundColor: "#4F46E5",
+                  }}
+                >
+                  <Box mr="0.5rem">
+                    <FaCirclePlus size="1.2rem" />
+                  </Box>
+                  <Text>Ajouter un employé</Text>
+                </Button>
+              ) : null}
+            </Box>
           </Flex>
-        ) : (
-          attendances
-            .filter((a) => !filter || a.department === filter)
-            .filter((a) => !statusFilter || a.status === statusFilter)
-            .filter((a) =>
-              `${a.firstName} ${a.lastName}`
-                .toLowerCase()
-                .includes(searchText.toLowerCase())
-            )
-            .map((attendance) => (
-              <EmployeeAttendanceCard
-                key={attendance._id}
-                attendance={attendance}
-                selectedDate={selectedDate}
-                gridTemplate={gridTemplate}
-                onDelete={() => {
-                  setAttendance(attendance);
-                  onOpen();
-                }}
-                isUnlocked={unlocked}
-                toggleOff={() => setUnlocked(false)}
+          {/* ===================================================
+              FILTER + SEARCH
+          =================================================== */}
+          <Flex mr="1rem" mt="1rem" justify="space-between">
+            <Box ml="0.5rem" mt="1rem">
+              <SearchBar
+                placeholderText="Rechercher un employé"
+                onSearch={setSearchText}
               />
-            ))
+            </Box>
+            <Box mt="1rem" ml="0.5rem">
+              <EmployeeFilterMenu onFilterClicked={setFilter} />
+            </Box>
+            <Box mt="1rem" ml="1rem">
+              <AttendanceStatusFilter onFilterClicked={setStatusFilter} />
+            </Box>
+          </Flex>
+        </Flex>
+        {/* =====================================================
+            TABLE HEADER
+        ===================================================== */}
+        {attendances.length !== 0 && (
+          <Grid
+            templateColumns={gridTemplate}
+            px={10}
+            fontWeight="600"
+            bg="#F8F9FB"
+            borderWidth="0.3px"
+            border="1px solid #E2E8F0"
+            boxShadow="0 2px 10px rgba(15,23,42,.06)"
+            height="3.5rem"
+            width="78.5vw"
+            overflowY="hidden"
+            overflowX="hidden"
+            mt="1rem"
+            ml="1rem"
+          >
+            <Text color="gray.800" fontSize="1rem" mt="0.7rem">
+              Employé
+            </Text>
+            <Text color="gray.800" fontSize="1rem" mt="0.7rem">
+              ID
+            </Text>
+            <Text color="gray.800" fontSize="1rem" mt="0.7rem">
+              Poste
+            </Text>
+            <Text color="gray.800" fontSize="1rem" mt="0.7rem">
+              Departement
+            </Text>
+            <Text color="gray.800" fontSize="1rem" mt="0.7rem">
+              Arrivée
+            </Text>
+            <Text color="gray.800" fontSize="1rem" mt="0.7rem">
+              Départ
+            </Text>
+            <Text color="gray.800" fontSize="1rem" mt="0.7rem">
+              Actions
+            </Text>
+          </Grid>
         )}
+        {/* =====================================================
+            BODY
+        ===================================================== */}
+        <Box height="56vh" overflowY="auto" overflowX="hidden">
+          {loading ? (
+            <>
+              <Box as="style">{shimmerKeyframes}</Box>
+              <VStack spacing={3}>
+                {[...Array(6)].map((_, i) => (
+                  <Shimmer key={i} height="40px" />
+                ))}
+              </VStack>
+            </>
+          ) : attendances.length === 0 ? (
+            <Flex
+              ml="1rem"
+              mt="3rem"
+              width="78vw"
+              minHeight={{
+                base: "180px",
+                md: "200px",
+              }}
+              align="center"
+              justify="center"
+              bg="#ffffff"
+              border="1px solid #A0AEC0"
+              borderRadius="8px"
+              px="20px"
+              flexShrink={0}
+            >
+              <VStack spacing="6px">
+                <Text
+                  fontSize={{
+                    base: "1rem",
+                    md: "1.1rem",
+                  }}
+                  fontWeight="500"
+                  color="gray.500"
+                  textAlign="center"
+                >
+                  Pas de présence enregistrée
+                </Text>
+              </VStack>
+            </Flex>
+          ) : (
+            attendances
+              .filter((a) => !filter || a.department === filter)
+              .filter((a) => !statusFilter || a.status === statusFilter)
+              .filter((a) =>
+                `${a.firstName} ${a.lastName}`
+                  .toLowerCase()
+                  .includes(searchText.toLowerCase())
+              )
+              .map((attendance) => (
+                <EmployeeAttendanceCard
+                  key={attendance._id}
+                  attendance={attendance}
+                  selectedDate={selectedDate}
+                  gridTemplate={gridTemplate}
+                  onDelete={() => {
+                    setAttendance(attendance);
+                    onOpen();
+                  }}
+                  isUnlocked={unlocked}
+                  toggleOff={() => setUnlocked(false)}
+                />
+              ))
+          )}
+        </Box>
       </Box>
       {/* =====================================================
           FOOTER
       ===================================================== */}
       <Flex
-        position="relative"
+        mb="0.3rem"
+        position="absolute"
+        bottom="0.2rem"
         width="80vw"
-        height="5rem"
+        height="2rem"
         justify="space-evenly"
-        mb="0.5rem"
       >
         {/* VERIFY */}
 

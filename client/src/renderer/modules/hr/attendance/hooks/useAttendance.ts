@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   AttendanceWithEmployee,
   CreateAttendanceDto,
-} from "../../../../../common/types/Attendance";
+} from "../../../../../common/types/attendance/Attendance";
 
 /* =========================================================
    QUERY KEYS
