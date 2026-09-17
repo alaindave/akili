@@ -12,6 +12,7 @@ import { FaPlus } from "react-icons/fa6";
 import { IoStatsChart } from "react-icons/io5";
 import LeaveSubmissionModal from "../../leave/components/LeaveSubmissionModal";
 import Employee from "../../../../../common/types/Employee";
+import { useNavigate } from "react-router-dom";
 
 interface Props {
   employees: Employee[];
@@ -24,6 +25,9 @@ const QuickActions = ({ onTaskCreate, employees }: Props) => {
     onOpen: onLeaveOpen,
     onClose: onLeaveClose,
   } = useDisclosure();
+
+  const navigate = useNavigate();
+
   return (
     <Box
       bg="linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))"
@@ -142,6 +146,7 @@ const QuickActions = ({ onTaskCreate, employees }: Props) => {
             whiteSpace={{ base: "normal", lg: "nowrap" }}
             overflow="hidden"
             textOverflow="ellipsis"
+            onClick={() => navigate("/employees_admin/reports")}
           >
             Générer un rapport
           </Text>
