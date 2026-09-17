@@ -25,28 +25,36 @@ const CompanySchema = new Schema<CompanyDocument>(
       type: String,
       required: true,
     },
+
     companyId: {
       type: String,
       required: true,
+      unique: true,
+      index: true,
     },
+
     name: {
       type: String,
       required: true,
       trim: true,
     },
+
     legalName: {
       type: String,
       default: null,
       trim: true,
     },
+
     signUpCode: {
       type: String,
       required: true,
     },
+
     logoPath: {
       type: String,
       default: null,
     },
+
     email: {
       type: String,
       default: null,
@@ -100,6 +108,7 @@ const CompanySchema = new Schema<CompanyDocument>(
       type: String,
       required: true,
     },
+
     isDeleted: {
       type: Number,
       required: true,

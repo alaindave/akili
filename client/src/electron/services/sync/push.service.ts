@@ -41,6 +41,7 @@ import {
 // Use the employee document repository to check whether the
 // document still exists locally.
 import { getEmployeeDocument } from "../../database/repositories/employees_documents.repository.js";
+
 import { enqueueNotification } from "../../database/repositories/notificationQueue.repository.js";
 import { processNotificationQueue } from "../email/notificationQueue.service.js";
 import { notifyManagerOfAttendanceDailyCheck } from "../attendance/attendanceNotification.service.js";
@@ -253,6 +254,56 @@ export async function pushPendingChanges(
     const data = JSON.parse(item.payload);
 
     switch (item.entity) {
+      /*
+       * -----------------------------------------------------
+       * COMPANY LOGO
+       * -----------------------------------------------------
+       */
+
+      case "company_logo": {
+        if (!data.logoPath) {
+          console.error("COMPANY LOGO PATH MISSING:", {
+            queueId: item._id,
+            companyId,
+          });
+
+          break;
+        }
+
+        const logoPath = path.join(app.getPath("userData"), data.logoPath);
+
+        console.log("STARTING SYNC FOR COMPANY LOGO:", {
+          queueId: item._id,
+          companyId,
+          logoPath: data.logoPath,
+          resolvedPath: logoPath,
+          exists: fs.existsSync(logoPath),
+          mimeType: data.mimeType,
+        });
+
+        if (fs.existsSync(logoPath)) {
+          form.append("company_logo", fs.createReadStream(logoPath), {
+            filename: path.basename(logoPath),
+            contentType: data.mimeType || "application/octet-stream",
+          });
+        } else {
+          console.error("COMPANY LOGO FILE MISSING:", {
+            queueId: item._id,
+            companyId,
+            logoPath: data.logoPath,
+            resolvedPath: logoPath,
+          });
+        }
+
+        break;
+      }
+
+      /*
+       * -----------------------------------------------------
+       * EMPLOYEE PHOTO
+       * -----------------------------------------------------
+       */
+
       case "employee_photo": {
         const photoPath = path.join(getEmployeePhotoDir(), data.photo_path);
 
@@ -271,6 +322,12 @@ export async function pushPendingChanges(
 
         break;
       }
+
+      /*
+       * -----------------------------------------------------
+       * EMPLOYEE DOCUMENT
+       * -----------------------------------------------------
+       */
 
       case "employee_document": {
         const documentPath = path.join(
@@ -351,32 +408,9 @@ export async function pushPendingChanges(
     queueIds: syncedIds,
   });
 
-  /*
-   * ---------------------------------------------------------
-   * PROCESS SERVER-SYNCED ITEMS
-   * ---------------------------------------------------------
-   *
-   * IMPORTANT:
-   *
-   * We DO NOT immediately mark the sync queue items as synced.
-   *
-   * For a leave creation:
-   *
-   *   1. Server confirms the leave was pushed.
-   *   2. We queue the email notification.
-   *   3. We mark the local leave as synced.
-   *   4. We mark the sync queue item as synced.
-   *
-   * This prevents losing the leave sync item if notification
-   * queue insertion fails.
-   */
-
   const successfullyProcessedQueueIds: string[] = [];
 
   for (const item of validPending) {
-    /*
-     * The server did not confirm this particular item.
-     */
     if (!syncedIds.includes(item._id)) {
       continue;
     }
@@ -384,61 +418,29 @@ export async function pushPendingChanges(
     const data = JSON.parse(item.payload);
 
     switch (item.entity) {
-      /*
-       * -----------------------------------------------------
-       * COMPANY
-       * -----------------------------------------------------
-       */
-
       case "company":
         await markCompanySynced(companyId, data.serverVersion);
         break;
 
-      /*
-       * -----------------------------------------------------
-       * EMPLOYEE
-       * -----------------------------------------------------
-       */
+      case "company_logo":
+        await markCompanySynced(companyId, data.serverVersion);
+        break;
 
       case "employee":
         await markEmployeeSynced(companyId, data._id);
         break;
 
-      /*
-       * -----------------------------------------------------
-       * EMPLOYEE PHOTO
-       * -----------------------------------------------------
-       */
-
       case "employee_photo":
         await markEmployeePhotoSynced(companyId, data.employeeId);
         break;
-
-      /*
-       * -----------------------------------------------------
-       * EMPLOYEE DOCUMENT
-       * -----------------------------------------------------
-       */
 
       case "employee_document":
         await markEmployeeDocumentSynced(companyId, data._id);
         break;
 
-      /*
-       * -----------------------------------------------------
-       * ATTENDANCE
-       * -----------------------------------------------------
-       */
-
       case "attendance":
         await markAttendanceSynced(companyId, data._id);
         break;
-
-      /*
-       * -----------------------------------------------------
-       * ATTENDANCE DAILY CHECK
-       * -----------------------------------------------------
-       */
 
       case "attendance_daily_check": {
         await markAttendanceDailyCheckSynced(companyId, data._id);
@@ -450,12 +452,6 @@ export async function pushPendingChanges(
 
         break;
       }
-
-      /*
-       * -----------------------------------------------------
-       * LEAVE
-       * -----------------------------------------------------
-       */
 
       case "leave": {
         if (
@@ -473,19 +469,20 @@ export async function pushPendingChanges(
             companyId,
             type: "leave",
             recipientEmail: data.managerEmail,
-            title: `Demande de congé - ${data.employeeFirstName} ${data.employeeLastName}`,
+            title:
+              `Demande de congé - ${data.employeeFirstName} ` +
+              `${data.employeeLastName}`,
             message: `
             Employé: ${data.employeeFirstName} ${data.employeeLastName}
 
             Période: Du ${new Date(data.startDate).toLocaleDateString(
               "fr-FR"
             )} au ${new Date(data.endDate).toLocaleDateString("fr-FR")}
-         
+
             Motif: ${data.notes || "Aucune note fournie."}
 
             Veuillez vous connecter sur Akili pour approuver 
             ou refuser la demande.
-            
             `.trim(),
             entityId: data._id,
           });
@@ -499,89 +496,33 @@ export async function pushPendingChanges(
           });
         }
 
-        /*
-         * Only after the notification has been successfully
-         * inserted into notification_queue do we mark the
-         * local leave as synced.
-         */
-
         await markLeaveSynced(companyId, data._id);
 
         break;
       }
 
-      /*
-       * -----------------------------------------------------
-       * TASK
-       * -----------------------------------------------------
-       */
-
       case "task":
         await markTaskSynced(companyId, data._id);
         break;
-
-      /*
-       * -----------------------------------------------------
-       * TASK COMMENT
-       * -----------------------------------------------------
-       */
 
       case "task_comment":
         await markTaskCommentsSynced(companyId, data._id);
         break;
 
-      /*
-       * -----------------------------------------------------
-       * PAYROLL SETTINGS
-       * -----------------------------------------------------
-       */
-
       case "payroll_settings":
         await markPayrollSettingsSynced(companyId, data._id);
         break;
-
-      /*
-       * -----------------------------------------------------
-       * PAYROLL COMPONENT
-       * -----------------------------------------------------
-       */
 
       case "payroll_component":
         await markPayrollComponentSynced(companyId, data._id);
         break;
 
-      /*
-       * -----------------------------------------------------
-       * PAYROLL PROFILE
-       * -----------------------------------------------------
-       */
-
       case "payroll_profile":
         await markPayrollEmployeeProfileSynced(companyId, data._id);
         break;
 
-      /*
-       * -----------------------------------------------------
-       * PAYROLL RUN
-       * -----------------------------------------------------
-       */
-
-      /*
-       * -----------------------------------------------------
-       * PAYROLL RUN
-       * -----------------------------------------------------
-       */
-
       case "payroll_run": {
         await markPayrollRunSynced(companyId, data._id);
-
-        /*
-         * ---------------------------------------------------
-         * MANAGER NOTIFIED
-         * ---------------------------------------------------
-         *
-         * Ask the manager to confirm the payroll.
-         */
 
         if (data.status === "VERIFICATION") {
           if (!data.managerEmail) {
@@ -607,6 +548,7 @@ export async function pushPendingChanges(
               "L'équipe Akili",
             entityId: data._id,
           });
+
           await processNotificationQueue();
 
           console.log("PAYROLL MANAGER CONFIRMATION NOTIFICATION QUEUED:", {
@@ -615,14 +557,6 @@ export async function pushPendingChanges(
             managerEmail: data.managerEmail,
           });
         }
-
-        /*
-         * ---------------------------------------------------
-         * PAYE
-         * ---------------------------------------------------
-         *
-         * Inform the manager that payroll has been paid.
-         */
 
         if (data.status === "PAYÉ") {
           if (!data.managerEmail) {
@@ -658,31 +592,13 @@ export async function pushPendingChanges(
         break;
       }
 
-      /*
-       * -----------------------------------------------------
-       * PAYROLL RESULT
-       * -----------------------------------------------------
-       */
-
       case "payroll_result":
         await markPayrollResultSynced(companyId, data._id);
         break;
 
-      /*
-       * -----------------------------------------------------
-       * PAYROLL ITEM
-       * -----------------------------------------------------
-       */
-
       case "payroll_item":
         await markPayrollItemSynced(companyId, data._id);
         break;
-
-      /*
-       * -----------------------------------------------------
-       * UNKNOWN ENTITY
-       * -----------------------------------------------------
-       */
 
       default:
         console.warn(`UNKNOWN SYNC ENTITY: ${item.entity}`);
@@ -691,18 +607,6 @@ export async function pushPendingChanges(
 
     successfullyProcessedQueueIds.push(item._id);
   }
-
-  /*
-   * ---------------------------------------------------------
-   * MARK SYNC QUEUE ITEMS AS SYNCED
-   * ---------------------------------------------------------
-   *
-   * This is deliberately AFTER the entity processing above.
-   *
-   * Therefore a leave creation notification is guaranteed to
-   * have been inserted into notification_queue before the
-   * corresponding sync queue item is marked as synced.
-   */
 
   if (successfullyProcessedQueueIds.length > 0) {
     await markManySynced(companyId, successfullyProcessedQueueIds);
@@ -713,12 +617,6 @@ export async function pushPendingChanges(
       queueIds: successfullyProcessedQueueIds,
     });
   }
-
-  /*
-   * ---------------------------------------------------------
-   * CHECK WHAT IS STILL PENDING
-   * ---------------------------------------------------------
-   */
 
   const remainingPending = await getUnsyncedItems(companyId);
 

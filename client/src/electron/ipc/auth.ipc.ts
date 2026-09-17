@@ -4,7 +4,7 @@ import axios from "axios";
 import { clearToken, saveToken } from "../auth.js";
 
 import {
-  getCompany,
+  getCompanyById,
   upsertCompanyId,
 } from "../database/repositories/companies.repository.js";
 
@@ -27,7 +27,7 @@ async function initializeLocalCompany(company: any): Promise<void> {
     throw new Error("AUTHENTICATION SUCCEEDED BUT COMPANY HAS NO COMPANY ID");
   }
 
-  const localCompany = await getCompany(company.companyId);
+  const localCompany = await getCompanyById(company.companyId);
 
   // ---------------------------------------------------------
   // FIRST LOGIN / FIRST SIGNUP ON THIS INSTALLATION

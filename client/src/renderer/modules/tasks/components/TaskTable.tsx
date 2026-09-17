@@ -12,7 +12,7 @@ import {
   Tr,
 } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
-import Task from "../../../../common/types/Task";
+import Task from "../../../../common/types/task/Task";
 
 interface TaskTableProps {
   tasks: Pick<

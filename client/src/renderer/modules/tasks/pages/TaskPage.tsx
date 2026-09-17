@@ -9,7 +9,7 @@ import {
 } from "@chakra-ui/react";
 import { FaSyncAlt } from "react-icons/fa";
 import { useEffect, useState } from "react";
-import Task from "../../../../common/types/Task";
+import Task from "../../../../common/types/task/Task";
 import useAdminUser from "../../../../store/auth.store";
 import useSyncStore from "../../../../store/sync.store";
 import TaskTable from "../components/TaskTable";
@@ -99,7 +99,7 @@ const TaskPage = () => {
           <Text
             fontWeight="500"
             fontSize="0.9rem"
-            color="gray.500"
+            color="#03143B"
             position="relative"
             bottom="0.5rem"
             left="1rem"

@@ -96,7 +96,7 @@ const EmployeeListPage = () => {
               <Box>
                 <HStack mt="0.3rem" spacing="4px" align="center">
                   <Text
-                    color="gray.800"
+                    color="#03143B"
                     fontSize={{
                       base: "1.2rem",
                       sm: "1.3rem",

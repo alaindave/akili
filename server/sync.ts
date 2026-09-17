@@ -92,8 +92,6 @@ export async function syncCompany(operation: SyncOperation, data: SyncData) {
 
   const { fields } = cleanSyncFields(data);
 
-  fields.companyId = companyId;
-
   const serverVersion = await getServerVersion("company");
 
   /*
@@ -113,6 +111,9 @@ export async function syncCompany(operation: SyncOperation, data: SyncData) {
           updatedAt: new Date(data.updatedAt as string),
           serverVersion,
         },
+      },
+      {
+        timestamps: false,
       }
     );
 
@@ -134,19 +135,13 @@ export async function syncCompany(operation: SyncOperation, data: SyncData) {
     };
   }
 
-  /*
-   * ------------------------------------------------------------
-   * CREATE / UPDATE
-   * ------------------------------------------------------------
-   */
+  delete fields.companyId;
 
   delete fields._id;
 
-  /*
-   * The company document should not contain client-only
-   * synchronization fields.
-   */
   fields.serverVersion = serverVersion;
+
+  fields.isDeleted = 0;
 
   await Company.updateOne(
     {
@@ -155,9 +150,9 @@ export async function syncCompany(operation: SyncOperation, data: SyncData) {
     {
       $set: {
         ...fields,
-        companyId,
-        serverVersion,
+        updatedAt: new Date(data.updatedAt as string),
       },
+
       $setOnInsert: {
         _id: data._id,
         companyId,
@@ -168,6 +163,12 @@ export async function syncCompany(operation: SyncOperation, data: SyncData) {
       timestamps: false,
     }
   );
+
+  /*
+   * ------------------------------------------------------------
+   * VERIFY
+   * ------------------------------------------------------------
+   */
 
   const company = await Company.findOne({
     companyId,
@@ -190,6 +191,136 @@ export async function syncCompany(operation: SyncOperation, data: SyncData) {
     companyId,
     serverVersion,
     company,
+  };
+}
+
+// ============================================================
+// COMPANY LOGO
+// ============================================================
+
+export async function syncCompanyLogo(data: SyncData, file?: UploadedFile) {
+  const companyId = requireCompanyId(data);
+  requireUpdatedAt(data);
+
+  console.log("COMPANY LOGO DATA:", data);
+
+  const company = await Company.findOne({
+    companyId,
+  });
+
+  if (!company) {
+    throw new Error(`COMPANY ${companyId} NOT FOUND`);
+  }
+
+  if (!file) {
+    throw new Error("COMPANY LOGO FILE MISSING");
+  }
+
+  const mimeType = data.mimeType || file.mimetype;
+
+  const extension = (() => {
+    switch (mimeType) {
+      case "image/png":
+        return ".png";
+
+      case "image/webp":
+        return ".webp";
+
+      case "image/jpeg":
+      case "image/jpg":
+      default:
+        return ".jpg";
+    }
+  })();
+
+  const objectPath = `${companyId}/logo${extension}`;
+
+  console.log("UPLOADING COMPANY LOGO:", {
+    companyId,
+    objectPath,
+    mimeType,
+    originalName: file.originalname,
+    previousLocalPath: company.logoPath,
+  });
+
+  const { error: uploadError } = await supabase.storage
+    .from("company_logos")
+    .upload(objectPath, file.buffer, {
+      contentType: mimeType,
+      upsert: true,
+      cacheControl: "0",
+    });
+
+  if (uploadError) {
+    throw new Error(`FAILED TO UPLOAD COMPANY LOGO: ${uploadError.message}`);
+  }
+
+  console.log("NEW COMPANY LOGO UPLOADED:", {
+    companyId,
+    objectPath,
+  });
+
+  const possibleOldPaths = [
+    `${companyId}/logo.png`,
+    `${companyId}/logo.jpg`,
+    `${companyId}/logo.jpeg`,
+    `${companyId}/logo.webp`,
+  ].filter((oldPath) => oldPath !== objectPath);
+
+  if (possibleOldPaths.length > 0) {
+    const { error: deleteError } = await supabase.storage
+      .from("company_logos")
+      .remove(possibleOldPaths);
+
+    if (deleteError) {
+      throw new Error(
+        `NEW COMPANY LOGO UPLOADED BUT FAILED TO DELETE OLD LOGO: ${deleteError.message}`
+      );
+    }
+
+    console.log("OLD COMPANY LOGO FILES CLEANED UP:", {
+      companyId,
+      removed: possibleOldPaths,
+    });
+  }
+
+  const serverVersion = await getServerVersion("company_logo");
+
+  await Company.updateOne(
+    {
+      companyId,
+    },
+    {
+      $set: {
+        logoPath: objectPath,
+
+        updatedAt: new Date(data.updatedAt as string),
+
+        serverVersion,
+      },
+    }
+  );
+
+  const { data: publicUrlData } = supabase.storage
+    .from("company_logos")
+    .getPublicUrl(objectPath);
+
+  const logoUrl = publicUrlData.publicUrl;
+
+  console.log("COMPANY LOGO SYNCED SUCCESSFULLY:", {
+    companyId,
+    objectPath,
+    logoUrl,
+    serverVersion,
+  });
+
+  return {
+    success: true,
+    companyId,
+    serverVersion,
+    logoPath: objectPath,
+    logoUrl,
+    updatedAt: company.updatedAt,
   };
 }
 

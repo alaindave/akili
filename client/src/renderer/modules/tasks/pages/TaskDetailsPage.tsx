@@ -13,10 +13,11 @@ import {
   VStack,
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
+import { GoDotFill } from "react-icons/go";
 import { FaHourglassStart } from "react-icons/fa";
 import { FaArrowLeftLong, FaHourglassEnd } from "react-icons/fa6";
 import { Link, useParams } from "react-router-dom";
-import Task from "../../../../common/types/Task";
+import Task from "../../../../common/types/task/Task";
 import useAdminUser from "../../../../store/auth.store";
 import useSyncStore from "../../../../store/sync.store";
 import useTaskStore from "../../../../store/task.store";
@@ -141,51 +142,34 @@ export default function TaskDetailsPage() {
         justify="space-between"
         zIndex={10}
       >
-        <HStack spacing={4}>
+        <HStack>
           <Link to="/employees_admin/tasks">
-            <Button variant="ghost" size="sm" leftIcon={<FaArrowLeftLong />}>
-              Retour
+            <Button variant="ghost" size="sm" _hover={{ bg: "transparent" }}>
+              <FaArrowLeftLong />
             </Button>
           </Link>
-
           <Divider orientation="vertical" height="28px" />
-
-          <Text
-            fontSize="lg"
-            fontWeight="700"
-            fontFamily="monospace"
-            color="gray.800"
-          >
-            {task?.taskNumber}
-          </Text>
-        </HStack>
-        {/* Deadline */}
-        <HStack>
-          {task?.deadline && new Date(task?.deadline) <= new Date() ? (
-            <FaHourglassEnd size="1.2rem" color="brown" />
-          ) : (
-            <FaHourglassStart size="1.2rem" color="green" />
-          )}
-          <Text fontSize="1.1rem">
-            {task?.deadline &&
-            new Date(task?.deadline).getDay() === new Date().getDay()
-              ? "Aujurd'hui"
-              : task?.deadline &&
-                new Date(task?.deadline).toLocaleDateString("fr-FR")}
-          </Text>
+          <VStack>
+            <Text
+              mt="0.2rem"
+              fontSize="1.05rem"
+              fontWeight="700"
+              fontFamily="monospace"
+              color="gray.800"
+            >
+              {task?.taskNumber}
+            </Text>
+            <Badge
+              colorScheme={task?.isResolved ? "green" : "yellow"}
+              borderRadius="full"
+              fontSize="0.7rem"
+            >
+              {task?.isResolved ? "Résolue" : "Ouverte"}
+            </Badge>
+          </VStack>
         </HStack>
 
         <HStack spacing={4}>
-          <Badge
-            colorScheme={task?.isResolved ? "green" : "yellow"}
-            borderRadius="full"
-            px={4}
-            py={1.5}
-            fontSize="sm"
-          >
-            {task?.isResolved ? "Résolue" : "Ouverte"}
-          </Badge>
-
           {!task?.isResolved && (
             <TaskResolutionPopover onSubmit={handleResolution} />
           )}
@@ -214,38 +198,38 @@ export default function TaskDetailsPage() {
                   Auteur
                 </Text>
 
-                <HStack spacing={3} mt="1rem">
-                  <Avatar
-                    size="sm"
-                    name={
-                      task?.author
-                        ? `${task.author.firstName} ${task.author.lastName}`
-                        : "Auteur"
-                    }
-                  />
-
-                  <Box>
-                    <Text fontSize="md" fontWeight="600" color="gray.800">
-                      {task?.author
-                        ? `${task.author.firstName} ${task.author.lastName}`
-                        : "Auteur inconnu"}
+                <Box>
+                  <Text fontSize="md" fontWeight="600" color="gray.800">
+                    {task?.author
+                      ? `${task.author.firstName} ${task.author.lastName}`
+                      : "Auteur inconnu"}
+                  </Text>
+                  <HStack>
+                    <Text fontSize="1rem" color="gray.600">
+                      {task?.submittedAt &&
+                        new Date(task.submittedAt).toLocaleDateString("fr-FR")}
                     </Text>
-                    <HStack>
-                      <Text fontSize="1rem" color="gray.600">
-                        {task?.submittedAt &&
-                          new Date(task.submittedAt).toLocaleDateString(
-                            "fr-FR"
-                          )}
-                      </Text>
-                      <Text fontSize="1rem" color="gray.600">
-                        {task?.submittedAt &&
-                          new Date(task.submittedAt).toLocaleTimeString(
-                            "fr-FR",
-                            { hour: "2-digit", minute: "2-digit" }
-                          )}
-                      </Text>
-                    </HStack>
-                  </Box>
+                    <Text fontSize="1rem" color="gray.600">
+                      {task?.submittedAt &&
+                        new Date(task.submittedAt).toLocaleTimeString("fr-FR", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                    </Text>
+                  </HStack>
+                </Box>
+                {/* Deadline */}
+                <HStack mt="1rem">
+                  <Text fontSize="1.05rem" fontWeight="600">
+                    Date limite:
+                  </Text>
+                  <Text fontSize="1rem">
+                    {task?.deadline &&
+                    new Date(task?.deadline).getDay() === new Date().getDay()
+                      ? "Aujurd'hui"
+                      : task?.deadline &&
+                        new Date(task?.deadline).toLocaleDateString("fr-FR")}
+                  </Text>
                 </HStack>
               </Box>
 
@@ -263,16 +247,11 @@ export default function TaskDetailsPage() {
                 {task?.recipients?.length ? (
                   <Grid
                     templateColumns="repeat(2, minmax(0, 1fr))"
-                    gap={3}
+                    gap={2}
                     width="100%"
                   >
                     {task?.recipients.map((user) => (
-                      <HStack key={user._id} spacing={2} px={3} py={1.5}>
-                        <Avatar
-                          size="sm"
-                          name={`${user.firstName} ${user.lastName}`}
-                        />
-
+                      <HStack key={user._id} spacing={1} px={1} py={1}>
                         <Text fontSize="md" color="gray.800">
                           {user.firstName} {user.lastName}
                         </Text>

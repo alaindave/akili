@@ -1,6 +1,10 @@
 
 const { contextBridge, ipcRenderer } = require("electron");
 
+type Company = import("../common/types/company", {
+  with: { "resolution-mode": "require" },
+}).default;
+
 type OfflineUser = import("../common/types/OfflineUser", {
   with: { "resolution-mode": "require" },
 }).default;
@@ -134,6 +138,87 @@ contextBridge.exposeInMainWorld("electron", {
   email: {
     send: (notification: EmailNotification) =>
       ipcRenderer.invoke("email:send", notification),
+  },
+
+    // ============================================================
+  // COMPANY
+  // ============================================================
+
+  company: {
+
+    getLogoUrl: (logoPath: string) =>
+  ipcRenderer.invoke(
+    "company:getLogoUrl",
+    logoPath
+  ),
+
+  updateLogo: (data: {
+  companyId: string;
+  mimeType: string;
+  data: ArrayBuffer;
+}) =>
+  ipcRenderer.invoke(
+    "company:updateLogo",
+    data
+  ),
+  
+    upsert: (company: Company) =>
+      ipcRenderer.invoke(
+        "company:upsert",
+        company
+      ),
+
+    upsertId: (company: Company) =>
+      ipcRenderer.invoke(
+        "company:upsertId",
+        company
+      ),
+
+    getById: (companyId: string) =>
+      ipcRenderer.invoke(
+        "company:getById",
+        companyId
+      ),
+
+    getId: () =>
+      ipcRenderer.invoke(
+        "company:getId"
+      ),
+
+    update: (company: Company) =>
+      ipcRenderer.invoke(
+        "company:update",
+        company
+      ),
+
+    markSynced: (
+      companyId: string,
+      serverVersion?: number
+    ) =>
+      ipcRenderer.invoke(
+        "company:markSynced",
+        {
+          companyId,
+          serverVersion,
+        }
+      ),
+
+    getUnsynced: () =>
+      ipcRenderer.invoke(
+        "company:getUnsynced"
+      ),
+
+    delete: (companyId: string) =>
+      ipcRenderer.invoke(
+        "company:delete",
+        companyId
+      ),
+
+    restore: (companyId: string) =>
+      ipcRenderer.invoke(
+        "company:restore",
+        companyId
+      ),
   },
 
   // ============================================================

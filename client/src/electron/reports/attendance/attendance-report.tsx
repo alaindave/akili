@@ -450,12 +450,10 @@ function ReportHeader({ report }: { report: DailyAttendanceReport }) {
               </Text>
             ) : null}
 
-            {report.company.city ? (
-              <Text style={styles.companyDetails}>{report.company.city}</Text>
-            ) : null}
-
-            {report.company.phone ? (
-              <Text style={styles.companyDetails}>{report.company.phone}</Text>
+            {report.company.city && report.company.country ? (
+              <Text style={styles.companyDetails}>
+                {report.company.city},{report.company.country}
+              </Text>
             ) : null}
 
             {report.company.email ? (

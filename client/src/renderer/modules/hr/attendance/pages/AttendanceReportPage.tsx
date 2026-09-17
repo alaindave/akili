@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { FaArrowLeftLong } from "react-icons/fa6";
 import { MdOutlineChevronRight } from "react-icons/md";
 import { Link, useLocation } from "react-router-dom";
-import { Attendance } from "../../../../../common/types/Attendance";
+import { Attendance } from "../../../../../common/types/attendance/Attendance";
 import type Employee from "../../../../../common/types/Employee";
 import useAdminUser from "../../../../../store/auth.store";
 import AttendanceTable from "../components/AttendanceRecordTable";

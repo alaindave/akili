@@ -201,11 +201,11 @@ export default function TransportAllowanceWeeklyReportPage() {
         overflow="hidden"
         width="80vw"
         flexShrink={0}
-        mt="1rem"
+        mt="1.2rem"
         ml="1rem"
       >
         {/* BLUE TITLE BAR */}
-        <Box height="55px" bg={BLUE} px={{ base: 5, md: 6 }} py={3}>
+        <Box height="45px" bg={BLUE} px={{ base: 5, md: 6 }} py={2}>
           <Flex
             justify="space-between"
             align={{ base: "flex-start", md: "center" }}

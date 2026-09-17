@@ -296,7 +296,7 @@ const EmployeeAdminPage = () => {
             <Text
               fontSize="clamp(1.3rem, 1vw + 0.8rem, 1.4rem)"
               fontWeight="700"
-              color="#1F2937"
+              color="#03143B"
             >
               Tableau de bord
             </Text>
@@ -316,7 +316,7 @@ const EmployeeAdminPage = () => {
             MANUAL TASK REFRESH
         ==================================================== */}
 
-        <Button colorScheme="blue" onClick={loadTasks}>
+        <Button mb="1rem" colorScheme="blue" onClick={loadTasks}>
           <Box>
             <IoReloadOutline />
           </Box>

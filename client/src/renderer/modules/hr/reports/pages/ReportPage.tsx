@@ -1,13 +1,6 @@
-import { Box, Flex, Grid, HStack, Text, VStack } from "@chakra-ui/react";
+import { Box, Flex, Grid, Text, VStack } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
-import {
-  FaCalendarCheck,
-  FaClipboardList,
-  FaFileInvoiceDollar,
-  FaMoneyBillWave,
-  FaUserClock,
-} from "react-icons/fa";
-import { MdOutlineDirectionsBus } from "react-icons/md";
+import { FaCalendarCheck } from "react-icons/fa";
 import { ReactNode } from "react";
 
 const BLUE = "#03143B";
@@ -196,8 +189,11 @@ export default function ReportsPage() {
               />
 
               <ReportItem
-                title="Rapport de présence mensuel"
-                description="Synthèse des présences pour un mois donné."
+                title="Frais de déplacement"
+                description="Calculer et consulter le rapport de frais de déplacement."
+                onClick={() =>
+                  navigate("/employees_admin/reports/transport_allowance")
+                }
               />
 
               <ReportItem
@@ -213,17 +209,14 @@ export default function ReportsPage() {
           </ReportSection>
 
           {/* FRAIS DE DÉPLACEMENT */}
-          <ReportSection
+          {/* <ReportSection
             title="Frais de déplacement"
             icon={<MdOutlineDirectionsBus size={23} />}
-            onClick={() =>
-              navigate("/employees_admin/reports/transport_allowance")
-            }
           >
             <VStack align="stretch" spacing={3}>
               <ReportItem
                 title="Allocation transport hebdomadaire"
-                description="Calculer et consulter l'allocation transport du lundi au vendredi."
+                description="Calculer et consulter le rapport de frais de déplacement."
               />
 
               <ReportItem
@@ -231,7 +224,7 @@ export default function ReportsPage() {
                 description="Consulter les allocations transport générées."
               />
             </VStack>
-          </ReportSection>
+          </ReportSection> */}
         </Grid>
       </Box>
     </Box>

@@ -14,6 +14,7 @@ import {
 } from "@chakra-ui/react";
 import { useMemo, useState } from "react";
 import { FiArrowLeft, FiArrowRight, FiCalendar, FiTruck } from "react-icons/fi";
+import { MdOutlineChevronRight } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
 import { TransportAllowanceWeeklyReport } from "../../../../../common/types/TransportAllowance";
 import useAdminUser from "../../../../../store/auth.store";
@@ -221,7 +222,21 @@ export default function TransportAllowancePage() {
             <Icon as={FiArrowLeft} boxSize={5} />
           </Button>
 
-          <Box>
+          <HStack>
+            <Heading
+              fontSize={{
+                base: "1.1rem",
+                md: "1.1rem",
+              }}
+              fontWeight="600"
+              color="#03143B"
+              letterSpacing="-0.4px"
+            >
+              Rapports
+            </Heading>
+            <Box>
+              <MdOutlineChevronRight fontSize="1.1rem" />
+            </Box>
             <Heading
               fontSize={{
                 base: "1.1rem",
@@ -233,7 +248,7 @@ export default function TransportAllowancePage() {
             >
               Frais de déplacement
             </Heading>
-          </Box>
+          </HStack>
         </HStack>
 
         {/* Main card */}

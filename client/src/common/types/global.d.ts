@@ -51,6 +51,37 @@ interface Reminder {
 declare global {
   interface Window {
     electron: {
+      company: {
+        getLogoUrl: (logoPath: string) => Promise<string | null>;
+
+        updateLogo: (data: {
+          companyId: string;
+          mimeType: string;
+          data: ArrayBuffer;
+        }) => Promise<string>;
+
+        upsert: (company: Company) => Promise<Company>;
+
+        upsertId: (company: Company) => Promise<Company>;
+
+        getById: (companyId: string) => Promise<Company | null>;
+
+        getId: () => Promise<string | null>;
+
+        update: (company: Company) => Promise<Company>;
+
+        markSynced: (
+          companyId: string,
+          serverVersion?: number
+        ) => Promise<Company>;
+
+        getUnsynced: () => Promise<Company[]>;
+
+        delete: (companyId: string) => Promise<Company>;
+
+        restore: (companyId: string) => Promise<Company>;
+      };
+
       email: {
         send: (notification: EmailNotification) => Promise<EmailDeliveryResult>;
       };

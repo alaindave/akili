@@ -4,6 +4,7 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import { getDailyAttendanceReport } from "../../database/repositories/attendances.repository.js";
 import { AttendanceReportDocument } from "../../reports/attendance/attendance-report.js";
 import { DailyAttendanceReport } from "../../../common/types/attendance/AttendanceReport.js";
+import { getCompanyById } from "../../database/repositories/companies.repository.js";
 
 export interface GeneratedAttendanceReport {
   filename: string;
@@ -15,6 +16,12 @@ export async function generateAttendanceReport(
   companyId: string,
   date: string
 ): Promise<GeneratedAttendanceReport> {
+  /*
+   * ------------------------------------------------------------
+   * LOAD ATTENDANCE
+   * ------------------------------------------------------------
+   */
+
   const rows = await getDailyAttendanceReport(companyId, date);
 
   const employees = rows.map((row) => ({
@@ -29,15 +36,43 @@ export async function generateAttendanceReport(
     status: row.status ?? "ABSENT",
   }));
 
+  /*
+   * ------------------------------------------------------------
+   * LOAD COMPANY FROM LOCAL SQLITE
+   * ------------------------------------------------------------
+   */
+
+  const company = await getCompanyById(companyId);
+
+  if (!company) {
+    throw new Error(`Entreprise introuvable dans SQLite: ${companyId}`);
+  }
+
+  /*
+   * ------------------------------------------------------------
+   * BUILD REPORT
+   * ------------------------------------------------------------
+   */
+
   const report: DailyAttendanceReport = {
     date,
     employees,
+
     company: {
-      name: "AFRITAN",
-      address: "10 Boulevard Melchior Ndadaye",
-      city: "Bujumbura,Burundi",
+      name: company.name ?? "",
+      address: company.address ?? "",
+      city: company.city ?? "",
+      country: company.country ?? "",
+      phone: company.phone ?? "",
+      email: company.email ?? "",
     },
   };
+
+  /*
+   * ------------------------------------------------------------
+   * GENERATE PDF
+   * ------------------------------------------------------------
+   */
 
   const pdfBuffer = await renderToBuffer(
     <AttendanceReportDocument report={report} />
@@ -47,6 +82,7 @@ export async function generateAttendanceReport(
     filename: `rapport-presences-${new Date(date).toLocaleDateString(
       "fr-FR"
     )}.pdf`,
+
     pdfBuffer: Buffer.from(pdfBuffer),
   };
 }
@@ -57,7 +93,9 @@ export async function saveAttendanceReport(companyId: string, date: string) {
    */
   const result = await dialog.showSaveDialog({
     title: "Enregistrer le rapport de présence",
+
     defaultPath: `rapport-presences-${date}.pdf`,
+
     filters: [
       {
         name: "PDF",

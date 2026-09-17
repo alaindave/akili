@@ -2,6 +2,7 @@ import SyncCounter from "../models/syncCounter.model.js";
 
 export type Entity =
   | "company"
+  | "company_logo"
   | "admin_user"
   | "employee"
   | "employee_document"

@@ -20,6 +20,7 @@ import {
   syncPayrollItem,
   syncPayrollSettings,
   syncCompany,
+  syncCompanyLogo,
 } from "../sync.js";
 
 import type { SyncOperation } from "../sync.js";
@@ -38,6 +39,7 @@ import PayrollItem from "../models/payrollItem.model.js";
 import PayrollRun from "../models/payrollRun.model.js";
 import PayrollSettings from "../models/payrollSettings.model.js";
 import AttendanceDailyCheck from "../models/attendanceDailyCheck.model.js";
+import supabase from "../services/supabase.service.js";
 
 const router = express.Router();
 
@@ -219,6 +221,9 @@ router.post(
     {
       name: "employees_documents",
     },
+    {
+      name: "company_logo",
+    },
   ]),
   async (
     req: AuthenticatedRequest & {
@@ -289,7 +294,7 @@ router.post(
 
       const photoFiles = files?.employees_photos || [];
       const documentFiles = files?.employees_documents || [];
-
+      const companyLogoFiles = files?.company_logo || [];
       /*
        * --------------------------------------------------------
        * SYNC RESULTS
@@ -324,16 +329,43 @@ router.post(
              */
 
             case "company": {
-              /*
-               * Company is the tenant root.
-               *
-               * The companyId has already been verified against
-               * the authenticated JWT above.
-               */
               const result = await syncCompany(operation, data);
 
               console.log(
                 `COMPANY ${data.companyId} SERVER VERSION:`,
+                result?.serverVersion
+              );
+
+              break;
+            }
+
+            /*
+             * ====================================================
+             * COMPANY LOGO
+             * ====================================================
+             */
+
+            case "company_logo": {
+              const file = companyLogoFiles.find(
+                (f) =>
+                  f.originalname === data.logo_filename ||
+                  f.originalname === data.fileName ||
+                  f.originalname === data.originalName ||
+                  f.originalname === data.filename
+              );
+
+              console.log("COMPANY LOGO TO UPDATE:", {
+                companyId,
+                queueId,
+                originalName: file?.originalname,
+                mimeType: file?.mimetype,
+                size: file?.size,
+              });
+
+              const result = await syncCompanyLogo(data, file);
+
+              console.log(
+                `COMPANY LOGO ${data.companyId} SERVER VERSION:`,
                 result?.serverVersion
               );
 
@@ -752,6 +784,89 @@ router.get(
           companyId,
           entity: "company",
           items: result.items,
+          nextVersion: result.nextVersion,
+          hasMore: result.hasMore,
+          serverTime: new Date().toISOString(),
+        });
+      }
+
+      /*
+       * ========================================================
+       * COMPANY LOGO
+       * ========================================================
+       */
+
+      if (entity === "company_logo") {
+        const result = await pullVersionedCollection(
+          Company,
+          companyId,
+          version,
+          max,
+          "companyId logoPath serverVersion updatedAt isDeleted"
+        );
+
+        const items = await Promise.all(
+          result.items.map(async (company: any) => {
+            /*
+             * --------------------------------------------------
+             * DELETED LOGO
+             * --------------------------------------------------
+             */
+
+            console.log("COMPANY LOGO PATH", company.logoPath);
+            if (
+              company.isDeleted === 1 ||
+              company.isDeleted === true ||
+              !company.logoPath
+            ) {
+              return {
+                companyId: company.companyId,
+                logoPath: null,
+                logoUrl: null,
+                serverVersion: company.serverVersion,
+                updatedAt: company.updatedAt,
+                isDeleted: 1,
+              };
+            }
+
+            /*
+             * --------------------------------------------------
+             * GET SUPABASE PUBLIC URL
+             * --------------------------------------------------
+             */
+
+            const { data: publicUrlData } = supabase.storage
+              .from("company_logos")
+              .getPublicUrl(company.logoPath);
+
+            return {
+              companyId: company.companyId,
+              logoPath: company.logoPath,
+              logoUrl: publicUrlData.publicUrl,
+              serverVersion: company.serverVersion,
+              updatedAt: company.updatedAt,
+              isDeleted: 0,
+            };
+          })
+        );
+
+        console.log("COMPANY LOGO VERSION PULL:", {
+          companyId,
+          afterVersion: version,
+          nextVersion: result.nextVersion,
+          count: items.length,
+          hasMore: result.hasMore,
+        });
+
+        if (items.length > 0) {
+          console.log("COMPANY LOGO PULL:", JSON.stringify(items[0], null, 2));
+        }
+
+        return res.json({
+          success: true,
+          companyId,
+          entity: "company_logo",
+          items,
           nextVersion: result.nextVersion,
           hasMore: result.hasMore,
           serverTime: new Date().toISOString(),

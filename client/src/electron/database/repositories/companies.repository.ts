@@ -1,6 +1,9 @@
 import { get, run } from "../db.js";
 import { addToSyncQueue } from "./sync.repository.js";
 import Company from "../../../common/types/company.js";
+import { app } from "electron";
+import path from "path";
+import fs from "fs";
 
 /* =========================================================
    UPSERT
@@ -108,17 +111,158 @@ export async function upsertCompany(company: Company): Promise<void> {
 }
 
 /* =========================================================
-   UPSERT COMPANY ID
+   LOGO
 ========================================================= */
 
-/**
- * Used during first-admin login.
- *
- * Establishes the company that this local Electron
- * installation belongs to.
- *
- * One installation = one company.
- */
+export async function getLogoUrl(logoPath: string): Promise<string | null> {
+  if (!logoPath) {
+    return null;
+  }
+
+  try {
+    const userDataPath = app.getPath("userData");
+
+    const fullPath = path.join(userDataPath, logoPath);
+
+    if (!fs.existsSync(fullPath)) {
+      return null;
+    }
+
+    const buffer = await fs.promises.readFile(fullPath);
+
+    const extension = path.extname(fullPath).toLowerCase();
+
+    let mimeType = "image/png";
+
+    if (extension === ".jpg" || extension === ".jpeg") {
+      mimeType = "image/jpeg";
+    } else if (extension === ".webp") {
+      mimeType = "image/webp";
+    } else if (extension === ".gif") {
+      mimeType = "image/gif";
+    } else if (extension === ".svg") {
+      mimeType = "image/svg+xml";
+    }
+
+    return `data:${mimeType};base64,${buffer.toString("base64")}`;
+  } catch (error) {
+    console.error("Failed to get company logo:", error);
+
+    return null;
+  }
+}
+
+/* =========================================================
+   UPDATE LOGO
+========================================================= */
+
+export async function updateLogo(
+  companyId: string,
+  mimeType: string,
+  data: ArrayBuffer
+): Promise<string> {
+  if (!companyId) {
+    throw new Error("companyId est obligatoire.");
+  }
+
+  if (!data || data.byteLength === 0) {
+    throw new Error("Le fichier logo est vide.");
+  }
+
+  const allowedMimeTypes = ["image/jpeg", "image/png", "image/webp"];
+
+  if (!allowedMimeTypes.includes(mimeType)) {
+    throw new Error("Format de logo non supporté. Utilisez JPG, PNG ou WEBP.");
+  }
+
+  const userDataPath = app.getPath("userData");
+
+  const companyLogoDirectory = path.join(
+    userDataPath,
+    "company_logo",
+    companyId
+  );
+
+  await fs.promises.mkdir(companyLogoDirectory, {
+    recursive: true,
+  });
+
+  let extension = ".png";
+
+  if (mimeType === "image/jpeg") {
+    extension = ".jpg";
+  } else if (mimeType === "image/webp") {
+    extension = ".webp";
+  }
+
+  const newFileName = `logo${extension}`;
+
+  const fullPath = path.join(companyLogoDirectory, newFileName);
+
+  const possibleExtensions = [".png", ".jpg", ".jpeg", ".webp"];
+
+  for (const oldExtension of possibleExtensions) {
+    const oldPath = path.join(companyLogoDirectory, `logo${oldExtension}`);
+
+    if (oldPath !== fullPath) {
+      try {
+        await fs.promises.unlink(oldPath);
+      } catch (error: any) {
+        if (error?.code !== "ENOENT") {
+          console.error("Failed to remove old company logo:", error);
+        }
+      }
+    }
+  }
+
+  const buffer = Buffer.from(data);
+
+  await fs.promises.writeFile(fullPath, buffer);
+
+  const relativeLogoPath = path.join("company_logo", companyId, newFileName);
+
+  const now = new Date().toISOString();
+
+  await run(
+    `
+      UPDATE companies
+      SET
+        logoPath = ?,
+        updatedAt = ?,
+        synced = 0
+      WHERE companyId = ?
+    `,
+    [relativeLogoPath, now, companyId]
+  );
+
+  const updatedCompany = await getCompanyById(companyId);
+
+  if (!updatedCompany) {
+    throw new Error(`Company not found after logo update: ${companyId}`);
+  }
+
+  await addToSyncQueue({
+    companyId,
+    entity: "company_logo",
+    entityId: companyId,
+    operation: "update",
+    payload: JSON.stringify({
+      _id: companyId,
+      companyId,
+      logoPath: relativeLogoPath,
+      originalName: newFileName,
+      mimeType,
+      size: buffer.length,
+      updatedAt: now,
+    }),
+  });
+
+  return relativeLogoPath;
+}
+
+/* =========================================================
+   UPSERT COMPANY ID
+========================================================= */
 export async function upsertCompanyId(company: Company): Promise<void> {
   console.log("COMPANY TO UPSERT:", company);
 
@@ -132,11 +276,6 @@ export async function upsertCompanyId(company: Company): Promise<void> {
 
   const now = new Date().toISOString();
 
-  /*
-   * No company exists yet.
-   * This is the first company associated with
-   * this local installation.
-   */
   if (!existing) {
     await run(
       `
@@ -187,37 +326,12 @@ export async function upsertCompanyId(company: Company): Promise<void> {
     return;
   }
 
-  /*
-   * Same company.
-   *
-   * Nothing needs to be changed.
-   */
   if (existing.companyId === company.companyId) {
     return;
   }
 
-  /*
-   * Different company.
-   */
   throw new Error(
     `This installation is already associated with company ${existing.companyId}`
-  );
-}
-
-/* =========================================================
-   GET COMPANY
-========================================================= */
-
-export async function getCompany(companyId: string): Promise<Company | null> {
-  return await get<Company>(
-    `
-    SELECT *
-    FROM companies
-    WHERE companyId = ?
-      AND isDeleted = 0
-    LIMIT 1
-    `,
-    [companyId]
   );
 }
 
@@ -226,7 +340,7 @@ export async function getCompany(companyId: string): Promise<Company | null> {
 ========================================================= */
 
 /**
- * One local installation has one company.
+ * One local installation per company.
  */
 export async function getCompanyId(): Promise<string | null> {
   const company = await get<{ companyId: string }>(
@@ -246,6 +360,8 @@ export async function getCompanyId(): Promise<string | null> {
 ========================================================= */
 
 export async function updateCompany(company: Company): Promise<void> {
+  const now = new Date().toISOString();
+
   await run(
     `
     UPDATE companies
@@ -273,7 +389,7 @@ export async function updateCompany(company: Company): Promise<void> {
       company.phone ?? null,
       company.email ?? null,
       company.website ?? null,
-      new Date().toISOString(),
+      now,
       company.companyId,
     ]
   );

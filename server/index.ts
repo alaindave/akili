@@ -13,6 +13,7 @@ import adminUser from "./routes/admin_user.route.js";
 import sync from "./routes/sync.route.js";
 import auth from "./routes/authenticate.route.js";
 import tasks from "./routes/task.route.js";
+import logo from "./routes/company_logo.route.js";
 import employee_photos from "./routes/employees_photos.route.js";
 import employee_documents from "./routes/employees_documents.route.js";
 import jobsRouter from "./routes/jobs.route.js";
@@ -86,6 +87,7 @@ app.use(cors());
 
 app.use("/employees", employees);
 app.use("/documents", employee_documents);
+app.use("/company-logo", logo);
 app.use("/photos", employee_photos);
 app.use("/attendances", attendances);
 app.use("/leaves", leaves);

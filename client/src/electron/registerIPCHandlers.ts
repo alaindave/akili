@@ -18,6 +18,7 @@ import { registerPayrollSettingsIPC } from "./ipc/payroll_settings.ipc.js";
 import { registerAttendanceDailyCheckIPC } from "./ipc/attendance_daily_check.ipc.js";
 import { registerEmailIPC } from "./ipc/email.ipc.js";
 import { registerTransportAllowanceIpc } from "./ipc/transportAllowance.ipc.js";
+import { registerCompanyIpc } from "./ipc/companies.ipc.js";
 
 export function registerIPCHandlers() {
   registerAuthIPC();
@@ -40,4 +41,5 @@ export function registerIPCHandlers() {
   registerNotificationIPC();
   registerEmailIPC();
   registerTransportAllowanceIpc();
+  registerCompanyIpc();
 }

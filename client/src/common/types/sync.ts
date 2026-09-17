@@ -19,6 +19,7 @@ export interface SyncQueueItem {
   _id: string;
   entity:
     | "company"
+    | "company_logo"
     | "employee"
     | "attendance"
     | "attendance_daily_check"

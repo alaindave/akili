@@ -21,6 +21,7 @@ import TaskDetailsPage from "../modules/tasks/pages/TaskDetailsPage";
 import ReportPage from "../modules/hr/reports/pages/ReportPage";
 import TransportAllowancePage from "../modules/hr/attendance/pages/TransportAllowancePage";
 import TransportAllowanceWeeklyReportPage from "../modules/hr/attendance/pages/TransportAllowanceWeeklyPage";
+import CompanySettingsPage from "../modules/auth/pages/CompanySettingsPage";
 
 const router = createHashRouter([
   {
@@ -32,6 +33,12 @@ const router = createHashRouter([
   {
     path: "/admin",
     element: <AdminPage />,
+    errorElement: <PageErrorFallback />,
+  },
+
+  {
+    path: "/admin/company_settings",
+    element: <CompanySettingsPage />,
     errorElement: <PageErrorFallback />,
   },
 

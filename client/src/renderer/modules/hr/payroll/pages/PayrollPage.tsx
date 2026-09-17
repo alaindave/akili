@@ -296,7 +296,7 @@ export default function PayrollPage() {
           <Box>
             <HStack>
               <Text
-                color="#1F2937"
+                color="#03143B"
                 fontSize="clamp(1.3rem, 1vw + 0.8rem, 1.4rem)"
                 fontWeight="700"
                 ml="1rem"
