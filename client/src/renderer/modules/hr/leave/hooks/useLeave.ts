@@ -195,9 +195,6 @@ export const useCreateLeave = (companyId: string) => {
 
       /*
        * Refresh monthly leaves.
-       *
-       * Using the prefix means this works regardless
-       * of which month is currently cached.
        */
       await queryClient.invalidateQueries({
         queryKey: [...leaveKeys.all, "month", companyId],
@@ -233,7 +230,7 @@ export const useUpdateLeave = (companyId: string) => {
       }
 
       if (!_id) {
-        throw new Error("Leave ID is required");
+        throw new Error("eave ID is required");
       }
 
       return window.electron.leave.update(companyId, _id, updates);
@@ -385,16 +382,6 @@ export const useDeleteLeave = (companyId: string) => {
         queryKey: leaveKeys.detail(companyId, leaveId),
       });
 
-      /*
-       * Delete can affect:
-       * - employee leaves
-       * - monthly leaves
-       * - ongoing leaves
-       * - general lists
-       *
-       * Therefore invalidate all leave queries
-       * belonging to this company.
-       */
       await queryClient.invalidateQueries({
         queryKey: leaveKeys.lists(companyId),
       });

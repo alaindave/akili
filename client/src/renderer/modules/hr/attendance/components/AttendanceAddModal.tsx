@@ -26,6 +26,8 @@ import "react-datepicker/dist/react-datepicker.css";
 import "react-time-picker/dist/TimePicker.css";
 import Employee from "../../../../../common/types/Employee";
 import useAdminUser from "../../../../../store/auth.store";
+import Company from "../../../../../common/types/Company";
+import { setSourceMapsEnabled } from "node:process";
 
 interface AddAttendanceModalProps {
   date: string;

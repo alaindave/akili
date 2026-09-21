@@ -108,7 +108,7 @@ export const useAttendanceByDate = (companyId: string, date: string) => {
   return useQuery({
     queryKey: attendanceKeys.byDate(companyId, date),
 
-    queryFn: () => window.electron.attendance.getByDate(companyId, date!),
+    queryFn: () => window.electron.attendance.getByDate(companyId, date),
 
     enabled: !!date,
   });

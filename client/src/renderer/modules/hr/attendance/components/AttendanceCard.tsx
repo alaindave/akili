@@ -16,7 +16,7 @@ import { GiClockwork } from "react-icons/gi";
 import { FaWindowClose } from "react-icons/fa";
 import { FaLock } from "react-icons/fa";
 import ClockIn from "./ClockIn";
-import type { AttendanceWithEmployee } from "../../../../../common/types/Attendance";
+import type { AttendanceWithEmployee } from "../../../../../common/types/attendance/Attendance";
 import defaultAvatar from "../../../../assets/default-avatar.jpeg";
 import { useUpdateAttendance } from "../hooks/useAttendance";
 import { useEmployee } from "../../employees/hooks/useEmployees";

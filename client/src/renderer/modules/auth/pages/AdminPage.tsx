@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Box, Button, Flex, Text, VStack } from "@chakra-ui/react";
+import { Box, Button, Flex, HStack, Text, VStack } from "@chakra-ui/react";
 import { IoSettings } from "react-icons/io5";
 import { FaRegArrowAltCircleRight } from "react-icons/fa";
 import { BsFillPeopleFill, BsBoxSeamFill } from "react-icons/bs";
@@ -42,13 +42,15 @@ const AdminPage = () => {
   return (
     <Flex
       direction="column"
-      minHeight="100vh"
+      height="100vh"
       width="100%"
       bg="linear-gradient(180deg, #F8F9FB 0%, #EEF2F7 100%)"
       overflow="auto"
+      justify="center"
+      align="center"
     >
       {/* Header */}
-      <Flex width="97vw" justify="space-between">
+      <Flex height="100%" width="97vw" justify="space-between">
         <Box
           mt={{ base: "1rem", md: "1.5rem", lg: "2.2rem" }}
           ml={{ base: "12px", md: "16px", lg: "8px" }}
@@ -67,37 +69,25 @@ const AdminPage = () => {
         </Button>
       </Flex>
       {/* Module cards */}
-      <Flex
-        flex="1"
-        width="100%"
-        align="center"
-        justify="center"
-        px={{ base: "16px", sm: "24px", md: "32px" }}
-      >
-        <Flex
-          width="100%"
-          maxWidth="1200px"
-          justify="center"
-          align="stretch"
-          gap={{ base: "20px", md: "28px", lg: "32px" }}
-          flexWrap="wrap"
-        >
+
+      <Box mb="2.3rem">
+        <HStack>
           {/* =====================================================
-              PERSONNEL
-          ===================================================== */}
+                  PERSONNEL
+              ===================================================== */}
           <VStack
+            mb="0.3rem"
             bg="#FFFFFF"
-            width="100%"
-            maxWidth={{ base: "100%", md: "270px" }}
-            minHeight={{ base: "340px", md: "380px" }}
+            width={{ base: "260px", md: "270px" }}
+            height={{ base: "330px", md: "350px" }}
             flex="1 1 250px"
             border="1px solid"
             borderColor="#D1D9E0"
             borderRadius="12px"
             boxShadow="
-                0 8px 20px rgba(0,0,0,0.12),
-                0 0 20px rgba(242, 183, 5, 0.35)
-              "
+                    0 8px 20px rgba(0,0,0,0.12),
+                    0 0 20px rgba(242, 183, 5, 0.35)
+                  "
             transition="all 0.2s ease"
             justifyContent="flex-start"
             alignItems="center"
@@ -107,9 +97,9 @@ const AdminPage = () => {
             _hover={{
               transform: "translateY(-2px)",
               boxShadow: `
-                  0 10px 24px rgba(0,0,0,0.14),
-                  0 0 22px rgba(242, 183, 5, 0.4)
-                `,
+                      0 10px 24px rgba(0,0,0,0.14),
+                      0 0 22px rgba(242, 183, 5, 0.4)
+                    `,
             }}
           >
             <Box
@@ -119,7 +109,7 @@ const AdminPage = () => {
               borderColor="#0078D4"
               flexShrink={0}
             >
-              <BsFillPeopleFill color="#0078D4" size="3.5rem" />
+              <BsFillPeopleFill color="#0078D4" size="2.2rem" />
             </Box>
             <VStack
               width="100%"
@@ -129,16 +119,16 @@ const AdminPage = () => {
             >
               <Text
                 color="#1F2937"
-                fontSize={{ base: "1.3rem", md: "1.4rem" }}
+                fontSize={{ base: "1.1rem", md: "1.2rem" }}
                 fontWeight="600"
-                lineHeight="1.3"
+                lineHeight="1"
               >
                 Personnel
               </Text>
               <Text
                 color="#6B7280"
                 fontSize={{ base: "1rem", md: "1rem" }}
-                lineHeight="1.5"
+                lineHeight="1.3"
                 maxWidth="240px"
               >
                 Gérez vos employés, présences, congés et fiches de paye
@@ -177,21 +167,20 @@ const AdminPage = () => {
             </Link>
           </VStack>
           {/* =====================================================
-                STOCK
-            ===================================================== */}
+                    STOCK
+                ===================================================== */}
           <VStack
             bg="#FFFFFF"
-            width="100%"
-            maxWidth={{ base: "100%", md: "270px" }}
-            minHeight={{ base: "340px", md: "380px" }}
+            width={{ base: "260px", md: "270px" }}
+            height={{ base: "330px", md: "350px" }}
             flex="1 1 250px"
             border="1px solid"
             borderColor="#D1D9E0"
             borderRadius="12px"
             boxShadow="
-                0 8px 20px rgba(0,0,0,0.12),
-                0 0 20px rgba(242, 183, 5, 0.35)
-              "
+                    0 8px 20px rgba(0,0,0,0.12),
+                    0 0 20px rgba(242, 183, 5, 0.35)
+                  "
             transition="all 0.2s ease"
             justifyContent="flex-start"
             alignItems="center"
@@ -201,10 +190,11 @@ const AdminPage = () => {
             _hover={{
               transform: "translateY(-2px)",
               boxShadow: `
-                  0 10px 24px rgba(0,0,0,0.14),
-                  0 0 22px rgba(242, 183, 5, 0.4)
-                `,
+                      0 10px 24px rgba(0,0,0,0.14),
+                      0 0 22px rgba(242, 183, 5, 0.4)
+                    `,
             }}
+            mb="0.3rem"
           >
             <Box
               borderWidth="1px"
@@ -213,7 +203,7 @@ const AdminPage = () => {
               borderColor="#107C10"
               flexShrink={0}
             >
-              <BsBoxSeamFill color="#107C10" size="4rem" />
+              <BsBoxSeamFill color="#107C10" size="2.2rem" />
             </Box>
             <VStack
               width="100%"
@@ -223,7 +213,7 @@ const AdminPage = () => {
             >
               <Text
                 color="#1F2937"
-                fontSize={{ base: "1.3rem", md: "1.4rem" }}
+                fontSize={{ base: "1.1rem", md: "1.2rem" }}
                 fontWeight="600"
                 lineHeight="1.3"
                 position="relative"
@@ -258,7 +248,7 @@ const AdminPage = () => {
                 height="50px"
                 width="100%"
                 maxWidth="240px"
-                mt={{ base: "24px", md: "30px" }}
+                mt={{ base: "24px", md: "22px" }}
                 borderRadius="6px"
                 _hover={{
                   bg: "#0E6E0E",
@@ -274,23 +264,23 @@ const AdminPage = () => {
               </Button>
             </Link>
           </VStack>
-
-          {/* =====================================================
-                APPROVISIONNEMENT
-            ===================================================== */}
+        </HStack>
+        {/* =====================================================
+                  APPROVISIONNEMENT
+              ===================================================== */}
+        <HStack>
           <VStack
             bg="#FFFFFF"
-            width="100%"
-            maxWidth={{ base: "100%", md: "270px" }}
-            minHeight={{ base: "340px", md: "380px" }}
+            width={{ base: "260px", md: "270px" }}
+            height={{ base: "330px", md: "350px" }}
             flex="1 1 250px"
             border="1px solid"
             borderColor="#D1D9E0"
             borderRadius="12px"
             boxShadow="
-                0 8px 20px rgba(0,0,0,0.12),
-                0 0 20px rgba(242, 183, 5, 0.35)
-              "
+                    0 8px 20px rgba(0,0,0,0.12),
+                    0 0 20px rgba(242, 183, 5, 0.35)
+                  "
             transition="all 0.2s ease"
             justifyContent="flex-start"
             alignItems="center"
@@ -300,9 +290,9 @@ const AdminPage = () => {
             _hover={{
               transform: "translateY(-2px)",
               boxShadow: `
-                  0 10px 24px rgba(0,0,0,0.14),
-                  0 0 22px rgba(242, 183, 5, 0.4)
-                `,
+                      0 10px 24px rgba(0,0,0,0.14),
+                      0 0 22px rgba(242, 183, 5, 0.4)
+                    `,
             }}
           >
             <Box
@@ -312,12 +302,12 @@ const AdminPage = () => {
               borderColor="#7C3AED"
               flexShrink={0}
             >
-              <MdOutlineShoppingCart color="#7C3AED" size="4rem" />
+              <MdOutlineShoppingCart color="#7C3AED" size="2.2rem" />
             </Box>
             <VStack width="100%" textAlign="center" spacing="6px">
               <Text
                 color="#1F2937"
-                fontSize={{ base: "1.3rem", md: "1.4rem" }}
+                fontSize={{ base: "1.1rem", md: "1.2rem" }}
                 fontWeight="600"
                 lineHeight="1.3"
                 position="relative"
@@ -352,7 +342,7 @@ const AdminPage = () => {
                 height="50px"
                 width="100%"
                 maxWidth="240px"
-                mt={{ base: "2rem", md: "3rem" }}
+                mt={{ base: "2rem", md: "2.7rem" }}
                 borderRadius="6px"
                 _hover={{
                   bg: "#6D28D9",
@@ -368,23 +358,21 @@ const AdminPage = () => {
               </Button>
             </Link>
           </VStack>
-
           {/* =====================================================
-              PRODUCTION
-          ===================================================== */}
+                  PRODUCTION
+              ===================================================== */}
           <VStack
             bg="#FFFFFF"
-            width="100%"
-            maxWidth={{ base: "100%", md: "270px" }}
-            minHeight={{ base: "340px", md: "380px" }}
+            width={{ base: "260px", md: "270px" }}
+            height={{ base: "330px", md: "350px" }}
             flex="1 1 250px"
             border="1px solid"
             borderColor="#D1D9E0"
             borderRadius="12px"
             boxShadow="
-                0 8px 20px rgba(0,0,0,0.12),
-                0 0 20px rgba(242, 183, 5, 0.35)
-              "
+                    0 8px 20px rgba(0,0,0,0.12),
+                    0 0 20px rgba(242, 183, 5, 0.35)
+                  "
             transition="all 0.2s ease"
             justifyContent="flex-start"
             alignItems="center"
@@ -394,9 +382,9 @@ const AdminPage = () => {
             _hover={{
               transform: "translateY(-2px)",
               boxShadow: `
-                  0 10px 24px rgba(0,0,0,0.14),
-                  0 0 22px rgba(242, 183, 5, 0.4)
-                `,
+                      0 10px 24px rgba(0,0,0,0.14),
+                      0 0 22px rgba(242, 183, 5, 0.4)
+                    `,
             }}
           >
             <Box
@@ -406,7 +394,7 @@ const AdminPage = () => {
               borderColor="#D97706"
               flexShrink={0}
             >
-              <GiFactory color="#D97706" size="4rem" />
+              <GiFactory color="#D97706" size="2.2rem" />
             </Box>
             <VStack
               width="100%"
@@ -416,7 +404,7 @@ const AdminPage = () => {
             >
               <Text
                 color="#1F2937"
-                fontSize={{ base: "1.3rem", md: "1.4rem" }}
+                fontSize={{ base: "1.1rem", md: "1.2rem" }}
                 fontWeight="600"
                 lineHeight="1.3"
               >
@@ -448,7 +436,7 @@ const AdminPage = () => {
                 height="50px"
                 width="100%"
                 maxWidth="240px"
-                mt={{ base: "1rem", md: "1.1rem" }}
+                mt={{ base: "2rem", md: "0.9rem" }}
                 borderRadius="6px"
                 _hover={{
                   bg: "#B45309",
@@ -464,8 +452,8 @@ const AdminPage = () => {
               </Button>
             </Link>
           </VStack>
-        </Flex>
-      </Flex>
+        </HStack>
+      </Box>
     </Flex>
   );
 };

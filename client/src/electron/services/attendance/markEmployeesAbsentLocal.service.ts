@@ -8,12 +8,6 @@ export async function markEmployeesAbsentLocally(
   date: string
 ) {
   const now = new Date().toISOString();
-  const today = new Date(date);
-  const dayOfWeek = today.getDay();
-  if (dayOfWeek === 0 || dayOfWeek === 6) {
-    console.log("ABSENCE CHECK SKIPPED: WEEKEND");
-    return;
-  }
 
   const employees: Employee[] = await getEmployeesWhoDidNotClockIn(
     companyId,

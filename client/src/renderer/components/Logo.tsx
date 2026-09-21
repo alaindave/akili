@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import defaultLogo from "../assets/afritan_logo.png";
 import "../styles/App.css";
 import useAdminUser from "../../store/auth.store";
+import useSyncStore from "../../store/sync.store";
 
 interface Props {
   text: string;
@@ -12,9 +13,8 @@ interface Props {
 
 const Logo = ({ text }: Props) => {
   const user = useAdminUser((store) => store.adminUser);
-
+  const syncVersion = useSyncStore((store) => store.syncVersion);
   const [logoSrc, setLogoSrc] = useState<string>(defaultLogo);
-
   const [companyName, setCompanyName] = useState("AFRITAN");
 
   useEffect(() => {
@@ -73,7 +73,7 @@ const Logo = ({ text }: Props) => {
     return () => {
       cancelled = true;
     };
-  }, [user?.companyId]);
+  }, [user?.companyId, syncVersion]);
 
   return (
     <Flex
@@ -122,7 +122,7 @@ const Logo = ({ text }: Props) => {
           }}
           fontWeight="700"
           lineHeight="1.1"
-          whiteSpace="nowrap"
+          whiteSpace="normal"
         >
           {companyName}
         </Text>

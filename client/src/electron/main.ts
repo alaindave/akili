@@ -438,6 +438,8 @@ async function startBackgroundServices(): Promise<void> {
 ========================================================= */
 
 async function bootstrap(): Promise<void> {
+  app.setName("Akili");
+
   try {
     /*
      * -----------------------------------------------------

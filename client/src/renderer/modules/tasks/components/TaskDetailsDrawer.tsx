@@ -19,8 +19,8 @@ import {
   VStack,
   SimpleGrid,
 } from "@chakra-ui/react";
-import { FiCheckCircle, FiUser } from "react-icons/fi";
-import Task from "../../../../common/types/Task";
+import { FiCheckCircle } from "react-icons/fi";
+import Task from "../../../../common/types/task/Task";
 import useAdminUser from "../../../../store/auth.store";
 import { useEffect, useState } from "react";
 import TaskResolutionPopover from "./TaskResolutionPopover";
@@ -265,7 +265,7 @@ export default function TaskDetailsDrawer({
                   <Avatar
                     size={{
                       base: "sm",
-                      md: "md",
+                      md: "sm",
                     }}
                     name={`${currentTask.author.firstName} ${currentTask.author.lastName}`}
                   />

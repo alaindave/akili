@@ -309,6 +309,12 @@ const EmployeeAttendancePage = () => {
         position: "top-left",
       });
 
+      if (result.source !== "AUTO_SERVER") {
+        refetchAttendance();
+        await loadDailyCheck();
+        return;
+      }
+
       await attendanceDailyCheckSync();
 
       return;
@@ -345,7 +351,7 @@ const EmployeeAttendancePage = () => {
         isClosable: true,
         position: "top-left",
       });
-
+      await loadDailyCheck();
       await attendanceDailyCheckSync();
     } catch (error) {
       showErrorMessage(
@@ -382,7 +388,7 @@ const EmployeeAttendancePage = () => {
         isClosable: true,
         position: "top-left",
       });
-
+      await loadDailyCheck();
       await attendanceDailyCheckSync();
     } catch (error) {
       showErrorMessage(
@@ -420,7 +426,7 @@ const EmployeeAttendancePage = () => {
         isClosable: true,
         position: "top-left",
       });
-
+      await loadDailyCheck();
       await attendanceDailyCheckSync();
     } catch (error) {
       showErrorMessage(

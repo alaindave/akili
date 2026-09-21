@@ -24,7 +24,7 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
 import { fr } from "date-fns/locale";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import DatePicker, { registerLocale } from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { Controller, useForm } from "react-hook-form";
@@ -90,6 +90,31 @@ const calculateRemainingLeave = (dateHired: string): number => {
   return 22;
 };
 
+/**
+ * Generate an employee matricule from the date of birth.
+ *
+ * Format:
+ * AFR-YY-XXX
+ *
+ * Example:
+ * 1985-06-15 -> AFR-85-427
+ */
+function generateMatriculeNumber(dateOfBirth: string | Date): string {
+  const date = new Date(dateOfBirth);
+
+  if (isNaN(date.getTime())) {
+    throw new Error("Date de naissance invalide");
+  }
+
+  const birthYear = date.getFullYear().toString().slice(-2);
+
+  const random = Math.floor(Math.random() * 1000)
+    .toString()
+    .padStart(3, "0");
+
+  return `AFR-${birthYear}-${random}`;
+}
+
 const schema = z.object({
   firstName: z.string().trim().min(1, { message: errorMessage }),
 
@@ -107,6 +132,7 @@ const schema = z.object({
     required_error: errorMessage,
     invalid_type_error: errorMessage,
   }),
+
   dateHired: z.string().min(1, { message: errorMessage }),
 
   remainingLeave: z.number().min(0),
@@ -186,6 +212,25 @@ const AddEmployee = () => {
   });
 
   const remainingLeave = watch("remainingLeave");
+  const dateBirth = watch("dateBirth");
+
+  /**
+   * Automatically generate the matricule whenever
+   * the date of birth changes.
+   */
+  useEffect(() => {
+    if (!dateBirth) {
+      setValue("matricule", "");
+      return;
+    }
+
+    const matricule = generateMatriculeNumber(dateBirth);
+
+    setValue("matricule", matricule, {
+      shouldValidate: true,
+      shouldDirty: true,
+    });
+  }, [dateBirth, setValue]);
 
   const onSubmit = async (employeeData: EmployeeData) => {
     setIsSaving(true);
@@ -285,9 +330,11 @@ const AddEmployee = () => {
     if (isSaving) return;
 
     setServerErrorMessage("");
+
     reset({
       remainingLeave: 0,
     });
+
     onClose();
   };
 
@@ -538,6 +585,10 @@ const AddEmployee = () => {
                         {...fieldStyles}
                         type="text"
                         {...register("matricule")}
+                        isReadOnly
+                        bg="gray.50"
+                        color="gray.700"
+                        cursor="not-allowed"
                       />
 
                       <FieldError message={errors.matricule?.message} />

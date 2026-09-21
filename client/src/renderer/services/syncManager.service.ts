@@ -1,45 +1,10 @@
 import { SyncStatusEvent } from "../../common/types/Sync";
 import useSyncStore from "../../store/sync.store";
-import { queryClient } from "../lib/queryClient";
-import { attendanceKeys } from "../modules/hr/attendance/hooks/useAttendance";
-import { employeeKeys } from "../modules/hr/employees/hooks/useEmployees";
-
-import { leaveKeys } from "../modules/hr/leave/hooks/useLeave";
 
 let initialized = false;
 
 let unsubscribeSyncStatus: (() => void) | null = null;
 let unsubscribePendingChanges: (() => void) | null = null;
-
-/* =========================================================
-   INVALIDATE ALL SYNCED ENTITY QUERIES
-========================================================= */
-
-async function invalidateSyncedQueries() {
-  /*
-   * Invalidate every entity whose data can be changed
-   * by the synchronization process.
-   *
-   * React Query will refetch active queries automatically.
-   */
-
-  await Promise.all([
-    // Employees
-    queryClient.invalidateQueries({
-      queryKey: employeeKeys.all,
-    }),
-
-    // Attendances
-    queryClient.invalidateQueries({
-      queryKey: attendanceKeys.all,
-    }),
-
-    // Leaves
-    queryClient.invalidateQueries({
-      queryKey: leaveKeys.all,
-    }),
-  ]);
-}
 
 /* =========================================================
    INITIALIZE RENDERER SYNC
@@ -59,7 +24,7 @@ export function initializeRendererSync() {
   ======================================================= */
 
   unsubscribeSyncStatus = window.electron.onSyncStatus(
-    async ({ status, timestamp }: SyncStatusEvent) => {
+    ({ status, timestamp }: SyncStatusEvent) => {
       const syncStore = useSyncStore.getState();
 
       console.log("RENDERER RECEIVED SYNC STATUS:", status, timestamp ?? "");
@@ -71,19 +36,15 @@ export function initializeRendererSync() {
 
         case "IDLE": {
           if (timestamp) {
-            console.log("LAST SYNC TIMESTAMP", timestamp);
+            console.log("LAST SYNC TIMESTAMP:", timestamp);
+
+            /*
+             * This increments syncVersion.
+             *
+             * Individual pages listen to syncVersion and
+             * explicitly refetch their SQLite queries.
+             */
             syncStore.setSyncCompleted(timestamp);
-
-            try {
-              await invalidateSyncedQueries();
-
-              console.log("RENDERER QUERY CACHE INVALIDATED AFTER SYNC.");
-            } catch (error) {
-              console.error(
-                "FAILED TO INVALIDATE QUERY CACHE AFTER SYNC:",
-                error
-              );
-            }
           } else {
             syncStore.resetSyncStatus();
           }
@@ -105,6 +66,14 @@ export function initializeRendererSync() {
         =================================================== */
 
         case "OFFLINE": {
+          /*
+           * IMPORTANT:
+           *
+           * Do NOT touch React Query here.
+           *
+           * Existing SQLite-backed data must remain visible
+           * while the application is offline.
+           */
           syncStore.setOffline();
           break;
         }
@@ -114,6 +83,9 @@ export function initializeRendererSync() {
         =================================================== */
 
         case "ERROR": {
+          /*
+           * An error does not invalidate or clear local data.
+           */
           syncStore.setSyncError();
           break;
         }
@@ -159,14 +131,7 @@ export function destroyRendererSync() {
     return;
   }
 
-  /*
-   * Remove sync status listener.
-   */
   unsubscribeSyncStatus?.();
-
-  /*
-   * Remove pending changes listener.
-   */
   unsubscribePendingChanges?.();
 
   unsubscribeSyncStatus = null;

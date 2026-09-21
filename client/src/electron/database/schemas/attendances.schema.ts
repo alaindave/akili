@@ -124,7 +124,8 @@ export async function createAttendancesTable() {
 
   await run(`
     CREATE INDEX IF NOT EXISTS idx_attendance_daily_checks_date
-    ON attendance_daily_checks(date);
+    ON attendance_daily_checks(date)
+    WHERE isDeleted=0;
   `);
 
   await run(`
