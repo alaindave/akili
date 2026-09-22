@@ -1,10 +1,12 @@
 import type { AttendanceDailyCheck } from "../../../../../common/types/attendance/AttendanceDailyCheck.js";
 import type NotificationQueueItem from "../../../../../common/types/EmailNotificationQueueItem.js";
-import { getAllAdminUsers } from "../../../../database/repositories/shared/admin_users.repository.js";
+import { getCompanyById } from "../../../../database/repositories/shared/companies.repository.js";
+
 import {
   enqueueNotification,
   getNotificationByEntity,
 } from "../../../../database/repositories/shared/notificationQueue.repository.js";
+
 import { generateAttendanceReport } from "./attendance_report.service.js";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -15,26 +17,22 @@ function formatAttendanceDate(date: string): string {
   );
 }
 
+/**
+ * Gets the notification email registered for the company.
+ *
+ * The company email stored in the `companies` table is now
+ * the single source of truth for attendance notifications.
+ */
 async function getManagerEmail(
   dailyCheck: AttendanceDailyCheck
 ): Promise<string> {
-  let email = dailyCheck.managerNotifiedTo?.trim();
+  const company = await getCompanyById(dailyCheck.companyId);
 
-  if (!email) {
-    const adminUsers = await getAllAdminUsers(dailyCheck.companyId);
-
-    const manager = dailyCheck.managerId
-      ? adminUsers?.find((user) => user._id === dailyCheck.managerId)
-      : adminUsers?.find(
-          (user) => user.role === "MANAGER" && user.isDeleted !== 1
-        );
-
-    email = manager?.email?.trim();
-  }
+  const email = company?.email?.trim();
 
   if (!email || !EMAIL_PATTERN.test(email)) {
     throw new Error(
-      `Cannot notify attendance manager: no valid manager email is configured for ${dailyCheck.date}.`
+      `Cannot notify attendance manager: no valid company email is configured for ${dailyCheck.date}.`
     );
   }
 
@@ -42,14 +40,14 @@ async function getManagerEmail(
 }
 
 /**
- * Queues the appropriate attendance notification for the manager.
- *
- * LOCKED:
- *   Sends the attendance report and informs the manager that
- *   the attendance has been locked.
+ * Queues the appropriate attendance notification for the company email.
  *
  * MANAGER_NOTIFIED:
- *   Asks the manager to confirm the attendance.
+ *   Asks the company contact to confirm the attendance.
+ *
+ * LOCKED:
+ *   Sends the attendance report and informs the company contact
+ *   that the attendance has been locked.
  */
 export async function notifyManagerOfAttendanceDailyCheck(
   dailyCheck: AttendanceDailyCheck
@@ -88,7 +86,7 @@ export async function notifyManagerOfAttendanceDailyCheck(
       title: `Confirmation de présence - ${attendanceDate}`,
       message:
         `La liste de présence du ${attendanceDate} est prête pour votre vérification. ` +
-        "Veuillez vérifier les présences, les retards et les absences, puis confirmer la liste de présence.",
+        "Veuillez vérifier les présences, les retards et les absences, puis confirmer.",
       entityId: dailyCheck._id,
     });
 

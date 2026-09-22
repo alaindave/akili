@@ -446,7 +446,7 @@ export async function pushPendingChanges(
       case "attendance_daily_check": {
         await markAttendanceDailyCheckSynced(companyId, data._id);
 
-        if (data.status === "LOCKED") {
+        if (data.status === "LOCKED" || data.status === "MANAGER_NOTIFIED") {
           await notifyManagerOfAttendanceDailyCheck(data);
           await processNotificationQueue();
         }

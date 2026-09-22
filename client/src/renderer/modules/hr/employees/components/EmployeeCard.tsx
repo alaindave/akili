@@ -1,3 +1,4 @@
+import { getCompanyEmail } from "../../../../services/companyEmail.service";
 import {
   Badge,
   Box,
@@ -358,7 +359,7 @@ const EmployeeCard = ({ employeeId }: Props) => {
           | "notes"
           | "status"
         > = {
-          managerEmail: "alainbedetse@gmail.com",
+          managerEmail: await getCompanyEmail(user.companyId),
           employeeId: employee._id,
           employeeFirstName: employee.firstName,
           employeeLastName: employee.lastName,

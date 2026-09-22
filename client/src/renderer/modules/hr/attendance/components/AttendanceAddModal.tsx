@@ -1,3 +1,4 @@
+import { getCompanyEmail } from "../../../../services/companyEmail.service";
 import {
   Box,
   Button,
@@ -197,7 +198,7 @@ const AddAttendanceModal = ({
           employeeId: employee._id,
           employeeFirstName: employee.firstName,
           employeeLastName: employee.lastName,
-          managerEmail: "alainbedetse@gmail.com",
+          managerEmail: await getCompanyEmail(user.companyId),
           startDate: date,
           endDate: date,
           subject: "Billet de sortie",

@@ -1,3 +1,4 @@
+import { getCompanyEmail } from "../../../../services/companyEmail.service";
 import {
   Box,
   Button,
@@ -92,7 +93,7 @@ const LeaveSubmissionModal = ({
     try {
       const leave = await window.electron.hr.leave.create(user.companyId, {
         ...leaveData,
-        managerEmail: "alainbedetse@gmail.com",
+        managerEmail: await getCompanyEmail(user.companyId),
         employeeId: employee._id,
         employeeFirstName: employee.firstName,
         employeeLastName: employee.lastName,
@@ -109,6 +110,8 @@ const LeaveSubmissionModal = ({
       console.error("Unable to save leave:error status", error.status);
       if (error.status == "400")
         setErrorMessage("Une demande de congé existe deja pour cet employé");
+      else
+        setErrorMessage(error instanceof Error ? error.message : "Impossible d’enregistrer la demande de congé.");
     } finally {
       setIsSubmitting(false);
     }
