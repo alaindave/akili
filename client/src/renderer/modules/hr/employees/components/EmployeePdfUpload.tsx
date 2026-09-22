@@ -46,10 +46,10 @@ export default function PdfUpload({
 
       const arrayBuffer = await selectedFile.arrayBuffer();
 
-      await window.electron.employees_documents.upload({
+      await window.electron.hr.employees_documents.upload({
         companyId: user.companyId,
         employeeId,
-        uploadedBy,
+        uploadedBy: uploadedBy ?? user._id,
         documentType,
         name: selectedFile.name,
         mimeType: selectedFile.type,

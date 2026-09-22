@@ -239,7 +239,7 @@ const AddEmployee = () => {
     console.log("Form to be submitted:", employeeData);
 
     try {
-      const employee = await window.electron.employees.create(
+      const employee = await window.electron.hr.employees.create(
         companyId,
         employeeData
       );

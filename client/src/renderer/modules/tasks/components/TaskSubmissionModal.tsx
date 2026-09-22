@@ -36,7 +36,7 @@ import { z } from "zod";
 import DatePicker from "react-datepicker";
 import AdminUser from "../../../../common/types/AdminUser";
 import User from "../../../../common/types/User";
-import { Priority } from "../../../../common/types/Task";
+import { Priority } from "../../../../common/types/task/Task";
 import useAdminUser from "../../../../store/auth.store";
 
 interface Props {
@@ -148,7 +148,7 @@ const TaskSubmissionModal = ({
       setIsSubmitting(true);
       setErrorMessage("");
 
-      const result = await window.electron.tasks.create(user.companyId, {
+      const result = await window.electron.tasks.tasks.create(user.companyId, {
         companyId: user.companyId,
         author,
         subject: task.subject,
@@ -169,7 +169,7 @@ const TaskSubmissionModal = ({
       onRefresh();
       onClose();
 
-      window.electron.sync(user.companyId).catch((error) => {
+      window.electron.sync.sync(user.companyId).catch((error) => {
         console.error("IMMEDIATE SYNC FAILED:", error);
       });
     } catch (error: any) {

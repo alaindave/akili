@@ -3,7 +3,7 @@ import fs from "fs/promises";
 import path from "path";
 import { app } from "electron";
 import { getCompanyLogoDir } from "../storage/directories.js";
-import { getCompanyById } from "../database/repositories/companies.repository.js";
+import { getCompanyById } from "../database/repositories/shared/companies.repository.js";
 
 export async function downloadCompanyLogo(
   companyId: string,

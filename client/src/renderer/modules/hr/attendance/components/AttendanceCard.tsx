@@ -226,7 +226,7 @@ const EmployeeAttendanceCard = ({
       }
 
       try {
-        const base64 = await window.electron.employees.getPhotoUrl(
+        const base64 = await window.electron.hr.employees.getPhotoUrl(
           employee.photo_path
         );
 

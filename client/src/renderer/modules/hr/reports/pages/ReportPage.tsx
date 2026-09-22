@@ -1,3 +1,4 @@
+import PageSubtitle from "../../../../components/PageSubtitle";
 import { Box, Flex, Grid, Text, VStack } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
 import { FaCalendarCheck } from "react-icons/fa";
@@ -144,9 +145,9 @@ export default function ReportsPage() {
               Rapports
             </Text>
 
-            <Text fontSize="14px" color="gray.500" mt={1}>
+            <PageSubtitle mt={1}>
               Consultez les rapports de votre entreprise.
-            </Text>
+            </PageSubtitle>
           </Box>
 
           <Box

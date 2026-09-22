@@ -8,25 +8,19 @@
     "allowJs": false,
     "skipLibCheck": true,
     "esModuleInterop": false,
-    "ignoreDeprecations": "6.0",
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "noUnusedParameters": true,
     "noUnusedLocals": true,
     "noImplicitReturns": true,
     "module": "ESNext",
-    "moduleResolution": "Node",
+    "moduleResolution": "Bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx"
   },
-  "include": [
-    "src",
-    "src/shared/types/**/*.d.ts",
-    "global.d.ts",
-    "vite.config.ts"
-  ],
+  "include": ["src", "src/shared/types/**/*.d.ts", "global.d.ts"],
   "exclude": ["src/electron"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

@@ -4,6 +4,7 @@ export type SocketEntity =
   | "employee"
   | "attendance"
   | "leave"
+  | "incident"
   | "task"
   | "task_comment"
   | "payroll"

@@ -19,7 +19,8 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { useState } from "react";
-import CreatePayrollProfileDto from "../../../../../common/types/payroll/CreatePayrollProfileDto";
+import { CreatePayrollProfileDto } from "../../../../../common/types/payroll/PayrollEmployeeProfile";
+import useAdminUser from "../../../../../store/auth.store";
 
 interface Props {
   type: "EARNING" | "DEDUCTION";
@@ -33,6 +34,7 @@ export default function AddPayrollEmployeeProfileModal({
 }: Props) {
   console.log("EMPLOYEE ID TESTING", employeeID);
   const toast = useToast();
+  const user = useAdminUser((store) => store.adminUser);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [loading, setLoading] = useState(false);
   const [displayName, setDisplayName] = useState("");
@@ -70,6 +72,7 @@ export default function AddPayrollEmployeeProfileModal({
     setLoading(true);
     try {
       const component: CreatePayrollProfileDto = {
+        companyId: user.companyId,
         name: displayName.toUpperCase().replace(/\s+/g, "_"),
         displayName,
         displayOrder,
@@ -78,7 +81,8 @@ export default function AddPayrollEmployeeProfileModal({
         calculationBase: null,
         value: defaultValue,
       };
-      await window.electron.payrollEmployeeProfiles.create(
+      await window.electron.hr.payrollProfile.create(
+        user.companyId,
         employeeID,
         component
       );

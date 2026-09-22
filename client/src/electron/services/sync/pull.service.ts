@@ -1,26 +1,23 @@
+import type { Incident } from "../../../common/types/incident/Incident.js";
+import { upsertIncident } from "../../database/repositories/shared/incidents.repository.js";
 import axios from "axios";
 import { app } from "electron";
 import fs from "fs/promises";
 import path from "path";
 
-import { getEmployeeById } from "../../database/repositories/employees.repository.js";
-import { setSetting } from "../../database/repositories/settings.repository.js";
-import { upsertAdminUser } from "../../database/repositories/admin_users.repository.js";
+import { getEmployeeById } from "../../database/repositories/modules/hr/employees.repository.js";
+import { setSetting } from "../../database/repositories/shared/settings.repository.js";
+import { upsertAdminUser } from "../../database/repositories/shared/admin_users.repository.js";
 
 import {
   markEmployeeSynced,
   upsertEmployee,
-} from "../../database/repositories/employees.repository.js";
-
-import {
-  markAttendanceSynced,
-  upsertAttendance,
-} from "../../database/repositories/attendances.repository.js";
+} from "../../database/repositories/modules/hr/employees.repository.js";
 
 import {
   markLeaveSynced,
   upsertLeave,
-} from "../../database/repositories/leaves.repository.js";
+} from "../../database/repositories/modules/hr/leaves.repository.js";
 
 import Employee from "../../../common/types/Employee.js";
 import { Attendance } from "../../../common/types/attendance/Attendance.js";
@@ -33,19 +30,19 @@ import PayrollComponent from "../../../common/types/payroll/PayrollComponent.js"
 import {
   markTaskSynced,
   upsertTask,
-} from "../../database/repositories/tasks.repository.js";
+} from "../../database/repositories/shared/tasks.repository.js";
 
 import { downloadEmployeePhoto } from "../../util/downloadEmployeePhoto.util.js";
 
-import { updateEmployeePhotoMetadata } from "../../database/repositories/employees_photos.repository.js";
+import { updateEmployeePhotoMetadata } from "../../database/repositories/modules/hr/employees_photos.repository.js";
 
-import { upsertTaskComment } from "../../database/repositories/tasks_comments.repository.js";
+import { upsertTaskComment } from "../../database/repositories/shared/tasks_comments.repository.js";
 
 import {
   getEmployeeDocument,
   upsertEmployeeDocument,
   markEmployeeDocumentSynced,
-} from "../../database/repositories/employees_documents.repository.js";
+} from "../../database/repositories/modules/hr/employees_documents.repository.js";
 
 import { downloadEmployeeDocument } from "../../util/downloadEmployeeDocument.util.js";
 
@@ -54,14 +51,14 @@ import { EmployeeDocument } from "../../../common/types/EmployeeDocuments.js";
 import {
   upsertPayrollComponent,
   markPayrollComponentSynced,
-} from "../../database/repositories/payroll_components.repository.js";
+} from "../../database/repositories/modules/hr/payroll_components.repository.js";
 
 import PayrollEmployeeProfile from "../../../common/types/payroll/PayrollEmployeeProfile.js";
 
 import {
   markPayrollEmployeeProfileSynced,
   upsertEmployeePayrollProfile,
-} from "../../database/repositories/payroll_employee_profile.repository.js";
+} from "../../database/repositories/modules/hr/payroll_employee_profile.repository.js";
 
 import {
   PayrollResult,
@@ -76,40 +73,43 @@ import {
   upsertPayrollItem,
   upsertPayrollResult,
   upsertPayrollRun,
-} from "../../database/repositories/payroll_run.repository.js";
+} from "../../database/repositories/modules/hr/payroll_run.repository.js";
 
 import { PayrollSettings } from "../../../common/types/payroll/Payroll.js";
 
 import {
   markPayrollSettingsSynced,
   upsertPayrollSettings,
-} from "../../database/repositories/payroll_settings.repository.js";
+} from "../../database/repositories/modules/hr/payroll_settings.repository.js";
 
 import { AttendanceDailyCheck } from "../../../common/types/attendance/AttendanceDailyCheck.js";
-
-import {
-  markAttendanceDailyCheckSynced,
-  upsertAttendanceDailyCheck,
-} from "../../database/repositories/attendanceDailyCheck.repository.js";
 
 import { get } from "../../database/db.js";
 
 import {
   getSyncState,
   updateLastPulledVersion,
-} from "../../database/repositories/syncState.repository.js";
+} from "../../database/repositories/shared/syncState.repository.js";
 
-import Company from "../../../common/types/company.js";
+import Company from "../../../common/types/Company.js";
 
 import {
   markCompanySynced,
   upsertCompany,
-} from "../../database/repositories/companies.repository.js";
+} from "../../database/repositories/shared/companies.repository.js";
 
 import { getToken } from "../../auth.js";
 
 import { getEmployeeDocumentsDir } from "../../storage/directories.js";
 import { downloadCompanyLogo } from "../../util/downloadCompanyLogo.util.js";
+import {
+  markAttendanceSynced,
+  upsertAttendance,
+} from "../../database/repositories/modules/hr/attendances.repository.js";
+import {
+  markAttendanceDailyCheckSynced,
+  upsertAttendanceDailyCheck,
+} from "../../database/repositories/modules/hr/attendanceDailyCheck.repository.js";
 
 const API_URL = app.isPackaged
   ? "https://leather-works.onrender.com"
@@ -281,6 +281,11 @@ export async function pullLatestChanges(companyId: string) {
     latestServerTime = tasksResult.serverTime ?? latestServerTime;
 
     const tasks = tasksResult.items;
+    const incidentsResult = await pullEntityByVersion<Incident>(companyId, "incident", async (items) => {
+      for (const incident of items) await upsertIncident(companyId, incident);
+      return true;
+    });
+    latestServerTime = incidentsResult.serverTime ?? latestServerTime;
 
     /* =====================================================
        PAYROLL SETTINGS

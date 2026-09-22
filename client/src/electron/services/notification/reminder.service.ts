@@ -1,6 +1,6 @@
 import { Notification } from "electron";
 import crypto from "crypto";
-import { emitNotification } from "../../ipc/notification_emitter.ipc.js";
+import { emitNotification } from "../../ipc/shared/notification_emitter.ipc.js";
 
 export interface Reminder {
   _id: string;

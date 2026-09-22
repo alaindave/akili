@@ -8,12 +8,12 @@ import { initializeDatabase } from "./database/initializeDatabase.js";
 import { getPreloadPath } from "./pathResolver.js";
 import { registerIPCHandlers } from "./registerIPCHandlers.js";
 
-import { markEmployeesOnLeave } from "./services/attendance/markEmployeesOnLeave.service.js";
+import { markEmployeesOnLeave } from "./services/modules/hr/attendance/markEmployeesOnLeave.service.js";
 
 import {
   initializeEmployeePayrollProfiles,
   removeDeletedPayrollComponentsFromEmployeeProfiles,
-} from "./services/payroll/payrollProfile.service.js";
+} from "./services/modules/hr/payroll/payrollProfile.service.js";
 
 import {
   startBackgroundSync,
@@ -23,7 +23,7 @@ import {
 import { createSocket } from "./socket.js";
 import { ensureStorageDirectories } from "./storage/directories.js";
 import { isDev } from "./util/env.util.js";
-import { getCompanyId } from "./database/repositories/companies.repository.js";
+import { getCompanyId } from "./database/repositories/shared/companies.repository.js";
 import { getInstallationId } from "./util/installationId.js";
 import { processNotificationQueue } from "./services/email/notificationQueue.service.js";
 
@@ -230,6 +230,7 @@ async function createMainWindow(): Promise<BrowserWindow> {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: false,
       preload: getPreloadPath(),
     },
   });

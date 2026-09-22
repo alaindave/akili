@@ -1,3 +1,4 @@
+import PageSubtitle from "../../../components/PageSubtitle";
 import {
   Alert,
   AlertIcon,
@@ -297,9 +298,9 @@ const CompanySettingsPage = () => {
             <Text fontSize="2xl" fontWeight="700" color="gray.800">
               Paramètres de l'entreprise
             </Text>
-            <Text mt={1} fontSize="sm" color="gray.500">
+            <PageSubtitle mt={1}>
               Gérez les informations générales et le logo de votre entreprise.
-            </Text>
+            </PageSubtitle>
           </Box>
         </HStack>
 

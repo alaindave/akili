@@ -44,7 +44,7 @@ export const useLeave = (companyId: string, leaveId: string) => {
         throw new Error("Leave ID is required");
       }
 
-      return window.electron.leave.getLeaveById(companyId, leaveId);
+      return window.electron.hr.leave.getLeaveById(companyId, leaveId);
     },
 
     enabled: Boolean(companyId && leaveId),
@@ -70,7 +70,10 @@ export const useEmployeeLeaves = (companyId: string, employeeId: string) => {
         throw new Error("Employee ID is required");
       }
 
-      return window.electron.leave.getLeaveByEmployeeId(companyId, employeeId);
+      return window.electron.hr.leave.getLeaveByEmployeeId(
+        companyId,
+        employeeId
+      );
     },
 
     enabled: Boolean(companyId && employeeId),
@@ -96,7 +99,7 @@ export const useOngoingLeaves = (companyId: string, date: string) => {
         throw new Error("Date is required");
       }
 
-      return window.electron.leave.getOngoingLeaves(companyId, date);
+      return window.electron.hr.leave.getOngoingLeaves(companyId, date);
     },
 
     enabled: Boolean(companyId && date),
@@ -122,7 +125,7 @@ export const useLeavesByMonth = (companyId: string, month: string) => {
         throw new Error("Month is required");
       }
 
-      return window.electron.leave.getLeaveByMonth(companyId, month);
+      return window.electron.hr.leave.getLeaveByMonth(companyId, month);
     },
 
     enabled: Boolean(companyId && month),
@@ -157,7 +160,7 @@ export const useCreateLeave = (companyId: string) => {
         throw new Error("Company ID is required");
       }
 
-      return window.electron.leave.create(companyId, leave);
+      return window.electron.hr.leave.create(companyId, leave);
     },
 
     onSuccess: async (createdLeave) => {
@@ -233,7 +236,7 @@ export const useUpdateLeave = (companyId: string) => {
         throw new Error("eave ID is required");
       }
 
-      return window.electron.leave.update(companyId, _id, updates);
+      return window.electron.hr.leave.update(companyId, _id, updates);
     },
 
     onSuccess: async (updatedLeave, variables) => {
@@ -301,7 +304,7 @@ export const useCancelLeave = (companyId: string) => {
         throw new Error("Leave ID is required");
       }
 
-      return window.electron.leave.cancel(companyId, leaveId);
+      return window.electron.hr.leave.cancel(companyId, leaveId);
     },
 
     onSuccess: async (cancelledLeave, leaveId) => {
@@ -370,7 +373,7 @@ export const useDeleteLeave = (companyId: string) => {
         throw new Error("Leave ID is required");
       }
 
-      return window.electron.leave.delete(companyId, leaveId);
+      return window.electron.hr.leave.delete(companyId, leaveId);
     },
 
     onSuccess: async (_result, leaveId) => {

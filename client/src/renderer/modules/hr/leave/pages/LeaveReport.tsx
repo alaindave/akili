@@ -37,7 +37,7 @@ const EmployeeLeaveReport = () => {
 
   const getLeaveHistory = async () => {
     if (!employee?._id) return;
-    const leaves = await window.electron.leave.getLeaveByEmployeeId(
+    const leaves = await window.electron.hr.leave.getLeaveByEmployeeId(
       user.companyId,
       employee?._id
     );

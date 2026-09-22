@@ -83,7 +83,7 @@ const EmployeePayslipDetails = () => {
     if (!employeeId) return;
 
     try {
-      const employee = await window.electron.employees.getById(
+      const employee = await window.electron.hr.employees.getById(
         user.companyId,
         employeeId
       );
@@ -99,7 +99,7 @@ const EmployeePayslipDetails = () => {
 
     try {
       const payrollResults =
-        await window.electron.payrollRun.getEmployeePayrollResults(
+        await window.electron.hr.payrollRun.getEmployeePayrollResults(
           user.companyId,
           employeeId,
           payslipId
@@ -109,7 +109,7 @@ const EmployeePayslipDetails = () => {
 
       setPayrollResults(payrollResults);
 
-      const payrollItems = await window.electron.payrollRun.getPayrollItems(
+      const payrollItems = await window.electron.hr.payrollRun.getPayrollItems(
         user.companyId,
         payrollResults?._id!,
         employeeId

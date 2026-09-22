@@ -13,7 +13,7 @@ import {
   useToast,
 } from "@chakra-ui/react";
 import { keyframes } from "@emotion/react";
-import Leave from "../../../../../common/types/leave/Leave";
+import useAdminUser from "../../../../../store/auth.store";
 
 interface Props {
   onSubmit: (notes?: string | undefined) => Promise<boolean>;
@@ -33,6 +33,7 @@ const AbsenceNotesPopover = ({
   const [absenceNote, setAbsenceNote] = useState(existingNotes);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const toast = useToast();
+  const user = useAdminUser((store) => store.adminUser);
 
   useEffect(() => {
     setAbsenceNote(existingNotes);
@@ -65,7 +66,7 @@ const AbsenceNotesPopover = ({
     setIsSubmitting(true);
 
     try {
-      const employee = await window.electron.employees.getById(employeeId);
+      const employee = await window.electron.hr.employees.getById(user.companyId, employeeId);
 
       if (!employee) {
         toast({
@@ -102,22 +103,26 @@ const AbsenceNotesPopover = ({
       const today = new Date();
       const date = today.toISOString().split("T")[0];
 
-      const leave: Partial<Leave> = {
+      const leave = {
+        managerEmail: user.email,
+        employeeFirstName: employee.firstName,
+        employeeLastName: employee.lastName,
         employeeId,
         startDate: date,
         endDate: date,
         subject: "Absence approuvée",
-        notes: absenceNote,
-        status: "APPROUVÉ",
+        notes: absenceNote ?? "",
+        status: "APPROUVÉ" as const,
       };
 
       // Create leave
-      const savedLeave = await window.electron.leave.create(leave);
+      const savedLeave = await window.electron.hr.leave.create(user.companyId, leave);
 
       console.log("LEAVE SUCCESSFULLY SAVED:", savedLeave);
 
       // Deduct one leave day
-      const updatedEmployee = await window.electron.employees.update(
+      const updatedEmployee = await window.electron.hr.employees.update(
+        user.companyId,
         employeeId,
         {
           remainingLeave: remainingLeave - leaveDays,
@@ -127,11 +132,12 @@ const AbsenceNotesPopover = ({
       console.log("EMPLOYEE LEAVE BALANCE UPDATED:", updatedEmployee);
 
       // Change attendance from ABSENT → CONGÉ
-      const attendanceChange = await window.electron.attendance.update(
+      const attendanceChange = await window.electron.hr.attendance.update(
+        user.companyId,
         attendanceId,
         new Date().toISOString(),
         {
-          notes: absenceNote,
+          notes: absenceNote ?? "",
           status: "CONGÉ",
         }
       );

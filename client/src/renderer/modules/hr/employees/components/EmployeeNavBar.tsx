@@ -64,7 +64,7 @@ const EmployeeNavBar = () => {
 
   const handleLogOut = async () => {
     try {
-      const logout = await window.electron.auth.logout();
+      const logout = await window.electron.auth.auth.logout();
 
       if (logout) {
         await setLogOut();
@@ -374,7 +374,7 @@ const EmployeeNavBar = () => {
             <ListItem flex="1" display="flex" alignItems="center">
               <NavLink
                 className="nav-button"
-                to="/admin"
+                to="/employees_admin/incidents"
                 style={{
                   display: "flex",
                   width: "100%",
@@ -597,7 +597,7 @@ const EmployeeNavBar = () => {
   ================================================= */}
         <Flex justifySelf="center" align="center" minWidth="0">
           <SyncStatus
-            onSync={async () => await window.electron.sync(user.companyId)}
+            onSync={async () => await window.electron.sync.sync(user.companyId)}
           />
         </Flex>
 

@@ -45,6 +45,7 @@
     "watch:electron": "tsc -p src/electron/tsconfig.json --watch",
     "dev:electron": "wait-on http://localhost:5173 && cross-env NODE_ENV=development electron .",
     "build:renderer": "vite build",
+    "test:ipc": "node scripts/check-electron-ipc.cjs",
     "build:electron": "tsc -p src/electron/tsconfig.json",
     "build": "npm run clean && npm run build:renderer && npm run build:electron",
     "dist:win": "npm run build && electron-builder --win --x64",

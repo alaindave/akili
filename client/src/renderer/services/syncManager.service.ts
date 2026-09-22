@@ -23,7 +23,7 @@ export function initializeRendererSync() {
      SYNC STATUS
   ======================================================= */
 
-  unsubscribeSyncStatus = window.electron.onSyncStatus(
+  unsubscribeSyncStatus = window.electron.sync.onSyncStatus(
     ({ status, timestamp }: SyncStatusEvent) => {
       const syncStore = useSyncStore.getState();
 
@@ -37,13 +37,6 @@ export function initializeRendererSync() {
         case "IDLE": {
           if (timestamp) {
             console.log("LAST SYNC TIMESTAMP:", timestamp);
-
-            /*
-             * This increments syncVersion.
-             *
-             * Individual pages listen to syncVersion and
-             * explicitly refetch their SQLite queries.
-             */
             syncStore.setSyncCompleted(timestamp);
           } else {
             syncStore.resetSyncStatus();
@@ -66,14 +59,6 @@ export function initializeRendererSync() {
         =================================================== */
 
         case "OFFLINE": {
-          /*
-           * IMPORTANT:
-           *
-           * Do NOT touch React Query here.
-           *
-           * Existing SQLite-backed data must remain visible
-           * while the application is offline.
-           */
           syncStore.setOffline();
           break;
         }
@@ -83,9 +68,6 @@ export function initializeRendererSync() {
         =================================================== */
 
         case "ERROR": {
-          /*
-           * An error does not invalidate or clear local data.
-           */
           syncStore.setSyncError();
           break;
         }
@@ -105,8 +87,14 @@ export function initializeRendererSync() {
      PENDING CHANGES
   ======================================================= */
 
-  unsubscribePendingChanges = window.electron.onPendingChanges(
-    ({ pendingChanges, timestamp }) => {
+  unsubscribePendingChanges = window.electron.sync.onPendingChanges(
+    ({
+      pendingChanges,
+      timestamp,
+    }: {
+      pendingChanges: number;
+      timestamp: string | null;
+    }) => {
       const syncStore = useSyncStore.getState();
 
       console.log(

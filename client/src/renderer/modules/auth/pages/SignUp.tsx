@@ -105,7 +105,7 @@ const SignUp = () => {
     console.log("FORM SUBMITTED:", data);
 
     try {
-      const res = await window.electron.auth.sign_up({
+      const res = await window.electron.auth.auth.signup({
         firstName: data.firstName,
         lastName: data.lastName,
         email: data.email,

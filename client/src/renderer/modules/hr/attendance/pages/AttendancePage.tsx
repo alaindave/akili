@@ -1,3 +1,4 @@
+import PageSubtitle from "../../../../components/PageSubtitle";
 import {
   Box,
   Button,
@@ -192,7 +193,7 @@ const EmployeeAttendancePage = () => {
   const loadDailyCheck = async () => {
     try {
       const dailyCheck: AttendanceDailyCheck | null =
-        await window.electron.attendanceDailyCheck.getByDate(
+        await window.electron.hr.attendanceDailyCheck.getByDate(
           user.companyId,
           selectedDate
         );
@@ -235,7 +236,7 @@ const EmployeeAttendancePage = () => {
 
   const attendanceDailyCheckSync = async () => {
     try {
-      const result = await window.electron.sync(user.companyId);
+      const result = await window.electron.sync.sync(user.companyId);
       if (!result.success) {
         console.error(result.message);
       }
@@ -292,13 +293,19 @@ const EmployeeAttendancePage = () => {
   const markAbsent = async () => {
     console.log("SELECTED DATE", selectedDate);
     try {
-      window.electron.sync(user.companyId).catch((error) => {
+      window.electron.sync.sync(user.companyId).catch((error: Error) => {
         console.error("IMMEDIATE SYNC FAILED:", error);
       });
 
-      const result = await markAbsentMutation();
+      const result: {
+        companyId: string;
+        absentAttendance: any;
+        source: "AUTO_SERVER" | "LOCAL" | "SKIPPED";
+        completed: boolean;
+        timestamp: string;
+      } = await markAbsentMutation();
 
-      console.log("MARK ABSENT RESULT", result);
+      console.log("MARK ABSENT :RESULT", result);
 
       toast({
         title: "Absences enregistrées",
@@ -335,11 +342,12 @@ const EmployeeAttendancePage = () => {
     try {
       setCheckLoading(true);
 
-      const result = await window.electron.attendanceDailyCheck.verify({
-        companyId: user.companyId,
-        date: selectedDate,
-        verifiedBy: user._id,
-      });
+      const result: AttendanceDailyCheck =
+        await window.electron.hr.attendanceDailyCheck.verify({
+          companyId: user.companyId,
+          date: selectedDate,
+          verifiedBy: user._id,
+        });
 
       console.log("VERIFIED ATTENDANCES", result);
 
@@ -372,10 +380,11 @@ const EmployeeAttendancePage = () => {
     try {
       setCheckLoading(true);
 
-      const result = await window.electron.attendanceDailyCheck.notifyManager({
-        companyId: user.companyId,
-        date: selectedDate,
-      });
+      const result =
+        await window.electron.hr.attendanceDailyCheck.notifyManager({
+          companyId: user.companyId,
+          date: selectedDate,
+        });
 
       console.log("NOTIFIED MANAGER ATTENDANCES", result);
 
@@ -406,10 +415,12 @@ const EmployeeAttendancePage = () => {
   ========================================================= */
 
   const lock = async () => {
+    if (user.role !== "ADMIN" && user.role !== "MANAGER") return;
+
     try {
       setCheckLoading(true);
 
-      const result = await window.electron.attendanceDailyCheck.lock({
+      const result = await window.electron.hr.attendanceDailyCheck.lock({
         companyId: user.companyId,
         date: selectedDate,
         lockedBy: user._id,
@@ -445,10 +456,11 @@ const EmployeeAttendancePage = () => {
 
   const download = async () => {
     try {
-      const result = await window.electron.attendanceReports.savePdf(
-        user.companyId,
-        selectedDate
-      );
+      const result =
+        await window.electron.hr.attendance.attendanceReports.savePdf(
+          user.companyId,
+          selectedDate
+        );
 
       if (result.canceled) {
         return;
@@ -549,17 +561,14 @@ const EmployeeAttendancePage = () => {
                   <FaSyncAlt />
                 </Button>
               </HStack>
-              <Text
-                color="gray.500"
-                fontWeight="500"
-                fontSize="0.93rem"
+              <PageSubtitle
                 position="relative"
                 left="0.45rem"
                 bottom="0.5rem"
                 ml="0.5rem"
               >
                 Gérez la liste de présence
-              </Text>
+              </PageSubtitle>
             </Box>
             <Spacer />
 

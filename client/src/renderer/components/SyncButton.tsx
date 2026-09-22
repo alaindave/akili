@@ -10,7 +10,7 @@ export default function SyncButton() {
   const handleSync = async () => {
     try {
       setLoading(true);
-      const result = await window.electron.sync(user.companyId);
+      const result = await window.electron.sync.sync(user.companyId);
       if (result.success) {
         console.log("SYNC COMPLETED");
       } else {

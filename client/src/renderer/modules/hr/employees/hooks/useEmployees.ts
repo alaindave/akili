@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import useAdminUser from "../../../../../store/auth.store";
+import Employee from "../../../../../common/types/Employee";
 
 type UpdateEmployeeInput = {
   companyId: string;
   _id: string;
-  data: Parameters<typeof window.electron.employees.update>[2];
+  data: Parameters<typeof window.electron.hr.employees.update>[2];
 };
 
 export const employeeKeys = {
@@ -37,13 +38,13 @@ export function useCreateEmployee() {
 
   return useMutation({
     mutationFn: (
-      data: Parameters<typeof window.electron.employees.create>[1]
+      data: Parameters<typeof window.electron.hr.employees.create>[1]
     ) => {
       if (!companyId) {
         throw new Error("Company ID is required");
       }
 
-      return window.electron.employees.create(companyId, data);
+      return window.electron.hr.employees.create(companyId, data);
     },
 
     onSuccess: () => {
@@ -68,7 +69,7 @@ export function useEmployees() {
         throw new Error("Company ID is required");
       }
 
-      return window.electron.employees.getAll(companyId);
+      return window.electron.hr.employees.getAll(companyId);
     },
 
     enabled: Boolean(companyId),
@@ -96,7 +97,7 @@ export function useEmployee(employeeId?: string) {
         throw new Error("Employee ID is required");
       }
 
-      return window.electron.employees.getById(companyId, employeeId);
+      return window.electron.hr.employees.getById(companyId, employeeId);
     },
 
     enabled: Boolean(companyId && employeeId),
@@ -121,10 +122,10 @@ export function useUpdateEmployee() {
         throw new Error("Company ID is required");
       }
 
-      return window.electron.employees.update(companyId, _id, data);
+      return window.electron.hr.employees.update(companyId, _id, data);
     },
 
-    onSuccess: (updatedEmployee, variables) => {
+    onSuccess: (updatedEmployee: Employee, variables) => {
       if (!updatedEmployee || !companyId) return;
 
       // Update individual employee cache immediately
@@ -162,7 +163,7 @@ export function useDeleteEmployee() {
         throw new Error("Company ID is required");
       }
 
-      return window.electron.employees.delete(companyId, employeeId);
+      return window.electron.hr.employees.delete(companyId, employeeId);
     },
 
     onSuccess: (_data, employeeId) => {

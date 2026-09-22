@@ -29,7 +29,7 @@ export default function PayrollDefaults() {
   const loadPayrollSettings = async () => {
     try {
       setLoading(true);
-      const result = await window.electron.payrollSettings.get(user.companyId);
+      const result = await window.electron.hr.payrollSettings.get(user.companyId);
       if (result) {
         setSettings(result);
         setCurrency(result.currency);
@@ -147,7 +147,7 @@ export default function PayrollDefaults() {
       setSaving(true);
 
       if (!settings) {
-        const created = await window.electron.payrollSettings.create(
+        const created = await window.electron.hr.payrollSettings.create(
           user.companyId,
           {
             currency,
@@ -174,7 +174,7 @@ export default function PayrollDefaults() {
         return;
       }
 
-      const updated = await window.electron.payrollSettings.updateFields(
+      const updated = await window.electron.hr.payrollSettings.updateFields(
         user.companyId,
         settings._id,
         {

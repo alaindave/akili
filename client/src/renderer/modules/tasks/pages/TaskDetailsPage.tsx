@@ -13,9 +13,7 @@ import {
   VStack,
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
-import { GoDotFill } from "react-icons/go";
-import { FaHourglassStart } from "react-icons/fa";
-import { FaArrowLeftLong, FaHourglassEnd } from "react-icons/fa6";
+import { FaArrowLeftLong } from "react-icons/fa6";
 import { Link, useParams } from "react-router-dom";
 import Task from "../../../../common/types/task/Task";
 import useAdminUser from "../../../../store/auth.store";
@@ -39,7 +37,10 @@ export default function TaskDetailsPage() {
     if (!_id) return;
 
     try {
-      const result = await window.electron.tasks.getById(author.companyId, _id);
+      const result = await window.electron.tasks.tasks.getById(
+        author.companyId,
+        _id
+      );
       if (!result) {
         return;
       }
@@ -58,7 +59,7 @@ export default function TaskDetailsPage() {
       await addComment(author.companyId, task?._id, author, comment);
       setComment("");
       await loadTask();
-      window.electron.sync(author.companyId).catch((error) => {
+      window.electron.sync.sync(author.companyId).catch((error: Error) => {
         console.error("IMMEDIATE SYNC FAILED:", error);
       });
     } catch (error) {
@@ -90,7 +91,7 @@ export default function TaskDetailsPage() {
     };
 
     try {
-      await window.electron.tasks.update(author.companyId, updatedTask);
+      await window.electron.tasks.tasks.update(author.companyId, updatedTask);
 
       useTaskStore.setState((state) => ({
         tasks: state.tasks.map((existingTask) =>
@@ -102,7 +103,7 @@ export default function TaskDetailsPage() {
             : existingTask
         ),
       }));
-      window.electron.sync(author.companyId).catch((error) => {
+      window.electron.sync.sync(author.companyId).catch((error: Error) => {
         console.error("IMMEDIATE SYNC FAILED:", error);
       });
       await loadTask();

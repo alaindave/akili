@@ -181,7 +181,7 @@ const EmployeeCard = ({ employeeId }: Props) => {
       }
 
       try {
-        const base64 = await window.electron.employees.getPhotoUrl(
+        const base64 = await window.electron.hr.employees.getPhotoUrl(
           employee.photo_path
         );
 
@@ -369,7 +369,7 @@ const EmployeeCard = ({ employeeId }: Props) => {
           status: "APPROUVÉ",
         };
 
-        const savedLeave = await window.electron.leave.create(
+        const savedLeave = await window.electron.hr.leave.create(
           user.companyId,
           leave
         );

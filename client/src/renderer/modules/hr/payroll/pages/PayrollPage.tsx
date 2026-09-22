@@ -1,3 +1,4 @@
+import PageSubtitle from "../../../../components/PageSubtitle";
 import {
   Badge,
   Box,
@@ -162,7 +163,7 @@ export default function PayrollPage() {
     console.log("Selected year", year);
     console.log("Selected month", month);
     try {
-      const payrollRuns = await window.electron.payrollRun.getPayrollRuns(
+      const payrollRuns = await window.electron.hr.payrollRun.getPayrollRuns(
         user.companyId,
         Number(year),
         Number(month)
@@ -178,7 +179,7 @@ export default function PayrollPage() {
   const handlePayrollSync = async () => {
     try {
       setLoading(true);
-      const result = await window.electron.sync(user.companyId);
+      const result = await window.electron.sync.sync(user.companyId);
       if (result.success) {
         console.log("SYNC COMPLETED");
         loadPayrollRun();
@@ -200,7 +201,7 @@ export default function PayrollPage() {
 
     try {
       const payroll_results =
-        await window.electron.payrollRun.createPayrollDraft({
+        await window.electron.hr.payrollRun.createPayrollDraft({
           companyId: user.companyId,
           managerEmail: "afritanleather@yahoo.fr",
           admin: user,
@@ -228,7 +229,7 @@ export default function PayrollPage() {
 
   const withdraw = async (_id: string) => {
     try {
-      const results = await window.electron.payrollRun.returnToDraft(
+      const results = await window.electron.hr.payrollRun.returnToDraft(
         user.companyId,
         _id
       );
@@ -246,7 +247,7 @@ export default function PayrollPage() {
   const handlePayrollCancellation = async (_id: string) => {
     if (!_id) return;
     try {
-      const results = await window.electron.payrollRun.cancelPayroll(
+      const results = await window.electron.hr.payrollRun.cancelPayroll(
         user.companyId,
         _id,
         user
@@ -264,7 +265,7 @@ export default function PayrollPage() {
 
   const handleDelete = async (_id: string) => {
     try {
-      const results = await window.electron.payrollRun.deletePayrollRun(
+      const results = await window.electron.hr.payrollRun.deletePayrollRun(
         user.companyId,
         _id
       );
@@ -318,16 +319,13 @@ export default function PayrollPage() {
                 <FaSyncAlt />
               </Button>
             </HStack>
-            <Text
-              fontWeight="500"
-              fontSize="0.93rem"
-              color="gray.500"
+            <PageSubtitle
               position="relative"
               bottom="0.5rem"
               left="1rem"
             >
               Gérez les fiches de payes
-            </Text>
+            </PageSubtitle>
           </Box>
 
           <Button

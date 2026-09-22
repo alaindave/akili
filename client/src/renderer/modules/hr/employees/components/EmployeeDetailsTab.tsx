@@ -82,7 +82,7 @@ const EmployeeDetailsTab = ({ employee }: Props) => {
 
   const loadEmployeeDocuments = async () => {
     try {
-      const documents = await window.electron.employees_documents.getByEmployee(
+      const documents = await window.electron.hr.employees_documents.getByEmployee(
         user.companyId,
         displayedEmployee._id
       );
@@ -96,7 +96,7 @@ const EmployeeDetailsTab = ({ employee }: Props) => {
   const handleView = async (document: EmployeeDocument) => {
     console.log("VIEWING DOCUMENT LOCAL PATH:", document.localPath);
 
-    await window.electron.employees_documents.view(
+    await window.electron.hr.employees_documents.view(
       user.companyId,
       document.localPath
     );
@@ -105,7 +105,7 @@ const EmployeeDetailsTab = ({ employee }: Props) => {
   const handleDownload = async (document: EmployeeDocument) => {
     console.log("DOWNLOADING DOCUMENT LOCAL PATH:", document.localPath);
 
-    await window.electron.employees_documents.download(
+    await window.electron.hr.employees_documents.download(
       user.companyId,
       document
     );
@@ -126,7 +126,7 @@ const EmployeeDetailsTab = ({ employee }: Props) => {
     if (!documentToDelete) return;
 
     try {
-      await window.electron.employees_documents.delete(
+      await window.electron.hr.employees_documents.delete(
         user.companyId,
         documentToDelete._id
       );

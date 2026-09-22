@@ -1,3 +1,4 @@
+import PageSubtitle from "../../../components/PageSubtitle";
 import {
   Box,
   Flex,
@@ -44,7 +45,7 @@ const TaskPage = () => {
   const loadTasks = async () => {
     try {
       setLoading(true);
-      const tasks = await window.electron.tasks.getUserTasks(
+      const tasks = await window.electron.tasks.tasks.getUserTasks(
         user.companyId,
         user._id
       );
@@ -59,7 +60,7 @@ const TaskPage = () => {
 
   const loadAdminUsers = async () => {
     try {
-      const admin_users = await window.electron.adminUsers.getAll(
+      const admin_users = await window.electron.company.adminUsers.getAll(
         user.companyId
       );
       setAdminUsersList(admin_users);
@@ -96,16 +97,13 @@ const TaskPage = () => {
               <FaSyncAlt />
             </Button>
           </HStack>
-          <Text
-            fontWeight="500"
-            fontSize="0.9rem"
-            color="#03143B"
+          <PageSubtitle
             position="relative"
             bottom="0.5rem"
             left="1rem"
           >
             Gérez les taches
-          </Text>
+          </PageSubtitle>
         </Box>
         <Button
           mt="1.2rem"

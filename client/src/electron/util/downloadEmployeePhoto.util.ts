@@ -4,7 +4,7 @@ import path from "path";
 import { app } from "electron";
 
 import { getEmployeePhotoDir } from "../storage/directories.js";
-import { getEmployeeById } from "../database/repositories/employees.repository.js";
+import { getEmployeeById } from "../database/repositories/modules/hr/employees.repository.js";
 
 export async function downloadEmployeePhoto(
   companyId: string,

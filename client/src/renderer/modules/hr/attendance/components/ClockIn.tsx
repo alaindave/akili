@@ -16,7 +16,7 @@ import {
   Badge,
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
-import type { AttendanceWithEmployee } from "../../../../../common/types/Attendance";
+import type { AttendanceWithEmployee } from "../../../../../common/types/attendance/Attendance";
 import { useUpdateAttendance } from "../hooks/useAttendance";
 import useAdminUser from "../../../../../store/auth.store";
 

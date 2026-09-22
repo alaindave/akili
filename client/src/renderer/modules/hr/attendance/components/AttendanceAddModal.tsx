@@ -26,8 +26,6 @@ import "react-datepicker/dist/react-datepicker.css";
 import "react-time-picker/dist/TimePicker.css";
 import Employee from "../../../../../common/types/Employee";
 import useAdminUser from "../../../../../store/auth.store";
-import Company from "../../../../../common/types/Company";
-import { setSourceMapsEnabled } from "node:process";
 
 interface AddAttendanceModalProps {
   date: string;
@@ -69,7 +67,7 @@ const AddAttendanceModal = ({
       setLoadingEmployees(true);
 
       const result =
-        await window.electron.attendance.getEmployeesWithoutAttendance(
+        await window.electron.hr.attendance.getEmployeesWithoutAttendance(
           user.companyId,
           date
         );
@@ -150,7 +148,7 @@ const AddAttendanceModal = ({
        * =====================================================
        */
       if (attendanceType === "ABSENT") {
-        await window.electron.attendance.createAbsenceLeave(
+        await window.electron.hr.attendance.createAbsenceLeave(
           user.companyId,
           employee._id,
           "ABSENT",
@@ -195,7 +193,7 @@ const AddAttendanceModal = ({
         /*
          * Create the leave.
          */
-        await window.electron.leave.create(user.companyId, {
+        await window.electron.hr.leave.create(user.companyId, {
           employeeId: employee._id,
           employeeFirstName: employee.firstName,
           employeeLastName: employee.lastName,
@@ -210,14 +208,14 @@ const AddAttendanceModal = ({
         /*
          * Deduct one day from the employee's balance.
          */
-        await window.electron.employees.update(user.companyId, employee._id, {
+        await window.electron.hr.employees.update(user.companyId, employee._id, {
           remainingLeave: remainingLeave - 1,
         });
 
         /*
          * Create the corresponding attendance record.
          */
-        await window.electron.attendance.createAbsenceLeave(
+        await window.electron.hr.attendance.createAbsenceLeave(
           user.companyId,
           employee._id,
           "CONGÉ",
@@ -286,12 +284,13 @@ const AddAttendanceModal = ({
         0
       );
 
-      await window.electron.attendance.create(user.companyId, {
+      await window.electron.hr.attendance.create(user.companyId, {
+        companyId: user.companyId,
         employeeId,
         date,
         clockIn: clockInDate.toISOString(),
         clockOut: clockOutDate.toISOString(),
-        status: "PRESENT",
+        status: null,
       });
 
       toast({

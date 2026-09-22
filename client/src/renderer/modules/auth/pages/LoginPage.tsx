@@ -52,7 +52,7 @@ const LoginPage = () => {
       console.log("ONLINE:", online);
 
       if (!online) {
-        const offlineUser = await window.electron.offlineUsers.login({
+        const offlineUser = await window.electron.auth.offlineUsers.login({
           email: credentials.email,
           password: credentials.password,
         });
@@ -79,14 +79,14 @@ const LoginPage = () => {
         return;
       }
 
-      const adminUser = await window.electron.auth.login(credentials);
+      const adminUser = await window.electron.auth.auth.login(credentials);
 
       console.log("ADMIN USER AFTER LOGIN", adminUser);
 
       console.log("CREDS:", credentials);
 
       if (adminUser) {
-        const offlineUser = await window.electron.offlineUsers.save(
+        const offlineUser = await window.electron.auth.offlineUsers.save(
           adminUser.company.companyId,
           {
             companyId: adminUser.company.companyId,

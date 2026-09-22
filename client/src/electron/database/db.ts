@@ -227,3 +227,13 @@ export async function migrate(migrations: Migration[] = []): Promise<void> {
     }
   }
 }
+
+// For reads inside transaction(), whose callback already owns the database queue.
+export function getDirect<T>(sql: string, params: Params = []): Promise<T | null> {
+  return new Promise((resolve, reject) => {
+    db.get(sql, params, (error: Error | null, row: T) => {
+      if (error) reject(error);
+      else resolve(row ?? null);
+    });
+  });
+}

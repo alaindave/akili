@@ -60,7 +60,7 @@ const EmployeePayrollReport = () => {
     console.log("Selected year", year);
     console.log("Selected month", month);
     try {
-      const payrollRuns = await window.electron.payrollRun.getPayrollRuns(
+      const payrollRuns = await window.electron.hr.payrollRun.getPayrollRuns(
         user.companyId,
         Number(year),
         Number(month)

@@ -60,7 +60,7 @@ export default function TaskDetailsDrawer({
     if (!task?._id) return;
 
     try {
-      const dbTask = await window.electron.tasks.getById(
+      const dbTask = await window.electron.tasks.tasks.getById(
         author.companyId,
         task._id
       );
@@ -104,7 +104,7 @@ export default function TaskDetailsDrawer({
     }
 
     try {
-      await window.electron.taskComments.create(author.companyId, {
+      await window.electron.tasks.taskComments.create(author.companyId, {
         taskId: currentTask._id,
         author: author._id,
         comment: comment.trim(),
@@ -148,7 +148,7 @@ export default function TaskDetailsDrawer({
     console.log("TASK TO UPDATE:", updatedTask);
 
     try {
-      const result = await window.electron.tasks.update(
+      const result = await window.electron.tasks.tasks.update(
         author.companyId,
         updatedTask
       );

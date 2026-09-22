@@ -9,7 +9,7 @@ import {
   Text,
   useDisclosure,
 } from "@chakra-ui/react";
-import { Attendance } from "../../../../../common/types/Attendance";
+import { Attendance } from "../../../../../common/types/attendance/Attendance";
 
 interface Props {
   attendance: Attendance;

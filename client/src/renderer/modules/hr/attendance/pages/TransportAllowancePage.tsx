@@ -1,3 +1,4 @@
+import PageSubtitle from "../../../../components/PageSubtitle";
 import {
   Box,
   Button,
@@ -144,7 +145,7 @@ export default function TransportAllowancePage() {
       setIsGenerating(true);
 
       const report: TransportAllowanceWeeklyReport =
-        await window.electron.transportAllowance.createWeeklyReport(
+        await window.electron.hr.attendance.transportAllowance.createWeeklyReport(
           user.companyId,
           weekStart
         );
@@ -281,9 +282,9 @@ export default function TransportAllowancePage() {
                   Sélection de la semaine
                 </Heading>
 
-                <Text mt={1} fontSize="13px" color="gray.600">
+                <PageSubtitle mt={1}>
                   Le rapport couvre les jours ouvrables du lundi au vendredi.
-                </Text>
+                </PageSubtitle>
               </Box>
             </Flex>
           </Box>

@@ -9,28 +9,27 @@ import { getToken } from "../../auth.js";
 import {
   getUnsyncedItems,
   markManySynced,
-} from "../../database/repositories/sync.repository.js";
+} from "../../database/repositories/shared/sync.repository.js";
 
-import { markCompanySynced } from "../../database/repositories/companies.repository.js";
-import { markEmployeeSynced } from "../../database/repositories/employees.repository.js";
-import { markAttendanceSynced } from "../../database/repositories/attendances.repository.js";
-import { markLeaveSynced } from "../../database/repositories/leaves.repository.js";
-import { markTaskSynced } from "../../database/repositories/tasks.repository.js";
-import { markTaskCommentsSynced } from "../../database/repositories/tasks_comments.repository.js";
-import { markEmployeePhotoSynced } from "../../database/repositories/employees_photos.repository.js";
-import { markEmployeeDocumentSynced } from "../../database/repositories/employees_documents.repository.js";
+import { markCompanySynced } from "../../database/repositories/shared/companies.repository.js";
+import { markEmployeeSynced } from "../../database/repositories/modules/hr/employees.repository.js";
+import { markLeaveSynced } from "../../database/repositories/modules/hr/leaves.repository.js";
+import { markTaskSynced } from "../../database/repositories/shared/tasks.repository.js";
+import { markIncidentSynced } from "../../database/repositories/shared/incidents.repository.js";
+import { markTaskCommentsSynced } from "../../database/repositories/shared/tasks_comments.repository.js";
+import { markEmployeePhotoSynced } from "../../database/repositories/modules/hr/employees_photos.repository.js";
+import { markEmployeeDocumentSynced } from "../../database/repositories/modules/hr/employees_documents.repository.js";
 
-import { markPayrollComponentSynced } from "../../database/repositories/payroll_components.repository.js";
-import { markPayrollEmployeeProfileSynced } from "../../database/repositories/payroll_employee_profile.repository.js";
+import { markPayrollComponentSynced } from "../../database/repositories/modules/hr/payroll_components.repository.js";
+import { markPayrollEmployeeProfileSynced } from "../../database/repositories/modules/hr/payroll_employee_profile.repository.js";
 
 import {
   markPayrollItemSynced,
   markPayrollResultSynced,
   markPayrollRunSynced,
-} from "../../database/repositories/payroll_run.repository.js";
+} from "../../database/repositories/modules/hr/payroll_run.repository.js";
 
-import { markPayrollSettingsSynced } from "../../database/repositories/payroll_settings.repository.js";
-import { markAttendanceDailyCheckSynced } from "../../database/repositories/attendanceDailyCheck.repository.js";
+import { markPayrollSettingsSynced } from "../../database/repositories/modules/hr/payroll_settings.repository.js";
 
 import {
   getEmployeeDocumentsDir,
@@ -40,12 +39,14 @@ import {
 // IMPORTANT:
 // Use the employee document repository to check whether the
 // document still exists locally.
-import { getEmployeeDocument } from "../../database/repositories/employees_documents.repository.js";
+import { getEmployeeDocument } from "../../database/repositories/modules/hr/employees_documents.repository.js";
 
-import { enqueueNotification } from "../../database/repositories/notificationQueue.repository.js";
+import { enqueueNotification } from "../../database/repositories/shared/notificationQueue.repository.js";
 import { processNotificationQueue } from "../email/notificationQueue.service.js";
-import { notifyManagerOfAttendanceDailyCheck } from "../attendance/attendanceNotification.service.js";
+import { notifyManagerOfAttendanceDailyCheck } from "../modules/hr/attendance/attendanceNotification.service.js";
 import { getMonthName } from "../../util/monthFormatter.util.js";
+import { markAttendanceSynced } from "../../database/repositories/modules/hr/attendances.repository.js";
+import { markAttendanceDailyCheckSynced } from "../../database/repositories/modules/hr/attendanceDailyCheck.repository.js";
 
 // Notification queue
 
@@ -500,6 +501,10 @@ export async function pushPendingChanges(
 
         break;
       }
+
+      case "incident":
+        await markIncidentSynced(companyId, data._id, data.updatedAt);
+        break;
 
       case "task":
         await markTaskSynced(companyId, data._id);

@@ -98,7 +98,7 @@ const PayrollDetailsPage = () => {
   const loadPayrollRun = async () => {
     if (!_id) return;
 
-    const payrollRun = await window.electron.payrollRun.getPayrollRunById(
+    const payrollRun = await window.electron.hr.payrollRun.getPayrollRunById(
       user.companyId,
       _id
     );
@@ -110,10 +110,11 @@ const PayrollDetailsPage = () => {
     if (!_id) return;
 
     try {
-      const payrollResults = await window.electron.payrollRun.getPayrollResults(
-        user.companyId,
-        _id
-      );
+      const payrollResults =
+        await window.electron.hr.payrollRun.getPayrollResults(
+          user.companyId,
+          _id
+        );
 
       setPayrollResults(payrollResults);
 
@@ -135,7 +136,7 @@ const PayrollDetailsPage = () => {
     if (!_id) return;
 
     try {
-      const results = await window.electron.payrollRun.cancelPayroll(
+      const results = await window.electron.hr.payrollRun.cancelPayroll(
         user.companyId,
         _id,
         user
@@ -143,7 +144,7 @@ const PayrollDetailsPage = () => {
 
       console.log("CANCELLATION RESULTS", results);
 
-      window.electron.sync(user.companyId).catch((error) => {
+      window.electron.sync.sync(user.companyId).catch((error: Error) => {
         console.error("IMMEDIATE SYNC FAILED:", error);
       });
 
@@ -158,7 +159,7 @@ const PayrollDetailsPage = () => {
     if (!_id) return;
 
     try {
-      const results = await window.electron.payrollRun.submitForVerification(
+      const results = await window.electron.hr.payrollRun.submitForVerification(
         user.companyId,
         "afritanleather@yahoo.fr",
         _id,
@@ -167,7 +168,7 @@ const PayrollDetailsPage = () => {
 
       console.log("VERIFICATION RESULTS", results);
 
-      window.electron.sync(user.companyId).catch((error) => {
+      window.electron.sync.sync(user.companyId).catch((error: Error) => {
         console.error("IMMEDIATE SYNC FAILED:", error);
       });
 
@@ -182,7 +183,7 @@ const PayrollDetailsPage = () => {
     if (!_id) return;
 
     try {
-      const results = await window.electron.payrollRun.approvePayroll(
+      const results = await window.electron.hr.payrollRun.approvePayroll(
         user.companyId,
         _id,
         user
@@ -190,7 +191,7 @@ const PayrollDetailsPage = () => {
 
       console.log("APPROVAL RESULTS", results);
 
-      window.electron.sync(user.companyId).catch((error) => {
+      window.electron.sync.sync(user.companyId).catch((error: Error) => {
         console.error("IMMEDIATE SYNC FAILED:", error);
       });
 
@@ -205,7 +206,7 @@ const PayrollDetailsPage = () => {
     if (!_id) return;
 
     try {
-      const results = await window.electron.payrollRun.markPayrollAsPaid(
+      const results = await window.electron.hr.payrollRun.markPayrollAsPaid(
         user.companyId,
         "afritanleather@yahoo.fr",
         _id,
@@ -214,7 +215,7 @@ const PayrollDetailsPage = () => {
 
       console.log("PAYMENT RESULTS", results);
 
-      window.electron.sync(user.companyId).catch((error) => {
+      window.electron.sync.sync(user.companyId).catch((error: Error) => {
         console.error("IMMEDIATE SYNC FAILED:", error);
       });
 

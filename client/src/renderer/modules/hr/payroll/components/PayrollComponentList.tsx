@@ -43,7 +43,7 @@ export default function PayrollComponentList({ type, showTaxable }: Props) {
 
   const loadComponents = async () => {
     try {
-      const data = await window.electron.payrollComponents.getAll(
+      const data = await window.electron.hr.payrollComponents.getAll(
         user.companyId,
         type
       );
@@ -123,7 +123,7 @@ export default function PayrollComponentList({ type, showTaxable }: Props) {
         return;
       }
 
-      await window.electron.payrollComponents.update(
+      await window.electron.hr.payrollComponents.update(
         user.companyId,
         modifiedComponents
       );
@@ -146,7 +146,7 @@ export default function PayrollComponentList({ type, showTaxable }: Props) {
 
   const handleDelete = async (_id: string) => {
     try {
-      await window.electron.payrollComponents.delete(user.companyId, _id);
+      await window.electron.hr.payrollComponents.delete(user.companyId, _id);
       await loadComponents();
     } catch (error) {
       console.error("AN ERROR OCCURED WHILE DELETING COMPONENT:", error);

@@ -26,7 +26,7 @@ export default function EmployeePhotoUpload({
 
   async function upload(file: File) {
     const arrayBuffer = await file.arrayBuffer();
-    await window.electron.employees.uploadPhoto(user.companyId, employeeId, {
+    await window.electron.hr.employees.uploadPhoto(user.companyId, employeeId, {
       name: file.name,
       buffer: arrayBuffer,
     });

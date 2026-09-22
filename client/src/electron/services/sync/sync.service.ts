@@ -5,7 +5,7 @@ import { NetworkService } from "./network.service.js";
 import {
   getUnsyncedItems,
   notifyPendingChanges,
-} from "../../database/repositories/sync.repository.js";
+} from "../../database/repositories/shared/sync.repository.js";
 import { SyncStatusEvent } from "../../../common/types/Sync.js";
 
 const API_URL = app.isPackaged

@@ -3,7 +3,7 @@ import {
   markNotificationFailed,
   markNotificationProcessing,
   markNotificationSent,
-} from "../../database/repositories/notificationQueue.repository.js";
+} from "../../database/repositories/shared/notificationQueue.repository.js";
 import { NetworkService } from "../sync/network.service.js";
 import { sendNotificationEmail } from "./email.service.js";
 import { calculateNotificationRetryTime } from "./notificationRetry.service.js";

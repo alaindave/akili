@@ -90,7 +90,7 @@ const LeaveSubmissionModal = ({
       return;
     }
     try {
-      const leave = await window.electron.leave.create(user.companyId, {
+      const leave = await window.electron.hr.leave.create(user.companyId, {
         ...leaveData,
         managerEmail: "alainbedetse@gmail.com",
         employeeId: employee._id,

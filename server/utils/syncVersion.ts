@@ -9,6 +9,7 @@ export type Entity =
   | "attendance"
   | "attendance_daily_check"
   | "leave"
+  | "incident"
   | "task"
   | "task_comment"
   | "payroll_settings"

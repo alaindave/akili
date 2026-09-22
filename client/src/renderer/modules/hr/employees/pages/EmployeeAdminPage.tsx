@@ -1,3 +1,4 @@
+import PageSubtitle from "../../../../components/PageSubtitle";
 import {
   Box,
   Button,
@@ -93,7 +94,9 @@ const EmployeeAdminPage = () => {
     try {
       setLoading(true);
 
-      const employees = await window.electron.employees.getAll(user.companyId);
+      const employees = await window.electron.hr.employees.getAll(
+        user.companyId
+      );
 
       setEmployees(employees);
 
@@ -101,7 +104,7 @@ const EmployeeAdminPage = () => {
 
       const today = new Date().toISOString().split("T")[0];
 
-      const attendances = await window.electron.attendance.getByDate(
+      const attendances = await window.electron.hr.attendance.getByDate(
         user.companyId,
         today
       );
@@ -110,7 +113,7 @@ const EmployeeAdminPage = () => {
 
       console.log("FETCHED ATTENDANCES:", attendances);
 
-      const leaves = await window.electron.leave.getOngoingLeaves(
+      const leaves = await window.electron.hr.leave.getOngoingLeaves(
         user.companyId,
         today
       );
@@ -119,7 +122,7 @@ const EmployeeAdminPage = () => {
 
       console.log("FETCHED ONGOING LEAVES:", leaves);
 
-      const admin_users = await window.electron.adminUsers.getAll(
+      const admin_users = await window.electron.company.adminUsers.getAll(
         user.companyId
       );
 
@@ -242,15 +245,15 @@ const EmployeeAdminPage = () => {
   };
 
   const handleNotesSubmission = () => {
-    window.electron.offlineUsers
+    window.electron.auth.offlineUsers
       .saveNotes(user.companyId, user._id, notes ?? "")
-      .then((res) => {
+      .then((res: Response) => {
         console.log("NOTES SUCCESSFULLY SAVED:", res);
 
         setNotes(notes);
         saveNotes(notes ?? "");
       })
-      .catch((error) =>
+      .catch((error: Error) =>
         console.error("AN ERROR OCCURRED WHILE SAVING NOTES:", error)
       );
   };
@@ -302,14 +305,12 @@ const EmployeeAdminPage = () => {
             </Text>
           </HStack>
 
-          <Text
-            fontSize="0.93rem"
-            color="gray.500"
+          <PageSubtitle
             position="relative"
             bottom="0.5rem"
           >
             Vue d'ensemble de votre gestion de personnel
-          </Text>
+          </PageSubtitle>
         </Box>
 
         {/* ===================================================

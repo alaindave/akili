@@ -1,3 +1,5 @@
+import Incident from "../models/incident.model.js";
+import { syncIncident } from "../services/incidents.service.js";
 import express, { Request, Response } from "express";
 
 import authorize from "../middlewares/authorize.js";
@@ -445,6 +447,11 @@ router.post(
              * TASK
              * ====================================================
              */
+
+            case "incident": {
+              await syncIncident(operation, data);
+              break;
+            }
 
             case "task": {
               const result = await syncTask(operation, data);
@@ -1119,6 +1126,22 @@ router.get(
        * TASK
        * ========================================================
        */
+
+      if (entity === "incident") {
+        const result = await pullVersionedCollection(
+          Incident,
+          companyId,
+          version,
+          max
+        );
+        return res.json({
+          success: true,
+          companyId,
+          entity,
+          ...result,
+          serverTime: new Date().toISOString(),
+        });
+      }
 
       if (entity === "task") {
         const result = await pullVersionedCollection(

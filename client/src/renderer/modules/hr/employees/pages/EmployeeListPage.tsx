@@ -1,3 +1,4 @@
+import PageSubtitle from "../../../../components/PageSubtitle";
 import {
   Box,
   Button,
@@ -133,17 +134,13 @@ const EmployeeListPage = () => {
                   </Button>
                 </HStack>
 
-                <Text
-                  color="gray.500"
-                  fontWeight="500"
-                  fontSize="0.93rem"
-                  lineHeight="1.3"
+                <PageSubtitle
                   noOfLines={1}
                   pos="relative"
                   bottom="0.3rem"
                 >
                   Gérez les informations de vos employés
-                </Text>
+                </PageSubtitle>
               </Box>
 
               <Box mt="3rem" flexShrink={0}>

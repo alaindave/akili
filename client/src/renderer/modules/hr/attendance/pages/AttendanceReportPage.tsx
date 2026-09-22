@@ -39,10 +39,11 @@ const EmployeeAttendanceReport = () => {
 
   const getAttendanceHistory = async () => {
     if (!employee?._id) return;
-    const attendances = await window.electron.attendance.getByEmployee(
-      user.companyId,
-      employee?._id
-    );
+    const attendances: Attendance[] =
+      await window.electron.hr.attendance.getByEmployee(
+        user.companyId,
+        employee?._id
+      );
     const filteredAttendances: Attendance[] = attendances
       .filter(
         (a) =>

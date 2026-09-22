@@ -12,7 +12,7 @@ export function usePayrollSettings() {
 
   const loadPayrollSettings = async () => {
     try {
-      const result = await window.electron.payrollSettings.get(user.companyId);
+      const result = await window.electron.hr.payrollSettings.get(user.companyId);
       setSettings(result);
     } catch (error) {
       console.error("FAILED TO LOAD PAYROLL SETTINGS:", error);

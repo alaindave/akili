@@ -47,7 +47,7 @@ export default function PayrollEmployeeProfileList({
 
   const loadProfiles = async () => {
     try {
-      const data = await window.electron.payrollEmployeeProfiles.getAll(
+      const data = await window.electron.hr.payrollProfile.getAll(
         user.companyId,
         employeeID,
         type
@@ -133,7 +133,7 @@ export default function PayrollEmployeeProfileList({
         return;
       }
 
-      await window.electron.payrollEmployeeProfiles.update(
+      await window.electron.hr.payrollProfile.updateMany(
         user.companyId,
         modifiedProfiles
       );
@@ -160,7 +160,7 @@ export default function PayrollEmployeeProfileList({
 
   const handleDelete = async (_id: string) => {
     try {
-      await window.electron.payrollEmployeeProfiles.delete(user.companyId, _id);
+      await window.electron.hr.payrollProfile.delete(user.companyId, _id);
 
       toast({
         title: "Élément supprimé.",
@@ -184,7 +184,7 @@ export default function PayrollEmployeeProfileList({
 
   const reset = async () => {
     try {
-      await window.electron.payrollEmployeeProfiles.resetToDefaults(
+      await window.electron.hr.payrollProfile.resetToDefaults(
         user.companyId,
         employeeID
       );

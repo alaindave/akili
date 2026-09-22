@@ -4,6 +4,7 @@ export type SocketEntity =
   | "employee"
   | "attendance"
   | "leave"
+  | "incident"
   | "task"
   | "task_comment"
   | "payroll"
@@ -125,6 +126,7 @@ class SocketService {
       "employee",
       "attendance",
       "leave",
+      "incident",
       "task",
       "task_comment",
       "payroll",

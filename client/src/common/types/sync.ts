@@ -10,6 +10,7 @@ export const SYNC_ENTITIES = {
   PAYROLL_ITEM: "payroll_item",
   PAYROLL_SETTINGS: "payroll_settings",
   TASK: "task",
+  INCIDENT: "incident",
 } as const;
 
 export type SyncEntity = (typeof SYNC_ENTITIES)[keyof typeof SYNC_ENTITIES];
@@ -24,6 +25,7 @@ export interface SyncQueueItem {
     | "attendance"
     | "attendance_daily_check"
     | "leave"
+    | "incident"
     | "task"
     | "task_comment"
     | "user_notes"

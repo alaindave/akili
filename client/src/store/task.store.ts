@@ -1,7 +1,8 @@
 import { create } from "zustand";
-import Task from "../common/types/Task";
-import PopulatedTaskComment from "../common/types/PopulatedTaskComment";
+
 import User from "../common/types/User";
+import Task from "../common/types/task/Task";
+import PopulatedTaskComment from "../common/types/task/PopulatedTaskComment";
 
 interface TaskStore {
   tasks: Task[];
@@ -31,7 +32,10 @@ const useTaskStore = create<TaskStore>((set, get) => ({
     set({ loading: true });
 
     try {
-      const tasks = await window.electron.tasks.getTopTasks(companyId, userId);
+      const tasks = await window.electron.tasks.tasks.getTopTasks(
+        companyId,
+        userId
+      );
 
       console.log("LOADED TOP TASKS IN STORE:", tasks);
 
@@ -62,7 +66,7 @@ const useTaskStore = create<TaskStore>((set, get) => ({
     }));
 
     try {
-      const savedTask = await window.electron.tasks.create(companyId, taskData);
+      const savedTask = await window.electron.tasks.tasks.create(companyId, taskData);
 
       set((state) => ({
         tasks: state.tasks.map((t) =>
@@ -91,7 +95,7 @@ const useTaskStore = create<TaskStore>((set, get) => ({
     }));
 
     try {
-      await window.electron.tasks.update(companyId, updatedTask);
+      await window.electron.tasks.tasks.update(companyId, updatedTask);
     } catch (error) {
       set({ tasks: previous });
 
@@ -143,12 +147,12 @@ const useTaskStore = create<TaskStore>((set, get) => ({
     }));
 
     try {
-      await window.electron.taskComments.create(companyId, {
+      await window.electron.tasks.taskComments.create(companyId, {
         taskId,
         author: author._id,
         comment,
       });
-      const refreshedTask = await window.electron.tasks.getById(
+      const refreshedTask = await window.electron.tasks.tasks.getById(
         companyId,
         taskId
       );

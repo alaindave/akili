@@ -1,3 +1,4 @@
+import PageSubtitle from "../../../../components/PageSubtitle";
 import {
   Box,
   Button,
@@ -246,16 +247,13 @@ const EmployeeLeavePage = () => {
             </Button>
           </HStack>
 
-          <Text
-            color="gray.500"
-            fontWeight="500"
-            fontSize="0.93rem"
+          <PageSubtitle
             position="relative"
             left="1rem"
             bottom="0.5rem"
           >
             Gérez les demandes de congés
-          </Text>
+          </PageSubtitle>
           <Box mt="2rem" ml="1rem">
             <EmployeeFilterMenu onFilterClicked={setFilter} />
           </Box>

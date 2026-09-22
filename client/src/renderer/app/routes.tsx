@@ -1,4 +1,5 @@
 import { createHashRouter } from "react-router-dom";
+import IncidentListPage from "../modules/incidents/pages/IncidentListPage";
 import AdminPage from "../modules/auth/pages/AdminPage";
 import App from "./App";
 import EmployeeAdminPage from "../modules/hr/employees/pages/EmployeeAdminPage";
@@ -46,6 +47,11 @@ const router = createHashRouter([
     path: "/employees_admin",
     element: <EmployeeAdminLayout />,
     children: [
+      {
+        path: "incidents",
+        element: <IncidentListPage />,
+        errorElement: <PageErrorFallback />,
+      },
       {
         path: "",
         element: <EmployeeAdminPage />,

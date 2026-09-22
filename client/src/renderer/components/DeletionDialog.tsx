@@ -10,7 +10,7 @@ import {
   Text,
 } from "@chakra-ui/react";
 import Employee from "../../common/types/Employee";
-import { AttendanceWithEmployee } from "../../common/types/Attendance";
+import { AttendanceWithEmployee } from "../../common/types/attendance/Attendance";
 
 interface Props {
   isOpen: boolean;
