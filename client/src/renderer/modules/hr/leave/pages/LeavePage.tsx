@@ -247,11 +247,7 @@ const EmployeeLeavePage = () => {
             </Button>
           </HStack>
 
-          <PageSubtitle
-            position="relative"
-            left="1rem"
-            bottom="0.5rem"
-          >
+          <PageSubtitle position="relative" left="1rem">
             Gérez les demandes de congés
           </PageSubtitle>
           <Box mt="2rem" ml="1rem">

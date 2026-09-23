@@ -111,7 +111,11 @@ const LeaveSubmissionModal = ({
       if (error.status == "400")
         setErrorMessage("Une demande de congé existe deja pour cet employé");
       else
-        setErrorMessage(error instanceof Error ? error.message : "Impossible d’enregistrer la demande de congé.");
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "Impossible d’enregistrer la demande de congé."
+        );
     } finally {
       setIsSubmitting(false);
     }
@@ -600,7 +604,7 @@ const LeaveSubmissionModal = ({
                         >
                           <HStack spacing={1.5}>
                             <FaRegNoteSticky color="#F2B705" />
-                            <Text>Motif</Text>
+                            <Text>Explications</Text>
                           </HStack>
                         </FormLabel>
                         <Textarea

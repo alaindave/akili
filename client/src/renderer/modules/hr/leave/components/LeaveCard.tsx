@@ -1,5 +1,6 @@
 import {
   Image,
+  Button,
   Box,
   Grid,
   HStack,
@@ -24,6 +25,7 @@ import { FaRegEdit } from "react-icons/fa";
 
 import LeaveNotesPopover from "./LeaveNotesPopover";
 import LeaveEdit from "./LeaveEdit";
+import LeaveDetailsDrawer from "./LeaveDetailsDrawer";
 
 import type { LeaveWithEmployee } from "../../../../../common/types/leave/LeaveWithEmployee";
 
@@ -36,6 +38,7 @@ import {
   useEmployee,
   useUpdateEmployee,
 } from "../../employees/hooks/useEmployees";
+import useSyncStore from "../../../../../store/sync.store";
 
 /* =========================================================
    TYPES
@@ -55,6 +58,7 @@ const EmployeeLeaveCard = ({ leave, onDelete, gridTemplate }: Props) => {
   const toast = useToast();
 
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const detailsDrawer = useDisclosure();
 
   const {
     isOpen: isCancelOpen,
@@ -66,11 +70,13 @@ const EmployeeLeaveCard = ({ leave, onDelete, gridTemplate }: Props) => {
 
   const user = useAdminUser((store) => store.adminUser);
 
+  const syncVersion = useSyncStore((store) => store.syncVersion);
+
   /* =======================================================
      REACT QUERY
   ======================================================= */
 
-  const { data: employee } = useEmployee(leave.employeeId);
+  const { data: employee, refetch } = useEmployee(leave.employeeId);
 
   const updateEmployeeMutation = useUpdateEmployee();
 
@@ -94,12 +100,6 @@ const EmployeeLeaveCard = ({ leave, onDelete, gridTemplate }: Props) => {
     status,
   } = leave;
 
-  /*
-   * Employee React Query cache is the primary source.
-   *
-   * The leave value is only a fallback in case the employee
-   * query has not loaded yet.
-   */
   const remainingLeave = employee?.remainingLeave ?? leave.remainingLeave ?? 0;
 
   /* =======================================================
@@ -118,6 +118,11 @@ const EmployeeLeaveCard = ({ leave, onDelete, gridTemplate }: Props) => {
       Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
     );
   };
+
+  useEffect(() => {
+    if (syncVersion === undefined) return;
+    refetch();
+  }, [syncVersion, refetch]);
 
   /* =======================================================
      EMPLOYEE PHOTO
@@ -454,13 +459,23 @@ const EmployeeLeaveCard = ({ leave, onDelete, gridTemplate }: Props) => {
 
       <Box>
         <HStack>
-          <Image
-            src={photoUrl || defaultAvatar}
-            boxSize="70px"
+          <Button
+            variant="unstyled"
+            h="70px"
+            minW="70px"
             borderRadius="full"
-            fit="cover"
-            fallbackSrc={defaultAvatar}
-          />
+            aria-label={`Voir les détails du congé de ${firstName} ${lastName}`}
+            onClick={detailsDrawer.onOpen}
+          >
+            <Image
+              src={photoUrl || defaultAvatar}
+              boxSize="70px"
+              borderRadius="full"
+              fit="cover"
+              fallbackSrc={defaultAvatar}
+              alt={`${firstName} ${lastName}`}
+            />
+          </Button>
 
           <Text
             color="gray.800"
@@ -500,9 +515,7 @@ const EmployeeLeaveCard = ({ leave, onDelete, gridTemplate }: Props) => {
           NOTES
       =================================================== */}
 
-      <Box>
-        <LeaveNotesPopover subject={subject} notes={notes} />
-      </Box>
+      <Box>{subject}</Box>
 
       {/* ===================================================
           STATUS
@@ -791,6 +804,15 @@ const EmployeeLeaveCard = ({ leave, onDelete, gridTemplate }: Props) => {
           CANCEL CONFIRMATION
       ===================================================== */}
 
+      {detailsDrawer.isOpen && (
+        <LeaveDetailsDrawer
+          leave={leave}
+          photoUrl={photoUrl || defaultAvatar}
+          remainingLeave={remainingLeave}
+          isOpen={detailsDrawer.isOpen}
+          onClose={detailsDrawer.onClose}
+        />
+      )}
       <DeletionDialog
         isOpen={isCancelOpen}
         onClose={onCancelClose}

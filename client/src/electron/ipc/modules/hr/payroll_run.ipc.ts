@@ -1,4 +1,5 @@
 import { ipcMain } from "electron";
+import { saveMonthlyPayrollReport } from "../../../services/modules/hr/payroll/monthlyPayrollReport.service.js";
 import AdminUser from "../../../../common/types/AdminUser.js";
 import { getAllEmployeePayrollInputs } from "../../../database/repositories/modules/hr/payroll_employee_profile.repository.js";
 import {
@@ -23,6 +24,9 @@ import { getPayrollAttendanceSummary } from "../../../database/repositories/modu
 import { PayrollRunDto } from "../../../preload/hr/payroll_run.preload.cjs";
 
 export function registerPayrollGenerationIPC() {
+  ipcMain.handle("payroll:saveMonthlyReport", (_, companyId: string, runId: string, department: string | null) =>
+    saveMonthlyPayrollReport(companyId, runId, department)
+  );
   console.log("REGISTERING PAYROLL GENERATION IPC");
 
   // Generate payroll draft

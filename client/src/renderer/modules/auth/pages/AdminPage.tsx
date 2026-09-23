@@ -44,22 +44,12 @@ const AdminPage = () => {
   };
 
   /**
-   * Shared module card component.
-   *
-   * Every card uses the exact same internal structure:
-   *
-   * 1. Icon area       -> fixed height
-   * 2. Title area      -> fixed height
-   * 3. Description     -> fixed height
-   * 4. Button          -> pushed to the bottom
-   *
-   * This guarantees perfect alignment between all cards.
+   * Compact shared module card.
    */
   const ModuleCard = ({
     icon,
     color,
     title,
-    description,
     to,
     hoverColor,
     activeColor,
@@ -67,7 +57,6 @@ const AdminPage = () => {
     icon: React.ReactNode;
     color: string;
     title: string;
-    description: string;
     to: string;
     hoverColor: string;
     activeColor: string;
@@ -76,32 +65,32 @@ const AdminPage = () => {
       <VStack
         bg="#FFFFFF"
         width="100%"
-        height={{ base: "350px", md: "350px" }}
+        height={{ base: "220px", md: "225px" }}
         border="1px solid"
         borderColor="#D1D9E0"
-        borderRadius="12px"
+        borderRadius="10px"
         boxShadow="
-          0 8px 20px rgba(0,0,0,0.12),
-          0 0 20px rgba(242, 183, 5, 0.35)
+          0 5px 14px rgba(0,0,0,0.09),
+          0 0 14px rgba(242, 183, 5, 0.22)
         "
         transition="all 0.2s ease"
         justifyContent="flex-start"
         alignItems="center"
-        px={{ base: "20px", md: "24px" }}
-        py={{ base: "24px", md: "26px" }}
+        px={{ base: "16px", md: "18px" }}
+        py={{ base: "16px", md: "18px" }}
         spacing={0}
         _hover={{
           transform: "translateY(-2px)",
           boxShadow: `
-            0 10px 24px rgba(0,0,0,0.14),
-            0 0 22px rgba(242, 183, 5, 0.4)
+            0 7px 18px rgba(0,0,0,0.11),
+            0 0 17px rgba(242, 183, 5, 0.28)
           `,
         }}
       >
         {/* Icon */}
         <Flex
-          width="80px"
-          height="80px"
+          width={{ base: "60px", md: "64px" }}
+          height={{ base: "60px", md: "64px" }}
           flexShrink={0}
           border="2px solid"
           borderColor={color}
@@ -113,44 +102,16 @@ const AdminPage = () => {
         </Flex>
 
         {/* Title */}
-        <Flex
-          width="100%"
-          height="42px"
-          flexShrink={0}
-          align="center"
-          justify="center"
-          mt="18px"
+        <Text
+          color="#1F2937"
+          fontSize={{ base: "1rem", md: "1.05rem" }}
+          fontWeight="600"
+          lineHeight="1.2"
+          textAlign="center"
+          mt="12px"
         >
-          <Text
-            color="#1F2937"
-            fontSize={{ base: "1.1rem", md: "1.2rem" }}
-            fontWeight="600"
-            lineHeight="1.2"
-            textAlign="center"
-          >
-            {title}
-          </Text>
-        </Flex>
-
-        {/* Description */}
-        <Flex
-          width="100%"
-          height="72px"
-          flexShrink={0}
-          align="flex-start"
-          justify="center"
-          mt="6px"
-        >
-          <Text
-            color="#6B7280"
-            fontSize="1rem"
-            lineHeight="1.5"
-            maxWidth="240px"
-            textAlign="center"
-          >
-            {description}
-          </Text>
-        </Flex>
+          {title}
+        </Text>
 
         {/* Button */}
         <Link
@@ -165,11 +126,11 @@ const AdminPage = () => {
           <Button
             bg={color}
             color="white"
-            fontSize="0.95rem"
+            fontSize="0.85rem"
             fontWeight="600"
-            height="50px"
+            height="40px"
             width="100%"
-            maxWidth="240px"
+            maxWidth="210px"
             borderRadius="6px"
             _hover={{
               bg: hoverColor,
@@ -178,8 +139,8 @@ const AdminPage = () => {
               bg: activeColor,
             }}
           >
-            <Text marginRight="1rem" fontSize="1rem">
-              Acceder au module
+            <Text mr="0.7rem" fontSize="0.85rem">
+              Accéder au module
             </Text>
 
             <FaRegArrowAltCircleRight />
@@ -196,101 +157,108 @@ const AdminPage = () => {
       width="100%"
       bg="linear-gradient(180deg, #F8F9FB 0%, #EEF2F7 100%)"
       overflow="auto"
-      justify="center"
-      align="center"
+      position="relative"
     >
       {/* Header */}
-      <Flex height="100%" width="97vw" justify="space-between" flexShrink={0}>
-        <Box
-          mt={{ base: "1rem", md: "1.5rem", lg: "2.2rem" }}
-          ml={{ base: "12px", md: "16px", lg: "8px" }}
-          flexShrink={0}
-        >
+      <Flex
+        width="100%"
+        justify="space-between"
+        align="flex-start"
+        flexShrink={0}
+        px={{ base: "16px", md: "24px", lg: "30px" }}
+      >
+        {/* Logo + company name — upper left */}
+        <Box mt={{ base: "1rem", md: "1.5rem", lg: "2rem" }} flexShrink={0}>
           <Logo text="Gestion de stock et de personnel" />
         </Box>
 
+        {/* Settings — upper right */}
         <Button
           bg="transparent"
-          mt="2.3rem"
+          mt={{ base: "1rem", md: "1.5rem", lg: "2rem" }}
           fontSize="2rem"
-          _hover={{ bg: "transparent" }}
-          onClick={() => navigate("/admin/company_settings")}
+          minWidth="auto"
+          height="auto"
+          p={2}
+          _hover={{
+            bg: "transparent",
+          }}
+          _active={{
+            bg: "transparent",
+          }}
+          onClick={() => navigate("/admin/settings")}
         >
           <IoSettings />
         </Button>
       </Flex>
 
       {/* Module cards */}
-      <Box
-        width={{
-          base: "92vw",
-          md: "700px",
-          lg: "760px",
-          xl: "800px",
-        }}
-        mb="2.3rem"
-        mt="1rem"
+      <Flex
+        flex="1"
+        width="100%"
+        justify="center"
+        align="center"
+        px={{ base: "16px", md: "24px" }}
+        pb="2rem"
       >
-        <Grid
-          templateColumns={{
-            base: "1fr",
-            md: "repeat(2, 1fr)",
+        <Box
+          width={{
+            base: "100%",
+            sm: "92vw",
+            md: "700px",
+            lg: "760px",
+            xl: "800px",
           }}
-          gap="18px"
         >
-          {/* =====================================================
-              PERSONNEL
-          ===================================================== */}
-          <ModuleCard
-            icon={<BsFillPeopleFill color="#0078D4" size="2.2rem" />}
-            color="#0078D4"
-            hoverColor="#106EBE"
-            activeColor="#005A9E"
-            title="Personnel"
-            description="Gérez vos employés, présences, congés et fiches de paye"
-            to="/employees_admin"
-          />
+          <Grid
+            templateColumns={{
+              base: "1fr",
+              md: "repeat(2, 1fr)",
+            }}
+            gap={{ base: "12px", md: "14px" }}
+          >
+            {/* PERSONNEL */}
+            <ModuleCard
+              icon={<BsFillPeopleFill color="#0078D4" size="1.9rem" />}
+              color="#0078D4"
+              hoverColor="#106EBE"
+              activeColor="#005A9E"
+              title="Personnel"
+              to="/employees_admin"
+            />
 
-          {/* =====================================================
-              APPROVISIONNEMENT
-          ===================================================== */}
-          <ModuleCard
-            icon={<MdOutlineShoppingCart color="#7C3AED" size="2.2rem" />}
-            color="#7C3AED"
-            hoverColor="#6D28D9"
-            activeColor="#5B21B6"
-            title="Approvisionnement"
-            description="Gérez vos fournisseurs, demandes, commandes et réceptions"
-            to="/approvisionnement"
-          />
+            {/* APPROVISIONNEMENT */}
+            <ModuleCard
+              icon={<MdOutlineShoppingCart color="#7C3AED" size="1.9rem" />}
+              color="#7C3AED"
+              hoverColor="#6D28D9"
+              activeColor="#5B21B6"
+              title="Approvisionnement"
+              to="/admin"
+            />
 
-          {/* =====================================================
-              STOCK
-          ===================================================== */}
-          <ModuleCard
-            icon={<BsBoxSeamFill color="#107C10" size="2.2rem" />}
-            color="#107C10"
-            hoverColor="#0E6E0E"
-            activeColor="#0A5C0A"
-            title="Stock"
-            description="Gérez vos produits, entrées, sorties, stock, entreposage et inventaires"
-            to="/admin"
-          />
+            {/* STOCK */}
+            <ModuleCard
+              icon={<BsBoxSeamFill color="#107C10" size="1.9rem" />}
+              color="#107C10"
+              hoverColor="#0E6E0E"
+              activeColor="#0A5C0A"
+              title="Stock"
+              to="/admin"
+            />
 
-          {/* =====================================================
-              PRODUCTION
-          ===================================================== */}
-          <ModuleCard
-            icon={<GiFactory color="#D97706" size="2.2rem" />}
-            color="#D97706"
-            hoverColor="#B45309"
-            activeColor="#92400E"
-            title="Production"
-            description="Planifiez et suivez la fabrication, les matières et les produits finis"
-            to="/production"
-          />
-        </Grid>
-      </Box>
+            {/* PRODUCTION */}
+            <ModuleCard
+              icon={<GiFactory color="#D97706" size="1.9rem" />}
+              color="#D97706"
+              hoverColor="#B45309"
+              activeColor="#92400E"
+              title="Production"
+              to="/admin"
+            />
+          </Grid>
+        </Box>
+      </Flex>
     </Flex>
   );
 };

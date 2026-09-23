@@ -561,12 +561,7 @@ const EmployeeAttendancePage = () => {
                   <FaSyncAlt />
                 </Button>
               </HStack>
-              <PageSubtitle
-                position="relative"
-                left="0.45rem"
-                bottom="0.5rem"
-                ml="0.5rem"
-              >
+              <PageSubtitle position="relative" left="0.45rem" ml="0.5rem">
                 Gérez la liste de présence
               </PageSubtitle>
             </Box>

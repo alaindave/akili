@@ -3,10 +3,16 @@ import {
   Button,
   Flex,
   HStack,
+  FormControl,
+  FormLabel,
+  Select,
+  IconButton,
+  useToast,
   Text,
   useDisclosure,
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
+import { DownloadIcon } from "@chakra-ui/icons";
 import { FaArrowLeftLong } from "react-icons/fa6";
 import { MdOutlineCancel, MdOutlineChevronRight } from "react-icons/md";
 import { Link, useParams } from "react-router-dom";
@@ -37,6 +43,50 @@ const PayrollDetailsPage = () => {
   );
 
   const [payrollResults, setPayrollResults] = useState<PayrollResult[]>([]);
+  const [department, setDepartment] = useState<string | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const toast = useToast();
+
+  const downloadReport = async () => {
+    if (!_id || isDownloading) return;
+    setIsDownloading(true);
+    try {
+      const result = await window.electron.hr.payrollRun.saveMonthlyReport(user.companyId, _id, department);
+      if (!result.canceled) {
+        toast({ title: "Rapport de paie enregistré", status: "success", duration: 3000, isClosable: true });
+      }
+    } catch (error) {
+      toast({
+        title: "Impossible de télécharger le rapport",
+        description: error instanceof Error ? error.message : "Veuillez réessayer.",
+        status: "error", duration: 5000, isClosable: true,
+      });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+  const departments = Array.from(
+    new Set(payrollResults.map((result) => result.department?.trim() ?? ""))
+  ).sort((a, b) => a.localeCompare(b, "fr"));
+  const filteredResults = payrollResults.filter(
+    (result) => department === null || (result.department?.trim() ?? "") === department
+  );
+  const dashboardTotals = filteredResults.reduce(
+    (totals, result) => ({
+      employeeCount: totals.employeeCount + 1,
+      totalBasicSalary: totals.totalBasicSalary + result.baseSalary,
+      totalEarnings: totals.totalEarnings + result.totalEarnings,
+      totalDeductions: totals.totalDeductions + result.totalDeductions,
+      totalNetSalary: totals.totalNetSalary + result.netSalary,
+    }),
+    {
+      employeeCount: 0,
+      totalBasicSalary: 0,
+      totalEarnings: 0,
+      totalDeductions: 0,
+      totalNetSalary: 0,
+    }
+  );
   const syncVersion = useSyncStore((store) => store.syncVersion);
 
   const {
@@ -93,7 +143,11 @@ const PayrollDetailsPage = () => {
   useEffect(() => {
     loadPayrollRun();
     loadPayrollResuts();
-  }, [syncVersion]);
+  }, [syncVersion, _id, user.companyId]);
+
+  useEffect(() => {
+    setDepartment(null);
+  }, [_id, user.companyId]);
 
   const loadPayrollRun = async () => {
     if (!_id) return;
@@ -287,17 +341,51 @@ const PayrollDetailsPage = () => {
           {/* Payroll dashboard */}
           <Box mt="5rem" ml="1.5rem">
             <PayrollDashboard
-              employeeCount={payrollRun?.employeeCount ?? 0}
-              totalBasicSalary={payrollRun?.totalBasicSalary ?? 0}
-              totalEarnings={payrollRun?.totalEarnings ?? 0}
-              totalDeductions={payrollRun?.totalDeductions ?? 0}
-              totalNetSalary={payrollRun?.totalNetSalary ?? 0}
+              {...dashboardTotals}
             />
           </Box>
           {/* Payroll results table */}
 
           <Box mt="3rem" ml="0.4rem">
-            <PayrollResultsTable payrollResults={payrollResults} />
+            <HStack mb={4} align="flex-end" spacing={3}>
+            <FormControl maxW="280px">
+              <FormLabel htmlFor="payroll-department" fontSize="sm">
+                Département
+              </FormLabel>
+              <Select
+                id="payroll-department"
+                isDisabled={isDownloading}
+                value={department === null ? "" : JSON.stringify(department)}
+                onChange={(event) => setDepartment(
+                  event.target.value === "" ? null : JSON.parse(event.target.value)
+                )}
+                bg="white"
+              >
+                <option value="">Tous les départements</option>
+                {departments.map((name) => (
+                  <option key={name} value={JSON.stringify(name)}>
+                    {name || "Sans département"}
+                  </option>
+                ))}
+              </Select>
+            </FormControl>
+            <IconButton
+              aria-label="Télécharger le rapport mensuel de paie"
+              title="Télécharger le rapport mensuel de paie"
+              icon={<DownloadIcon />}
+              onClick={downloadReport}
+              isLoading={isDownloading}
+              isDisabled={!payrollRun?._id || filteredResults.length === 0}
+              variant="outline"
+              colorScheme="blue"
+            />
+            </HStack>
+            <PayrollResultsTable payrollResults={filteredResults} />
+            {filteredResults.length === 0 && (
+              <Text mt={4} color="gray.500" textAlign="center">
+                Aucun résultat pour ce département.
+              </Text>
+            )}
           </Box>
         </Box>
         <PayrollAuditPopover payrollRun={payrollRun} />

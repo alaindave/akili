@@ -37,6 +37,7 @@ import {
 } from "../../attendance/hooks/useAttendance";
 import { useEmployee, useUpdateEmployee } from "../hooks/useEmployees";
 import useAdminUser from "../../../../../store/auth.store";
+import useSyncStore from "../../../../../store/sync.store";
 
 interface Props {
   employeeId: string;
@@ -117,20 +118,17 @@ const EmployeeCard = ({ employeeId }: Props) => {
   const [photo_url, setPhotoUrl] = useState("");
 
   const user = useAdminUser((store) => store.adminUser);
+  const syncVersion = useSyncStore((store) => store.syncVersion);
 
   /* =======================================================
      EMPLOYEE QUERY
   ======================================================= */
 
-  const { data: employee, isLoading: loadingEmployee } =
-    useEmployee(employeeId);
-
-  /* =======================================================
-     TOASTS
-  ======================================================= */
-
-  const toast = useToast();
-  const showErrorMessage = useErrorToast();
+  const {
+    data: employee,
+    isLoading: loadingEmployee,
+    refetch: refetchEmployee,
+  } = useEmployee(employeeId);
 
   /* =======================================================
      ATTENDANCE QUERY
@@ -163,16 +161,26 @@ const EmployeeCard = ({ employeeId }: Props) => {
     useUpdateEmployee();
 
   /* =======================================================
-     COMBINED LOADING STATES
+     TOASTS
+  ======================================================= */
+
+  const toast = useToast();
+  const showErrorMessage = useErrorToast();
+
+  /* =======================================================
+      LOADING STATES
   ======================================================= */
 
   const isSubmittingAttendance = isCreatingAttendance || isUpdatingAttendance;
 
   const isSubmittingLeave = isCreatingAbsenceLeave || isUpdatingEmployee;
 
-  /* =======================================================
-     FETCH EMPLOYEE PHOTO
-  ======================================================= */
+  useEffect(() => {
+    if (syncVersion > 0) {
+      refetchEmployee();
+      refetchAttendance();
+    }
+  }, [syncVersion]);
 
   useEffect(() => {
     async function load() {
@@ -194,7 +202,7 @@ const EmployeeCard = ({ employeeId }: Props) => {
     }
 
     load();
-  }, [employee?.photo_path]);
+  }, [employee?.photo_path, syncVersion]);
 
   /* =======================================================
      CLOCK IN EDIT

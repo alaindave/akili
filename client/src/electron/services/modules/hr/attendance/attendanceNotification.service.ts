@@ -36,6 +36,7 @@ async function getManagerEmail(
     );
   }
 
+  console.log("GET EMAIL RESULTS:", email);
   return email;
 }
 

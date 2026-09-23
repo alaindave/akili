@@ -4,13 +4,13 @@ import {
   Button,
   Flex,
   HStack,
-  SimpleGrid,
+  IconButton,
   Text,
   VStack,
 } from "@chakra-ui/react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { FaArrowLeft } from "react-icons/fa6";
-import { FaDownload } from "react-icons/fa";
+import { FiTrash2 } from "react-icons/fi";
 import { MdOutlineDirectionsBus } from "react-icons/md";
 
 import {
@@ -28,7 +28,7 @@ const GOLD = "#F2B705";
 const BG = "#F5F6F8";
 const BORDER = "#E2E5E9";
 
-const GRID_COLUMNS = "1fr repeat(9, 1fr)";
+const GRID_COLUMNS = "1fr repeat(9, 1fr) 64px";
 
 export default function TransportAllowanceWeeklyReportPage() {
   const navigate = useNavigate();
@@ -36,6 +36,24 @@ export default function TransportAllowanceWeeklyReportPage() {
 
   const state = location.state as LocationState | null;
   const report = state?.report;
+
+  const updateReport = (nextReport: TransportAllowanceWeeklyReport) => {
+    navigate(location.pathname, {
+      replace: true,
+      state: { ...state, report: nextReport },
+    });
+  };
+
+  const removeRow = (employeeId: string) => {
+    if (!report) return;
+    const employees = report.employees.filter((employee) => employee.employeeId !== employeeId);
+    updateReport({
+      ...report,
+      employees,
+      totalEmployees: employees.length,
+      totalAllowance: employees.reduce((total, employee) => total + employee.weeklyAllowance, 0),
+    });
+  };
 
   if (!report) {
     return (
@@ -176,10 +194,6 @@ export default function TransportAllowanceWeeklyReportPage() {
     return "0 FBU";
   };
 
-  const handleGeneratePdf = () => {
-    console.log("GENERATE TRANSPORT ALLOWANCE PDF", report);
-  };
-
   const firstEmployee = report.employees[0];
 
   return (
@@ -246,7 +260,6 @@ export default function TransportAllowanceWeeklyReportPage() {
           </Flex>
         </Box>
 
-        {/* SUMMARY */}
       </Flex>
 
       {/* =========================================================
@@ -340,6 +353,7 @@ export default function TransportAllowanceWeeklyReportPage() {
 
               {/* TOTAL */}
               <GridHeaderCell text="Total" />
+              <GridHeaderCell text="Action" />
             </Box>
           </Box>
 
@@ -492,6 +506,14 @@ export default function TransportAllowanceWeeklyReportPage() {
                     {formatCurrency(employee.weeklyAllowance)}
                   </Text>
                 </GridBodyCell>
+                <GridBodyCell>
+                  <IconButton
+                    aria-label={`Supprimer la ligne de ${employee.firstName} ${employee.lastName}`}
+                    title="Supprimer la ligne" icon={<FiTrash2 />}
+                    size="sm" colorScheme="red" variant="ghost"
+                    onClick={() => removeRow(employee.employeeId)}
+                  />
+                </GridBodyCell>
               </Box>
             ))}
           </Box>
@@ -553,6 +575,7 @@ export default function TransportAllowanceWeeklyReportPage() {
                   {formatCurrency(report.totalAllowance)}
                 </Text>
               </GridFooterCell>
+              <GridFooterCell />
             </Box>
           </Box>
         </Box>
@@ -573,11 +596,11 @@ export default function TransportAllowanceWeeklyReportPage() {
           pointerEvents="none"
         >
           <Text fontWeight="700" color={BLUE}>
-            Aucun employé trouvé
+            Aucune ligne dans le rapport
           </Text>
 
           <Text fontSize="13px" color="gray.500" mt={1}>
-            Aucun employé n'est disponible pour cette entreprise.
+            Revenez à la sélection de la semaine pour générer un nouveau rapport.
           </Text>
         </Box>
       )}

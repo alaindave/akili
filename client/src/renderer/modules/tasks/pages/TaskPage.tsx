@@ -97,11 +97,7 @@ const TaskPage = () => {
               <FaSyncAlt />
             </Button>
           </HStack>
-          <PageSubtitle
-            position="relative"
-            bottom="0.5rem"
-            left="1rem"
-          >
+          <PageSubtitle position="relative" left="1rem">
             Gérez les taches
           </PageSubtitle>
         </Box>

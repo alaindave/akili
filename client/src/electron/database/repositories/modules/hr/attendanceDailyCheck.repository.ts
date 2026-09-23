@@ -1,3 +1,4 @@
+import { requireAttendanceAdmin } from "./attendanceSettings.repository.js";
 import { randomUUID } from "crypto";
 import {
   AttendanceDailyCheck,
@@ -671,4 +672,22 @@ export async function markAttendanceDailyCheckSynced(
     `,
     [_id, companyId]
   );
+}
+
+export async function reopenAttendanceDailyCheck(companyId: string, date: string, userId: string) {
+  await requireAttendanceAdmin(companyId, userId);
+  const existing = await getAttendanceDailyCheckByDate(companyId, date);
+  if (!existing) throw new Error("Aucun contrôle de présence pour cette date.");
+  if (!["LOCKED", "VERIFIED", "MANAGER_NOTIFIED"].includes(existing.status)) {
+    throw new Error("Ce contrôle est déjà ouvert ou en préparation.");
+  }
+  await run(`UPDATE attendance_daily_checks SET status = 'OPEN',
+    verifiedEmployees = 0, verifiedAt = NULL, verifiedBy = NULL,
+    managerId = NULL, managerNotifiedAt = NULL, managerNotifiedTo = NULL,
+    lockedAt = NULL, lockedBy = NULL, updatedAt = ?, synced = 0
+    WHERE companyId = ? AND _id = ? AND isDeleted = 0`, [now(), companyId, existing._id]);
+  const updated = await getAttendanceDailyCheckById(companyId, existing._id);
+  await addToSyncQueue({ companyId, entity: "attendance_daily_check", entityId: existing._id,
+    operation: "update", payload: JSON.stringify(updated) });
+  return updated;
 }

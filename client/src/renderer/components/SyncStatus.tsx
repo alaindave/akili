@@ -108,14 +108,15 @@ const SyncStatus = ({ onSync }: SyncStatusProps) => {
             break;
 
           case "ERROR":
-            toast({
-              title: "Échec de synchronisation",
-              description:
-                "Une erreur est survenue pendant la synchronisation.",
-              status: "error",
-              duration: 4000,
-              isClosable: true,
-            });
+            // toast({
+            //   title: "Échec de synchronisation",
+            //   description:
+            //     "Une erreur est survenue pendant la synchronisation.",
+            //   status: "error",
+            //   duration: 4000,
+            //   isClosable: true,
+            // });
+            console.error("Une erreur est survenue pendant la synchronisation");
             break;
 
           default:

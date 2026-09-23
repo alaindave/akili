@@ -25,6 +25,9 @@ type LockAttendanceDailyCheckInput  = import(
 import { invoke } from "../../ipc/ipc.cjs";
 
 export const attendanceDailyCheckApi = {
+  reopen: (companyId: string, date: string, userId: string) => invoke("attendanceDailyCheck:reopen", companyId, date, userId),
+  getClockIn: (companyId: string) => invoke<string>("attendanceSettings:getClockIn", companyId),
+  saveClockIn: (companyId: string, userId: string, time: string) => invoke<string>("attendanceSettings:saveClockIn", companyId, userId, time),
   create: (input: AttendanceDailyCheckPreparationInput) =>
     invoke("attendanceDailyCheck:create", input),
 

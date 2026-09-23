@@ -13,6 +13,8 @@ export interface PayrollRunDto {
 }
 
 export const payrollRunApi = {
+  saveMonthlyReport: (companyId: string, runId: string, department: string | null) =>
+    invoke<{ canceled: boolean; filePath?: string }>("payroll:saveMonthlyReport", companyId, runId, department),
   createPayrollDraft: (payrollRun: PayrollRunDto) =>
     invoke("payroll:createDraft", payrollRun),
 

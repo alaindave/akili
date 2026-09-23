@@ -49,10 +49,6 @@ const EmployeeAdminPage = () => {
 
   console.log("ADMIN USER STORE", adminStore);
 
-  // ---------------------------------------------------------
-  // DISCLOSURES
-  // ---------------------------------------------------------
-
   const {
     isOpen: isCreateOpen,
     onOpen: onCreateOpen,
@@ -73,10 +69,6 @@ const EmployeeAdminPage = () => {
 
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
-  // ---------------------------------------------------------
-  // ATTENDANCE COUNTS
-  // ---------------------------------------------------------
-
   const lateCount = attendances.filter(
     (attendance) => attendance.status === "RETARD"
   );
@@ -85,10 +77,6 @@ const EmployeeAdminPage = () => {
     (attendance) =>
       attendance.status === "PONCTUEL" || attendance.status === "RETARD"
   );
-
-  // ---------------------------------------------------------
-  // LOAD DASHBOARD DATA
-  // ---------------------------------------------------------
 
   const loadData = async () => {
     try {
@@ -136,10 +124,6 @@ const EmployeeAdminPage = () => {
     }
   };
 
-  // ---------------------------------------------------------
-  // LOAD TOP TASKS
-  // ---------------------------------------------------------
-
   const loadTasks = async () => {
     if (!user?._id) {
       console.warn("CANNOT LOAD TASKS: NO ADMIN USER");
@@ -154,11 +138,6 @@ const EmployeeAdminPage = () => {
       console.error("AN ERROR OCCURRED WHILE FETCHING TASKS:", error);
     }
   };
-
-  // ---------------------------------------------------------
-  // INITIAL PAGE LOAD
-  // Runs once when the dashboard is mounted.
-  // ---------------------------------------------------------
 
   useEffect(() => {
     console.log("EMPLOYEE ADMIN PAGE: INITIAL LOAD");
@@ -183,10 +162,6 @@ const EmployeeAdminPage = () => {
     loadData();
     loadTasks();
   }, [syncVersion]);
-
-  // ---------------------------------------------------------
-  // PERSONAL NOTES AUTOSAVE
-  // ---------------------------------------------------------
 
   useEffect(() => {
     if (!notes?.trim()) {
@@ -305,10 +280,7 @@ const EmployeeAdminPage = () => {
             </Text>
           </HStack>
 
-          <PageSubtitle
-            position="relative"
-            bottom="0.5rem"
-          >
+          <PageSubtitle position="relative" bottom="0.3rem">
             Vue d'ensemble de votre gestion de personnel
           </PageSubtitle>
         </Box>

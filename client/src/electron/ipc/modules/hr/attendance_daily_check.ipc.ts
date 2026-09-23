@@ -1,3 +1,4 @@
+import { getAttendanceClockIn, saveAttendanceClockIn } from "../../../database/repositories/modules/hr/attendanceSettings.repository.js";
 import { ipcMain } from "electron";
 
 import type { AttendanceDailyCheckPreparationInput } from "../../../../common/types/attendance/AttendanceDailyCheck.js";
@@ -9,6 +10,7 @@ import {
 import { verifyDailyAttendance } from "../../../services/modules/hr/attendance/attendanceDailyCheck.service.js";
 import {
   completeMarkAbsent,
+  reopenAttendanceDailyCheck,
   createAttendanceDailyCheck,
   getAllAttendanceDailyChecks,
   getAttendanceDailyCheckByDate,
@@ -18,7 +20,9 @@ import {
 } from "../../../database/repositories/modules/hr/attendanceDailyCheck.repository.js";
 
 export function registerAttendanceDailyCheckIPC() {
-  console.log("REGISTERING ABSENCE DAILY CHECK IPC...");
+  ipcMain.handle("attendanceDailyCheck:reopen", (_, companyId: string, date: string, userId: string) => reopenAttendanceDailyCheck(companyId, date, userId));
+  ipcMain.handle("attendanceSettings:getClockIn", (_, companyId: string) => getAttendanceClockIn(companyId));
+  ipcMain.handle("attendanceSettings:saveClockIn", (_, companyId: string, userId: string, time: string) => saveAttendanceClockIn(companyId, userId, time));
   ipcMain.handle(
     "attendanceDailyCheck:create",
     async (_, input: AttendanceDailyCheckPreparationInput) => {

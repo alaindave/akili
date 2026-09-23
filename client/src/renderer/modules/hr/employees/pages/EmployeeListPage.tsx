@@ -12,7 +12,7 @@ import {
   Text,
   VStack,
 } from "@chakra-ui/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FaAddressBook } from "react-icons/fa6";
 import { FaSyncAlt } from "react-icons/fa";
 
@@ -25,11 +25,13 @@ import { useEmployees } from "../hooks/useEmployees";
 
 import NotAuthorized from "../../../../components/NotAuthorized";
 import SearchBar from "../../../../components/SearchBar";
+import useSyncStore from "../../../../../store/sync.store";
 
 const EmployeeListPage = () => {
   const [searchText, setSearchText] = useState("");
   const [filter, setFilter] = useState("");
   const user = useAdminUser((store) => store.adminUser);
+  const syncVersion = useSyncStore((store) => store.syncVersion);
   const adminStore = useAdminUser();
 
   console.log("CURRENT STORE", adminStore);
@@ -39,6 +41,12 @@ const EmployeeListPage = () => {
     isFetching,
     refetch,
   } = useEmployees();
+
+  useEffect(() => {
+    if (syncVersion > 0) {
+      refetch();
+    }
+  }, [syncVersion, refetch]);
 
   const loading = isLoading || isFetching;
 
@@ -134,11 +142,7 @@ const EmployeeListPage = () => {
                   </Button>
                 </HStack>
 
-                <PageSubtitle
-                  noOfLines={1}
-                  pos="relative"
-                  bottom="0.3rem"
-                >
+                <PageSubtitle noOfLines={1}>
                   Gérez les informations de vos employés
                 </PageSubtitle>
               </Box>

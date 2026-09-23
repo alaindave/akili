@@ -138,14 +138,14 @@ export default function ReportsPage() {
         >
           <Box mt="0.4rem">
             <Text
-              fontSize={{ base: "1.2rem", md: "1.3rem" }}
+              fontSize="clamp(1.3rem, 1vw + 0.8rem, 1.4rem)"
               fontWeight="750"
               color={BLUE}
             >
               Rapports
             </Text>
 
-            <PageSubtitle mt={1}>
+            <PageSubtitle>
               Consultez les rapports de votre entreprise.
             </PageSubtitle>
           </Box>

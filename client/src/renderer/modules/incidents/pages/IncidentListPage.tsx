@@ -115,7 +115,9 @@ function CompanyIncidents({ companyId }: { companyId: string }) {
       <Stack spacing={6}>
         <Flex justify="space-between" align="center" gap={4} wrap="wrap">
           <Box>
-            <Heading size="lg">Incidents</Heading>
+            <Heading fontSize="clamp(1.3rem, 1vw + 0.8rem, 1.4rem)">
+              Incidents
+            </Heading>
             <PageSubtitle>
               Déclarez un incident et consultez les rapports précédents.
             </PageSubtitle>
@@ -164,7 +166,7 @@ function CompanyIncidents({ companyId }: { companyId: string }) {
             />
           </FormControl>
           <FormControl isInvalid={invalidDates}>
-            <FormLabel htmlFor="incident-to">Au (inclus)</FormLabel>
+            <FormLabel htmlFor="incident-to">Au</FormLabel>
             <Input
               id="incident-to"
               bg="white"

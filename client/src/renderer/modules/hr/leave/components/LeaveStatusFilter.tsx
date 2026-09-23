@@ -66,7 +66,7 @@ const LeaveStatusFilter = ({ onFilterClicked }: Props) => {
           }}
           onClick={() => {
             onFilterClicked("ATTENTE_APPROBATION");
-            setFilter("Attente d'approvation");
+            setFilter("Attente d'approbation");
           }}
         >
           <Box>

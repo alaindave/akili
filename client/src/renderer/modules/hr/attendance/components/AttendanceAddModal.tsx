@@ -50,12 +50,22 @@ const AddAttendanceModal = ({
     useState<AttendanceType>("PRESENT");
 
   const [clockIn, setClockIn] = useState<string | null>("08:00");
+  const [defaultClockIn, setDefaultClockIn] = useState("08:00");
   const [clockOut, setClockOut] = useState<string | null>("16:30");
 
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loadingEmployees, setLoadingEmployees] = useState(false);
   const [saving, setSaving] = useState(false);
   const user = useAdminUser((store) => store.adminUser);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let active = true;
+    window.electron.hr.attendanceDailyCheck.getClockIn(user.companyId)
+      .then((time) => { if (active) { setDefaultClockIn(time); setClockIn(time); } })
+      .catch((error) => console.error("Unable to load attendance clock-in setting", error));
+    return () => { active = false; };
+  }, [isOpen, user.companyId]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -95,7 +105,7 @@ const AddAttendanceModal = ({
   const resetForm = () => {
     setEmployeeId("");
     setAttendanceType("PRESENT");
-    setClockIn("08:00");
+    setClockIn(defaultClockIn);
     setClockOut("16:30");
   };
 

@@ -290,7 +290,7 @@ const CompanySettingsPage = () => {
             border="1px solid #14376b"
             borderRadius="10px"
             _hover={{ bg: "transparent" }}
-            onClick={() => navigate("/admin")}
+            onClick={() => navigate("/admin/settings")}
           >
             <FaArrowLeftLong color="black" />
           </Button>

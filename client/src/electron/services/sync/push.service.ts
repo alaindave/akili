@@ -447,6 +447,7 @@ export async function pushPendingChanges(
         await markAttendanceDailyCheckSynced(companyId, data._id);
 
         if (data.status === "LOCKED" || data.status === "MANAGER_NOTIFIED") {
+          console.log("DC STATUS", data.status);
           await notifyManagerOfAttendanceDailyCheck(data);
           await processNotificationQueue();
         }

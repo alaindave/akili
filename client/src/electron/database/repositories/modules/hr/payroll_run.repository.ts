@@ -1800,7 +1800,7 @@ export async function getPayrollResults(
   companyId: string,
   payrollRunId: string
 ) {
-  return await all(
+  return await all<PayrollResult>(
     `
     SELECT
       pr.*,

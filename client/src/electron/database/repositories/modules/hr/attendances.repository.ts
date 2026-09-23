@@ -1,3 +1,4 @@
+import { getAttendanceClockIn } from "./attendanceSettings.repository.js";
 import { randomUUID } from "crypto";
 import {
   Attendance,
@@ -58,8 +59,11 @@ export async function createAttendance(
   if (clockIn) {
     const clockInDate = new Date(clockIn);
 
-    const scheduledHour = 8;
-    const scheduledMinute = 0;
+    const [scheduledHour, scheduledMinute] = (
+      await getAttendanceClockIn(companyId)
+    )
+      .split(":")
+      .map(Number);
 
     const expectedMinutes = scheduledHour * 60 + scheduledMinute;
 
@@ -736,8 +740,11 @@ export async function updateAttendance(
   if (updates.clockIn) {
     const clockInDate = new Date(updates.clockIn);
 
-    const scheduledHour = 8;
-    const scheduledMinute = 0;
+    const [scheduledHour, scheduledMinute] = (
+      await getAttendanceClockIn(companyId)
+    )
+      .split(":")
+      .map(Number);
 
     const expectedMinutes = scheduledHour * 60 + scheduledMinute;
 
@@ -975,6 +982,8 @@ export async function deleteAttendance(companyId: string, _id: string) {
                 entityId: existing.employeeId,
                 operation: "update",
                 payload: JSON.stringify({
+                  ...updatedEmployee,
+                  companyId: updatedEmployee.companyId,
                   _id: updatedEmployee._id,
                   remainingLeave: updatedEmployee.remainingLeave,
                   serverVersion: updatedEmployee.serverVersion ?? 0,
@@ -1106,7 +1115,7 @@ export async function deleteAttendance(companyId: string, _id: string) {
           entityId: newLeaveId,
           operation: "create",
           payload: JSON.stringify({
-            companyId,
+            ...existing,
             _id: newLeaveId,
             employeeId: existing.employeeId,
             startDate: dayAfter,
@@ -1149,13 +1158,9 @@ export async function deleteAttendance(companyId: string, _id: string) {
   );
 
   const deletePayload: Partial<Attendance> = {
-    companyId,
-    _id,
-    employeeId: existing.employeeId,
-    date: existing.date,
+    ...existing,
     isDeleted: 1,
     serverVersion: existing.serverVersion ?? 0,
-    createdAt: existing.createdAt,
     updatedAt: now,
   };
 

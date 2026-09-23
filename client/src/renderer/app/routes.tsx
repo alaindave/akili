@@ -1,3 +1,5 @@
+import SettingsPage from "../modules/auth/pages/SettingsPage";
+import AttendanceSettingsPage from "../modules/auth/pages/AttendanceSettingsPage";
 import { createHashRouter } from "react-router-dom";
 import IncidentListPage from "../modules/incidents/pages/IncidentListPage";
 import AdminPage from "../modules/auth/pages/AdminPage";
@@ -25,6 +27,8 @@ import TransportAllowanceWeeklyReportPage from "../modules/hr/attendance/pages/T
 import CompanySettingsPage from "../modules/auth/pages/CompanySettingsPage";
 
 const router = createHashRouter([
+  { path: "/admin/settings", element: <SettingsPage />, errorElement: <PageErrorFallback /> },
+  { path: "/admin/settings/attendance", element: <AttendanceSettingsPage />, errorElement: <PageErrorFallback /> },
   {
     path: "/",
     element: <App />,
