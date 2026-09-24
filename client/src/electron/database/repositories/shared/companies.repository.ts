@@ -61,6 +61,7 @@ export async function upsertCompany(company: Company): Promise<void> {
       phone,
       email,
       website,
+      attendanceClockIn,
       createdAt,
       updatedAt,
       serverVersion,
@@ -68,7 +69,7 @@ export async function upsertCompany(company: Company): Promise<void> {
       synced,
       isDeleted
     )
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 
     ON CONFLICT(_id)
     DO UPDATE SET
@@ -81,6 +82,7 @@ export async function upsertCompany(company: Company): Promise<void> {
       phone = excluded.phone,
       email = excluded.email,
       website = excluded.website,
+      attendanceClockIn = excluded.attendanceClockIn,
       createdAt = excluded.createdAt,
       updatedAt = excluded.updatedAt,
       serverVersion = excluded.serverVersion,
@@ -100,6 +102,7 @@ export async function upsertCompany(company: Company): Promise<void> {
       company.phone ?? null,
       company.email ?? null,
       company.website ?? null,
+      company.attendanceClockIn ?? "08:00",
       company.createdAt,
       company.updatedAt,
       company.serverVersion ?? 0,
@@ -291,6 +294,7 @@ export async function upsertCompanyId(company: Company): Promise<void> {
         phone,
         email,
         website,
+        attendanceClockIn,
         createdAt,
         updatedAt,
         serverVersion,
@@ -298,7 +302,7 @@ export async function upsertCompanyId(company: Company): Promise<void> {
         synced,
         isDeleted
       )
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
       `,
       [
         company._id,
@@ -312,6 +316,7 @@ export async function upsertCompanyId(company: Company): Promise<void> {
         company.phone ?? null,
         company.email ?? null,
         company.website ?? null,
+        company.attendanceClockIn ?? "08:00",
         company.createdAt ?? now,
         company.updatedAt ?? now,
         company.serverVersion ?? 0,

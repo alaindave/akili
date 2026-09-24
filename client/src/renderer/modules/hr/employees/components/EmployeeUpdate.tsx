@@ -66,6 +66,8 @@ const schema = z.object({
 
   matricule: z.string().min(1, { message: errorMessage }),
 
+  idNum: z.string().trim().min(1, { message: errorMessage }),
+
   dateBirth: z.string().min(1, { message: errorMessage }),
 
   role: z.string().min(1, { message: errorMessage }),
@@ -154,6 +156,7 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
     firstName,
     lastName,
     matricule,
+    idNum,
     dateBirth,
     role,
     dateHired,
@@ -189,6 +192,7 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
       firstName,
       lastName,
       matricule,
+      idNum: idNum ?? "",
       dateBirth,
       role,
       department,
@@ -208,6 +212,7 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
       firstName: employee.firstName,
       lastName: employee.lastName,
       matricule: employee.matricule,
+      idNum: employee.idNum ?? "",
       role: employee.role,
       department: employee.department as Department,
       salary: employee.salary,
@@ -255,6 +260,7 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
         firstName: updatedEmployee.firstName,
         lastName: updatedEmployee.lastName,
         matricule: updatedEmployee.matricule,
+        idNum: updatedEmployee.idNum ?? "",
         dateBirth: updatedEmployee.dateBirth,
         role: updatedEmployee.role,
         department: updatedEmployee.department as Department,
@@ -352,6 +358,7 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
         isOpen={isOpen}
         onClose={handleFormClosed}
         returnFocusOnClose={false}
+        scrollBehavior="inside"
         isCentered
       >
         <ModalOverlay backdropFilter="auto" backdropBlur="0.3rem" />
@@ -366,6 +373,12 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
           maxH="90vh"
         >
           <form
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              minHeight: 0,
+              maxHeight: "90vh",
+            }}
             onSubmit={handleSubmit(
               (data) => {
                 console.log("VALID SUBMIT", data);
@@ -382,6 +395,7 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
             ====================================================== */}
 
             <ModalHeader
+              flexShrink={0}
               bg="#F8FAFC"
               borderBottom="1px solid #E2E8F0"
               px={6}
@@ -455,7 +469,7 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
                 BODY
             ====================================================== */}
 
-            <ModalBody px={6} py={4} overflow="hidden">
+            <ModalBody px={6} py={4} minH={0} overflowY="auto">
               <VStack spacing={3} align="stretch">
                 {/* ==================================================
                     PERSONAL INFORMATION
@@ -518,6 +532,30 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
                       <Box minH="18px">
                         <FormErrorMessage fontSize="11px">
                           {errors.firstName?.message}
+                        </FormErrorMessage>
+                      </Box>
+                    </FormControl>
+
+                    {/* CARTE D'IDENTITE */}
+
+                    <FormControl isInvalid={!!errors.idNum}>
+                      <FormLabel {...labelStyles}>
+                        <HStack spacing={1.5}>
+                          <MdOutlineNumbers color={iconColor} size="15px" />
+
+                          <Text>N° carte d'identité</Text>
+                        </HStack>
+                      </FormLabel>
+
+                      <Input
+                        type="text"
+                        {...inputStyles}
+                        {...register("idNum")}
+                      />
+
+                      <Box minH="18px">
+                        <FormErrorMessage fontSize="11px">
+                          {errors.idNum?.message}
                         </FormErrorMessage>
                       </Box>
                     </FormControl>
@@ -883,6 +921,7 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
             ====================================================== */}
 
             <ModalFooter
+              flexShrink={0}
               bg="#F8FAFC"
               borderTop="1px solid #E2E8F0"
               px={6}

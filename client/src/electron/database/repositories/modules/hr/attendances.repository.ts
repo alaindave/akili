@@ -1123,6 +1123,7 @@ export async function deleteAttendance(companyId: string, _id: string) {
             subject: leaveData.subject ?? null,
             notes: leaveData.notes ?? null,
             status,
+            submittedAt: now,
             createdAt: now,
             updatedAt: now,
             serverVersion: 0,

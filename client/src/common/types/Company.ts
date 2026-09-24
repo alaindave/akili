@@ -11,6 +11,7 @@ export default interface Company {
   phone?: string | null;
   email?: string | null;
   website?: string | null;
+  attendanceClockIn?: string;
   createdAt: string;
   updatedAt: string;
   serverVersion: number;

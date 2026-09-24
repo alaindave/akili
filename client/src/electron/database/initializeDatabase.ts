@@ -1,3 +1,5 @@
+import { migratePayrollAccounts } from "./repositories/modules/hr/payrollAccount.repository.js";
+import { migrateAttendanceClockInSettings } from "./repositories/modules/hr/attendanceSettings.repository.js";
 import { queueExistingIncidents } from "./repositories/shared/incidents.repository.js";
 import { createEmployeesTable } from "./schemas/modules/hr/employees.schema.js";
 import { createIncidentsTable } from "./schemas/shared/incidents.schema.js";
@@ -27,7 +29,9 @@ export async function initializeDatabase() {
   await createSyncTable();
   await queueExistingIncidents();
   await createSettingsTable();
+  await migrateAttendanceClockInSettings();
   await createPayrollTables();
+  await migratePayrollAccounts();
   await createAuditLogsTable();
   await createNotificationTable();
   console.log("DATABASE INITIALIZED");

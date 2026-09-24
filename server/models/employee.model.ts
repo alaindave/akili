@@ -12,6 +12,7 @@ export interface EmployeeDocument {
   role: string;
   department: "Administation" | "Atelier" | "Usine" | "Magasin" | "Sentinelle";
   salary: number;
+  accountNumber?: string;
   remainingLeave: number;
   status: "ACTIF" | "INACTIF";
   telephone: string;
@@ -94,6 +95,12 @@ const employeeSchema = new Schema<EmployeeDocument>(
       type: Number,
       required: true,
       min: 0,
+    },
+
+    accountNumber: {
+      type: String,
+      default: "cash",
+      set: (value: string | null | undefined) => value?.trim() || "cash",
     },
 
     remainingLeave: {

@@ -33,6 +33,7 @@ export async function createEmployeesTable() {
       relationship TEXT NOT NULL,
       contactPhone TEXT NOT NULL,
       salary INTEGER NOT NULL,
+      accountNumber TEXT NOT NULL DEFAULT 'cash',
       status TEXT NOT NULL DEFAULT 'ACTIF'
         CHECK (status IN ('ACTIF', 'INACTIF')),
       remainingLeave INTEGER NOT NULL DEFAULT 20,
@@ -59,6 +60,10 @@ export async function createEmployeesTable() {
    */
 
   const columns = await all<{ name: string }>(`PRAGMA table_info(employees)`);
+
+  if (!columns.some((column) => column.name === "accountNumber")) {
+    await run(`ALTER TABLE employees ADD COLUMN accountNumber TEXT NOT NULL DEFAULT 'cash'`);
+  }
 
   const hasCompanyId = columns.some((column) => column.name === "companyId");
 

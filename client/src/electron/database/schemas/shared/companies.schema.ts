@@ -1,4 +1,4 @@
-import { run } from "../../db.js";
+import { all, run } from "../../db.js";
 
 export async function createCompanyTable() {
   await run(`
@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS companies (
   phone TEXT,
   email TEXT,
   website TEXT,
+  attendanceClockIn TEXT NOT NULL DEFAULT '08:00',
   createdAt DATETIME NOT NULL,
   updatedAt DATETIME NOT NULL,
   serverVersion INTEGER NOT NULL DEFAULT 0,
@@ -22,6 +23,11 @@ CREATE TABLE IF NOT EXISTS companies (
   isDeleted INTEGER NOT NULL DEFAULT 0
 );
   `);
+
+  const columns = await all<{ name: string }>("PRAGMA table_info(companies)");
+  if (!columns.some((column) => column.name === "attendanceClockIn")) {
+    await run("ALTER TABLE companies ADD COLUMN attendanceClockIn TEXT NOT NULL DEFAULT '08:00'");
+  }
 
   console.log("COMPANY TABLE INITIALIZED");
 }

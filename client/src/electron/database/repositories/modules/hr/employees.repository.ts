@@ -1,7 +1,8 @@
-import { run, get, all } from "../../../db.js";
+import { updatePayrollAccountInTransaction } from "./payrollAccount.repository.js";
+import { run, get, all, runDirect, getDirect, transaction } from "../../../db.js";
 import { randomUUID } from "crypto";
 import Employee from "../../../../../common/types/Employee.js";
-import { addToSyncQueue } from "../../shared/sync.repository.js";
+import { addToSyncQueue, notifyPendingChanges } from "../../shared/sync.repository.js";
 import { initializeEmployeePayrollProfilesForEmployee } from "../../../../services/modules/hr/payroll/payrollProfile.service.js";
 
 /*
@@ -37,6 +38,7 @@ export async function createEmployee(
       lastName,
       matricule,
       idNum,
+      accountNumber,
       dateBirth,
       role,
       dateHired,
@@ -56,7 +58,7 @@ export async function createEmployee(
       isDeleted
     )
     VALUES (
-      ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
+      ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
       ?,?,?,0,0
     )
     `,
@@ -67,6 +69,7 @@ export async function createEmployee(
       employee.lastName,
       employee.matricule,
       employee.idNum,
+      employee.accountNumber?.trim() || "cash",
       employee.dateBirth,
       employee.role,
       employee.dateHired,
@@ -91,6 +94,7 @@ export async function createEmployee(
     _id,
     companyId,
     ...employee,
+    accountNumber: employee.accountNumber?.trim() || "cash",
     createdAt: time,
     updatedAt: time,
     serverVersion,
@@ -201,86 +205,96 @@ export async function updateEmployee(
   _id: string,
   data: Partial<Omit<Employee, "companyId">>
 ) {
-  const existing = await getEmployeeByIdIncludingDeleted(companyId, _id);
+  const result = await transaction(async () => {
+    const existing = await getDirect<Employee>("SELECT * FROM employees WHERE companyId = ? AND _id = ?", [companyId, _id]);
 
-  if (!existing) {
-    throw new Error("Employee not found");
-  }
+    if (!existing) {
+      throw new Error("Employee not found");
+    }
 
-  const updatedAt = new Date().toISOString();
+    const updatedAt = new Date().toISOString();
 
-  /*
-   * Keep the existing serverVersion.
-   */
-  const serverVersion = existing.serverVersion ?? 0;
+    /*
+     * Keep the existing serverVersion.
+     */
+    const serverVersion = existing.serverVersion ?? 0;
 
-  await run(
-    `
-    UPDATE employees
-    SET
-      firstName = ?,
-      lastName = ?,
-      matricule = ?,
-      idNum = ?,
-      dateBirth = ?,
-      role = ?,
-      dateHired = ?,
-      department = ?,
-      telephone = ?,
-      address = ?,
-      emergencyContact = ?,
-      relationship = ?,
-      contactPhone = ?,
-      salary = ?,
-      status = ?,
-      remainingLeave = ?,
-      updatedAt = ?,
-      serverVersion = ?,
-      synced = 0
-    WHERE companyId = ?
-      AND _id = ?
-    `,
-    [
-      data.firstName ?? existing.firstName,
-      data.lastName ?? existing.lastName,
-      data.matricule ?? existing.matricule,
-      data.idNum ?? existing.idNum,
-      data.dateBirth ?? existing.dateBirth,
-      data.role ?? existing.role,
-      data.dateHired ?? existing.dateHired,
-      data.department ?? existing.department,
-      data.telephone ?? existing.telephone,
-      data.address ?? existing.address,
-      data.emergencyContact ?? existing.emergencyContact,
-      data.relationship ?? existing.relationship,
-      data.contactPhone ?? existing.contactPhone,
-      data.salary ?? existing.salary,
-      data.status ?? existing.status,
-      data.remainingLeave ?? existing.remainingLeave,
-      updatedAt,
-      serverVersion,
+    await runDirect(
+      `
+      UPDATE employees
+      SET
+        firstName = ?,
+        lastName = ?,
+        matricule = ?,
+        idNum = ?,
+        accountNumber = ?,
+        dateBirth = ?,
+        role = ?,
+        dateHired = ?,
+        department = ?,
+        telephone = ?,
+        address = ?,
+        emergencyContact = ?,
+        relationship = ?,
+        contactPhone = ?,
+        salary = ?,
+        status = ?,
+        remainingLeave = ?,
+        updatedAt = ?,
+        serverVersion = ?,
+        synced = 0
+      WHERE companyId = ?
+        AND _id = ?
+      `,
+      [
+        data.firstName ?? existing.firstName,
+        data.lastName ?? existing.lastName,
+        data.matricule ?? existing.matricule,
+        data.idNum ?? existing.idNum,
+        (data.accountNumber === undefined ? existing.accountNumber : data.accountNumber)?.trim() || "cash",
+        data.dateBirth ?? existing.dateBirth,
+        data.role ?? existing.role,
+        data.dateHired ?? existing.dateHired,
+        data.department ?? existing.department,
+        data.telephone ?? existing.telephone,
+        data.address ?? existing.address,
+        data.emergencyContact ?? existing.emergencyContact,
+        data.relationship ?? existing.relationship,
+        data.contactPhone ?? existing.contactPhone,
+        data.salary ?? existing.salary,
+        data.status ?? existing.status,
+        data.remainingLeave ?? existing.remainingLeave,
+        updatedAt,
+        serverVersion,
+        companyId,
+        _id,
+      ]
+    );
+
+    const updatedEmployee = await getDirect<Employee>("SELECT * FROM employees WHERE companyId = ? AND _id = ?", [companyId, _id]);
+
+    if (!updatedEmployee) {
+      throw new Error("Failed to retrieve updated employee");
+    }
+
+    console.log("EMPLOYEE TO SAVE TO SYNC QUEUE:", updatedEmployee);
+
+    await addToSyncQueue({
       companyId,
-      _id,
-    ]
-  );
+      entity: "employee",
+      entityId: _id,
+      operation: "update",
+      payload: JSON.stringify(updatedEmployee),
+    }, true);
 
-  const updatedEmployee = await getEmployeeByIdIncludingDeleted(companyId, _id);
+    if (data.accountNumber !== undefined) {
+      await updatePayrollAccountInTransaction(companyId, _id, updatedEmployee.accountNumber || "cash", updatedAt);
+    }
 
-  if (!updatedEmployee) {
-    throw new Error("Failed to retrieve updated employee");
-  }
-
-  console.log("EMPLOYEE TO SAVE TO SYNC QUEUE:", updatedEmployee);
-
-  await addToSyncQueue({
-    companyId,
-    entity: "employee",
-    entityId: _id,
-    operation: "update",
-    payload: JSON.stringify(updatedEmployee),
+    return updatedEmployee;
   });
-
-  return updatedEmployee;
+  await notifyPendingChanges(companyId);
+  return result;
 }
 
 /*
@@ -432,6 +446,7 @@ export async function upsertEmployee(employee: Employee) {
         lastName,
         matricule,
         idNum,
+        accountNumber,
         dateBirth,
         dateHired,
         role,
@@ -452,7 +467,7 @@ export async function upsertEmployee(employee: Employee) {
         isDeleted
       )
       VALUES (
-        ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
+        ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
         ?,?,?,?,?,?
       )
       `,
@@ -463,6 +478,7 @@ export async function upsertEmployee(employee: Employee) {
         employee.lastName,
         employee.matricule,
         employee.idNum,
+        employee.accountNumber?.trim() || "cash",
         employee.dateBirth,
         employee.dateHired,
         employee.role,
@@ -542,6 +558,7 @@ export async function upsertEmployee(employee: Employee) {
       lastName = ?,
       matricule = ?,
       idNum = ?,
+      accountNumber = ?,
       dateBirth = ?,
       dateHired = ?,
       role = ?,
@@ -568,6 +585,7 @@ export async function upsertEmployee(employee: Employee) {
       employee.lastName,
       employee.matricule,
       employee.idNum,
+      employee.accountNumber?.trim() || "cash",
       employee.dateBirth,
       employee.dateHired,
       employee.role,

@@ -25,6 +25,12 @@ export async function createEmployeePayrollProfile(
   const _id = randomUUID();
   const now = new Date().toISOString();
 
+  const employee = await get<{ accountNumber?: string }>(
+    "SELECT accountNumber FROM employees WHERE companyId = ? AND _id = ?",
+    [companyId, employeeId]
+  );
+  const accountNumber = employee?.accountNumber?.trim() || "cash";
+
   // Local records have not received a server version yet.
   const serverVersion = 0;
 
@@ -34,6 +40,7 @@ export async function createEmployeePayrollProfile(
       companyId,
       _id,
       employeeId,
+      accountNumber,
       componentId,
       name,
       displayName,
@@ -50,12 +57,13 @@ export async function createEmployeePayrollProfile(
       createdAt,
       updatedAt
     )
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `,
     [
       companyId,
       _id,
       employeeId,
+      accountNumber,
       profile.componentId ?? _id,
       profile.name,
       profile.displayName,
@@ -76,6 +84,8 @@ export async function createEmployeePayrollProfile(
 
   const payrollProfile = {
     ...profile,
+    accountNumber,
+    componentId: profile.componentId ?? _id,
     companyId,
     employeeId,
     _id,
@@ -449,6 +459,7 @@ export async function upsertEmployeePayrollProfile(
       SET
         companyId = ?,
         employeeId = ?,
+        accountNumber = ?,
         componentId = ?,
         name = ?,
         displayName = ?,
@@ -473,6 +484,7 @@ export async function upsertEmployeePayrollProfile(
       [
         companyId,
         profile.employeeId,
+        (profile.accountNumber === undefined ? local.accountNumber : profile.accountNumber)?.trim() || "cash",
         profile.componentId,
         profile.name,
         profile.displayName,
@@ -506,6 +518,7 @@ export async function upsertEmployeePayrollProfile(
       companyId,
       _id,
       employeeId,
+      accountNumber,
       componentId,
       name,
       displayName,
@@ -525,12 +538,13 @@ export async function upsertEmployeePayrollProfile(
       updatedAt,
       lastSyncedAt
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     `,
     [
       companyId,
       profile._id,
       profile.employeeId,
+      profile.accountNumber?.trim() || "cash",
       profile.componentId,
       profile.name,
       profile.displayName,
@@ -766,7 +780,8 @@ export async function getUnsyncedEmployeePayrollProfiles(companyId: string) {
 
 export async function markPayrollEmployeeProfileSynced(
   companyId: string,
-  _id: string
+  _id: string,
+  updatedAt?: string
 ) {
   await run(
     `
@@ -776,8 +791,9 @@ export async function markPayrollEmployeeProfileSynced(
       lastSyncedAt = CURRENT_TIMESTAMP
     WHERE companyId = ?
       AND _id = ?
+      AND (? IS NULL OR updatedAt = ?)
     `,
-    [companyId, _id]
+    [companyId, _id, updatedAt ?? null, updatedAt ?? null]
   );
 
   return true;

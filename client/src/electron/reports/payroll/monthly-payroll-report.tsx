@@ -1,3 +1,4 @@
+import { getPayrollPaymentMethod, payrollPaymentLabels, PayrollPaymentFilter } from "../../../common/types/payroll/payrollPayment.js";
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 import Company from "../../../common/types/Company.js";
 import {
@@ -118,12 +119,14 @@ export function MonthlyPayrollReportDocument({
   results,
   department,
   currency,
+  paymentMethod = "all",
 }: {
   company: Company;
   run: PayrollRun;
   results: PayrollResult[];
   department: string | null;
   currency: string;
+  paymentMethod?: PayrollPaymentFilter;
 }) {
   const money = (value: number) =>
     `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 })
@@ -152,12 +155,13 @@ export function MonthlyPayrollReportDocument({
   const columns = [
     "Employé",
     "Département",
+    "Compte / Paiement",
     "Salaire de base",
     "Rémunérations",
     "Déductions",
     "Salaire net",
   ];
-  const widths = ["24%", "16%", "15%", "15%", "15%", "15%"];
+  const widths = ["20%", "12%", "12%", "14%", "14%", "14%", "14%"];
   return (
     <Document
       title={`Rapport mensuel de paie - ${period}`}
@@ -182,6 +186,7 @@ export function MonthlyPayrollReportDocument({
                 ? "Tous les départements"
                 : department || "Sans département"}
             </Text>
+            <Text style={styles.details}>{payrollPaymentLabels[paymentMethod]}</Text>
             <StatusBadge status={run.status} />
           </View>
         </View>
@@ -203,7 +208,7 @@ export function MonthlyPayrollReportDocument({
                   styles.cell,
                   {
                     width: widths[index],
-                    textAlign: index >= 2 && index <= 5 ? "right" : "left",
+                    textAlign: index >= 3 ? "right" : "left",
                   },
                 ]}
               >
@@ -218,6 +223,9 @@ export function MonthlyPayrollReportDocument({
                   row.employeeId ||
                   "--",
                 row.department?.trim() || "Sans département",
+                getPayrollPaymentMethod(row.accountNumber) === "bank"
+                  ? row.accountNumber!.trim()
+                  : payrollPaymentLabels.cash,
                 money(row.baseSalary),
                 money(row.totalEarnings),
                 money(row.totalDeductions),
@@ -227,7 +235,7 @@ export function MonthlyPayrollReportDocument({
                   key={i}
                   style={[
                     styles.cell,
-                    { width: widths[i], textAlign: i >= 2 ? "right" : "left" },
+                    { width: widths[i], textAlign: i >= 3 ? "right" : "left" },
                   ]}
                 >
                   {value}
@@ -236,17 +244,17 @@ export function MonthlyPayrollReportDocument({
             </View>
           ))}
           {results.length === 0 && (
-            <Text style={styles.cell}>Aucun résultat pour ce département.</Text>
+            <Text style={styles.cell}>Aucun résultat pour ces filtres.</Text>
           )}
           <View style={[styles.row, styles.tableHeader]} wrap={false}>
-            <Text style={[styles.cell, { width: "40%" }]}>TOTAL</Text>
+            <Text style={[styles.cell, { width: "44%" }]}>TOTAL</Text>
             {[totals.base, totals.earnings, totals.deductions, totals.net].map(
               (value, i) => (
                 <Text
                   key={i}
                   style={[
                     styles.cell,
-                    { width: widths[i + 2], textAlign: "right" },
+                    { width: widths[i + 3], textAlign: "right" },
                   ]}
                 >
                   {money(value)}

@@ -1,4 +1,4 @@
-import { run } from "../../../db.js";
+import { run, all } from "../../../db.js";
 
 export async function createPayrollTables() {
   /* =========================================================
@@ -131,6 +131,14 @@ export async function createPayrollTables() {
         ON DELETE CASCADE
     );
   `);
+
+  const profileColumns = await all<{ name: string }>(
+    "PRAGMA table_info(payroll_employee_profiles)"
+  );
+  if (!profileColumns.some((column) => column.name === "accountNumber")) {
+    // NULL identifies legacy rows for the transactional backfill and queue.
+    await run("ALTER TABLE payroll_employee_profiles ADD COLUMN accountNumber TEXT");
+  }
 
   /* =========================================================
      PAYROLL RUNS

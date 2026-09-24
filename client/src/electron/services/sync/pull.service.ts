@@ -56,7 +56,6 @@ import {
 import PayrollEmployeeProfile from "../../../common/types/payroll/PayrollEmployeeProfile.js";
 
 import {
-  markPayrollEmployeeProfileSynced,
   upsertEmployeePayrollProfile,
 } from "../../database/repositories/modules/hr/payroll_employee_profile.repository.js";
 
@@ -1168,8 +1167,6 @@ async function syncPayrollEmployeeProfiles(
 
     try {
       await upsertEmployeePayrollProfile(profile);
-
-      await markPayrollEmployeeProfileSynced(profile.companyId, profile._id);
     } catch (error) {
       succeeded = false;
 

@@ -18,6 +18,7 @@ export default interface Employee {
   role: string;
   department: "Administration" | "Atelier" | "Usine" | "Magasin" | "Sentinelle";
   salary: number;
+  accountNumber?: string;
   remainingLeave: number;
   status: "ACTIF" | "INACTIF";
   telephone: string;

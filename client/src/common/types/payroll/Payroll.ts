@@ -67,6 +67,7 @@ export interface PayrollResult {
   firstName?: string;
   lastName?: string;
   department?: string;
+  accountNumber?: string;
   baseSalary: number;
   grossSalary: number;
   taxableSalary: number;

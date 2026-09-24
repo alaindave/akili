@@ -237,3 +237,13 @@ export function getDirect<T>(sql: string, params: Params = []): Promise<T | null
     });
   });
 }
+
+// For multi-row reads inside a transaction that already owns the queue.
+export function allDirect<T>(sql: string, params: Params = []): Promise<T[]> {
+  return new Promise((resolve, reject) => {
+    db.all(sql, params, (error: Error | null, rows: T[]) => {
+      if (error) reject(error);
+      else resolve(rows ?? []);
+    });
+  });
+}

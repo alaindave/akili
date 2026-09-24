@@ -7,12 +7,20 @@ import {
   TabPanel,
   HStack,
   Text,
+  Button,
+  FormControl,
+  FormLabel,
+  FormHelperText,
+  Input,
+  useToast,
 } from "@chakra-ui/react";
+import { useEffect, useState } from "react";
 import { MdOutlineChevronRight } from "react-icons/md";
 import { FaArrowLeftLong } from "react-icons/fa6";
 import PayrollEmployeeProfileList from "../components/PayrollProfileList";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import Employee from "../../../../../common/types/Employee";
+import { useEmployee, useUpdateEmployee } from "../../employees/hooks/useEmployees";
 
 type PhotoState = {
   photo_url?: string;
@@ -24,8 +32,38 @@ type EmployeeState = {
 
 export default function PayrollEmployeeProfileSettingsPage() {
   const location = useLocation();
-  const { employee } = (location.state as EmployeeState) || {};
+  const { _id } = useParams();
+  const { employee: initialEmployee } = (location.state as EmployeeState) || {};
+  const { data: employee, isLoading, isError } = useEmployee(_id ?? initialEmployee?._id);
+  const updateEmployee = useUpdateEmployee();
+  const [accountNumber, setAccountNumber] = useState("cash");
+  const toast = useToast();
   const { photo_url } = (location.state as PhotoState) || "";
+
+  useEffect(() => {
+    setAccountNumber(employee?.accountNumber?.trim() || "cash");
+  }, [employee?._id, employee?.accountNumber]);
+
+  const saveAccountNumber = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!employee) return;
+
+    try {
+      await updateEmployee.mutateAsync({
+        companyId: employee.companyId,
+        _id: employee._id,
+        data: { accountNumber: accountNumber.trim() || "cash" },
+      });
+      setAccountNumber(accountNumber.trim() || "cash");
+      toast({ title: "Numéro de compte enregistré", status: "success" });
+    } catch {
+      toast({ title: "Impossible d'enregistrer le numéro de compte", status: "error" });
+    }
+  };
+
+  if (isLoading) return <Box p={6}>Chargement...</Box>;
+  if (isError || !employee) return <Box p={6}>Impossible de charger cet employé.</Box>;
+
   return (
     <Box p={6}>
       <HStack>
@@ -74,9 +112,10 @@ export default function PayrollEmployeeProfileSettingsPage() {
       </HStack>
 
       <Tabs colorScheme="yellow">
-        <TabList gap="20rem">
+        <TabList gap={{ base: 2, md: 8 }} flexWrap="wrap">
           <Tab>Remuneration</Tab>
           <Tab>Deductions</Tab>
+          <Tab>Numéro de compte</Tab>
         </TabList>
 
         <TabPanels>
@@ -93,6 +132,26 @@ export default function PayrollEmployeeProfileSettingsPage() {
               type="DEDUCTION"
               showTaxable={false}
             />
+          </TabPanel>
+          <TabPanel px={0}>
+            <Box as="form" onSubmit={saveAccountNumber} maxW="480px">
+              <FormControl isDisabled={updateEmployee.isPending}>
+                <FormLabel htmlFor="employee-account-number">Numéro de compte</FormLabel>
+                <Input
+                  id="employee-account-number"
+                  type="text"
+                  value={accountNumber}
+                  onChange={(event) => setAccountNumber(event.target.value)}
+                  placeholder="cash"
+                />
+                <FormHelperText>
+                  Laissez ce champ vide pour un paiement en espèces (cash).
+                </FormHelperText>
+              </FormControl>
+              <Button mt={4} type="submit" colorScheme="yellow" isLoading={updateEmployee.isPending}>
+                Enregistrer
+              </Button>
+            </Box>
           </TabPanel>
         </TabPanels>
       </Tabs>

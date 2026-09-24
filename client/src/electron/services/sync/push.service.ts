@@ -524,7 +524,7 @@ export async function pushPendingChanges(
         break;
 
       case "payroll_profile":
-        await markPayrollEmployeeProfileSynced(companyId, data._id);
+        await markPayrollEmployeeProfileSynced(companyId, data._id, data.updatedAt);
         break;
 
       case "payroll_run": {

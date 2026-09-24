@@ -4,6 +4,7 @@ export interface PayrollEmployeeProfileDocument {
   companyId: string;
   _id: string;
   employeeId: string;
+  accountNumber?: string;
   componentId: string;
   name: string;
   displayName: string;
@@ -54,6 +55,12 @@ const PayrollEmployeeProfileSchema = new Schema<PayrollEmployeeProfileDocument>(
       type: String,
       required: true,
       index: true,
+    },
+
+    accountNumber: {
+      type: String,
+      default: "cash",
+      set: (value: string | null | undefined) => value?.trim() || "cash",
     },
 
     componentId: {

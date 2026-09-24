@@ -1,3 +1,4 @@
+type PayrollPaymentFilter = import("../../../common/types/payroll/payrollPayment", { with: { "resolution-mode": "require" } }).PayrollPaymentFilter;
 type AdminUser = import("../../../common/types/AdminUser", {
   with: { "resolution-mode": "require" },
 }).default;
@@ -13,8 +14,8 @@ export interface PayrollRunDto {
 }
 
 export const payrollRunApi = {
-  saveMonthlyReport: (companyId: string, runId: string, department: string | null) =>
-    invoke<{ canceled: boolean; filePath?: string }>("payroll:saveMonthlyReport", companyId, runId, department),
+  saveMonthlyReport: (companyId: string, runId: string, department: string | null, paymentMethod: PayrollPaymentFilter = "all") =>
+    invoke<{ canceled: boolean; filePath?: string }>("payroll:saveMonthlyReport", companyId, runId, department, paymentMethod),
   createPayrollDraft: (payrollRun: PayrollRunDto) =>
     invoke("payroll:createDraft", payrollRun),
 

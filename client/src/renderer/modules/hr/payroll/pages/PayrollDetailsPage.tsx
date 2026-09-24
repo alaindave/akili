@@ -1,3 +1,4 @@
+import { matchesPayrollFilters, payrollPaymentLabels, PayrollPaymentFilter } from "../../../../../common/types/payroll/payrollPayment";
 import {
   Box,
   Button,
@@ -44,6 +45,7 @@ const PayrollDetailsPage = () => {
 
   const [payrollResults, setPayrollResults] = useState<PayrollResult[]>([]);
   const [department, setDepartment] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<PayrollPaymentFilter>("all");
   const [isDownloading, setIsDownloading] = useState(false);
   const toast = useToast();
 
@@ -51,7 +53,7 @@ const PayrollDetailsPage = () => {
     if (!_id || isDownloading) return;
     setIsDownloading(true);
     try {
-      const result = await window.electron.hr.payrollRun.saveMonthlyReport(user.companyId, _id, department);
+      const result = await window.electron.hr.payrollRun.saveMonthlyReport(user.companyId, _id, department, paymentMethod);
       if (!result.canceled) {
         toast({ title: "Rapport de paie enregistré", status: "success", duration: 3000, isClosable: true });
       }
@@ -69,7 +71,7 @@ const PayrollDetailsPage = () => {
     new Set(payrollResults.map((result) => result.department?.trim() ?? ""))
   ).sort((a, b) => a.localeCompare(b, "fr"));
   const filteredResults = payrollResults.filter(
-    (result) => department === null || (result.department?.trim() ?? "") === department
+    (result) => matchesPayrollFilters(result, department, paymentMethod)
   );
   const dashboardTotals = filteredResults.reduce(
     (totals, result) => ({
@@ -147,6 +149,7 @@ const PayrollDetailsPage = () => {
 
   useEffect(() => {
     setDepartment(null);
+    setPaymentMethod("all");
   }, [_id, user.companyId]);
 
   const loadPayrollRun = async () => {
@@ -347,7 +350,7 @@ const PayrollDetailsPage = () => {
           {/* Payroll results table */}
 
           <Box mt="3rem" ml="0.4rem">
-            <HStack mb={4} align="flex-end" spacing={3}>
+            <HStack mb={4} align="flex-end" spacing={3} flexWrap="wrap">
             <FormControl maxW="280px">
               <FormLabel htmlFor="payroll-department" fontSize="sm">
                 Département
@@ -369,6 +372,22 @@ const PayrollDetailsPage = () => {
                 ))}
               </Select>
             </FormControl>
+            <FormControl maxW="280px">
+              <FormLabel htmlFor="payroll-payment-method" fontSize="sm">
+                Mode de paiement
+              </FormLabel>
+              <Select
+                id="payroll-payment-method"
+                value={paymentMethod}
+                onChange={(event) => setPaymentMethod(event.target.value as PayrollPaymentFilter)}
+                isDisabled={isDownloading}
+                bg="white"
+              >
+                {Object.entries(payrollPaymentLabels).map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </Select>
+            </FormControl>
             <IconButton
               aria-label="Télécharger le rapport mensuel de paie"
               title="Télécharger le rapport mensuel de paie"
@@ -383,7 +402,7 @@ const PayrollDetailsPage = () => {
             <PayrollResultsTable payrollResults={filteredResults} />
             {filteredResults.length === 0 && (
               <Text mt={4} color="gray.500" textAlign="center">
-                Aucun résultat pour ce département.
+                Aucun résultat pour ces filtres.
               </Text>
             )}
           </Box>

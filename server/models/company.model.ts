@@ -13,6 +13,7 @@ export interface CompanyDocument extends Document {
   phone: string | null;
   email: string | null;
   website: string | null;
+  attendanceClockIn: string;
   serverVersion: number;
   createdAt: string;
   updatedAt: string;
@@ -72,6 +73,13 @@ const CompanySchema = new Schema<CompanyDocument>(
       type: String,
       default: null,
       trim: true,
+    },
+
+    attendanceClockIn: {
+      type: String,
+      required: true,
+      default: "08:00",
+      match: /^([01]\d|2[0-3]):[0-5]\d$/,
     },
 
     address: {

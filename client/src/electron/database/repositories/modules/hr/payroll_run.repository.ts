@@ -1806,7 +1806,8 @@ export async function getPayrollResults(
       pr.*,
       e.firstName,
       e.lastName,
-      e.department
+      e.department,
+      e.accountNumber
     FROM payroll_results pr
     LEFT JOIN employees e
       ON pr.employeeId = e._id

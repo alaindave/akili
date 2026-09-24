@@ -135,6 +135,14 @@ export async function syncCompany(operation: SyncOperation, data: SyncData) {
     };
   }
 
+  if (
+    fields.attendanceClockIn !== undefined &&
+    (typeof fields.attendanceClockIn !== "string" ||
+      !/^([01]\d|2[0-3]):[0-5]\d$/.test(fields.attendanceClockIn))
+  ) {
+    throw new Error("COMPANY SYNC FAILED: invalid attendance clock-in time");
+  }
+
   delete fields.companyId;
 
   delete fields._id;
@@ -1396,6 +1404,17 @@ export async function syncPayrollProfile(
   if (!_id) {
     throw new Error("PAYROLL PROFILE SYNC FAILED: MISSING _id");
   }
+
+  // Older queued payloads may predate account numbers. Preserve the saved
+  // profile value, or inherit the employee account when creating the profile.
+  if (fields.accountNumber === undefined) {
+    const existing = await EmployeePayrollProfile.findOne({ _id, companyId }).lean();
+    const employee = existing?.accountNumber == null
+      ? await Employee.findOne({ _id: fields.employeeId, companyId }).lean()
+      : null;
+    fields.accountNumber = existing?.accountNumber ?? employee?.accountNumber ?? "cash";
+  }
+  fields.accountNumber = String(fields.accountNumber ?? "").trim() || "cash";
 
   const serverVersion = await getServerVersion("payroll_profile");
 
