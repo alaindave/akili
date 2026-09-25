@@ -275,8 +275,6 @@ export default function TransportAllowancePage() {
             borderColor="gray.100"
           >
             <Flex align="center" gap={3}>
-              <Icon as={FiCalendar} color="#D69E00" boxSize={5} />
-
               <Box>
                 <Heading fontSize="17px" color="#03143B" fontWeight="700">
                   Sélection de la semaine

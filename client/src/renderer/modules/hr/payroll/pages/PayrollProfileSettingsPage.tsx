@@ -20,7 +20,10 @@ import { FaArrowLeftLong } from "react-icons/fa6";
 import PayrollEmployeeProfileList from "../components/PayrollProfileList";
 import { Link, useLocation, useParams } from "react-router-dom";
 import Employee from "../../../../../common/types/Employee";
-import { useEmployee, useUpdateEmployee } from "../../employees/hooks/useEmployees";
+import {
+  useEmployee,
+  useUpdateEmployee,
+} from "../../employees/hooks/useEmployees";
 
 type PhotoState = {
   photo_url?: string;
@@ -34,7 +37,11 @@ export default function PayrollEmployeeProfileSettingsPage() {
   const location = useLocation();
   const { _id } = useParams();
   const { employee: initialEmployee } = (location.state as EmployeeState) || {};
-  const { data: employee, isLoading, isError } = useEmployee(_id ?? initialEmployee?._id);
+  const {
+    data: employee,
+    isLoading,
+    isError,
+  } = useEmployee(_id ?? initialEmployee?._id);
   const updateEmployee = useUpdateEmployee();
   const [accountNumber, setAccountNumber] = useState("cash");
   const toast = useToast();
@@ -57,12 +64,16 @@ export default function PayrollEmployeeProfileSettingsPage() {
       setAccountNumber(accountNumber.trim() || "cash");
       toast({ title: "Numéro de compte enregistré", status: "success" });
     } catch {
-      toast({ title: "Impossible d'enregistrer le numéro de compte", status: "error" });
+      toast({
+        title: "Impossible d'enregistrer le numéro de compte",
+        status: "error",
+      });
     }
   };
 
   if (isLoading) return <Box p={6}>Chargement...</Box>;
-  if (isError || !employee) return <Box p={6}>Impossible de charger cet employé.</Box>;
+  if (isError || !employee)
+    return <Box p={6}>Impossible de charger cet employé.</Box>;
 
   return (
     <Box p={6}>
@@ -136,7 +147,9 @@ export default function PayrollEmployeeProfileSettingsPage() {
           <TabPanel px={0}>
             <Box as="form" onSubmit={saveAccountNumber} maxW="480px">
               <FormControl isDisabled={updateEmployee.isPending}>
-                <FormLabel htmlFor="employee-account-number">Numéro de compte</FormLabel>
+                <FormLabel htmlFor="employee-account-number">
+                  Numéro de compte
+                </FormLabel>
                 <Input
                   id="employee-account-number"
                   type="text"
@@ -145,10 +158,15 @@ export default function PayrollEmployeeProfileSettingsPage() {
                   placeholder="cash"
                 />
                 <FormHelperText>
-                  Laissez ce champ vide pour un paiement en espèces (cash).
+                  Laissez ce champ vide pour un paiement en espèces.
                 </FormHelperText>
               </FormControl>
-              <Button mt={4} type="submit" colorScheme="yellow" isLoading={updateEmployee.isPending}>
+              <Button
+                mt={4}
+                type="submit"
+                colorScheme="yellow"
+                isLoading={updateEmployee.isPending}
+              >
                 Enregistrer
               </Button>
             </Box>

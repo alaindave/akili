@@ -1,7 +1,6 @@
 import PageSubtitle from "../../../../components/PageSubtitle";
 import { Box, Flex, Grid, Text, VStack } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
-import { FaCalendarCheck } from "react-icons/fa";
 import { ReactNode } from "react";
 
 const BLUE = "#03143B";
@@ -9,7 +8,6 @@ const GOLD = "#F2B705";
 
 interface ReportSectionProps {
   title: string;
-  icon: ReactNode;
   children: ReactNode;
   onClick?: () => void;
 }
@@ -20,7 +18,7 @@ interface ReportItemProps {
   onClick?: () => void;
 }
 
-function ReportSection({ title, icon, children, onClick }: ReportSectionProps) {
+function ReportSection({ title, children, onClick }: ReportSectionProps) {
   return (
     <Box
       bg="white"
@@ -49,20 +47,6 @@ function ReportSection({ title, icon, children, onClick }: ReportSectionProps) {
         borderBottom="1px solid"
         borderColor="gray.100"
       >
-        <Box
-          w="42px"
-          h="42px"
-          flexShrink={0}
-          borderRadius="10px"
-          bg={BLUE}
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-          color={GOLD}
-        >
-          {icon}
-        </Box>
-
         <Box>
           <Text fontSize="16px" fontWeight="800" color={BLUE}>
             {title}
@@ -177,16 +161,22 @@ export default function ReportsPage() {
           gap={3}
         >
           {/* PRÉSENCE */}
-          <ReportSection title="Présence" icon={<FaCalendarCheck size={21} />}>
+          <ReportSection title="Présence">
             <VStack align="stretch" spacing={3}>
               <ReportItem
                 title="Rapport de présence quotidien"
-                description="Consulter les présences et absences d'une journée."
+                description="Choisir une journée et télécharger le rapport de présence."
+                onClick={() =>
+                  navigate("/employees_admin/reports/daily_attendance")
+                }
               />
 
               <ReportItem
                 title="Rapport de présence hebdomadaire"
-                description="Vue détaillée de la présence du lundi au vendredi."
+                description="Heures d’arrivée, absences et congés du lundi au vendredi."
+                onClick={() =>
+                  navigate("/employees_admin/reports/weekly_attendance")
+                }
               />
 
               <ReportItem
@@ -199,6 +189,7 @@ export default function ReportsPage() {
 
               <ReportItem
                 title="Rapport des retards"
+                onClick={() => navigate("/employees_admin/reports/late_attendance")}
                 description="Consulter les retards enregistrés des employés."
               />
 
@@ -208,24 +199,6 @@ export default function ReportsPage() {
               />
             </VStack>
           </ReportSection>
-
-          {/* FRAIS DE DÉPLACEMENT */}
-          {/* <ReportSection
-            title="Frais de déplacement"
-            icon={<MdOutlineDirectionsBus size={23} />}
-          >
-            <VStack align="stretch" spacing={3}>
-              <ReportItem
-                title="Allocation transport hebdomadaire"
-                description="Calculer et consulter le rapport de frais de déplacement."
-              />
-
-              <ReportItem
-                title="Rapports d'allocation transport"
-                description="Consulter les allocations transport générées."
-              />
-            </VStack>
-          </ReportSection> */}
         </Grid>
       </Box>
     </Box>

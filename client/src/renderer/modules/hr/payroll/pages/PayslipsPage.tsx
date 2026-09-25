@@ -80,6 +80,7 @@ const EmployeePayrollReport = () => {
       height="93vh"
       alignItems="flex-start"
       justify="space-between"
+      overflow="hidden"
     >
       {/* Header */}
       <Box>
@@ -136,6 +137,7 @@ const EmployeePayrollReport = () => {
         {payrollRuns.length !== 0 ? (
           <>
             <TableContainer
+              maxH="65vh"
               width="60vw"
               borderWidth="1px"
               borderRadius="lg"

@@ -4,9 +4,11 @@ import {
   Flex,
   FormControl,
   Image,
+  IconButton,
   Input,
   InputGroup,
   InputLeftElement,
+  InputRightElement,
   Text,
   VStack,
 } from "@chakra-ui/react";
@@ -15,7 +17,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { CiLock } from "react-icons/ci";
-import { FaUnlockAlt } from "react-icons/fa";
+import { FaEye, FaEyeSlash, FaUnlockAlt } from "react-icons/fa";
 import { IoIosMail } from "react-icons/io";
 import { z } from "zod";
 import useAdminUser from "../../../../store/auth.store";
@@ -34,6 +36,7 @@ type AuthData = z.infer<typeof schema>;
 
 const LoginPage = () => {
   const [errorMessage, setErrorMessage] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const setLogIn = useAdminUser((store) => store.login);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -242,7 +245,8 @@ const LoginPage = () => {
                 </InputLeftElement>
 
                 <Input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
+                  pr="48px"
                   placeholder="Mot de passe"
                   h={{
                     base: "48px",
@@ -265,6 +269,18 @@ const LoginPage = () => {
                   }}
                   {...register("password")}
                 />
+                <InputRightElement w="48px" h={{ base: "48px", md: "52px" }}>
+                  <IconButton
+                    type="button"
+                    aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                    icon={showPassword ? <FaEyeSlash /> : <FaEye />}
+                    variant="ghost"
+                    size="sm"
+                    color="#5B6472"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => setShowPassword((visible) => !visible)}
+                  />
+                </InputRightElement>
               </InputGroup>
 
               {errorMessage && (

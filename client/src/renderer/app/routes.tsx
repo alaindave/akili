@@ -1,3 +1,6 @@
+import LateAttendanceReportPage from "../modules/hr/attendance/pages/LateAttendanceReportPage";
+import DailyAttendanceReportPage from "../modules/hr/attendance/pages/DailyAttendanceReportPage";
+import WeeklyAttendanceReportPage from "../modules/hr/attendance/pages/WeeklyAttendanceReportPage";
 import SettingsPage from "../modules/auth/pages/SettingsPage";
 import AttendanceSettingsPage from "../modules/auth/pages/AttendanceSettingsPage";
 import { createHashRouter } from "react-router-dom";
@@ -120,6 +123,21 @@ const router = createHashRouter([
       {
         path: "reports",
         element: <ReportPage />,
+        errorElement: <PageErrorFallback />,
+      },
+      {
+        path: "reports/late_attendance",
+        element: <LateAttendanceReportPage />,
+        errorElement: <PageErrorFallback />,
+      },
+      {
+        path: "reports/daily_attendance",
+        element: <DailyAttendanceReportPage />,
+        errorElement: <PageErrorFallback />,
+      },
+      {
+        path: "reports/weekly_attendance",
+        element: <WeeklyAttendanceReportPage />,
         errorElement: <PageErrorFallback />,
       },
       {

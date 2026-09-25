@@ -13,7 +13,7 @@ import {
   VStack,
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
-import { FaCheckDouble, FaDownload, FaLock, FaSyncAlt } from "react-icons/fa";
+import { FaCheckDouble, FaLock, FaSyncAlt } from "react-icons/fa";
 import { FaCirclePlus } from "react-icons/fa6";
 import { GiConfirmed } from "react-icons/gi";
 import { PiSealCheck } from "react-icons/pi";
@@ -451,31 +451,6 @@ const EmployeeAttendancePage = () => {
   };
 
   /* =========================================================
-     DOWNLOAD
-  ========================================================= */
-
-  const download = async () => {
-    try {
-      const result =
-        await window.electron.hr.attendance.attendanceReports.savePdf(
-          user.companyId,
-          selectedDate
-        );
-
-      if (result.canceled) {
-        return;
-      }
-
-      console.log("DOWNLOAD RESULTS:", result);
-    } catch (error) {
-      console.error(
-        "AN ERROR OCCURED WHILE DOWNLOADING THE ATTENDANCE REPORT",
-        error
-      );
-    }
-  };
-
-  /* =========================================================
      ATTENDANCE ACTION
   ========================================================= */
 
@@ -839,17 +814,6 @@ const EmployeeAttendancePage = () => {
             />
           </Box>
         )}
-        <Button
-          mb="0.5rem"
-          fontSize="1.5rem"
-          bg="transparent"
-          onClick={download}
-          _hover={{
-            bg: "transparent",
-          }}
-        >
-          <FaDownload />
-        </Button>
       </Flex>
       {/* =====================================================
           ADD ATTENDANCE

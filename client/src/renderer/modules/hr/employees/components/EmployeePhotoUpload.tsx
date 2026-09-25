@@ -54,8 +54,8 @@ export default function EmployeePhotoUpload({
 
   return (
     <Box
-      w="100px"
-      h="100px"
+      w="85px"
+      h="85px"
       borderRadius="full"
       overflow="hidden"
       border="1px solid"
@@ -87,7 +87,7 @@ export default function EmployeePhotoUpload({
 
       <Image
         src={preview || currentPhoto || defaultAvatar}
-        boxSize="140px"
+        boxSize="85px"
         objectFit="cover"
       />
     </Box>
