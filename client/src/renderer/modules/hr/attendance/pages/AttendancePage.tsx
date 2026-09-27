@@ -1,4 +1,5 @@
 import PageSubtitle from "../../../../components/PageSubtitle";
+import { MdPunchClock } from "react-icons/md";
 import {
   Box,
   Button,
@@ -564,9 +565,9 @@ const EmployeeAttendancePage = () => {
                   }}
                 >
                   <Box mr="0.5rem">
-                    <FaCirclePlus size="1.2rem" />
+                    <MdPunchClock size="1.2rem" />
                   </Box>
-                  <Text>Ajouter un employé</Text>
+                  <Text>Pointer</Text>
                 </Button>
               ) : null}
             </Box>

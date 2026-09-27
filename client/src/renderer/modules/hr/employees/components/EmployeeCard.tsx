@@ -15,11 +15,18 @@ import {
   MenuItem,
   MenuList,
   Portal,
+  Popover,
+  PopoverAnchor,
+  PopoverArrow,
+  PopoverBody,
+  PopoverContent,
+  PopoverHeader,
+  Textarea,
   Text,
   useToast,
 } from "@chakra-ui/react";
-import { useEffect, useState } from "react";
-import { GiClockwork } from "react-icons/gi";
+import { MdPunchClock } from "react-icons/md";
+import { useEffect, useRef, useState } from "react";
 import { GoDotFill } from "react-icons/go";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { Link } from "react-router-dom";
@@ -110,6 +117,15 @@ const formattedDate = formatter.format(date);
 ========================================================= */
 
 const EmployeeCard = ({ employeeId }: Props) => {
+  const [isExitPassOpen, setExitPassOpen] = useState(false);
+  const [exitPassNotes, setExitPassNotes] = useState("");
+  const [isSavingExitPass, setSavingExitPass] = useState(false);
+  const exitPassNotesRef = useRef<HTMLTextAreaElement>(null);
+  const closeExitPass = () => {
+    if (isSavingExitPass) return;
+    setExitPassOpen(false);
+    setExitPassNotes("");
+  };
   const [_clockIn, setClockIn] = useState("");
 
   const [isClockingIn, setIsClockingIn] = useState(false);
@@ -173,7 +189,8 @@ const EmployeeCard = ({ employeeId }: Props) => {
 
   const isSubmittingAttendance = isCreatingAttendance || isUpdatingAttendance;
 
-  const isSubmittingLeave = isCreatingAbsenceLeave || isUpdatingEmployee;
+  const isSubmittingLeave =
+    isCreatingAbsenceLeave || isUpdatingEmployee || isSavingExitPass;
 
   useEffect(() => {
     if (syncVersion > 0) {
@@ -333,6 +350,8 @@ const EmployeeCard = ({ employeeId }: Props) => {
     ===================================================== */
 
     if (action === "CONGÉ") {
+      if (isSavingExitPass) return;
+      setSavingExitPass(true);
       try {
         const remainingLeave = employee.remainingLeave ?? 0;
 
@@ -374,7 +393,7 @@ const EmployeeCard = ({ employeeId }: Props) => {
           startDate: leaveDate,
           endDate: leaveDate,
           subject: "Billet de sortie",
-          notes: "Billet de sortie approuvé",
+          notes: exitPassNotes.trim(),
           status: "APPROUVÉ",
         };
 
@@ -414,6 +433,9 @@ const EmployeeCard = ({ employeeId }: Props) => {
 
         console.log("ATTENDANCE RESULTS:", attendanceResult);
 
+        setExitPassOpen(false);
+        setExitPassNotes("");
+
         toast({
           title: "Billet de sortie",
           description: "Billet de sortie enregistré avec succès.",
@@ -428,6 +450,8 @@ const EmployeeCard = ({ employeeId }: Props) => {
           error,
           "Impossible d'enregistrer le billet de sortie."
         );
+      } finally {
+        setSavingExitPass(false);
       }
 
       return;
@@ -736,7 +760,7 @@ const EmployeeCard = ({ employeeId }: Props) => {
       >
         {!attendance && displayClock && (
           <Button
-            color="#c89704"
+            color="green.800"
             backgroundColor="transparent"
             _hover={{
               bg: "transparent",
@@ -760,7 +784,7 @@ const EmployeeCard = ({ employeeId }: Props) => {
             position="relative"
             right="6rem"
           >
-            <GiClockwork size="1.7rem" />
+            <MdPunchClock size="1.75rem" />
           </Button>
         )}
 
@@ -831,52 +855,101 @@ const EmployeeCard = ({ employeeId }: Props) => {
         justifyContent="center"
         alignItems="center"
       >
-        <Menu placement="left">
-          <MenuButton
-            as={IconButton}
-            icon={
-              <Icon
-                as={BsThreeDotsVertical}
-                boxSize={{
-                  base: "1.1rem",
-                  sm: "1.2rem",
-                  md: "1.4rem",
-                }}
-              />
-            }
-            variant="ghost"
-            size="md"
-            aria-label="Options"
-            flexShrink={0}
-            isDisabled={!!attendance || isSubmittingLeave}
-          />
+        <Popover
+          isOpen={isExitPassOpen}
+          onClose={closeExitPass}
+          placement="left-start"
+          initialFocusRef={exitPassNotesRef}
+          closeOnBlur={!isSavingExitPass}
+          closeOnEsc={!isSavingExitPass}
+        >
+          <PopoverAnchor>
+            <Box>
+              <Menu placement="left">
+                <MenuButton
+                  as={IconButton}
+                  icon={
+                    <Icon
+                      as={BsThreeDotsVertical}
+                      boxSize={{
+                        base: "1.1rem",
+                        sm: "1.2rem",
+                        md: "1.4rem",
+                      }}
+                    />
+                  }
+                  variant="ghost"
+                  size="md"
+                  aria-label="Options"
+                  flexShrink={0}
+                  isDisabled={!!attendance || isSubmittingLeave}
+                />
 
+                <Portal>
+                  <MenuList zIndex={9999} minW="140px">
+                    <MenuItem
+                      onClick={() => setExitPassOpen(true)}
+                      isDisabled={isSubmittingLeave}
+                      _hover={{
+                        bg: "blue",
+                        color: "#ffffff",
+                      }}
+                    >
+                      Billet de sortie
+                    </MenuItem>
+
+                    <MenuItem
+                      onClick={() => handleMenuAction("ABSENT")}
+                      isDisabled={isSubmittingLeave}
+                      _hover={{
+                        bg: "brown",
+                        color: "#ffffff",
+                      }}
+                    >
+                      Absence
+                    </MenuItem>
+                  </MenuList>
+                </Portal>
+              </Menu>
+            </Box>
+          </PopoverAnchor>
           <Portal>
-            <MenuList zIndex={9999} minW="140px">
-              <MenuItem
-                onClick={() => handleMenuAction("CONGÉ")}
-                isDisabled={isSubmittingLeave}
-                _hover={{
-                  bg: "blue",
-                  color: "#ffffff",
-                }}
-              >
-                Billet de sortie
-              </MenuItem>
-
-              <MenuItem
-                onClick={() => handleMenuAction("ABSENT")}
-                isDisabled={isSubmittingLeave}
-                _hover={{
-                  bg: "brown",
-                  color: "#ffffff",
-                }}
-              >
-                Absence
-              </MenuItem>
-            </MenuList>
+            <PopoverContent width="300px" maxW="calc(100vw - 24px)" zIndex={10000}>
+              <PopoverArrow />
+              <PopoverHeader fontWeight="semibold">Billet de sortie</PopoverHeader>
+              <PopoverBody>
+                <Textarea
+                  ref={exitPassNotesRef}
+                  aria-label="Notes du billet de sortie"
+                  placeholder="Saisissez vos notes…"
+                  value={exitPassNotes}
+                  onChange={(event) => setExitPassNotes(event.target.value)}
+                  isDisabled={isSavingExitPass}
+                  rows={3}
+                  size="sm"
+                />
+                <Flex justify="flex-end" gap={2} mt={3}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={closeExitPass}
+                    isDisabled={isSavingExitPass}
+                  >
+                    Annuler
+                  </Button>
+                  <Button
+                    size="sm"
+                    colorScheme="blue"
+                    onClick={() => handleMenuAction("CONGÉ")}
+                    isLoading={isSavingExitPass}
+                  >
+                    Enregistrer
+                  </Button>
+                </Flex>
+              </PopoverBody>
+            </PopoverContent>
           </Portal>
-        </Menu>
+        </Popover>
       </Box>
     </Flex>
   );

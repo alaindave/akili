@@ -1,4 +1,4 @@
-import { run, all } from "../../../db.js";
+import { run, all, runDirect, allDirect, transaction } from "../../../db.js";
 
 export async function createPayrollTables() {
   /* =========================================================
@@ -43,6 +43,7 @@ export async function createPayrollTables() {
             'POURCENTAGE_BRUT',
             'POURCENTAGE_IMPOSABLE',
             'FORMULE_IPR',
+            'FORMULE_INSS',
             'FORMULE_ABSENCE',
             'FORMULE_RETARD'
           )
@@ -96,6 +97,7 @@ export async function createPayrollTables() {
             'POURCENTAGE_BRUT',
             'POURCENTAGE_IMPOSABLE',
             'FORMULE_IPR',
+            'FORMULE_INSS',
             'FORMULE_ABSENCE',
             'FORMULE_RETARD'
           )
@@ -131,6 +133,8 @@ export async function createPayrollTables() {
         ON DELETE CASCADE
     );
   `);
+
+  await migrateInssCalculationType();
 
   const profileColumns = await all<{ name: string }>(
     "PRAGMA table_info(payroll_employee_profiles)"
@@ -493,4 +497,43 @@ export async function createPayrollTables() {
   `);
 
   console.log("PAYROLL TABLES INITIALIZED");
+}
+
+// Run during schema initialization, before application queries start.
+// SQLite CHECK constraints require rebuilding existing tables.
+async function migrateInssCalculationType() {
+  const tables = await all<{ name: string; sql: string }>(
+    `SELECT name, sql FROM sqlite_master
+     WHERE type = 'table'
+       AND name IN ('payroll_components', 'payroll_employee_profiles')`
+  );
+  const legacyTables = tables.filter((table) => !table.sql.includes("'FORMULE_INSS'"));
+  if (legacyTables.length === 0) return;
+
+  await run("PRAGMA foreign_keys = OFF");
+  try {
+    await transaction(async () => {
+      for (const table of legacyTables) {
+        const objects = await allDirect<{ sql: string }>(
+          `SELECT sql FROM sqlite_master
+           WHERE tbl_name = ? AND type IN ('index', 'trigger') AND sql IS NOT NULL`,
+          [table.name]
+        );
+        const temporaryName = `${table.name}_inss`;
+        const createSql = table.sql
+          .replace(/CREATE TABLE\s+(?:IF NOT EXISTS\s+)?["`\[]?\w+["`\]]?/i,
+            `CREATE TABLE "${temporaryName}"`)
+          .replace("'FORMULE_IPR'", "'FORMULE_IPR', 'FORMULE_INSS'");
+        await runDirect(createSql);
+        await runDirect(`INSERT INTO "${temporaryName}" SELECT * FROM "${table.name}"`);
+        await runDirect(`DROP TABLE "${table.name}"`);
+        await runDirect(`ALTER TABLE "${temporaryName}" RENAME TO "${table.name}"`);
+        for (const object of objects) await runDirect(object.sql);
+      }
+      const violations = await allDirect("PRAGMA foreign_key_check");
+      if (violations.length > 0) throw new Error("INSS migration: foreign key check failed");
+    });
+  } finally {
+    await run("PRAGMA foreign_keys = ON");
+  }
 }

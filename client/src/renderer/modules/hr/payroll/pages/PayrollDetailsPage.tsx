@@ -1,4 +1,8 @@
-import { matchesPayrollFilters, payrollPaymentLabels, PayrollPaymentFilter } from "../../../../../common/types/payroll/payrollPayment";
+import {
+  matchesPayrollFilters,
+  payrollPaymentLabels,
+  PayrollPaymentFilter,
+} from "../../../../../common/types/payroll/payrollPayment";
 import {
   Box,
   Button,
@@ -45,7 +49,8 @@ const PayrollDetailsPage = () => {
 
   const [payrollResults, setPayrollResults] = useState<PayrollResult[]>([]);
   const [department, setDepartment] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<PayrollPaymentFilter>("all");
+  const [paymentMethod, setPaymentMethod] =
+    useState<PayrollPaymentFilter>("all");
   const [isDownloading, setIsDownloading] = useState(false);
   const toast = useToast();
 
@@ -53,15 +58,28 @@ const PayrollDetailsPage = () => {
     if (!_id || isDownloading) return;
     setIsDownloading(true);
     try {
-      const result = await window.electron.hr.payrollRun.saveMonthlyReport(user.companyId, _id, department, paymentMethod);
+      const result = await window.electron.hr.payrollRun.saveMonthlyReport(
+        user.companyId,
+        _id,
+        department,
+        paymentMethod
+      );
       if (!result.canceled) {
-        toast({ title: "Rapport de paie enregistré", status: "success", duration: 3000, isClosable: true });
+        toast({
+          title: "Rapport de paie enregistré",
+          status: "success",
+          duration: 3000,
+          isClosable: true,
+        });
       }
     } catch (error) {
       toast({
         title: "Impossible de télécharger le rapport",
-        description: error instanceof Error ? error.message : "Veuillez réessayer.",
-        status: "error", duration: 5000, isClosable: true,
+        description:
+          error instanceof Error ? error.message : "Veuillez réessayer.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
       });
     } finally {
       setIsDownloading(false);
@@ -70,8 +88,8 @@ const PayrollDetailsPage = () => {
   const departments = Array.from(
     new Set(payrollResults.map((result) => result.department?.trim() ?? ""))
   ).sort((a, b) => a.localeCompare(b, "fr"));
-  const filteredResults = payrollResults.filter(
-    (result) => matchesPayrollFilters(result, department, paymentMethod)
+  const filteredResults = payrollResults.filter((result) =>
+    matchesPayrollFilters(result, department, paymentMethod)
   );
   const dashboardTotals = filteredResults.reduce(
     (totals, result) => ({
@@ -343,61 +361,69 @@ const PayrollDetailsPage = () => {
           </HStack>
           {/* Payroll dashboard */}
           <Box mt="5rem" ml="1.5rem">
-            <PayrollDashboard
-              {...dashboardTotals}
-            />
+            <PayrollDashboard {...dashboardTotals} />
           </Box>
           {/* Payroll results table */}
 
           <Box mt="3rem" ml="0.4rem">
             <HStack mb={4} align="flex-end" spacing={3} flexWrap="wrap">
-            <FormControl maxW="280px">
-              <FormLabel htmlFor="payroll-department" fontSize="sm">
-                Département
-              </FormLabel>
-              <Select
-                id="payroll-department"
-                isDisabled={isDownloading}
-                value={department === null ? "" : JSON.stringify(department)}
-                onChange={(event) => setDepartment(
-                  event.target.value === "" ? null : JSON.parse(event.target.value)
-                )}
-                bg="white"
-              >
-                <option value="">Tous les départements</option>
-                {departments.map((name) => (
-                  <option key={name} value={JSON.stringify(name)}>
-                    {name || "Sans département"}
-                  </option>
-                ))}
-              </Select>
-            </FormControl>
-            <FormControl maxW="280px">
-              <FormLabel htmlFor="payroll-payment-method" fontSize="sm">
-                Mode de paiement
-              </FormLabel>
-              <Select
-                id="payroll-payment-method"
-                value={paymentMethod}
-                onChange={(event) => setPaymentMethod(event.target.value as PayrollPaymentFilter)}
-                isDisabled={isDownloading}
-                bg="white"
-              >
-                {Object.entries(payrollPaymentLabels).map(([value, label]) => (
-                  <option key={value} value={value}>{label}</option>
-                ))}
-              </Select>
-            </FormControl>
-            <IconButton
-              aria-label="Télécharger le rapport mensuel de paie"
-              title="Télécharger le rapport mensuel de paie"
-              icon={<DownloadIcon />}
-              onClick={downloadReport}
-              isLoading={isDownloading}
-              isDisabled={!payrollRun?._id || filteredResults.length === 0}
-              variant="outline"
-              colorScheme="blue"
-            />
+              <FormControl maxW="280px">
+                <FormLabel htmlFor="payroll-department" fontSize="sm">
+                  Département
+                </FormLabel>
+                <Select
+                  id="payroll-department"
+                  isDisabled={isDownloading}
+                  value={department === null ? "" : JSON.stringify(department)}
+                  onChange={(event) =>
+                    setDepartment(
+                      event.target.value === ""
+                        ? null
+                        : JSON.parse(event.target.value)
+                    )
+                  }
+                  bg="white"
+                >
+                  <option value="">Tous les départements</option>
+                  {departments.map((name) => (
+                    <option key={name} value={JSON.stringify(name)}>
+                      {name || "Sans département"}
+                    </option>
+                  ))}
+                </Select>
+              </FormControl>
+              <FormControl maxW="280px">
+                <FormLabel htmlFor="payroll-payment-method" fontSize="sm">
+                  Mode de paiement
+                </FormLabel>
+                <Select
+                  id="payroll-payment-method"
+                  value={paymentMethod}
+                  onChange={(event) =>
+                    setPaymentMethod(event.target.value as PayrollPaymentFilter)
+                  }
+                  isDisabled={isDownloading}
+                  bg="white"
+                >
+                  {Object.entries(payrollPaymentLabels).map(
+                    ([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    )
+                  )}
+                </Select>
+              </FormControl>
+              <IconButton
+                aria-label="Télécharger le rapport mensuel de paie"
+                title="Télécharger le rapport mensuel de paie"
+                icon={<DownloadIcon />}
+                onClick={downloadReport}
+                isLoading={isDownloading}
+                isDisabled={!payrollRun?._id || filteredResults.length === 0}
+                variant="outline"
+                colorScheme="blue"
+              />
             </HStack>
             <PayrollResultsTable payrollResults={filteredResults} />
             {filteredResults.length === 0 && (

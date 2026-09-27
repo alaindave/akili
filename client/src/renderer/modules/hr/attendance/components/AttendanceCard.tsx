@@ -12,9 +12,9 @@ import {
   Badge,
 } from "@chakra-ui/react";
 import { memo, useEffect, useState } from "react";
-import { GiClockwork } from "react-icons/gi";
+import { MdPunchClock } from "react-icons/md";
 import { FaWindowClose } from "react-icons/fa";
-import { FaLock } from "react-icons/fa";
+import { MdDisabledByDefault } from "react-icons/md";
 import ClockIn from "./ClockIn";
 import type { AttendanceWithEmployee } from "../../../../../common/types/attendance/Attendance";
 import defaultAvatar from "../../../../assets/default-avatar.jpeg";
@@ -747,11 +747,11 @@ const EmployeeAttendanceCard = ({
               _hover={{
                 bg: "transparent",
               }}
-              color={clockOutMode === "editing" ? "red.300" : "yellow.600"}
+              color={clockOutMode === "editing" ? "red.700" : "green.700"}
               onClick={handleToggleClockOut}
               isDisabled={updateAttendanceMutation.isPending}
             >
-              <GiClockwork size="1.8rem" />
+              <MdPunchClock size="1.75rem" />
             </Button>
           ) : (
             <Button
@@ -771,7 +771,7 @@ const EmployeeAttendanceCard = ({
         </Box>
       ) : (
         <Box>
-          <FaLock size="1.3rem" color="#D4A017" />
+          <MdDisabledByDefault size="1.3rem" />
         </Box>
       )}
     </Grid>

@@ -1,5 +1,3 @@
-// Burundi income tax calculations
-
 const calculateIPR = (
   taxableSalary: number,
   grossSalary: number,
@@ -15,11 +13,8 @@ const calculateIPR = (
   }
 
   if (socialTaxableSalary <= 300_000) {
-    // 20% on the amount above 150,000 BIF
     return (socialTaxableSalary - 150_000) * 0.2;
   }
-  // 30% on the amount above 300,000 BIF
-  // plus the 30,000 BIF tax accumulated from the previous bracket
   return (socialTaxableSalary - 300_000) * 0.3 + 30_000;
 };
 

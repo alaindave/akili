@@ -40,6 +40,7 @@ export default function AddPayrollComponentModal({ type, onCreated }: Props) {
     | "POURCENTAGE_IMPOSABLE"
     | "MANUEL"
     | "FORMULE_IPR"
+    | "FORMULE_INSS"
     | "FORMULE_ABSENCE"
     | "FORMULE_RETARD"
   >("MANUEL");
@@ -152,6 +153,7 @@ export default function AddPayrollComponentModal({ type, onCreated }: Props) {
                         | "POURCENTAGE_IMPOSABLE"
                         | "MANUEL"
                         | "FORMULE_IPR"
+                        | "FORMULE_INSS"
                         | "FORMULE_ABSENCE"
                         | "FORMULE_RETARD"
                     )
@@ -161,6 +163,7 @@ export default function AddPayrollComponentModal({ type, onCreated }: Props) {
                   <option value="POURCENTAGE">Pourcentage</option>
                   <option value="MANUEL">Manuel</option>
                   <option value="FORMULE_IPR">FORMULE_IPR</option>
+                  <option value="FORMULE_INSS">FORMULE_INSS</option>
                   <option value="FORMULE_ABSENCE">FORMULE_ABSENCE</option>
                   <option value="FORMULE_RETARD">FORMULE_RETARD</option>
                 </Select>

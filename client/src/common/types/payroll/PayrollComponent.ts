@@ -8,6 +8,7 @@ export type PayrollCalculationType =
   | "MANUEL"
   | "QUANTITE_TAUX"
   | "FORMULE_IPR"
+  | "FORMULE_INSS"
   | "FORMULE_ABSENCE"
   | "FORMULE_RETARD";
 

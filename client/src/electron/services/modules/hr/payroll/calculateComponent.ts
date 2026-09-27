@@ -27,6 +27,9 @@ export function calculateComponent(
     case "QUANTITE_TAUX":
       return (component.quantity ?? 0) * (component.rate ?? 0);
 
+    case "FORMULE_INSS":
+      return Math.min(context.grossSalary * 0.04, 18_000);
+
     case "FORMULE_IPR": {
       console.log(
         `TAXABLE SALARY FOR EMPLOYEE ID ${context.employeeId} IS ${context.taxableSalary}.

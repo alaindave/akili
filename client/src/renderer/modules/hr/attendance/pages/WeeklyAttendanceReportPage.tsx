@@ -181,6 +181,8 @@ export default function WeeklyAttendanceReportPage() {
             borderRadius="lg"
             border="1px solid"
             borderColor="gray.200"
+            maxH="55vh"
+            overflowY="auto"
           >
             <Table
               size="sm"
@@ -199,7 +201,7 @@ export default function WeeklyAttendanceReportPage() {
                   <col key={day} style={{ width: "11%" }} />
                 ))}
               </colgroup>
-              <Thead bg="gray.50">
+              <Thead position="sticky" top={0} zIndex={1} bg="gray.50">
                 <Tr>
                   <Th>Employé</Th>
                   <Th>Matricule</Th>

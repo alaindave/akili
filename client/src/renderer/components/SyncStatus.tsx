@@ -11,7 +11,6 @@ import {
   Text,
   VStack,
   useDisclosure,
-  useToast,
 } from "@chakra-ui/react";
 import { FaSyncAlt } from "react-icons/fa";
 import { PiClockClockwiseBold } from "react-icons/pi";
@@ -25,8 +24,6 @@ interface SyncStatusProps {
 }
 
 const SyncStatus = ({ onSync }: SyncStatusProps) => {
-  const toast = useToast();
-
   const { isOpen, onOpen, onClose } = useDisclosure();
 
   const status = useSyncStore((store) => store.status);
@@ -93,62 +90,8 @@ const SyncStatus = ({ onSync }: SyncStatusProps) => {
 
     try {
       await onSync();
-
-      if (status !== "IDLE") {
-        switch (status) {
-          case "OFFLINE":
-            toast({
-              title: "Serveur indisponible",
-              description:
-                "Le serveur est actuellement indisponible. Vos modifications restent enregistrées localement.",
-              status: "warning",
-              duration: 4000,
-              isClosable: true,
-            });
-            break;
-
-          case "ERROR":
-            // toast({
-            //   title: "Échec de synchronisation",
-            //   description:
-            //     "Une erreur est survenue pendant la synchronisation.",
-            //   status: "error",
-            //   duration: 4000,
-            //   isClosable: true,
-            // });
-            console.error("Une erreur est survenue pendant la synchronisation");
-            break;
-
-          default:
-            toast({
-              title: "Synchronisation non terminée",
-              description: "La synchronisation n'a pas pu être terminée.",
-              status: "warning",
-              duration: 4000,
-              isClosable: true,
-            });
-        }
-
-        return;
-      }
-
-      toast({
-        title: "Synchronisation terminée",
-        description: "Vos données sont à jour.",
-        status: "success",
-        duration: 2500,
-        isClosable: true,
-      });
     } catch (error) {
       console.error("SYNC FAILED:", error);
-
-      toast({
-        title: "Échec de synchronisation",
-        description: "Impossible de synchroniser les données avec le serveur.",
-        status: "error",
-        duration: 4000,
-        isClosable: true,
-      });
     }
   };
 

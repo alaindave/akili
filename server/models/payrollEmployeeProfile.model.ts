@@ -18,6 +18,7 @@ export interface PayrollEmployeeProfileDocument {
     | "POURCENTAGE_IMPOSABLE"
     | "FORMULE"
     | "FORMULE_IPR"
+    | "FORMULE_INSS"
     | "FORMULE_ABSENCE"
     | "FORMULE_RETARD";
   calculationBase?:
@@ -102,6 +103,7 @@ const PayrollEmployeeProfileSchema = new Schema<PayrollEmployeeProfileDocument>(
         "POURCENTAGE_BRUT",
         "POURCENTAGE_IMPOSABLE",
         "FORMULE_IPR",
+        "FORMULE_INSS",
         "FORMULE_ABSENCE",
         "FORMULE_RETARD",
       ],

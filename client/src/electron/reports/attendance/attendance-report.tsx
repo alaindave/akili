@@ -676,7 +676,7 @@ export function AttendanceReportDocument({
           <Text
             style={styles.footerText}
             render={({ pageNumber, totalPages }) =>
-              `Page ${pageNumber} of ${totalPages}`
+              `Page ${pageNumber} sur ${totalPages}`
             }
           />
         </View>

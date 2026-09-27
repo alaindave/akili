@@ -13,6 +13,7 @@ export interface PayrollComponentDocument {
     | "POURCENTAGE_BRUT"
     | "POURCENTAGE_IMPOSABLE"
     | "FORMULE_IPR"
+    | "FORMULE_INSS"
     | "FORMULE_ABSENCE"
     | "FORMULE_RETARD";
   defaultValue: number;
@@ -69,6 +70,7 @@ const PayrollComponentSchema = new Schema<PayrollComponentDocument>({
       "POURCENTAGE_BRUT",
       "POURCENTAGE_IMPOSABLE",
       "FORMULE_IPR",
+      "FORMULE_INSS",
       "FORMULE_ABSENCE",
       "FORMULE_RETARD",
     ],

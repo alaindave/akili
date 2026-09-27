@@ -97,6 +97,17 @@ export async function calculatePayroll(
    * ============================================================
    */
 
+  // Resolve formula-based INSS before IPR, regardless of component ordering.
+  const inssComponent = employee.components.find(
+    (component) =>
+      component.enabled === 1 &&
+      component.type === "DEDUCTION" &&
+      component.calculationType === "FORMULE_INSS"
+  );
+  if (inssComponent && grossSalary > 0) {
+    socialRate = (Math.min(grossSalary * 0.04, 18_000) / grossSalary) * 100;
+  }
+
   for (const component of employee.components) {
     // Ignore disabled components
     if (component.enabled !== 1) continue;
@@ -104,7 +115,7 @@ export async function calculatePayroll(
     // Only deductions
     if (component.type !== "DEDUCTION") continue;
 
-    if (component.name === "SOCIAL_SECURITY") {
+    if (component.name === "SOCIAL_SECURITY" && !inssComponent) {
       console.log("SOCIAL RATE:", component.value);
       socialRate = component.value ?? 0;
     }
