@@ -261,6 +261,13 @@ export async function createPayrollTables() {
     );
   `);
 
+  const resultColumns = await all<{ name: string }>("PRAGMA table_info(payroll_results)");
+  for (const column of ["approvedBy", "paidBy"]) {
+    if (!resultColumns.some((existing) => existing.name === column)) {
+      await run(`ALTER TABLE payroll_results ADD COLUMN ${column} TEXT`);
+    }
+  }
+
   /* =========================================================
      PAYROLL ITEMS
   ========================================================= */

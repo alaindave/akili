@@ -21,7 +21,7 @@ export default function SettingsPage() {
           Paramètres
         </Heading>
       </HStack>
-      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6} maxW="1000px">
+      <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={6} maxW="1200px">
         {[
           [
             "Paramètres de l'entreprise",
@@ -32,6 +32,11 @@ export default function SettingsPage() {
             "Paramètres de présence",
             "Heure de pointage et réouverture des contrôles quotidiens.",
             "/admin/settings/attendance",
+          ],
+          [
+            "Paramètres de paie",
+            "Annulation des paies approuvées ou payées.",
+            "/admin/settings/payroll",
           ],
         ].map(([title, description, path]) => (
           <VStack

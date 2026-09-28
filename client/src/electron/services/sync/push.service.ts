@@ -528,7 +528,7 @@ export async function pushPendingChanges(
         break;
 
       case "payroll_run": {
-        await markPayrollRunSynced(companyId, data._id);
+        await markPayrollRunSynced(companyId, data._id, data.updatedAt);
 
         if (data.status === "VERIFICATION") {
           if (!data.managerEmail) {
@@ -599,7 +599,7 @@ export async function pushPendingChanges(
       }
 
       case "payroll_result":
-        await markPayrollResultSynced(companyId, data._id);
+        await markPayrollResultSynced(companyId, data._id, data.updatedAt);
         break;
 
       case "payroll_item":

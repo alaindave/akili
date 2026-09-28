@@ -1,606 +1,442 @@
+import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
+
 import {
-  Document,
-  Page,
-  Text,
-  View,
-  StyleSheet,
-  Image,
-} from "@react-pdf/renderer";
-
-export interface PayslipCompany {
-  name: string;
-  legalName?: string;
-  logo?: string;
-  address?: string;
-  city?: string;
-  country?: string;
-  phone?: string;
-  email?: string;
-  website?: string;
-}
-
-export interface PayslipEmployee {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email?: string;
-  phone?: string;
-  department?: string;
-  position?: string;
-  employeeNumber?: string;
-}
-
-export interface PayslipItem {
-  name: string;
-  displayName?: string;
-  type: "EARNING" | "DEDUCTION";
-  amount: number;
-}
-
-export interface PayslipReportData {
-  company: PayslipCompany;
-  employee: PayslipEmployee;
-  month: string;
-  year: number;
-  items: PayslipItem[];
-
-  totalEarnings: number;
-  grossSalary: number;
-  totalDeductions: number;
-  netSalary: number;
-}
-
-const COLORS = {
-  gold: "#F2B705",
-  dark: "#1F2937",
-  text: "#374151",
-  muted: "#64748B",
-  border: "#CBD5E1",
-  lightBorder: "#E2E8F0",
-  light: "#F8FAFC",
-  header: "#F1F5F9",
-  white: "#FFFFFF",
-  earning: "#166534",
-  deduction: "#991B1B",
-};
+  PayslipDocumentData,
+  payslipPeriod,
+  payslipRows,
+} from "../../../common/types/payroll/PayslipDocument.js";
 
 const styles = StyleSheet.create({
   page: {
-    paddingTop: 36,
-    paddingBottom: 40,
-    paddingLeft: 40,
-    paddingRight: 40,
+    padding: 40,
+    paddingBottom: 58,
     fontFamily: "Helvetica",
     fontSize: 9,
-    color: COLORS.text,
-    backgroundColor: COLORS.white,
+    color: "#171717",
   },
 
+  /*
+   * Header
+   */
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
-    paddingBottom: 14,
-    borderBottomWidth: 2,
-    borderBottomColor: COLORS.gold,
+    borderBottomWidth: 1,
+    borderBottomColor: "#d4d4d4",
+    paddingBottom: 18,
+    marginBottom: 20,
   },
 
-  companySection: {
-    flexDirection: "row",
-    alignItems: "center",
-    width: "65%",
+  company: {
+    width: "55%",
   },
 
-  logo: {
-    width: 58,
-    height: 58,
-    objectFit: "contain",
-    marginRight: 12,
-  },
-
-  companyInfo: {
-    flexDirection: "column",
+  titleBlock: {
+    width: "40%",
+    textAlign: "right",
   },
 
   companyName: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "bold",
-    color: COLORS.dark,
-    marginBottom: 4,
-  },
-
-  legalName: {
-    fontSize: 8,
-    color: COLORS.muted,
-    marginBottom: 4,
-  },
-
-  companyText: {
-    fontSize: 8,
-    color: COLORS.muted,
-    marginBottom: 2,
-  },
-
-  reportTitleSection: {
-    width: "30%",
-    alignItems: "flex-end",
-  },
-
-  reportTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: COLORS.dark,
     marginBottom: 5,
   },
 
-  reportPeriod: {
+  title: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 8,
+  },
+
+  detail: {
+    fontSize: 8,
+    lineHeight: 1.5,
+    color: "#525252",
+  },
+
+  /*
+   * Employee information
+   *
+   * One vertical column, matching the desktop payslip.
+   */
+  identity: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#d4d4d4",
+    marginBottom: 20,
+    paddingBottom: 8,
+  },
+
+  field: {
+    flexDirection: "row",
+    alignItems: "center",
+    minHeight: 28,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+    paddingVertical: 5,
+  },
+
+  label: {
+    width: "32%",
+    fontSize: 8,
+    color: "#525252",
+  },
+
+  value: {
+    width: "68%",
     fontSize: 9,
-    color: COLORS.muted,
+    fontWeight: "bold",
+  },
+
+  /*
+   * Payroll sections
+   */
+  sections: {
+    flexDirection: "row",
+    width: "100%",
+  },
+
+  section: {
+    width: "50%",
+    borderWidth: 1,
+    borderColor: "#d4d4d4",
+  },
+
+  sectionLeft: {
+    marginRight: 6,
+  },
+
+  sectionRight: {
+    marginLeft: 6,
+  },
+
+  sectionHeader: {
+    backgroundColor: "#f5f5f5",
+    borderBottomWidth: 1,
+    borderBottomColor: "#d4d4d4",
+    paddingVertical: 9,
+    paddingHorizontal: 10,
   },
 
   sectionTitle: {
     fontSize: 10,
     fontWeight: "bold",
-    color: COLORS.dark,
-    marginBottom: 7,
-    marginTop: 16,
+    letterSpacing: 0.5,
   },
 
-  employeeBox: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 4,
-    padding: 10,
-    backgroundColor: COLORS.light,
-  },
-
-  employeeRow: {
+  /*
+   * Payroll rows
+   *
+   * Both sections use exactly the same number of rows.
+   * This guarantees that the Total rows align horizontally.
+   */
+  row: {
     flexDirection: "row",
-    marginBottom: 7,
-  },
-
-  employeeColumn: {
-    width: "50%",
-  },
-
-  label: {
-    fontSize: 7,
-    color: COLORS.muted,
-    marginBottom: 2,
-  },
-
-  value: {
-    fontSize: 9,
-    color: COLORS.dark,
-    fontWeight: "bold",
-  },
-
-  table: {
-    width: "100%",
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 4,
-    overflow: "hidden",
-  },
-
-  tableHeader: {
-    flexDirection: "row",
-    backgroundColor: COLORS.header,
+    minHeight: 30,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    paddingTop: 7,
-    paddingBottom: 7,
-    paddingLeft: 8,
-    paddingRight: 8,
+    borderBottomColor: "#e5e5e5",
+    paddingVertical: 8,
+    paddingHorizontal: 8,
   },
 
-  tableRow: {
-    flexDirection: "row",
-    paddingTop: 7,
-    paddingBottom: 7,
-    paddingLeft: 8,
-    paddingRight: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.lightBorder,
+  description: {
+    width: "62%",
+    paddingRight: 6,
+    fontSize: 8.5,
   },
 
-  tableRowLast: {
-    flexDirection: "row",
-    paddingTop: 7,
-    paddingBottom: 7,
-    paddingLeft: 8,
-    paddingRight: 8,
-  },
-
-  descriptionColumn: {
-    width: "55%",
-  },
-
-  typeColumn: {
-    width: "20%",
-    textAlign: "center",
-  },
-
-  amountColumn: {
-    width: "25%",
+  amount: {
+    width: "38%",
     textAlign: "right",
-  },
-
-  tableHeaderText: {
-    fontSize: 8,
-    fontWeight: "bold",
-    color: COLORS.dark,
-  },
-
-  tableText: {
-    fontSize: 8,
-    color: COLORS.text,
-  },
-
-  earningBadge: {
-    backgroundColor: "#DCFCE7",
-    borderRadius: 3,
-    paddingTop: 3,
-    paddingBottom: 3,
-    paddingLeft: 6,
-    paddingRight: 6,
-    alignSelf: "center",
-  },
-
-  deductionBadge: {
-    backgroundColor: "#FEE2E2",
-    borderRadius: 3,
-    paddingTop: 3,
-    paddingBottom: 3,
-    paddingLeft: 6,
-    paddingRight: 6,
-    alignSelf: "center",
-  },
-
-  earningText: {
-    fontSize: 7,
-    color: COLORS.earning,
+    fontSize: 8.5,
     fontWeight: "bold",
   },
 
-  deductionText: {
-    fontSize: 7,
-    color: COLORS.deduction,
-    fontWeight: "bold",
-  },
-
-  summaryContainer: {
-    marginTop: 14,
+  /*
+   * Section total
+   */
+  totals: {
     flexDirection: "row",
-    justifyContent: "flex-end",
+    minHeight: 34,
+    borderTopWidth: 2,
+    borderTopColor: "#171717",
+    paddingVertical: 9,
+    paddingHorizontal: 8,
+    backgroundColor: "#ffffff",
   },
 
-  summaryBox: {
-    width: "48%",
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 4,
-  },
-
-  summaryRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingTop: 7,
-    paddingBottom: 7,
-    paddingLeft: 9,
-    paddingRight: 9,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.lightBorder,
-  },
-
-  summaryLabel: {
-    fontSize: 8,
-    color: COLORS.muted,
-  },
-
-  summaryValue: {
-    fontSize: 8,
+  totalLabel: {
+    width: "62%",
+    fontSize: 8.5,
     fontWeight: "bold",
-    color: COLORS.dark,
   },
 
-  netSalaryBox: {
-    marginTop: 8,
-    backgroundColor: COLORS.gold,
-    borderRadius: 4,
-    padding: 10,
+  totalAmount: {
+    width: "38%",
+    textAlign: "right",
+    fontSize: 8.5,
+    fontWeight: "bold",
+  },
+
+  /*
+   * Net salary
+   */
+  net: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    borderTopWidth: 2,
+    borderBottomWidth: 2,
+    borderColor: "#171717",
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    marginTop: 20,
   },
 
-  netSalaryLabel: {
-    fontSize: 10,
+  netLabel: {
+    fontSize: 11,
     fontWeight: "bold",
-    color: COLORS.dark,
+    letterSpacing: 0.5,
   },
 
-  netSalaryValue: {
-    fontSize: 13,
+  netAmount: {
+    fontSize: 11,
     fontWeight: "bold",
-    color: COLORS.dark,
   },
 
-  signatures: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 35,
-  },
-
-  signatureBox: {
-    width: "40%",
-  },
-
-  signatureLine: {
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    height: 25,
-    marginBottom: 5,
-  },
-
-  signatureText: {
-    fontSize: 8,
-    color: COLORS.muted,
-    textAlign: "center",
-  },
-
+  /*
+   * Bottom footer
+   */
   footer: {
     position: "absolute",
-    bottom: 18,
     left: 40,
     right: 40,
+    bottom: 24,
     flexDirection: "row",
     justifyContent: "space-between",
     borderTopWidth: 1,
-    borderTopColor: COLORS.lightBorder,
-    paddingTop: 6,
-  },
-
-  footerText: {
+    borderTopColor: "#d4d4d4",
+    paddingTop: 8,
     fontSize: 7,
-    color: COLORS.muted,
+    color: "#525252",
   },
 });
 
-function formatMoney(value: number): string {
-  return new Intl.NumberFormat("fr-FR", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
-}
+/*
+ * Format amounts exactly like the payslip page.
+ *
+ * Examples:
+ *
+ * 1250000.75 -> 1 250 001 FBU
+ * 1250000    -> 1 250 000 FBU
+ * 50000      -> 50 000 FBU
+ * 3300       -> 3 300 FBU
+ *
+ * No commas.
+ * No decimal places.
+ * Currency comes from data.currency.
+ */
+const formatMoney = (value: number, currency: string): string => {
+  const amount = Math.round(Number(value) || 0);
 
-function getItemName(item: PayslipItem): string {
-  return item.displayName || item.name;
-}
+  const formattedAmount = amount
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 
-function getFullAddress(company: PayslipCompany): string {
-  const parts = [company.address, company.city, company.country].filter(
-    Boolean
-  );
-
-  return parts.join(", ");
-}
+  return `${formattedAmount} ${currency}`.trim();
+};
 
 export default function PayslipReportDocument({
   data,
 }: {
-  data: PayslipReportData;
+  data: PayslipDocumentData;
 }) {
+  const { company, employee, payroll, currency } = data;
+
+  const rows = payslipRows(data);
+
+  const earnings = rows.filter((row) => row.earning !== null);
+
+  const deductions = rows.filter((row) => row.deduction !== null);
+
+  /*
+   * Important:
+   *
+   * Both sections must have the same number of physical rows.
+   * If Rémunérations has 5 items and Retenues has 2 items,
+   * the Retenues section receives 3 empty rows.
+   *
+   * This keeps both Total rows on the same horizontal line.
+   */
+  const maxRows = Math.max(earnings.length, deductions.length);
+
   return (
     <Document
-      title={`Bulletin de paie - ${data.employee.firstName} ${data.employee.lastName}`}
-      author="Akili"
+      title={`Bulletin de paie - ${employee.firstName} ${employee.lastName} - ${payroll.month}/${payroll.year}`}
+      author={company.name}
     >
       <Page size="A4" style={styles.page}>
-        <View style={styles.header}>
-          <View style={styles.companySection}>
-            {data.company.logo ? (
-              <Image src={data.company.logo} style={styles.logo} />
-            ) : null}
+        {/* =========================================================
+            HEADER
+        ========================================================= */}
 
-            <View style={styles.companyInfo}>
-              <Text style={styles.companyName}>{data.company.name}</Text>
+        <View style={styles.header} wrap={false}>
+          {/* Company */}
+          <View style={styles.company}>
+            <Text style={styles.companyName}>{company.name}</Text>
 
-              {data.company.legalName ? (
-                <Text style={styles.legalName}>{data.company.legalName}</Text>
-              ) : null}
+            {!!company.legalName && company.legalName !== company.name && (
+              <Text style={styles.detail}>{company.legalName}</Text>
+            )}
 
-              {getFullAddress(data.company) ? (
-                <Text style={styles.companyText}>
-                  {getFullAddress(data.company)}
-                </Text>
-              ) : null}
-
-              {data.company.phone ? (
-                <Text style={styles.companyText}>
-                  Tel: {data.company.phone}
-                </Text>
-              ) : null}
-
-              {data.company.email ? (
-                <Text style={styles.companyText}>
-                  Email: {data.company.email}
-                </Text>
-              ) : null}
-
-              {data.company.website ? (
-                <Text style={styles.companyText}>{data.company.website}</Text>
-              ) : null}
-            </View>
-          </View>
-
-          <View style={styles.reportTitleSection}>
-            <Text style={styles.reportTitle}>BULLETIN DE PAIE</Text>
-
-            <Text style={styles.reportPeriod}>
-              {data.month} {data.year}
+            <Text style={styles.detail}>
+              {[company.address, company.city, company.country]
+                .filter(Boolean)
+                .join(", ")}
             </Text>
+
+            {!!company.phone && (
+              <Text style={styles.detail}>{company.phone}</Text>
+            )}
+
+            {!!company.email && (
+              <Text style={styles.detail}>{company.email}</Text>
+            )}
+          </View>
+
+          {/* Payslip title / status */}
+          <View style={styles.titleBlock}>
+            <Text style={styles.title}>BULLETIN DE PAIE</Text>
+
+            <Text style={styles.detail}>
+              Période du {payslipPeriod(payroll.month, payroll.year)}
+            </Text>
+
+            <Text style={styles.detail}>Statut : {payroll.status}</Text>
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>INFORMATIONS DE L'EMPLOYE</Text>
+        {/* =========================================================
+            EMPLOYEE INFORMATION
+        ========================================================= */}
 
-        <View style={styles.employeeBox}>
-          <View style={styles.employeeRow}>
-            <View style={styles.employeeColumn}>
-              <Text style={styles.label}>Nom complet</Text>
-              <Text style={styles.value}>
-                {data.employee.firstName} {data.employee.lastName}
-              </Text>
-            </View>
+        <View style={styles.identity} wrap={false}>
+          {[
+            ["Nom de l’employé", `${employee.firstName} ${employee.lastName}`],
+            ["Matricule", employee.matricule || "—"],
+            ["Département", employee.department || "—"],
+            ["Poste", employee.role || "—"],
+          ].map(([label, value]) => (
+            <View style={styles.field} key={label}>
+              <Text style={styles.label}>{label}</Text>
 
-            <View style={styles.employeeColumn}>
-              <Text style={styles.label}>Matricule</Text>
-              <Text style={styles.value}>
-                {data.employee.employeeNumber || "-"}
-              </Text>
+              <Text style={styles.value}>{value}</Text>
             </View>
-          </View>
-
-          <View style={styles.employeeRow}>
-            <View style={styles.employeeColumn}>
-              <Text style={styles.label}>Departement</Text>
-              <Text style={styles.value}>
-                {data.employee.department || "-"}
-              </Text>
-            </View>
-
-            <View style={styles.employeeColumn}>
-              <Text style={styles.label}>Poste</Text>
-              <Text style={styles.value}>{data.employee.position || "-"}</Text>
-            </View>
-          </View>
-
-          <View style={styles.employeeRow}>
-            <View style={styles.employeeColumn}>
-              <Text style={styles.label}>Email</Text>
-              <Text style={styles.value}>{data.employee.email || "-"}</Text>
-            </View>
-
-            <View style={styles.employeeColumn}>
-              <Text style={styles.label}>Telephone</Text>
-              <Text style={styles.value}>{data.employee.phone || "-"}</Text>
-            </View>
-          </View>
+          ))}
         </View>
 
-        <Text style={styles.sectionTitle}>DETAIL DE LA PAIE</Text>
+        {/* =========================================================
+            PAYROLL SECTIONS
+        ========================================================= */}
 
-        <View style={styles.table}>
-          <View style={styles.tableHeader}>
-            <View style={styles.descriptionColumn}>
-              <Text style={styles.tableHeaderText}>ELEMENT</Text>
+        <View style={styles.sections} wrap={false}>
+          {/* =======================================================
+              RÉMUNÉRATIONS
+          ======================================================= */}
+
+          <View style={[styles.section, styles.sectionLeft]}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>RÉMUNÉRATIONS</Text>
             </View>
 
-            <View style={styles.typeColumn}>
-              <Text style={styles.tableHeaderText}>TYPE</Text>
-            </View>
+            {Array.from({
+              length: maxRows,
+            }).map((_, index) => {
+              const row = earnings[index];
 
-            <View style={styles.amountColumn}>
-              <Text style={styles.tableHeaderText}>MONTANT</Text>
-            </View>
-          </View>
+              return (
+                <View style={styles.row} key={`earning-${index}`} wrap={false}>
+                  <Text style={styles.description}>{row?.label || "—"}</Text>
 
-          {data.items.map((item, index) => {
-            const isLast = index === data.items.length - 1;
-
-            return (
-              <View
-                key={`${item.name}-${index}`}
-                style={isLast ? styles.tableRowLast : styles.tableRow}
-              >
-                <View style={styles.descriptionColumn}>
-                  <Text style={styles.tableText}>{getItemName(item)}</Text>
-                </View>
-
-                <View style={styles.typeColumn}>
-                  <View
-                    style={
-                      item.type === "EARNING"
-                        ? styles.earningBadge
-                        : styles.deductionBadge
-                    }
-                  >
-                    <Text
-                      style={
-                        item.type === "EARNING"
-                          ? styles.earningText
-                          : styles.deductionText
-                      }
-                    >
-                      {item.type === "EARNING" ? "GAIN" : "RETENUE"}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.amountColumn}>
-                  <Text style={styles.tableText}>
-                    {formatMoney(item.amount)} FBU
+                  <Text style={styles.amount}>
+                    {row ? formatMoney(row.earning!, currency) : "—"}
                   </Text>
                 </View>
-              </View>
-            );
-          })}
-        </View>
+              );
+            })}
 
-        <View style={styles.summaryContainer}>
-          <View style={styles.summaryBox}>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Total remuneration</Text>
+            {/* Total rémunérations */}
+            <View style={styles.totals} wrap={false}>
+              <Text style={styles.totalLabel}>Total</Text>
 
-              <Text style={styles.summaryValue}>
-                {formatMoney(data.totalEarnings)} FBU
+              <Text style={styles.totalAmount}>
+                {formatMoney(payroll.grossSalary, currency)}
               </Text>
             </View>
+          </View>
 
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Salaire brut</Text>
+          {/* =======================================================
+              RETENUES
+          ======================================================= */}
 
-              <Text style={styles.summaryValue}>
-                {formatMoney(data.grossSalary)} FBU
-              </Text>
+          <View style={[styles.section, styles.sectionRight]}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>RETENUES</Text>
             </View>
 
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Total retenues</Text>
+            {Array.from({
+              length: maxRows,
+            }).map((_, index) => {
+              const row = deductions[index];
 
-              <Text style={styles.summaryValue}>
-                {formatMoney(data.totalDeductions)} FBU
-              </Text>
-            </View>
+              return (
+                <View
+                  style={styles.row}
+                  key={`deduction-${index}`}
+                  wrap={false}
+                >
+                  <Text style={styles.description}>{row?.label || "—"}</Text>
 
-            <View style={styles.netSalaryBox}>
-              <Text style={styles.netSalaryLabel}>SALAIRE NET A PAYER</Text>
+                  <Text style={styles.amount}>
+                    {row ? formatMoney(row.deduction!, currency) : "—"}
+                  </Text>
+                </View>
+              );
+            })}
 
-              <Text style={styles.netSalaryValue}>
-                {formatMoney(data.netSalary)} FBU
+            {/* Total retenues */}
+            <View style={styles.totals} wrap={false}>
+              <Text style={styles.totalLabel}>Total</Text>
+
+              <Text style={styles.totalAmount}>
+                {formatMoney(payroll.totalDeductions, currency)}
               </Text>
             </View>
           </View>
         </View>
 
-        <View style={styles.signatures}>
-          <View style={styles.signatureBox}>
-            <View style={styles.signatureLine} />
-            <Text style={styles.signatureText}>Signature de l'employeur</Text>
-          </View>
+        {/* =========================================================
+            NET À PAYER
+        ========================================================= */}
 
-          <View style={styles.signatureBox}>
-            <View style={styles.signatureLine} />
-            <Text style={styles.signatureText}>Signature de l'employe</Text>
-          </View>
+        <View style={styles.net} wrap={false}>
+          <Text style={styles.netLabel}>NET À PAYER</Text>
+
+          <Text style={styles.netAmount}>
+            {formatMoney(payroll.netSalary, currency)}
+          </Text>
         </View>
 
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Genere par Akili</Text>
+        {/* =========================================================
+            FOOTER
+        ========================================================= */}
+
+        <View style={styles.footer} fixed>
+          <Text>
+            Document confidentiel •{" "}
+            {employee.matricule || `${employee.firstName} ${employee.lastName}`}
+          </Text>
 
           <Text
-            style={styles.footerText}
             render={({ pageNumber, totalPages }) =>
               `Page ${pageNumber} / ${totalPages}`
             }

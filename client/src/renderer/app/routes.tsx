@@ -1,6 +1,7 @@
 import LateAttendanceReportPage from "../modules/hr/attendance/pages/LateAttendanceReportPage";
 import DailyAttendanceReportPage from "../modules/hr/attendance/pages/DailyAttendanceReportPage";
 import WeeklyAttendanceReportPage from "../modules/hr/attendance/pages/WeeklyAttendanceReportPage";
+import PayrollAdminSettingsPage from "../modules/auth/pages/PayrollAdminSettingsPage";
 import SettingsPage from "../modules/auth/pages/SettingsPage";
 import AttendanceSettingsPage from "../modules/auth/pages/AttendanceSettingsPage";
 import { createHashRouter } from "react-router-dom";
@@ -30,6 +31,7 @@ import TransportAllowanceWeeklyReportPage from "../modules/hr/attendance/pages/T
 import CompanySettingsPage from "../modules/auth/pages/CompanySettingsPage";
 
 const router = createHashRouter([
+  { path: "/admin/settings/payroll", element: <PayrollAdminSettingsPage />, errorElement: <PageErrorFallback /> },
   { path: "/admin/settings", element: <SettingsPage />, errorElement: <PageErrorFallback /> },
   { path: "/admin/settings/attendance", element: <AttendanceSettingsPage />, errorElement: <PageErrorFallback /> },
   {

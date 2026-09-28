@@ -1464,105 +1464,168 @@ export async function syncPayrollProfile(
 // PAYROLL RUN
 // ============================================================
 
+// Derive the batch status on the server as well: different devices may approve
+// different employees without ever seeing a locally complete batch.
+export async function refreshPayrollRunStatus(companyId: string, payrollRunId: string) {
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const payrollRun = await PayrollRun.findOne({ companyId, _id: payrollRunId }).lean();
+    if (!payrollRun || payrollRun.isDeleted || payrollRun.status === "ANNULÉ") return;
+    const results = await PayrollResult.find({ companyId, payrollRunId, isDeleted: 0 }).lean();
+    const complete = results.length > 0 && results.length >= payrollRun.employeeCount;
+    const allApproved = complete && results.every((r) => r.status === "APPROUVÉ" || r.status === "PAYÉ");
+    const allPaid = complete && results.every((r) => r.status === "PAYÉ");
+    const status = allPaid ? "PAYÉ" : allApproved ? "APPROUVÉ"
+      : (complete || payrollRun.status === "BROUILLON") && results.every((r) => r.status === "BROUILLON")
+        ? "BROUILLON" : "VERIFICATION";
+    const lastApproved = [...results].sort((a, b) => new Date(b.approvedAt ?? 0).getTime() - new Date(a.approvedAt ?? 0).getTime())[0];
+    const lastPaid = [...results].sort((a, b) => new Date(b.paidAt ?? 0).getTime() - new Date(a.paidAt ?? 0).getTime())[0];
+    const serverVersion = await getServerVersion("payroll_run");
+    const saved = await PayrollRun.updateOne(
+      { companyId, _id: payrollRunId, serverVersion: payrollRun.serverVersion },
+      { $set: { status, serverVersion, updatedAt: new Date(),
+        approvedAt: allApproved ? lastApproved?.approvedAt ?? payrollRun.approvedAt ?? null : null,
+        approvedBy: allApproved ? lastApproved?.approvedBy ?? payrollRun.approvedBy ?? null : null,
+        paidAt: allPaid ? lastPaid?.paidAt ?? payrollRun.paidAt ?? null : null,
+        paidBy: allPaid ? lastPaid?.paidBy ?? payrollRun.paidBy ?? null : null,
+      } }
+    );
+    if (saved.matchedCount) return;
+  }
+  throw new Error("Payroll status changed during sync; retry required.");
+}
+
+async function cancelSyncedPayrollResults(companyId: string, payrollRunId: string, cancelledAt: Date) {
+  const results = await PayrollResult.find({ companyId, payrollRunId, isDeleted: 0 }).lean();
+  for (const result of results) {
+    if (result.status === "ANNULÉ") continue;
+    // Give each result its own version so paginated pulls cannot skip a row.
+    await syncPayrollResult("update", {
+      _id: result._id, companyId, serverVersion: 0, status: "ANNULÉ",
+      cancelledAt, updatedAt: cancelledAt,
+    });
+  }
+}
+
 export async function syncPayrollRun(operation: SyncOperation, data: SyncData) {
   const companyId = requireCompanyId(data);
   requireUpdatedAt(data);
-
   const { _id, fields } = cleanSyncFields(data);
   fields.companyId = companyId;
-
-  const serverVersion = await getServerVersion("payroll_run");
-
-  await PayrollRun.updateOne(
-    {
-      _id,
-      companyId,
-    },
-    {
-      $set: {
-        ...fields,
-        serverVersion,
-      },
-      $setOnInsert: {
-        _id,
-      },
-    },
-    {
-      upsert: true,
+  const fromSettings = fields.cancellationFromSettings === true;
+  delete fields.cancellationFromSettings;
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const existing = await PayrollRun.findOne({ companyId, _id }).lean();
+    // Cancellation is terminal, including when another device replays an older run.
+    if (existing?.status === "ANNULÉ") {
+      if (operation === "delete" && fields.isDeleted === 1) {
+        const serverVersion = await getServerVersion("payroll_run");
+        const deleted = await PayrollRun.updateOne(
+          { companyId, _id, serverVersion: existing.serverVersion },
+          { $set: { isDeleted: 1, updatedAt: fields.updatedAt, serverVersion } }
+        );
+        if (!deleted.matchedCount) continue;
+        const payrollRun = await PayrollRun.findOne({ companyId, _id }).lean();
+        return { success: true, _id, serverVersion, payrollRun };
+      }
+      await cancelSyncedPayrollResults(companyId, _id, existing.cancelledAt ?? existing.updatedAt);
+      return { success: true, _id, serverVersion: existing.serverVersion, payrollRun: existing };
     }
-  );
-
-  const payrollRun = await PayrollRun.findOne({
-    _id,
-    companyId,
-  }).lean();
-
-  console.log(`SYNCED ${operation.toUpperCase()} PAYROLL RUN:`, {
-    _id,
-    updatedAt: data.updatedAt,
-    serverVersion,
-  });
-
-  return {
-    success: true,
-    _id,
-    serverVersion,
-    payrollRun,
-  };
+    const update = { ...fields };
+    const processed = await PayrollResult.exists({ companyId, payrollRunId: _id,
+      isDeleted: 0, status: { $in: ["APPROUVÉ", "PAYÉ"] } });
+    const hasProcessed = processed || existing?.status === "APPROUVÉ" || existing?.status === "PAYÉ";
+    if (hasProcessed && (update.status === "BROUILLON" || update.isDeleted === 1)) {
+      throw new Error("Cannot reset or delete payroll with approved or paid payslips.");
+    }
+    if (update.status === "ANNULÉ") {
+      if (hasProcessed && !fromSettings) throw new Error("Use payroll settings to cancel approved or paid payroll.");
+      if (fromSettings) {
+        const actor = await AdminUser.findOne({ companyId, _id: update.cancelledBy, isDeleted: 0 }).lean();
+        if (!actor || !["ADMIN", "MANAGER"].includes(actor.role)) {
+          throw new Error("Only an administrator or manager can cancel approved or paid payroll.");
+        }
+      }
+      if (!update.cancelledAt) throw new Error("Cancellation date is required.");
+      // Retain the server's approval/payment history when cancellation was made offline.
+      for (const field of ["approvedAt", "approvedBy", "paidAt", "paidBy"] as const) {
+        if (existing?.[field]) update[field] = existing[field];
+      }
+    } else if (update.status === "APPROUVÉ" || update.status === "PAYÉ" || processed) {
+      update.status = existing?.status ?? "VERIFICATION";
+      delete update.approvedAt;
+      delete update.approvedBy;
+      delete update.paidAt;
+      delete update.paidBy;
+    }
+    const serverVersion = await getServerVersion("payroll_run");
+    const filter = existing ? { _id, companyId, serverVersion: existing.serverVersion } : { _id, companyId };
+    const saved = await PayrollRun.updateOne(filter, {
+      $set: { ...update, serverVersion }, $setOnInsert: { _id },
+    }, { upsert: !existing });
+    if (!saved.matchedCount && !saved.upsertedCount) continue;
+    if (update.status === "ANNULÉ") {
+      await cancelSyncedPayrollResults(companyId, _id, new Date(update.cancelledAt));
+    } else {
+      await refreshPayrollRunStatus(companyId, _id);
+    }
+    const payrollRun = await PayrollRun.findOne({ _id, companyId }).lean();
+    return { success: true, _id, serverVersion: payrollRun?.serverVersion ?? serverVersion, payrollRun };
+  }
+  throw new Error("Payroll changed during sync; retry required.");
 }
 
-// ============================================================
-// PAYROLL RESULT
-// ============================================================
-
-export async function syncPayrollResult(
-  operation: SyncOperation,
-  data: SyncData
-) {
+export async function syncPayrollResult(operation: SyncOperation, data: SyncData) {
   const companyId = requireCompanyId(data);
   requireUpdatedAt(data);
-
   const { _id, fields } = cleanSyncFields(data);
   fields.companyId = companyId;
-
-  const serverVersion = await getServerVersion("payroll_result");
-
-  await PayrollResult.updateOne(
-    {
-      _id,
-      companyId,
-    },
-    {
-      $set: {
-        ...fields,
-        serverVersion,
-      },
-      $setOnInsert: {
-        _id,
-      },
-    },
-    {
-      upsert: true,
+  const rank: Record<string, number> = { BROUILLON: 0, VERIFICATION: 1, "APPROUVÉ": 2, "PAYÉ": 3 };
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const existing = await PayrollResult.findOne({ companyId, _id }).lean();
+    const update = { ...fields };
+    if (existing && update.payrollRunId && update.payrollRunId !== existing.payrollRunId) {
+      throw new Error("Cannot move a payslip to another payroll run.");
     }
-  );
-
-  const result = await PayrollResult.findOne({
-    _id,
-    companyId,
-  }).lean();
-
-  console.log(`SYNCED ${operation.toUpperCase()} PAYROLL RESULT:`, {
-    _id,
-    updatedAt: data.updatedAt,
-    serverVersion,
-  });
-
-  return {
-    success: true,
-    _id,
-    serverVersion,
-    result,
-  };
+    const payrollRunId = existing?.payrollRunId ?? update.payrollRunId;
+    const payrollRun = await PayrollRun.findOne({ companyId, _id: payrollRunId }).lean();
+    if (!payrollRun || payrollRun.isDeleted) throw new Error("Payroll run not found.");
+    if (payrollRun.status === "ANNULÉ") {
+      update.status = "ANNULÉ";
+      update.cancelledAt = payrollRun.cancelledAt;
+      update.updatedAt = payrollRun.updatedAt;
+      for (const field of ["approvedAt", "approvedBy", "paidAt", "paidBy"] as const) {
+        if (existing?.[field]) update[field] = existing[field];
+      }
+    } else if (existing && (rank[existing.status] ?? -1) >= 2) {
+      if (update.isDeleted === 1 || update.status === "ANNULÉ" || update.status === "BROUILLON") {
+        throw new Error("Cannot reset or delete an approved or paid payslip.");
+      }
+      // Replayed verification/approval snapshots must never undo payment or audit dates.
+      if ((rank[update.status] ?? -1) <= rank[existing.status]) {
+        update.status = existing.status;
+        update.approvedAt = existing.approvedAt;
+        update.approvedBy = existing.approvedBy;
+        update.paidAt = existing.paidAt;
+        update.paidBy = existing.paidBy;
+        update.updatedAt = existing.updatedAt;
+      } else {
+        update.approvedAt = existing.approvedAt;
+        update.approvedBy = existing.approvedBy;
+      }
+    }
+    const serverVersion = await getServerVersion("payroll_result");
+    const filter = existing ? { _id, companyId, serverVersion: existing.serverVersion } : { _id, companyId };
+    const saved = await PayrollResult.updateOne(filter, {
+      $set: { ...update, serverVersion }, $setOnInsert: { _id },
+    }, { upsert: !existing });
+    if (!saved.matchedCount && !saved.upsertedCount) continue;
+    const latestRun = await PayrollRun.findOne({ companyId, _id: payrollRunId }).lean();
+    if (latestRun?.status === "ANNULÉ" && update.status !== "ANNULÉ") continue;
+    await refreshPayrollRunStatus(companyId, payrollRunId);
+    const result = await PayrollResult.findOne({ _id, companyId }).lean();
+    return { success: true, _id, serverVersion, result };
+  }
+  throw new Error("Payslip changed during sync; retry required.");
 }
 
 // ============================================================

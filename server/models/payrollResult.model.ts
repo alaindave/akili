@@ -22,6 +22,8 @@ export interface PayrollResultDocument {
   netSalary: number;
   cancelledAt?: Date;
   verifiedAt?: Date;
+  approvedBy?: string;
+  paidBy?: string;
   approvedAt?: Date;
   paidAt?: Date;
   serverVersion: number;
@@ -111,6 +113,8 @@ const PayrollResultSchema = new Schema<PayrollResultDocument>(
     verifiedAt: {
       type: Date,
     },
+    approvedBy: { type: String },
+    paidBy: { type: String },
     approvedAt: {
       type: Date,
     },

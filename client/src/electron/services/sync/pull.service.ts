@@ -72,6 +72,7 @@ import {
   upsertPayrollItem,
   upsertPayrollResult,
   upsertPayrollRun,
+  refreshPayrollRunStatuses,
 } from "../../database/repositories/modules/hr/payroll_run.repository.js";
 
 import { PayrollSettings } from "../../../common/types/payroll/Payroll.js";
@@ -357,6 +358,7 @@ export async function pullLatestChanges(companyId: string) {
     latestServerTime = payrollResultsResult.serverTime ?? latestServerTime;
 
     const payrollResults = payrollResultsResult.items;
+    await refreshPayrollRunStatuses(companyId);
 
     /* =====================================================
        PAYROLL ITEMS

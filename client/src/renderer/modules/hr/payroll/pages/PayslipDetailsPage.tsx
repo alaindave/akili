@@ -1,526 +1,785 @@
 import {
   Box,
+  Button,
   Flex,
+  Heading,
   HStack,
   Table,
+  TableContainer,
   Tbody,
   Td,
   Text,
   Tfoot,
-  Th,
-  Thead,
   Tr,
-  VStack,
+  useToast,
 } from "@chakra-ui/react";
-import { useEffect, useState } from "react";
-import { FaDollarSign } from "react-icons/fa";
-import {
-  FaArrowDownLong,
-  FaArrowLeftLong,
-  FaArrowTrendUp,
-} from "react-icons/fa6";
-import { IoWalletOutline } from "react-icons/io5";
-import { MdOutlineChevronRight } from "react-icons/md";
-import { PiCreditCardLight } from "react-icons/pi";
+import { FaArrowLeftLong } from "react-icons/fa6";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
-  PayrollItem,
-  PayrollResult,
-} from "../../../../../common/types/payroll/Payroll";
+  PayslipDocumentData,
+  payslipPeriod,
+  payslipRows,
+} from "../../../../../common/types/payroll/PayslipDocument";
 import useSyncStore from "../../../../../store/sync.store";
-import PayslipItemDisplay from "../components/PayslipItemDisplay";
-import { usePayrollSettings } from "../hooks/payroll_settings.hook";
-import { getPayrollPeriod } from "../../../../lib/date";
-import { formatCurrency } from "../../../../lib/formatter";
-import Employee from "../../../../../common/types/Employee";
 import useAdminUser from "../../../../../store/auth.store";
 
-const EmployeePayslipDetails = () => {
+export default function EmployeePayslipDetails() {
   const { _id: employeeId, payslipId } = useParams();
+
   const user = useAdminUser((store) => store.adminUser);
-  const navigate = useNavigate();
-  const [employee, setEmployee] = useState<Employee | null>(null);
-  const [payrollResults, setPayrollResults] = useState<PayrollResult | null>(
-    {} as PayrollResult
-  );
-  const [payrollItems, setPayrollItems] = useState<PayrollItem[] | null>([]);
-  console.log("Employee ID:", employeeId);
-  console.log("PAYROLL ID", payslipId);
-  const earnings = payrollItems?.filter((p) => p.type === "EARNING") ?? [];
-  const deductions = payrollItems?.filter((p) => p.type === "DEDUCTION") ?? [];
-  const totalEarnings = earnings.reduce(
-    (total, item) => total + item.amount,
-    0
-  );
-  const totalDeductions = deductions.reduce(
-    (total, item) => total + item.amount,
-    0
-  );
+
   const syncVersion = useSyncStore((store) => store.syncVersion);
-  const payrollSettings = usePayrollSettings();
-  const currency = payrollSettings?.currency ?? "BIF";
-  const statusColor = {
-    BROUILLON: "#e6b800",
-    VERIFICATION: "#1a53ff",
-    APPROUVÉ: "green",
-    PAYÉ: "pink.600",
-    ANNULÉ: "red",
-  } as const;
-  const statusBgColor = {
-    BROUILLON: "yellow.200",
-    VERIFICATION: "blue.200",
-    APPROUVÉ: "green.200",
-    PAYÉ: "pink.200",
-    ANNULÉ: "red.200",
-  } as const;
 
+  const navigate = useNavigate();
+
+  const toast = useToast();
+
+  const [data, setData] = useState<PayslipDocumentData | null>(null);
+
+  const [loading, setLoading] = useState(true);
+
+  const [error, setError] = useState("");
+
+  const [revision, setRevision] = useState(0);
+
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const api = window.electron.hr.payrollRun;
+
+  const viewportRef = useRef<HTMLDivElement>(null);
+
+  const documentRef = useRef<HTMLDivElement>(null);
+
+  const [documentScale, setDocumentScale] = useState(1);
+
+  /*
+   * Actual visible space that must remain between
+   * the bottom of the payslip paper and the lower navbar.
+   */
+  const bottomPaperMargin = 50;
+
+  /*
+   * Format payroll amounts using French-style thousands
+   * separation with a normal space.
+   *
+   * Examples:
+   *
+   * 1250000.75 -> 1 250 001 FBU
+   * 1250000    -> 1 250 000 FBU
+   * 50000      -> 50 000 FBU
+   * 3300       -> 3 300 FBU
+   *
+   * Currency comes directly from the payslip document,
+   * which should be populated from payroll settings.
+   */
+  const formatMoney = (value: number) => {
+    const amount = Math.round(Number(value) || 0);
+
+    const formattedAmount = amount
+      .toString()
+      .replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+
+    return `${formattedAmount} ${data?.currency || ""}`.trim();
+  };
+
+  /*
+   * Fit the payslip inside the available viewport while
+   * preserving a real visible margin underneath it.
+   */
+  useLayoutEffect(() => {
+    const viewport = viewportRef.current;
+    const document = documentRef.current;
+
+    if (!viewport || !document) return;
+
+    const fitDocument = () => {
+      const paperHeight = document.offsetHeight;
+
+      if (paperHeight <= 0) return;
+
+      /*
+       * Reserve actual visible space underneath the paper.
+       */
+      const availableHeight = viewport.clientHeight - bottomPaperMargin;
+
+      if (availableHeight <= 0) {
+        setDocumentScale(0.8);
+        return;
+      }
+
+      const scale = Math.min(1, availableHeight / paperHeight);
+
+      setDocumentScale(scale);
+    };
+
+    const observer = new ResizeObserver(fitDocument);
+
+    observer.observe(viewport);
+    observer.observe(document);
+
+    fitDocument();
+
+    return () => observer.disconnect();
+  }, [data, loading, error]);
+
+  /*
+   * Load payslip.
+   */
   useEffect(() => {
-    loadEmployee();
-    loadPayroll();
-  }, [employee?.photo_path, syncVersion]);
+    let active = true;
 
-  const loadEmployee = async () => {
-    if (!employeeId) return;
+    setLoading(true);
+    setData(null);
+    setError("");
+
+    if (!employeeId || !payslipId) {
+      setError("Bulletin de paie introuvable.");
+      setLoading(false);
+      return;
+    }
+
+    api
+      .getPayslipDocument(user.companyId, employeeId, payslipId)
+      .then((value) => {
+        if (active) {
+          setData(value);
+        }
+      })
+      .catch((cause: unknown) => {
+        if (active) {
+          setError(
+            cause instanceof Error
+              ? cause.message
+              : "Impossible de charger le bulletin de paie."
+          );
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [employeeId, payslipId, user.companyId, syncVersion, revision]);
+
+  /*
+   * Display errors using Chakra toast.
+   */
+  const showError = (title: string, cause: unknown) =>
+    toast({
+      title,
+      description:
+        cause instanceof Error ? cause.message : "Veuillez réessayer.",
+      status: "error",
+      isClosable: true,
+    });
+
+  /*
+   * Download payslip.
+   */
+  const download = async () => {
+    if (!employeeId || !payslipId || !data || isDownloading || isUpdating) {
+      return;
+    }
+
+    setIsDownloading(true);
 
     try {
-      const employee = await window.electron.hr.employees.getById(
+      const result = await api.savePayslipReport(
         user.companyId,
-        employeeId
+        employeeId,
+        payslipId
       );
-      console.log("FETCHED EMPLOYEE:", employee);
-      setEmployee(employee);
-    } catch (e) {
-      console.error("AN ERROR OCCURED WHILE FETCHING THE EMPLOYEE", e);
+
+      if (!result.canceled) {
+        toast({
+          title: "Bulletin de paie enregistré",
+          status: "success",
+          isClosable: true,
+        });
+      }
+    } catch (cause) {
+      showError("Impossible de télécharger le bulletin", cause);
+    } finally {
+      setIsDownloading(false);
     }
   };
 
-  const loadPayroll = async () => {
-    if (!employeeId || !payslipId) return;
+  /*
+   * Approve or pay payslip.
+   */
+  const updatePayslip = async () => {
+    if (!data?.payroll._id || isUpdating || isDownloading) {
+      return;
+    }
+
+    setIsUpdating(true);
 
     try {
-      const payrollResults =
-        await window.electron.hr.payrollRun.getEmployeePayrollResults(
-          user.companyId,
-          employeeId,
-          payslipId
-        );
-      console.log("FETCHED PAYROLL RESULTS", payrollResults);
-      console.log("PAYSLIP ID", payslipId);
+      if (data.payroll.status === "VERIFICATION") {
+        await api.approvePayslip(user.companyId, data.payroll._id, user);
+      } else if (data.payroll.status === "APPROUVÉ") {
+        await api.markPayslipAsPaid(user.companyId, data.payroll._id, user);
+      } else {
+        return;
+      }
 
-      setPayrollResults(payrollResults);
+      setRevision((value) => value + 1);
 
-      const payrollItems = await window.electron.hr.payrollRun.getPayrollItems(
-        user.companyId,
-        payrollResults?._id!,
-        employeeId
-      );
-      console.log("FETCHED PAYROLL ITEMS", payrollItems);
-      setPayrollItems(payrollItems);
-    } catch (e) {
-      console.error("AN ERROR OCCURED WHILE FETCHING PAYROLL DATA", e);
+      window.electron.sync.sync(user.companyId).catch((cause: Error) => {
+        console.error("PAYSLIP SYNC FAILED:", cause);
+      });
+    } catch (cause) {
+      showError("Impossible de modifier ce bulletin", cause);
+    } finally {
+      setIsUpdating(false);
     }
   };
+
+  /*
+   * Make sure the loaded document belongs to the
+   * employee and payslip requested by the route.
+   */
+  const ready =
+    !loading &&
+    data?.employee._id === employeeId &&
+    data?.payroll.payrollRunId === payslipId;
+
+  const rows = data ? payslipRows(data) : [];
+
+  const earnings = rows.filter((row) => row.earning !== null);
+
+  const deductions = rows.filter((row) => row.deduction !== null);
+
+  const maxRows = Math.max(earnings.length, deductions.length);
 
   return (
-    <Flex bg="#ffffff" width="100%" direction="column">
-      <Flex justify="space-between">
-        {/* Header */}
-        <HStack>
-          <Box
-            mt="1rem"
-            p={3}
-            border="1px solid #14376b"
-            borderRadius="10px"
-            onClick={() => navigate(-1)}
-          >
-            <FaArrowLeftLong size="0.9rem" color="black" />
-          </Box>
-          <Box mt="1rem">
-            <HStack>
-              <Text ml="0.3rem" fontSize="1.1rem" fontWeight="500">
-                Fiches de paye
-              </Text>
-              <Box>
-                <MdOutlineChevronRight fontSize="1.3rem" />
-              </Box>
-              <Text fontWeight="500" fontSize="1rem">
-                Periode du{" "}
-                {payrollResults?.month && payrollResults?.year
-                  ? getPayrollPeriod(payrollResults.month, payrollResults.year)
-                  : ""}
-              </Text>
-              <Box>
-                <MdOutlineChevronRight fontSize="1.3rem" />
-              </Box>
+    <Box
+      bg="#f5f5f5"
+      color="#171717"
+      height="100%"
+      minH={0}
+      display="flex"
+      flexDirection="column"
+      overflow="hidden"
+      width="100%"
+      p={{ base: 3, md: 5 }}
+    >
+      {/* =========================================================
+          PAGE HEADER
+      ========================================================= */}
 
-              <Text fontWeight="500" fontSize="1rem">
-                {employee?.firstName}
+      <Flex
+        maxW="1350px"
+        width="100%"
+        flexShrink={0}
+        mx="auto"
+        mb={3}
+        justify="space-between"
+        gap={3}
+        flexWrap="wrap"
+      >
+        {/* Left side */}
+        <HStack spacing={4} minW={0}>
+          <Button
+            size="sm"
+            variant="outline"
+            colorScheme="gray"
+            bg="white"
+            flexShrink={0}
+            onClick={() => navigate(-1)}
+            fontSize="1.1rem"
+          >
+            <FaArrowLeftLong color="black" />
+          </Button>
+
+          <Box position="relative" top="0.4rem">
+            <Heading fontSize="1.1rem">Fiche de paie</Heading>
+
+            {data && ready && (
+              <Text fontSize="1rem" color="#525252">
+                Période du{" "}
+                {payslipPeriod(data.payroll.month, data.payroll.year)}
               </Text>
-              <Text fontWeight="500" fontSize="1rem">
-                {employee?.lastName}
-              </Text>
-            </HStack>
+            )}
           </Box>
         </HStack>
-        <VStack>
-          {/* Creation date */}
-          {payrollResults?.status === "BROUILLON" ? (
-            <HStack mt="1rem" mr="2rem">
-              <Box>
-                <HStack>
-                  <Text fontWeight="600">
-                    {payrollResults?.createdAt &&
-                      new Date(payrollResults?.createdAt).toLocaleDateString(
-                        "fr-FR"
-                      )}
-                  </Text>
-                  <Text>
-                    {payrollResults?.createdAt &&
-                      new Date(payrollResults?.createdAt).toLocaleTimeString(
-                        "fr-FR",
-                        {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        }
-                      )}
-                  </Text>
-                </HStack>
-              </Box>
-            </HStack>
-          ) : null}
 
-          {/* Cancellation date */}
-          {payrollResults?.status === "ANNULÉ" ? (
-            <HStack mt="1rem" mr="1rem">
-              <HStack>
-                <Text fontWeight="600">
-                  {payrollResults?.cancelledAt &&
-                    new Date(payrollResults?.cancelledAt).toLocaleDateString(
-                      "fr-FR"
-                    )}
-                </Text>
-                <Text>
-                  {payrollResults?.cancelledAt &&
-                    new Date(payrollResults?.cancelledAt).toLocaleTimeString(
-                      "fr-FR",
-                      {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      }
-                    )}
-                </Text>
-              </HStack>
-            </HStack>
-          ) : null}
-          {/* Date de verification */}
-          {payrollResults?.status === "VERIFICATION" ? (
-            <HStack mt="1rem" mr="1rem">
-              <Box>
-                <HStack>
-                  <Text fontWeight="600">
-                    {payrollResults?.verifiedAt &&
-                      new Date(payrollResults?.verifiedAt).toLocaleDateString(
-                        "fr-FR"
-                      )}
-                  </Text>
-                  <Text>
-                    {payrollResults?.verifiedAt &&
-                      new Date(payrollResults?.verifiedAt).toLocaleTimeString(
-                        "fr-FR",
-                        {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        }
-                      )}
-                  </Text>
-                </HStack>
-              </Box>
-            </HStack>
-          ) : null}
-          {/* Approval date  */}
-          {payrollResults?.status === "APPROUVÉ" ? (
-            <HStack mt="1rem" mr="1rem">
-              <Box>
-                <HStack>
-                  <Text fontWeight="600">
-                    {payrollResults?.approvedAt &&
-                      new Date(payrollResults?.approvedAt).toLocaleDateString(
-                        "fr-FR"
-                      )}
-                  </Text>
-                  <Text>
-                    {payrollResults?.approvedAt &&
-                      new Date(payrollResults?.approvedAt).toLocaleTimeString(
-                        "fr-FR",
-                        {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        }
-                      )}
-                  </Text>
-                </HStack>
-              </Box>
-            </HStack>
-          ) : null}
-          {/* Payment date  */}
-          {payrollResults?.status === "PAYÉ" ? (
-            <HStack mt="1rem" mr="1rem">
-              <Box>
-                <HStack>
-                  <Text fontWeight="600">
-                    {payrollResults?.paidAt &&
-                      new Date(payrollResults?.paidAt).toLocaleDateString(
-                        "fr-FR"
-                      )}
-                  </Text>
-                  <Text>
-                    {payrollResults?.paidAt &&
-                      new Date(payrollResults?.paidAt).toLocaleTimeString(
-                        "fr-FR",
-                        {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        }
-                      )}
-                  </Text>
-                </HStack>
-              </Box>
-            </HStack>
-          ) : null}
-          <Box>
-            <Text
-              color={
-                payrollResults?.status && statusColor[payrollResults?.status]
-              }
-              fontWeight="700"
-            >
-              {payrollResults?.status && payrollResults.status}
-            </Text>
-          </Box>
-        </VStack>
+        {/* Right side */}
+        <HStack spacing={3} flexWrap="wrap">
+          {data &&
+            ready &&
+            user.role === "MANAGER" &&
+            (data.payroll.status === "VERIFICATION" ||
+              data.payroll.status === "APPROUVÉ") && (
+              <Button
+                size="sm"
+                variant="outline"
+                colorScheme="gray"
+                bg="white"
+                onClick={updatePayslip}
+                isLoading={isUpdating}
+                isDisabled={isDownloading}
+                fontSize="1.1rem"
+              >
+                {data.payroll.status === "VERIFICATION" ? "Approuver" : "Payer"}
+              </Button>
+            )}
+
+          <Button
+            size="sm"
+            bg="#171717"
+            color="white"
+            _hover={{
+              bg: "#404040",
+            }}
+            onClick={download}
+            isLoading={isDownloading}
+            isDisabled={!ready || isUpdating}
+            fontSize="1.1rem"
+          >
+            Télécharger
+          </Button>
+        </HStack>
       </Flex>
 
-      {/* Salary breakdown */}
-      <HStack
-        bg="#F8F9FB"
-        border="1px solid"
-        borderColor="#D1D9E0"
-        borderRadius="8px"
-        boxShadow="0 2px 8px rgba(0,0,0,0.5)"
-        height="15vh"
-        width="78vw"
-        mt="3rem"
-        ml="1rem"
-        gap={10}
-        padding={10}
+      {/* =========================================================
+          PAYSLIP VIEWPORT
+      ========================================================= */}
+
+      <Box
+        ref={viewportRef}
+        flex="1"
+        minH={0}
+        width="100%"
+        mx="auto"
+        position="relative"
+        overflow="hidden"
+        mt="1.5rem"
       >
-        <PayslipItemDisplay
-          itemName="Salaire de base"
-          amount={payrollResults?.baseSalary ?? 0}
-          icon={IoWalletOutline}
-          color="green"
-        />
-        <PayslipItemDisplay
-          itemName="Remunerations"
-          amount={payrollResults?.totalEarnings ?? 0}
-          icon={FaArrowTrendUp}
-          color="purple"
-        />
-        <PayslipItemDisplay
-          itemName="Salaire brut"
-          amount={payrollResults?.grossSalary ?? 0}
-          icon={FaDollarSign}
-          color="blue"
-        />
-        <PayslipItemDisplay
-          itemName="Deductions"
-          amount={payrollResults?.totalDeductions ?? 0}
-          icon={FaArrowDownLong}
-          color="red"
-        />
-        <PayslipItemDisplay
-          itemName="Salaire net"
-          amount={payrollResults?.netSalary ?? 0}
-          icon={PiCreditCardLight}
-          color="green"
-        />
-      </HStack>
-      {/* Earnings and deductions breakdown */}
-      <HStack
-        ml="1rem"
-        mt="5rem"
-        spacing="1rem"
-        width="calc(100% - 4rem)"
-        height="400px"
-        align="stretch"
-      >
-        {/* Earnings */}
         <Box
-          width="40vw"
-          height="50vh"
-          border="1px solid"
-          bg="#ffffff"
-          borderColor="#D1D9E0"
-          borderRadius="8px"
-          boxShadow="0 2px 8px rgba(0,0,0,0.5)"
+          position="absolute"
+          top={0}
+          left={0}
+          right={0}
+          height={`calc(100% - ${bottomPaperMargin}px)`}
           overflow="hidden"
-          display="flex"
-          flexDirection="column"
         >
-          {/* Fixed Header */}
-          <Table variant="simple" sx={{ tableLayout: "fixed" }} flexShrink={0}>
-            <Thead>
-              <Tr>
-                <Th color="purple.600" fontSize="0.8rem">
-                  Rémunérations
-                </Th>
-                <Th isNumeric>Montant</Th>
-              </Tr>
-            </Thead>
-          </Table>
+          {loading ? (
+            <Text textAlign="center" py={12} fontSize="1.1rem">
+              Chargement du bulletin de paie…
+            </Text>
+          ) : error ? (
+            <Box textAlign="center" py={12}>
+              <Text mb={4} fontSize="1.1rem">
+                {error}
+              </Text>
 
-          {/* ONLY THIS SECTION SCROLLS */}
-          <Box
-            flex="1"
-            overflowY="auto"
-            overflowX="hidden"
-            sx={{
-              "&::-webkit-scrollbar": {
-                width: "6px",
-              },
-              "&::-webkit-scrollbar-thumb": {
-                background: "#CBD5E0",
-                borderRadius: "10px",
-              },
-            }}
-          >
-            <Table
-              variant="simple"
-              sx={{
-                tableLayout: "fixed",
-              }}
-            >
-              <Tbody>
-                {earnings.map((item) => (
-                  <Tr key={item.componentId}>
-                    <Td>{item.displayName}</Td>
-                    <Td isNumeric>{formatCurrency(item.amount, currency)}</Td>
-                  </Tr>
-                ))}
-              </Tbody>
-            </Table>
-          </Box>
+              <Button
+                variant="outline"
+                onClick={() => setRevision((value) => value + 1)}
+                fontSize="1.1rem"
+              >
+                Réessayer
+              </Button>
+            </Box>
+          ) : (
+            data &&
+            ready && (
+              <Box
+                ref={documentRef}
+                as="article"
+                position="absolute"
+                top={0}
+                left="50%"
+                width="1100px"
+                transform={`translateX(-50%) scale(${documentScale})`}
+                transformOrigin="top center"
+                aria-label="Bulletin de paie"
+                bg="white"
+                border="1.5px solid #a8a8a8"
+                borderRadius="2px"
+                boxShadow="0 2px 12px rgba(0,0,0,0.06)"
+                px="85px"
+                pt="42px"
+                pb="28px"
+                fontSize="1.1rem"
+                boxSizing="border-box"
+              >
+                {/* =================================================
+                    TOP SECTION
+                ================================================= */}
 
-          {/* Fixed Footer */}
-          <Table variant="simple" sx={{ tableLayout: "fixed" }} flexShrink={0}>
-            <Tfoot>
-              <Tr>
-                <Th
-                  fontSize="0.9rem"
-                  bg="purple.100"
-                  color="purple.800"
-                  fontWeight="800"
+                <Flex
+                  width="100%"
+                  justify="space-between"
+                  align="flex-start"
+                  gap={10}
+                  pb={6}
+                  mb={5}
+                  borderBottom="1px solid #d4d4d4"
                 >
-                  Total
-                </Th>
-                <Th
-                  fontSize="0.9rem"
-                  bg="purple.100"
-                  color="purple.800"
-                  fontWeight="800"
-                  isNumeric
+                  {/* Employee information */}
+                  <Box flex="1" minW={0}>
+                    <Text
+                      fontSize="1.3rem"
+                      fontWeight="700"
+                      mb={4}
+                      letterSpacing="0.04em"
+                      textTransform="uppercase"
+                      textAlign="left"
+                    >
+                      Informations de l’employé
+                    </Text>
+
+                    <Box width="100%">
+                      {[
+                        [
+                          "Nom de l’employé",
+                          `${data.employee.firstName} ${data.employee.lastName}`,
+                        ],
+                        ["Matricule", data.employee.matricule || "—"],
+                        ["Département", data.employee.department || "—"],
+                        ["Poste", data.employee.role || "—"],
+                      ].map(([label, value]) => (
+                        <Flex
+                          key={label}
+                          align="baseline"
+                          minH="38px"
+                          borderBottom="1px solid #f0f0f0"
+                          py={1}
+                        >
+                          <Text
+                            width="230px"
+                            flexShrink={0}
+                            fontSize="1.05rem"
+                            color="#525252"
+                          >
+                            {label}
+                          </Text>
+
+                          <Text
+                            fontSize="1.05rem"
+                            fontWeight="600"
+                            overflowWrap="anywhere"
+                            whiteSpace="normal"
+                          >
+                            {value}
+                          </Text>
+                        </Flex>
+                      ))}
+                    </Box>
+                  </Box>
+
+                  {/* =================================================
+                      STATUS — TOP RIGHT
+                  ================================================= */}
+
+                  <Box flexShrink={0} minW="220px" pt={1} textAlign="right">
+                    <Text
+                      fontSize="1.05rem"
+                      color="#525252"
+                      whiteSpace="nowrap"
+                    >
+                      Statut:{" "}
+                      <Text as="span" fontWeight="700" color="#171717">
+                        {data.payroll.status}
+                      </Text>
+                    </Text>
+                  </Box>
+                </Flex>
+
+                {/* =================================================
+                    PAYROLL SECTIONS
+                ================================================= */}
+
+                <Flex width="100%" gap="32px" align="stretch">
+                  {/* =================================================
+                      RÉMUNÉRATIONS
+                  ================================================= */}
+
+                  <Box
+                    flex="1"
+                    minW={0}
+                    border="1px solid #d4d4d4"
+                    display="flex"
+                    flexDirection="column"
+                  >
+                    <Box
+                      bg="#f5f5f5"
+                      px={6}
+                      py={3}
+                      borderBottom="1px solid #d4d4d4"
+                      flexShrink={0}
+                    >
+                      <Text
+                        fontSize="1.2rem"
+                        fontWeight="700"
+                        letterSpacing="0.04em"
+                        textTransform="uppercase"
+                      >
+                        Rémunérations
+                      </Text>
+                    </Box>
+
+                    <TableContainer
+                      maxH="285px"
+                      overflowY="auto"
+                      overflowX="hidden"
+                      px={3}
+                      py={2}
+                      position="relative"
+                    >
+                      <Table
+                        size="sm"
+                        variant="simple"
+                        sx={{
+                          tableLayout: "auto",
+
+                          "th, td": {
+                            borderColor: "#e5e5e5",
+                            py: 2.5,
+                            px: 3,
+                          },
+
+                          td: {
+                            fontSize: "1.05rem",
+                            verticalAlign: "top",
+                          },
+
+                          tfoot: {
+                            position: "sticky",
+                            bottom: 0,
+                            zIndex: 2,
+                          },
+
+                          "tfoot td": {
+                            position: "sticky",
+                            bottom: 0,
+                            background: "white",
+                            borderTop: "2px solid #171717",
+                            boxShadow: "0 -2px 4px rgba(0,0,0,0.05)",
+                            zIndex: 2,
+                          },
+                        }}
+                      >
+                        <Tbody>
+                          {Array.from({
+                            length: maxRows,
+                          }).map((_, index) => {
+                            const row = earnings[index];
+
+                            return (
+                              <Tr key={index}>
+                                <Td
+                                  width="60%"
+                                  whiteSpace="normal"
+                                  overflowWrap="break-word"
+                                  wordBreak="normal"
+                                >
+                                  {row?.label || "—"}
+                                </Td>
+
+                                <Td
+                                  width="40%"
+                                  isNumeric
+                                  whiteSpace="nowrap"
+                                  fontWeight="600"
+                                >
+                                  {row ? formatMoney(row.earning!) : "—"}
+                                </Td>
+                              </Tr>
+                            );
+                          })}
+                        </Tbody>
+
+                        <Tfoot>
+                          <Tr fontWeight="700">
+                            <Td fontSize="1.05rem">Total</Td>
+
+                            <Td
+                              isNumeric
+                              whiteSpace="nowrap"
+                              fontSize="1.05rem"
+                            >
+                              {formatMoney(data.payroll.grossSalary)}
+                            </Td>
+                          </Tr>
+                        </Tfoot>
+                      </Table>
+                    </TableContainer>
+                  </Box>
+
+                  {/* =================================================
+                      RETENUES
+                  ================================================= */}
+
+                  <Box
+                    flex="1"
+                    minW={0}
+                    border="1px solid #d4d4d4"
+                    display="flex"
+                    flexDirection="column"
+                  >
+                    <Box
+                      bg="#f5f5f5"
+                      px={6}
+                      py={3}
+                      borderBottom="1px solid #d4d4d4"
+                      flexShrink={0}
+                    >
+                      <Text
+                        fontSize="1.2rem"
+                        fontWeight="700"
+                        letterSpacing="0.04em"
+                        textTransform="uppercase"
+                      >
+                        Retenues
+                      </Text>
+                    </Box>
+
+                    <TableContainer
+                      maxH="285px"
+                      overflowY="auto"
+                      overflowX="hidden"
+                      px={3}
+                      py={2}
+                      position="relative"
+                    >
+                      <Table
+                        size="sm"
+                        variant="simple"
+                        sx={{
+                          tableLayout: "auto",
+
+                          "th, td": {
+                            borderColor: "#e5e5e5",
+                            py: 2.5,
+                            px: 3,
+                          },
+
+                          td: {
+                            fontSize: "1.05rem",
+                            verticalAlign: "top",
+                          },
+
+                          tfoot: {
+                            position: "sticky",
+                            bottom: 0,
+                            zIndex: 2,
+                          },
+
+                          "tfoot td": {
+                            position: "sticky",
+                            bottom: 0,
+                            background: "white",
+                            borderTop: "2px solid #171717",
+                            boxShadow: "0 -2px 4px rgba(0,0,0,0.05)",
+                            zIndex: 2,
+                          },
+                        }}
+                      >
+                        <Tbody>
+                          {Array.from({
+                            length: maxRows,
+                          }).map((_, index) => {
+                            const row = deductions[index];
+
+                            return (
+                              <Tr key={index}>
+                                <Td
+                                  width="60%"
+                                  whiteSpace="normal"
+                                  overflowWrap="break-word"
+                                  wordBreak="normal"
+                                >
+                                  {row?.label || "—"}
+                                </Td>
+
+                                <Td
+                                  width="40%"
+                                  isNumeric
+                                  whiteSpace="nowrap"
+                                  fontWeight="600"
+                                >
+                                  {row ? formatMoney(row.deduction!) : "—"}
+                                </Td>
+                              </Tr>
+                            );
+                          })}
+                        </Tbody>
+
+                        <Tfoot>
+                          <Tr fontWeight="700">
+                            <Td fontSize="1.05rem">Total</Td>
+
+                            <Td
+                              isNumeric
+                              whiteSpace="nowrap"
+                              fontSize="1.05rem"
+                            >
+                              {formatMoney(data.payroll.totalDeductions)}
+                            </Td>
+                          </Tr>
+                        </Tfoot>
+                      </Table>
+                    </TableContainer>
+                  </Box>
+                </Flex>
+
+                {/* =================================================
+                    NET SALARY
+                ================================================= */}
+
+                <Flex
+                  justify="space-between"
+                  align="center"
+                  gap={5}
+                  mt={5}
+                  py={3}
+                  px={5}
+                  borderTop="2px solid #171717"
+                  borderBottom="2px solid #171717"
                 >
-                  {formatCurrency(totalEarnings, currency)}
-                </Th>
-              </Tr>
-            </Tfoot>
-          </Table>
+                  <Text
+                    fontWeight="700"
+                    letterSpacing="0.05em"
+                    fontSize="1.2rem"
+                  >
+                    NET À PAYER
+                  </Text>
+
+                  <Text fontSize="1.2rem" fontWeight="700" whiteSpace="nowrap">
+                    {formatMoney(data.payroll.netSalary)}
+                  </Text>
+                </Flex>
+
+                {/* Small internal space before paper border */}
+                <Box height="20px" />
+              </Box>
+            )
+          )}
         </Box>
-        {/* Deductions */}
+
+        {/* =========================================================
+            REAL BOTTOM BREATHING ROOM
+        ========================================================= */}
+
         <Box
-          width="40vw"
-          height="50vh"
-          border="1px solid"
-          bg="#ffffff"
-          borderColor="#D1D9E0"
-          borderRadius="8px"
-          boxShadow="0 2px 8px rgba(0,0,0,0.5)"
-          overflow="hidden"
-          display="flex"
-          flexDirection="column"
-        >
-          {/* Fixed Header */}
-          <Table variant="simple" sx={{ tableLayout: "fixed" }} flexShrink={0}>
-            <Thead>
-              <Tr>
-                <Th color="red.600" fontSize="0.8rem">
-                  Déductions
-                </Th>
-                <Th isNumeric>Montant</Th>
-              </Tr>
-            </Thead>
-          </Table>
-
-          {/* ONLY THIS SECTION SCROLLS */}
-          <Box
-            flex="1"
-            overflowY="auto"
-            overflowX="hidden"
-            sx={{
-              "&::-webkit-scrollbar": {
-                width: "6px",
-              },
-              "&::-webkit-scrollbar-thumb": {
-                background: "#CBD5E0",
-                borderRadius: "10px",
-              },
-            }}
-          >
-            <Table
-              variant="simple"
-              sx={{
-                tableLayout: "fixed",
-              }}
-            >
-              <Tbody>
-                {deductions.map((item) => (
-                  <Tr key={item.componentId}>
-                    <Td>{item.displayName}</Td>
-                    <Td isNumeric>{formatCurrency(item.amount, currency)}</Td>
-                  </Tr>
-                ))}
-              </Tbody>
-            </Table>
-          </Box>
-
-          {/* Fixed Footer */}
-          <Table variant="simple" sx={{ tableLayout: "fixed" }} flexShrink={0}>
-            <Tfoot>
-              <Tr>
-                <Th
-                  fontSize="0.9rem"
-                  bg="red.100"
-                  color="red.800"
-                  fontWeight="800"
-                >
-                  Total
-                </Th>
-                <Th
-                  fontSize="0.9rem"
-                  bg="red.100"
-                  color="red.800"
-                  fontWeight="800"
-                  isNumeric
-                >
-                  {formatCurrency(totalDeductions, currency)}
-                </Th>
-              </Tr>
-            </Tfoot>
-          </Table>
-        </Box>
-      </HStack>
-    </Flex>
+          position="absolute"
+          bottom={0}
+          left={0}
+          right={0}
+          height={`${bottomPaperMargin}px`}
+          pointerEvents="none"
+        />
+      </Box>
+    </Box>
   );
-};
-
-export default EmployeePayslipDetails;
+}

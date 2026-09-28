@@ -6,6 +6,7 @@ import {
   TableContainer,
   Tbody,
   Td,
+  Tfoot,
   Th,
   Thead,
   Tr,
@@ -33,10 +34,18 @@ export default function PayrollResultsTable({ payrollResults }: Props) {
   const payrollSettings = usePayrollSettings();
   const currency = payrollSettings?.currency ?? "BIF";
   const navigate = useNavigate();
+  const totals = payrollResults.reduce(
+    (sum, result) => ({
+      earnings: sum.earnings + result.totalEarnings,
+      deductions: sum.deductions + result.totalDeductions,
+      netSalary: sum.netSalary + result.netSalary,
+    }),
+    { earnings: 0, deductions: 0, netSalary: 0 }
+  );
 
   return (
     <TableContainer
-      maxH="50vh"
+      maxH="70vh"
       maxW="80vw"
       borderWidth="1px"
       borderRadius="lg"
@@ -91,7 +100,7 @@ export default function PayrollResultsTable({ payrollResults }: Props) {
 
               <Td isNumeric>{formatCurrency(result.baseSalary, currency)}</Td>
 
-              <Td isNumeric>
+              <Td isNumeric color="blue.500">
                 {formatCurrency(result.totalEarnings, currency)}
               </Td>
 
@@ -141,6 +150,34 @@ export default function PayrollResultsTable({ payrollResults }: Props) {
             </Tr>
           ))}
         </Tbody>
+        <Tfoot
+          bg="gray.50"
+          sx={{
+            "& > tr > th, & > tr > td": {
+              position: "sticky",
+              bottom: 0,
+              zIndex: 1,
+              bg: "gray.50",
+              boxShadow: "inset 0 1px 0 var(--chakra-colors-gray-200)",
+            },
+          }}
+        >
+          <Tr fontWeight="bold">
+            <Th colSpan={3} scope="row">
+              Total
+            </Th>
+            <Td isNumeric color="blue.500">
+              {formatCurrency(totals.earnings, currency)}
+            </Td>
+            <Td isNumeric color="red.500">
+              {formatCurrency(totals.deductions, currency)}
+            </Td>
+            <Td isNumeric color="green.500">
+              {formatCurrency(totals.netSalary, currency)}
+            </Td>
+            <Td colSpan={2} />
+          </Tr>
+        </Tfoot>
       </Table>
     </TableContainer>
   );

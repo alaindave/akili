@@ -1,3 +1,4 @@
+type PayslipDocumentData = import("../../../common/types/payroll/PayslipDocument", { with: { "resolution-mode": "require" } }).PayslipDocumentData;
 type PayrollPaymentFilter = import("../../../common/types/payroll/payrollPayment", { with: { "resolution-mode": "require" } }).PayrollPaymentFilter;
 type AdminUser = import("../../../common/types/AdminUser", {
   with: { "resolution-mode": "require" },
@@ -14,6 +15,10 @@ export interface PayrollRunDto {
 }
 
 export const payrollRunApi = {
+  getPayslipDocument: (companyId: string, employeeId: string, payrollRunId: string) =>
+    invoke<PayslipDocumentData>("payroll:getPayslipDocument", companyId, employeeId, payrollRunId),
+  savePayslipReport: (companyId: string, employeeId: string, payrollRunId: string) =>
+    invoke<{ canceled: boolean; filePath?: string }>("payroll:savePayslipReport", companyId, employeeId, payrollRunId),
   saveMonthlyReport: (companyId: string, runId: string, department: string | null, paymentMethod: PayrollPaymentFilter = "all") =>
     invoke<{ canceled: boolean; filePath?: string }>("payroll:saveMonthlyReport", companyId, runId, department, paymentMethod),
   createPayrollDraft: (payrollRun: PayrollRunDto) =>
@@ -42,25 +47,17 @@ export const payrollRunApi = {
   returnToDraft: (companyId: string, payrollRunId: string) =>
     invoke("payroll:returnToDraft", companyId, payrollRunId),
 
-  approvePayroll: (
-    companyId: string,
-    payrollRunId: string,
-    adminUser: AdminUser
-  ) => invoke("payroll:approve", companyId, payrollRunId, adminUser),
+  approvePayslip: (companyId: string, payrollResultId: string, admin: AdminUser) =>
+    invoke("payroll:approvePayslip", companyId, payrollResultId, admin),
 
-  markPayrollAsPaid: (
-    companyId: string,
-    managerEmail: string,
-    payrollRunId: string,
-    adminUser: AdminUser
-  ) =>
-    invoke(
-      "payroll:markAsPaid",
-      companyId,
-      managerEmail,
-      payrollRunId,
-      adminUser
-    ),
+  markPayslipAsPaid: (companyId: string, payrollResultId: string, admin: AdminUser) =>
+    invoke("payroll:payPayslip", companyId, payrollResultId, admin),
+
+  getProcessedPayrollRuns: (companyId: string) =>
+    invoke("payroll:getProcessedRuns", companyId),
+
+  cancelProcessedPayroll: (companyId: string, payrollRunId: string, admin: AdminUser) =>
+    invoke("payroll:cancelProcessed", companyId, payrollRunId, admin),
 
   cancelPayroll: (companyId: string, payrollRunId: string, admin: AdminUser) =>
     invoke("payroll:cancel", companyId, payrollRunId, admin),

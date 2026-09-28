@@ -79,6 +79,8 @@ export interface PayrollResult {
   serverVersion?: number;
   cancelledAt?: string;
   verifiedAt?: string;
+  approvedBy?: string;
+  paidBy?: string;
   approvedAt?: string;
   paidAt?: string;
   netSalary: number;

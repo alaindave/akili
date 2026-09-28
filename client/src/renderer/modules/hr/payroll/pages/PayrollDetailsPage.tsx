@@ -30,7 +30,6 @@ import {
 import User from "../../../../../common/types/User";
 import useAdminUser from "../../../../../store/auth.store";
 import DeletionDialog from "../../../../components/DeletionDialog";
-import PayrollDashboard from "../components/PayrollDashboard";
 import PayrollResultsTable from "../components/PayrollResultsTable";
 import useSyncStore from "../../../../../store/sync.store";
 import { getPayrollPeriod } from "../../../../lib/date";
@@ -91,22 +90,6 @@ const PayrollDetailsPage = () => {
   const filteredResults = payrollResults.filter((result) =>
     matchesPayrollFilters(result, department, paymentMethod)
   );
-  const dashboardTotals = filteredResults.reduce(
-    (totals, result) => ({
-      employeeCount: totals.employeeCount + 1,
-      totalBasicSalary: totals.totalBasicSalary + result.baseSalary,
-      totalEarnings: totals.totalEarnings + result.totalEarnings,
-      totalDeductions: totals.totalDeductions + result.totalDeductions,
-      totalNetSalary: totals.totalNetSalary + result.netSalary,
-    }),
-    {
-      employeeCount: 0,
-      totalBasicSalary: 0,
-      totalEarnings: 0,
-      totalDeductions: 0,
-      totalNetSalary: 0,
-    }
-  );
   const syncVersion = useSyncStore((store) => store.syncVersion);
 
   const {
@@ -127,22 +110,6 @@ const PayrollDetailsPage = () => {
     }
 
     switch (payrollRun.status) {
-      case "VERIFICATION":
-        return user.role === "MANAGER"
-          ? {
-              label: "Approuver",
-              onClick: approve,
-            }
-          : null;
-
-      case "APPROUVÉ":
-        return user.role === "MANAGER"
-          ? {
-              label: "Payer",
-              onClick: pay,
-            }
-          : null;
-
       case "BROUILLON":
         return {
           label: "Verifier",
@@ -226,7 +193,12 @@ const PayrollDetailsPage = () => {
       loadPayrollRun();
       loadPayrollResuts();
     } catch (e) {
-      console.error("AN ERROR OCCURED DURING CANCELLATION", e);
+      toast({
+        title: "Impossible d’annuler cette paie",
+        description: e instanceof Error ? e.message : "Veuillez réessayer.",
+        status: "error",
+        isClosable: true,
+      });
     }
   };
 
@@ -251,53 +223,6 @@ const PayrollDetailsPage = () => {
       loadPayrollResuts();
     } catch (e) {
       console.error("AN ERROR OCCURED WHILE SUBMITTING FOR VERIFICATION", e);
-    }
-  };
-
-  const approve = async () => {
-    if (!_id) return;
-
-    try {
-      const results = await window.electron.hr.payrollRun.approvePayroll(
-        user.companyId,
-        _id,
-        user
-      );
-
-      console.log("APPROVAL RESULTS", results);
-
-      window.electron.sync.sync(user.companyId).catch((error: Error) => {
-        console.error("IMMEDIATE SYNC FAILED:", error);
-      });
-
-      loadPayrollRun();
-      loadPayrollResuts();
-    } catch (e) {
-      console.error("AN ERROR OCCURED WHILE SUBMITTING FOR APPROVAL", e);
-    }
-  };
-
-  const pay = async () => {
-    if (!_id) return;
-
-    try {
-      const results = await window.electron.hr.payrollRun.markPayrollAsPaid(
-        user.companyId,
-        "afritanleather@yahoo.fr",
-        _id,
-        user
-      );
-
-      console.log("PAYMENT RESULTS", results);
-
-      window.electron.sync.sync(user.companyId).catch((error: Error) => {
-        console.error("IMMEDIATE SYNC FAILED:", error);
-      });
-
-      loadPayrollRun();
-      loadPayrollResuts();
-    } catch (e) {
-      console.error("AN ERROR OCCURED WHILE SUBMITTING FOR PAYMENT", e);
     }
   };
 
@@ -332,7 +257,7 @@ const PayrollDetailsPage = () => {
         >
           <Box
             position="absolute"
-            top="1rem"
+            top="1.5rem"
             ml="0.2rem"
             mr="2rem"
             p={2}
@@ -344,28 +269,24 @@ const PayrollDetailsPage = () => {
         </Link>
         <Box ml="2rem">
           <HStack>
-            <Text mt="1rem" ml="1rem" fontSize="1.4rem" fontWeight="600">
+            <Text mt="1.5rem" ml="1rem" fontSize="1.4rem" fontWeight="600">
               Fiches de paye
             </Text>
 
-            <Box mt="1rem">
+            <Box mt="1.5rem">
               <MdOutlineChevronRight fontSize="1.3rem" />
             </Box>
 
-            <Text mt="1.2rem" fontWeight="600" color="gray.700">
+            <Text mt="1.5rem" fontWeight="600" color="gray.700">
               Periode du{" "}
               {payrollRun?.month && payrollRun?.year
                 ? getPayrollPeriod(payrollRun.month, payrollRun.year)
                 : ""}
             </Text>
           </HStack>
-          {/* Payroll dashboard */}
-          <Box mt="5rem" ml="1.5rem">
-            <PayrollDashboard {...dashboardTotals} />
-          </Box>
           {/* Payroll results table */}
 
-          <Box mt="3rem" ml="0.4rem">
+          <Box mt="3rem">
             <HStack mb={4} align="flex-end" spacing={3} flexWrap="wrap">
               <FormControl maxW="280px">
                 <FormLabel htmlFor="payroll-department" fontSize="sm">
@@ -425,10 +346,12 @@ const PayrollDetailsPage = () => {
                 colorScheme="blue"
               />
             </HStack>
-            <PayrollResultsTable payrollResults={filteredResults} />
+            <Box mt="2.5rem">
+              <PayrollResultsTable payrollResults={filteredResults} />
+            </Box>
             {filteredResults.length === 0 && (
               <Text mt={4} color="gray.500" textAlign="center">
-                Aucun résultat pour ces filtres.
+                Aucun résultat.
               </Text>
             )}
           </Box>
@@ -438,37 +361,41 @@ const PayrollDetailsPage = () => {
 
       {/* Buttons */}
 
-      {payrollRun?.status !== "ANNULÉ" && payrollRun?.status !== "PAYÉ" && (
-        <Flex mb="1rem" mr="2rem" justify="flex-end">
-          <Button
-            onClick={onConfirmationOpen}
-            width="8rem"
-            bg="#ffffff"
-            border="1px solid gray"
-          >
-            <Box color="red.400" fontSize="1.2rem" mr="0.7rem">
-              <MdOutlineCancel />
-            </Box>
-            Annuler
-          </Button>
-
-          {statusAction && (
+      {payrollRun?.status !== "ANNULÉ" &&
+        payrollRun?.status !== "PAYÉ" &&
+        !payrollResults.some(
+          (result) => result.status === "APPROUVÉ" || result.status === "PAYÉ"
+        ) && (
+          <Flex mb="1rem" mr="2rem" justify="flex-end">
             <Button
-              onClick={statusAction.onClick}
+              onClick={onConfirmationOpen}
               width="8rem"
               bg="#ffffff"
               border="1px solid gray"
-              ml="0.3rem"
             >
-              <Box color="green.600" fontSize="1.2rem" mr="0.7rem">
-                <GiConfirmed />
+              <Box color="red.400" fontSize="1.2rem" mr="0.7rem">
+                <MdOutlineCancel />
               </Box>
-
-              {statusAction.label}
+              Annuler
             </Button>
-          )}
-        </Flex>
-      )}
+
+            {statusAction && (
+              <Button
+                onClick={statusAction.onClick}
+                width="8rem"
+                bg="#ffffff"
+                border="1px solid gray"
+                ml="0.3rem"
+              >
+                <Box color="green.600" fontSize="1.2rem" mr="0.7rem">
+                  <GiConfirmed />
+                </Box>
+
+                {statusAction.label}
+              </Button>
+            )}
+          </Flex>
+        )}
 
       <DeletionDialog
         isOpen={isConfirmationOpen}

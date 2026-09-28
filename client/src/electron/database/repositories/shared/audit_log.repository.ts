@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { all, run } from "../../db.js";
+import { all, run, runDirect } from "../../db.js";
 import type {
   AuditLog,
   CreateAuditLogInput,
@@ -10,7 +10,8 @@ import type {
  * record any set of fields while the database schema remains reusable.
  */
 export async function createAuditLog(
-  input: CreateAuditLogInput
+  input: CreateAuditLogInput,
+  withinTransaction = false
 ): Promise<AuditLog> {
   const requiredFields = [
     "companyId",
@@ -34,7 +35,7 @@ export async function createAuditLog(
     createdAt: new Date().toISOString(),
   };
 
-  await run(
+  await (withinTransaction ? runDirect : run)(
     `
       INSERT INTO audit_logs (
         _id, companyId, userId, userName, action, entity, entityId,

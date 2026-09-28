@@ -1,5 +1,13 @@
 import { randomUUID } from "crypto";
-import { run, get, all, transaction, runDirect } from "../../../db.js";
+import {
+  run,
+  get,
+  all,
+  transaction,
+  runDirect,
+  getDirect,
+  allDirect,
+} from "../../../db.js";
 
 import {
   PayrollBatchResult,
@@ -9,7 +17,10 @@ import {
   PayrollStatus,
 } from "../../../../../common/types/payroll/Payroll.js";
 import AdminUser from "../../../../../common/types/AdminUser.js";
-import { addToSyncQueue } from "../../shared/sync.repository.js";
+import {
+  addToSyncQueue,
+  notifyPendingChanges,
+} from "../../shared/sync.repository.js";
 import { createAuditLog } from "../../shared/audit_log.repository.js";
 import { PayrollRunDto } from "../../../../preload/hr/payroll_run.preload.cjs";
 
@@ -648,7 +659,7 @@ export async function upsertPayrollResult(
 
     if (
       payrollResult.serverVersion &&
-      payrollResult.serverVersion <= (existingById.serverVersion ?? 0)
+      payrollResult.serverVersion < (existingById.serverVersion ?? 0)
     ) {
       console.log(
         `SKIPPING PAYROLL RESULT PULL. LOCAL SERVER VERSION IS NEWER/EQUAL: ${payrollResult._id}`,
@@ -677,6 +688,8 @@ export async function upsertPayrollResult(
         status = ?,
         cancelledAt = ?,
         verifiedAt = ?,
+        approvedBy = ?,
+        paidBy = ?,
         approvedAt = ?,
         paidAt = ?,
         serverVersion = ?,
@@ -700,6 +713,8 @@ export async function upsertPayrollResult(
         payrollResult.status,
         payrollResult.cancelledAt ?? null,
         payrollResult.verifiedAt ?? null,
+        payrollResult.approvedBy ?? null,
+        payrollResult.paidBy ?? null,
         payrollResult.approvedAt ?? null,
         payrollResult.paidAt ?? null,
         payrollResult.serverVersion,
@@ -786,6 +801,8 @@ export async function upsertPayrollResult(
         status = ?,
         cancelledAt = ?,
         verifiedAt = ?,
+        approvedBy = ?,
+        paidBy = ?,
         approvedAt = ?,
         paidAt = ?,
         serverVersion = ?,
@@ -810,6 +827,8 @@ export async function upsertPayrollResult(
         payrollResult.status,
         payrollResult.cancelledAt ?? null,
         payrollResult.verifiedAt ?? null,
+        payrollResult.approvedBy ?? null,
+        payrollResult.paidBy ?? null,
         payrollResult.approvedAt ?? null,
         payrollResult.paidAt ?? null,
         payrollResult.serverVersion,
@@ -845,6 +864,8 @@ export async function upsertPayrollResult(
       status,
       cancelledAt,
       verifiedAt,
+      approvedBy,
+      paidBy,
       approvedAt,
       paidAt,
       serverVersion,
@@ -855,7 +876,7 @@ export async function upsertPayrollResult(
     )
     VALUES (
       ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-      ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?
+      ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?
     )
     `,
     [
@@ -873,6 +894,8 @@ export async function upsertPayrollResult(
       payrollResult.status,
       payrollResult.cancelledAt ?? null,
       payrollResult.verifiedAt ?? null,
+      payrollResult.approvedBy ?? null,
+      payrollResult.paidBy ?? null,
       payrollResult.approvedAt ?? null,
       payrollResult.paidAt ?? null,
       payrollResult.serverVersion,
@@ -1008,101 +1031,58 @@ export async function updatePayrollStatus(
   payrollRunId: string,
   status: PayrollStatus
 ) {
-  if (!companyId) {
-    throw new Error("Company ID is required.");
-  }
-
-  const now = new Date().toISOString();
-
-  // ----------------------------------------------------------
-  // Make sure payroll run belongs to this company
-  // ----------------------------------------------------------
-
-  const payrollRun: PayrollRun | null = await get(
-    `
-    SELECT *
-    FROM payroll_runs
-    WHERE companyId = ?
-      AND _id = ?
-      AND isDeleted = 0
-    LIMIT 1
-    `,
-    [companyId, payrollRunId]
-  );
-
-  if (!payrollRun) {
-    throw new Error(`Payroll run not found for company: ${payrollRunId}`);
-  }
-
-  const results: PayrollResult[] = await all(
-    `
-    SELECT *
-    FROM payroll_results
-    WHERE companyId = ?
-      AND payrollRunId = ?
-    `,
-    [companyId, payrollRunId]
-  );
-
-  await run(
-    `
-    UPDATE payroll_runs
-    SET
-      status = ?,
-      updatedAt = ?,
-      synced = 0
-    WHERE companyId = ?
-      AND _id = ?
-    `,
-    [status, now, companyId, payrollRunId]
-  );
-
-  if (results.length > 0) {
-    const resultIds = results.map((result) => result._id);
-
-    const placeholders = resultIds.map(() => "?").join(", ");
-
-    await run(
-      `
-      UPDATE payroll_results
-      SET
-        status = ?,
-        updatedAt = ?,
-        synced = 0
-      WHERE companyId = ?
-        AND _id IN (${placeholders})
-      `,
-      [status, now, companyId, ...resultIds]
+  if (!companyId) throw new Error("Company ID is required.");
+  if (status !== "BROUILLON")
+    throw new Error("Utilisez les actions individuelles des bulletins.");
+  await transaction(async () => {
+    const payrollRun = await getDirect<PayrollRun>(
+      "SELECT * FROM payroll_runs WHERE companyId = ? AND _id = ? AND isDeleted = 0",
+      [companyId, payrollRunId]
     );
-  }
-
-  await addToSyncQueue({
-    companyId,
-    entity: "payroll_run",
-    entityId: payrollRunId,
-    operation: "update",
-    payload: JSON.stringify({
-      ...payrollRun,
-      status,
-      updatedAt: now,
-    }),
+    if (!payrollRun || payrollRun.status === "ANNULÉ")
+      throw new Error("Paie introuvable ou annulée.");
+    const results = await allDirect<PayrollResult>(
+      "SELECT * FROM payroll_results WHERE companyId = ? AND payrollRunId = ? AND isDeleted = 0",
+      [companyId, payrollRunId]
+    );
+    if (results.some((r) => r.status === "APPROUVÉ" || r.status === "PAYÉ")) {
+      throw new Error(
+        "Cette paie contient des bulletins déjà approuvés ou payés."
+      );
+    }
+    const now = new Date().toISOString();
+    await runDirect(
+      "UPDATE payroll_runs SET status = ?, updatedAt = ?, synced = 0 WHERE companyId = ? AND _id = ?",
+      [status, now, companyId, payrollRunId]
+    );
+    await runDirect(
+      "UPDATE payroll_results SET status = ?, updatedAt = ?, synced = 0 WHERE companyId = ? AND payrollRunId = ? AND isDeleted = 0",
+      [status, now, companyId, payrollRunId]
+    );
+    await addToSyncQueue(
+      {
+        companyId,
+        entity: "payroll_run",
+        entityId: payrollRunId,
+        operation: "update",
+        payload: JSON.stringify({ ...payrollRun, status, updatedAt: now }),
+      },
+      true
+    );
+    for (const result of results) {
+      await addToSyncQueue(
+        {
+          companyId,
+          entity: "payroll_result",
+          entityId: result._id!,
+          operation: "update",
+          payload: JSON.stringify({ ...result, status, updatedAt: now }),
+        },
+        true
+      );
+    }
   });
-
-  for (const result of results) {
-    if (!result._id) return;
-    await addToSyncQueue({
-      companyId,
-      entity: "payroll_result",
-      entityId: result._id,
-      operation: "update",
-      payload: JSON.stringify({
-        ...result,
-        status,
-        updatedAt: now,
-      }),
-    });
-  }
-
+  await notifyPendingChanges(companyId);
   return true;
 }
 
@@ -1110,117 +1090,76 @@ export async function updatePayrollStatus(
 // CANCEL PAYROLL RUN
 // ============================================================
 
-export async function cancelPayrollRun(
-  companyId: string,
-  payrollRunId: string,
-  admin: AdminUser
+export async function getProcessedPayrollRuns(companyId: string) {
+  if (!companyId) throw new Error("Company ID is required.");
+  return all<PayrollRun>(
+    `SELECT * FROM payroll_runs WHERE companyId = ? AND isDeleted = 0
+     AND status IN ('APPROUVÉ', 'PAYÉ') ORDER BY year DESC, month DESC, createdAt DESC`,
+    [companyId]
+  );
+}
+
+export function cancelPayrollRun(companyId: string, payrollRunId: string, admin: AdminUser) {
+  return cancelRun(companyId, payrollRunId, admin, false);
+}
+
+export function cancelProcessedPayrollRun(companyId: string, payrollRunId: string, admin: AdminUser) {
+  return cancelRun(companyId, payrollRunId, admin, true);
+}
+
+async function cancelRun(
+  companyId: string, payrollRunId: string, admin: AdminUser, fromSettings: boolean
 ) {
-  if (!companyId) {
-    throw new Error("Company ID is required.");
+  if (!companyId || admin.companyId !== companyId || !["ADMIN", "MANAGER"].includes(admin.role)) {
+    throw new Error("Seul un administrateur ou un responsable de cette entreprise peut annuler la paie.");
   }
-
-  const now = new Date().toISOString();
-
-  const payrollRun: PayrollRun | null = await get(
-    `
-    SELECT *
-    FROM payroll_runs
-    WHERE companyId = ?
-      AND _id = ?
-      AND isDeleted = 0
-    LIMIT 1
-    `,
-    [companyId, payrollRunId]
-  );
-
-  if (!payrollRun) {
-    throw new Error(`Payroll run not found for company: ${payrollRunId}`);
-  }
-
-  const results: PayrollResult[] = await all(
-    `
-    SELECT *
-    FROM payroll_results
-    WHERE companyId = ?
-      AND payrollRunId = ?
-    `,
-    [companyId, payrollRunId]
-  );
-
   await transaction(async () => {
-    await runDirect(
-      `
-      UPDATE payroll_runs
-      SET
-        status = ?,
-        cancelledBy = ?,
-        cancelledAt = ?,
-        updatedAt = ?,
-        synced = 0
-      WHERE companyId = ?
-        AND _id = ?
-      `,
-      ["ANNULÉ", admin._id, now, now, companyId, payrollRunId]
+    const payrollRun = await getDirect<PayrollRun>(
+      "SELECT * FROM payroll_runs WHERE companyId = ? AND _id = ? AND isDeleted = 0",
+      [companyId, payrollRunId]
     );
-
-    await runDirect(
-      `
-      UPDATE payroll_results
-      SET
-        status = ?,
-        cancelledAt = ?,
-        updatedAt = ?,
-        synced = 0
-      WHERE companyId = ?
-        AND payrollRunId = ?
-      `,
-      ["ANNULÉ", now, now, companyId, payrollRunId]
+    if (!payrollRun) throw new Error("Paie introuvable.");
+    if (payrollRun.status === "ANNULÉ") return;
+    if (fromSettings && !["APPROUVÉ", "PAYÉ"].includes(payrollRun.status)) {
+      throw new Error("Sélectionnez une paie approuvée ou payée.");
+    }
+    const results = await allDirect<PayrollResult>(
+      "SELECT * FROM payroll_results WHERE companyId = ? AND payrollRunId = ? AND isDeleted = 0",
+      [companyId, payrollRunId]
     );
-
-    return true;
-  });
-
-  await addToSyncQueue({
-    companyId,
-    entity: "payroll_run",
-    entityId: payrollRunId,
-    operation: "update",
-    payload: JSON.stringify({
-      ...payrollRun,
-      companyId,
-      status: "ANNULÉ",
-      cancelledBy: admin._id,
-      cancelledAt: now,
-      updatedAt: now,
-    }),
-  });
-
-  for (const result of results) {
-    if (!result._id) return;
+    if (!fromSettings && results.some((result) => ["APPROUVÉ", "PAYÉ"].includes(result.status))) {
+      throw new Error("Utilisez les paramètres de paie pour annuler une paie approuvée ou payée.");
+    }
+    const now = new Date().toISOString();
+    await runDirect(
+      `UPDATE payroll_runs SET status = 'ANNULÉ', cancelledBy = ?, cancelledAt = ?, updatedAt = ?, synced = 0
+       WHERE companyId = ? AND _id = ?`,
+      [admin._id, now, now, companyId, payrollRunId]
+    );
+    await runDirect(
+      `UPDATE payroll_results SET status = 'ANNULÉ', cancelledAt = ?, updatedAt = ?, synced = 0
+       WHERE companyId = ? AND payrollRunId = ? AND isDeleted = 0`,
+      [now, now, companyId, payrollRunId]
+    );
     await addToSyncQueue({
-      companyId,
-      entity: "payroll_result",
-      entityId: result._id,
-      operation: "update",
-      payload: JSON.stringify({
-        ...result,
-        companyId,
-        status: "ANNULÉ",
-        cancelledAt: now,
-        updatedAt: now,
-      }),
-    });
-  }
-
-  await createPayrollStatusAudit(
-    companyId,
-    payrollRunId,
-    admin,
-    payrollRun.status,
-    "ANNULÉ",
-    "Annulation de la paie"
-  );
-
+      companyId, entity: "payroll_run", entityId: payrollRunId, operation: "update",
+      payload: JSON.stringify({ ...payrollRun, status: "ANNULÉ", cancelledBy: admin._id,
+        cancelledAt: now, updatedAt: now, cancellationFromSettings: fromSettings }),
+    }, true);
+    for (const result of results) {
+      await addToSyncQueue({
+        companyId, entity: "payroll_result", entityId: result._id!, operation: "update",
+        payload: JSON.stringify({ ...result, status: "ANNULÉ", cancelledAt: now, updatedAt: now }),
+      }, true);
+    }
+    await createAuditLog({
+      companyId, userId: admin._id, userName: getAdminName(admin), action: "UPDATE",
+      entity: "PAYROLL_RUN", entityId: payrollRunId,
+      description: fromSettings ? "Annulation de la paie depuis les paramètres" : "Annulation de la paie",
+      changes: { status: { from: payrollRun.status, to: "ANNULÉ" } },
+    }, true);
+  });
+  await notifyPendingChanges(companyId);
   return true;
 }
 
@@ -1267,6 +1206,23 @@ export async function verifyPayrollRun(
   );
 
   await transaction(async () => {
+    const currentRun = await getDirect<PayrollRun>(
+      "SELECT * FROM payroll_runs WHERE companyId = ? AND _id = ? AND isDeleted = 0",
+      [companyId, payrollRunId]
+    );
+    if (!currentRun || currentRun.status !== "BROUILLON") {
+      throw new Error("Seule une paie en brouillon peut être soumise à vérification.");
+    }
+
+    const processed = await getDirect<{ _id: string }>(
+      "SELECT _id FROM payroll_results WHERE companyId = ? AND payrollRunId = ? AND isDeleted = 0 AND status IN ('APPROUVÉ', 'PAYÉ') LIMIT 1",
+      [companyId, payrollRunId]
+    );
+    if (processed)
+      throw new Error(
+        "Cette paie contient des bulletins déjà approuvés ou payés."
+      );
+
     await runDirect(
       `
       UPDATE payroll_runs
@@ -1341,239 +1297,181 @@ export async function verifyPayrollRun(
   return true;
 }
 
-// ============================================================
-// APPROVE PAYROLL RUN
-// ============================================================
-
-export async function approvePayrollRun(
+// Run status is derived from all active payslips, including those outside UI filters.
+// This helper runs inside the database transaction owned by its caller.
+async function refreshPayrollRunStatus(
   companyId: string,
-  payrollRunId: string,
-  admin: AdminUser
+  payrollRunId: string
 ) {
-  if (!companyId) {
-    throw new Error("Company ID is required.");
-  }
-
-  const now = new Date().toISOString();
-
-  const payrollRun = await get<{ _id: string; status: PayrollStatus }>(
-    `
-    SELECT _id, status
-    FROM payroll_runs
-    WHERE companyId = ?
-      AND _id = ?
-      AND isDeleted = 0
-    LIMIT 1
-    `,
+  const payrollRun = await getDirect<PayrollRun>(
+    "SELECT * FROM payroll_runs WHERE companyId = ? AND _id = ? AND isDeleted = 0",
     [companyId, payrollRunId]
   );
-
-  if (!payrollRun) {
-    throw new Error(`Payroll run not found for company: ${payrollRunId}`);
-  }
-
-  const results = await all<{ _id: string }>(
-    `
-    SELECT _id
-    FROM payroll_results
-    WHERE companyId = ?
-      AND payrollRunId = ?
-    `,
+  if (!payrollRun || payrollRun.status === "ANNULÉ") return;
+  const results = await allDirect<PayrollResult>(
+    "SELECT * FROM payroll_results WHERE companyId = ? AND payrollRunId = ? AND isDeleted = 0",
     [companyId, payrollRunId]
   );
-
-  await transaction(async () => {
-    await runDirect(
-      `
-      UPDATE payroll_runs
-      SET
-        status = ?,
-        approvedBy = ?,
-        approvedAt = ?,
-        updatedAt = ?,
-        synced = 0
-      WHERE companyId = ?
-        AND _id = ?
-      `,
-      ["APPROUVÉ", admin._id, now, now, companyId, payrollRunId]
-    );
-
-    await runDirect(
-      `
-      UPDATE payroll_results
-      SET
-        status = ?,
-        approvedAt = ?,
-        updatedAt = ?,
-        synced = 0
-      WHERE companyId = ?
-        AND payrollRunId = ?
-      `,
-      ["APPROUVÉ", now, now, companyId, payrollRunId]
-    );
-  });
-
-  await addToSyncQueue({
-    companyId,
-    entity: "payroll_run",
-    entityId: payrollRunId,
-    operation: "update",
-    payload: JSON.stringify({
+  // Do not report completion while a sync has only downloaded part of the run.
+  const complete =
+    results.length > 0 && results.length >= payrollRun.employeeCount;
+  const allApproved =
+    complete &&
+    results.every((r) => r.status === "APPROUVÉ" || r.status === "PAYÉ");
+  const allPaid = complete && results.every((r) => r.status === "PAYÉ");
+  const status: PayrollStatus = allPaid
+    ? "PAYÉ"
+    : allApproved
+    ? "APPROUVÉ"
+    : (complete || payrollRun.status === "BROUILLON") &&
+      results.every((r) => r.status === "BROUILLON")
+    ? "BROUILLON"
+    : "VERIFICATION";
+  const lastApproved = [...results].sort((a, b) =>
+    (b.approvedAt ?? "").localeCompare(a.approvedAt ?? "")
+  )[0];
+  const lastPaid = [...results].sort((a, b) =>
+    (b.paidAt ?? "").localeCompare(a.paidAt ?? "")
+  )[0];
+  await runDirect(
+    `UPDATE payroll_runs SET status = ?, approvedAt = ?, approvedBy = ?, paidAt = ?, paidBy = ?
+     WHERE companyId = ? AND _id = ?`,
+    [
+      status,
+      allApproved
+        ? lastApproved?.approvedAt ?? payrollRun.approvedAt ?? null
+        : null,
+      allApproved
+        ? lastApproved?.approvedBy ?? payrollRun.approvedBy ?? null
+        : null,
+      allPaid ? lastPaid?.paidAt ?? payrollRun.paidAt ?? null : null,
+      allPaid ? lastPaid?.paidBy ?? payrollRun.paidBy ?? null : null,
       companyId,
-      _id: payrollRunId,
-      status: "APPROUVÉ",
-      approvedBy: admin._id,
-      approvedAt: now,
-      updatedAt: now,
-    }),
-  });
-
-  for (const result of results) {
-    await addToSyncQueue({
-      companyId,
-      entity: "payroll_result",
-      entityId: result._id,
-      operation: "update",
-      payload: JSON.stringify({
-        companyId,
-        _id: result._id,
-        status: "APPROUVÉ",
-        payrollRunId,
-        approvedAt: now,
-        updatedAt: now,
-      }),
-    });
-  }
-
-  await createPayrollStatusAudit(
-    companyId,
-    payrollRunId,
-    admin,
-    payrollRun.status,
-    "APPROUVÉ",
-    "Approbation de la paie"
+      payrollRunId,
+    ]
   );
-
-  return true;
 }
 
-// ============================================================
-// PAYMENT PAYROLL RUN
-// ============================================================
+// Reconcile after pulling both runs and results, preserving pending individual actions.
+export async function refreshPayrollRunStatuses(companyId: string) {
+  await transaction(async () => {
+    const runs = await allDirect<{ _id: string }>(
+      "SELECT _id FROM payroll_runs WHERE companyId = ? AND isDeleted = 0",
+      [companyId]
+    );
+    for (const run of runs) await refreshPayrollRunStatus(companyId, run._id);
+  });
+}
 
-export async function paymentPayrollRun(
+async function transitionPayslip(
   companyId: string,
-  managerEmail: string,
-  payrollRunId: string,
+  payrollResultId: string,
+  admin: AdminUser,
+  target: "APPROUVÉ" | "PAYÉ"
+) {
+  if (!companyId || admin.companyId !== companyId || admin.role !== "MANAGER") {
+    throw new Error(
+      "Seul un responsable de cette entreprise peut approuver ou payer un bulletin."
+    );
+  }
+  const result = await transaction(async () => {
+    const payslip = await getDirect<PayrollResult>(
+      "SELECT * FROM payroll_results WHERE companyId = ? AND _id = ? AND isDeleted = 0",
+      [companyId, payrollResultId]
+    );
+    if (!payslip?.payrollRunId)
+      throw new Error("Bulletin de paie introuvable.");
+    const payrollRun = await getDirect<PayrollRun>(
+      "SELECT * FROM payroll_runs WHERE companyId = ? AND _id = ? AND isDeleted = 0",
+      [companyId, payslip.payrollRunId]
+    );
+    if (
+      !payrollRun ||
+      payrollRun.status === "ANNULÉ" ||
+      payrollRun.status === "BROUILLON"
+    ) {
+      throw new Error(
+        "La paie doit être soumise à vérification avant cette action."
+      );
+    }
+    // Repeated clicks and retried IPC calls must not create duplicate transitions.
+    if (
+      payslip.status === target ||
+      (target === "APPROUVÉ" && payslip.status === "PAYÉ")
+    )
+      return payslip;
+    const expected = target === "APPROUVÉ" ? "VERIFICATION" : "APPROUVÉ";
+    if (payslip.status !== expected) {
+      throw new Error(
+        target === "PAYÉ"
+          ? "Ce bulletin doit être approuvé avant son paiement."
+          : "Ce bulletin doit être en vérification avant son approbation."
+      );
+    }
+    const now = new Date().toISOString();
+    const dateField = target === "APPROUVÉ" ? "approvedAt" : "paidAt";
+    const actorField = target === "APPROUVÉ" ? "approvedBy" : "paidBy";
+    await runDirect(
+      `UPDATE payroll_results SET status = ?, ${dateField} = ?, ${actorField} = ?, updatedAt = ?, synced = 0
+       WHERE companyId = ? AND _id = ?`,
+      [target, now, admin._id, now, companyId, payrollResultId]
+    );
+    const updated = {
+      ...payslip,
+      status: target,
+      [dateField]: now,
+      [actorField]: admin._id,
+      updatedAt: now,
+    };
+    await addToSyncQueue(
+      {
+        companyId,
+        entity: "payroll_result",
+        entityId: payrollResultId,
+        operation: "update",
+        payload: JSON.stringify(updated),
+      },
+      true
+    );
+    await refreshPayrollRunStatus(companyId, payslip.payrollRunId);
+    await createAuditLog(
+      {
+        companyId,
+        userId: admin._id,
+        userName: getAdminName(admin),
+        action: "UPDATE",
+        entity: "PAYROLL_RUN",
+        entityId: payslip.payrollRunId,
+        description: `${
+          target === "APPROUVÉ" ? "Approbation" : "Paiement"
+        } du bulletin de l'employé ${payslip.employeeId}`,
+        changes: {
+          payslipId: { from: payrollResultId, to: payrollResultId },
+          status: { from: payslip.status, to: target },
+        },
+      },
+      true
+    );
+    return updated;
+  });
+  await notifyPendingChanges(companyId);
+  return result;
+}
+
+export function approvePayslip(
+  companyId: string,
+  payrollResultId: string,
   admin: AdminUser
 ) {
-  if (!companyId) {
-    throw new Error("Company ID is required.");
-  }
+  return transitionPayslip(companyId, payrollResultId, admin, "APPROUVÉ");
+}
 
-  const now = new Date().toISOString();
-
-  const payrollRun: PayrollRun | null = await get(
-    `
-    SELECT *
-    FROM payroll_runs
-    WHERE companyId = ?
-      AND _id = ?
-      AND isDeleted = 0
-    LIMIT 1
-    `,
-    [companyId, payrollRunId]
-  );
-
-  if (!payrollRun) {
-    throw new Error(`Payroll run not found for company: ${payrollRunId}`);
-  }
-
-  const results: PayrollResult[] = await all(
-    `
-    SELECT *
-    FROM payroll_results
-    WHERE companyId = ?
-      AND payrollRunId = ?
-    `,
-    [companyId, payrollRunId]
-  );
-
-  await transaction(async () => {
-    await runDirect(
-      `
-      UPDATE payroll_runs
-      SET
-        status = ?,
-        paidBy = ?,
-        paidAt = ?,
-        updatedAt = ?,
-        synced = 0
-      WHERE companyId = ?
-        AND _id = ?
-      `,
-      ["PAYÉ", admin._id, now, now, companyId, payrollRunId]
-    );
-
-    await runDirect(
-      `
-      UPDATE payroll_results
-      SET
-        status = ?,
-        paidAt = ?,
-        updatedAt = ?,
-        synced = 0
-      WHERE companyId = ?
-        AND payrollRunId = ?
-      `,
-      ["PAYÉ", now, now, companyId, payrollRunId]
-    );
-  });
-
-  await addToSyncQueue({
-    companyId,
-    entity: "payroll_run",
-    entityId: payrollRunId,
-    operation: "update",
-    payload: JSON.stringify({
-      ...payrollRun,
-      companyId,
-      managerEmail,
-      status: "PAYÉ",
-      paidBy: admin._id,
-      paidAt: now,
-      updatedAt: now,
-    }),
-  });
-
-  for (const result of results) {
-    if (!result._id) continue;
-    await addToSyncQueue({
-      companyId,
-      entity: "payroll_result",
-      entityId: result._id,
-      operation: "update",
-      payload: JSON.stringify({
-        ...result,
-        companyId,
-        managerEmail,
-        status: "PAYÉ",
-        paidAt: now,
-        updatedAt: now,
-      }),
-    });
-  }
-
-  await createPayrollStatusAudit(
-    companyId,
-    payrollRunId,
-    admin,
-    payrollRun.status,
-    "PAYÉ",
-    "Marquage de la paie comme payée"
-  );
-
-  return true;
+export function payPayslip(
+  companyId: string,
+  payrollResultId: string,
+  admin: AdminUser
+) {
+  return transitionPayslip(companyId, payrollResultId, admin, "PAYÉ");
 }
 
 // ============================================================
@@ -1923,7 +1821,11 @@ export async function getPayrollItems(
 // MARK PAYROLL RUN SYNCED
 // ============================================================
 
-export async function markPayrollRunSynced(companyId: string, _id: string) {
+export async function markPayrollRunSynced(
+  companyId: string,
+  _id: string,
+  updatedAt?: string
+) {
   return await run(
     `
     UPDATE payroll_runs
@@ -1932,8 +1834,15 @@ export async function markPayrollRunSynced(companyId: string, _id: string) {
       lastSyncedAt = ?
     WHERE companyId = ?
       AND _id = ?
+      AND (? IS NULL OR updatedAt = ?)
     `,
-    [new Date().toISOString(), companyId, _id]
+    [
+      new Date().toISOString(),
+      companyId,
+      _id,
+      updatedAt ?? null,
+      updatedAt ?? null,
+    ]
   );
 }
 
@@ -1941,7 +1850,11 @@ export async function markPayrollRunSynced(companyId: string, _id: string) {
 // MARK PAYROLL RESULT SYNCED
 // ============================================================
 
-export async function markPayrollResultSynced(companyId: string, _id: string) {
+export async function markPayrollResultSynced(
+  companyId: string,
+  _id: string,
+  updatedAt?: string
+) {
   return await run(
     `
     UPDATE payroll_results
@@ -1950,8 +1863,15 @@ export async function markPayrollResultSynced(companyId: string, _id: string) {
       lastSyncedAt = ?
     WHERE companyId = ?
       AND _id = ?
+      AND (? IS NULL OR updatedAt = ?)
     `,
-    [new Date().toISOString(), companyId, _id]
+    [
+      new Date().toISOString(),
+      companyId,
+      _id,
+      updatedAt ?? null,
+      updatedAt ?? null,
+    ]
   );
 }
 
@@ -2047,6 +1967,15 @@ export async function deletePayrollRun(
   // ----------------------------------------------------------
 
   await transaction(async () => {
+    const processed = await getDirect<{ _id: string }>(
+      "SELECT _id FROM payroll_results WHERE companyId = ? AND payrollRunId = ? AND isDeleted = 0 AND status IN ('APPROUVÉ', 'PAYÉ') LIMIT 1",
+      [companyId, payrollRunId]
+    );
+    if (processed)
+      throw new Error(
+        "Cette paie contient des bulletins déjà approuvés ou payés."
+      );
+
     if (resultIds.length > 0) {
       const placeholders = resultIds.map(() => "?").join(", ");
 

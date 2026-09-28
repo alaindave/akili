@@ -1,11 +1,14 @@
+import { getPayslipDocumentData, savePayslipReport } from "../../../services/modules/hr/payroll/payslipReport.service.js";
 import { PayrollPaymentFilter } from "../../../../common/types/payroll/payrollPayment.js";
 import { ipcMain } from "electron";
 import { saveMonthlyPayrollReport } from "../../../services/modules/hr/payroll/monthlyPayrollReport.service.js";
 import AdminUser from "../../../../common/types/AdminUser.js";
 import { getAllEmployeePayrollInputs } from "../../../database/repositories/modules/hr/payroll_employee_profile.repository.js";
 import {
-  approvePayrollRun,
+  approvePayslip,
   cancelPayrollRun,
+  cancelProcessedPayrollRun,
+  getProcessedPayrollRuns,
   createPayrollRun,
   deletePayrollRun,
   getEmployeePayrollResults,
@@ -13,7 +16,7 @@ import {
   getPayrollResults,
   getPayrollRunById,
   getPayrollRuns,
-  paymentPayrollRun,
+  payPayslip,
   savePayrollResults,
   updatePayrollStatus,
   verifyPayrollRun,
@@ -25,6 +28,12 @@ import { getPayrollAttendanceSummary } from "../../../database/repositories/modu
 import { PayrollRunDto } from "../../../preload/hr/payroll_run.preload.cjs";
 
 export function registerPayrollGenerationIPC() {
+  ipcMain.handle("payroll:getPayslipDocument", (_, companyId: string, employeeId: string, payrollRunId: string) =>
+    getPayslipDocumentData(companyId, employeeId, payrollRunId)
+  );
+  ipcMain.handle("payroll:savePayslipReport", (_, companyId: string, employeeId: string, payrollRunId: string) =>
+    savePayslipReport(companyId, employeeId, payrollRunId)
+  );
   ipcMain.handle("payroll:saveMonthlyReport", (_, companyId: string, runId: string, department: string | null, paymentMethod: PayrollPaymentFilter = "all") =>
     saveMonthlyPayrollReport(companyId, runId, department, paymentMethod)
   );
@@ -138,40 +147,28 @@ export function registerPayrollGenerationIPC() {
     }
   );
 
-  /**
-   * EN_VERIFICATION → APPROUVÉ
-   */
   ipcMain.handle(
-    "payroll:approve",
-    async (_, companyId: string, payrollRunId: string, admin: AdminUser) => {
-      return await approvePayrollRun(companyId, payrollRunId, admin);
-    }
+    "payroll:approvePayslip",
+    (_, companyId: string, payrollResultId: string, admin: AdminUser) =>
+      approvePayslip(companyId, payrollResultId, admin)
   );
 
-  /**
-   * APPROUVÉ → PAYÉ
-   */
   ipcMain.handle(
-    "payroll:markAsPaid",
-    async (
-      _,
-      companyId: string,
-      managerEmail: string,
-      payrollRunId: string,
-      admin: AdminUser
-    ) => {
-      return await paymentPayrollRun(
-        companyId,
-        managerEmail,
-        payrollRunId,
-        admin
-      );
-    }
+    "payroll:payPayslip",
+    (_, companyId: string, payrollResultId: string, admin: AdminUser) =>
+      payPayslip(companyId, payrollResultId, admin)
   );
 
   /**
    * BROUILLON / EN_VERIFICATION / APPROUVÉ → ANNULÉ
    */
+  ipcMain.handle("payroll:getProcessedRuns", (_, companyId: string) =>
+    getProcessedPayrollRuns(companyId)
+  );
+  ipcMain.handle("payroll:cancelProcessed", (_, companyId: string, payrollRunId: string, admin: AdminUser) =>
+    cancelProcessedPayrollRun(companyId, payrollRunId, admin)
+  );
+
   ipcMain.handle(
     "payroll:cancel",
     async (_, companyId: string, payrollRunId: string, admin: AdminUser) => {
