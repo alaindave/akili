@@ -51,7 +51,7 @@ const server = load('../../server/sync.ts', (name) => {
   assert.equal(new Model().accountNumber, 'cash');
   assert.equal(new Model({ accountNumber: '' }).accountNumber, 'cash');
   await assert.rejects(() => server.syncPayrollProfile('update', { ...payload, companyId: '' }));
-  let pending = [{ _id: 'queue-1', companyId: 'a', entity: 'payroll_profile', operation: 'update',
+  let pending = [{ _id: 'queue-1', companyId: 'a', entity: 'payroll_profile', entityId: 'profile', operation: 'update',
     payload: JSON.stringify({ ...payload, accountNumber: '007700' }) }];
   let failRequest = true;
   const acknowledgements = [];

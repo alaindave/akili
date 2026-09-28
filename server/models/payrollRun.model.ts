@@ -180,11 +180,13 @@ const payrollRunSchema = new Schema<PayrollRunDocument>(
 
 // Prevent duplicate payroll runs for the same month/year.
 payrollRunSchema.index(
-  { month: 1, year: 1 },
+  { companyId: 1, month: 1, year: 1 },
   {
+    name: "payroll_company_period_active",
     unique: true,
     partialFilterExpression: {
-      status: { $ne: "ANNULÉ" },
+      isDeleted: 0,
+      status: { $in: ["BROUILLON", "VERIFICATION", "APPROUVÉ", "PAYÉ"] },
     },
   }
 );

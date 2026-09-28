@@ -8,6 +8,7 @@ import { getToken } from "../../auth.js";
 
 import {
   getUnsyncedItems,
+  blockSyncItem,
   markManySynced,
 } from "../../database/repositories/shared/sync.repository.js";
 
@@ -57,6 +58,8 @@ const API_URL = app.isPackaged
 interface PushPendingChangesResult {
   pendingChanges: number;
   syncedCount: number;
+  retryablePending?: number;
+  conflictMessage?: string;
 }
 
 export async function pushPendingChanges(
@@ -112,33 +115,26 @@ export async function pushPendingChanges(
    * ---------------------------------------------------------
    */
 
+  // Old verification entries have entityId but no payload._id. Repair only that
+  // unambiguous omission; a disagreement between two supplied IDs is a conflict.
+  const blockedEntities = new Set(pending.filter((item) => item.blockedReason)
+    .map((item) => `${item.entity}:${item.entityId}`));
   for (const item of pending) {
-    if (item.companyId !== companyId) {
-      throw new Error(
-        `SYNC QUEUE COMPANY MISMATCH: ` +
-          `item ${item._id} belongs to ${item.companyId}, ` +
-          `but current company is ${companyId}`
-      );
-    }
-
-    let data: any;
-
+    if (item.blockedReason) continue;
     try {
-      data = JSON.parse(item.payload);
-    } catch {
-      throw new Error(`INVALID SYNC PAYLOAD FOR ITEM ${item._id}`);
-    }
-
-    if (!data.companyId) {
-      throw new Error(`Cannot push sync item ${item._id}: missing companyId`);
-    }
-
-    if (data.companyId !== companyId) {
-      throw new Error(
-        `SYNC PAYLOAD COMPANY MISMATCH: ` +
-          `item ${item._id} belongs to ${data.companyId}, ` +
-          `but current company is ${companyId}`
-      );
+      const data = JSON.parse(item.payload);
+      if (item.companyId !== companyId || data.companyId !== companyId) {
+        throw new Error("Sync company does not match the queued record.");
+      }
+      if (item.entity.startsWith("payroll_")) {
+        if (data._id && data._id !== item.entityId) throw new Error("Queued payroll ID does not match its payload ID.");
+        if (!data._id) data._id = item.entityId;
+        item.payload = JSON.stringify(data);
+      }
+    } catch (error) {
+      item.blockedReason = error instanceof Error ? error.message : "Invalid sync payload.";
+      await blockSyncItem(companyId, item._id, item.blockedReason);
+      blockedEntities.add(`${item.entity}:${item.entityId}`);
     }
   }
 
@@ -153,6 +149,7 @@ export async function pushPendingChanges(
   const validPending = [];
 
   for (const item of pending) {
+    if (blockedEntities.has(`${item.entity}:${item.entityId}`)) continue;
     if (item.entity === "employee_document" && item.operation === "update") {
       const data = JSON.parse(item.payload);
 
@@ -214,6 +211,8 @@ export async function pushPendingChanges(
     return {
       pendingChanges: remainingPending.length,
       syncedCount: obsoleteQueueIds.length,
+      retryablePending: 0,
+      conflictMessage: pending.find((item) => item.blockedReason)?.blockedReason ?? undefined,
     };
   }
 
@@ -402,6 +401,19 @@ export async function pushPendingChanges(
    */
 
   const syncedIds: string[] = response.data.synced ?? [];
+  const failures: { queueId: string; message: string; retryable: boolean }[] = response.data.failed ?? [];
+  for (const failure of failures) {
+    if (!failure.retryable) {
+      const item = validPending.find((entry) => String(entry._id) === String(failure.queueId));
+      if (item) {
+        blockedEntities.add(`${item.entity}:${item.entityId}`);
+        // Persist the conflict for this record and later snapshots of the same record.
+        for (const related of pending.filter((entry) => entry.entity === item.entity && entry.entityId === item.entityId)) {
+          await blockSyncItem(companyId, related._id, failure.message);
+        }
+      }
+    }
+  }
 
   console.log("SERVER CONFIRMED SYNCED ITEMS:", {
     companyId,
@@ -528,15 +540,7 @@ export async function pushPendingChanges(
         break;
 
       case "payroll_run": {
-        await markPayrollRunSynced(companyId, data._id, data.updatedAt);
-
-        if (data.status === "VERIFICATION") {
-          if (!data.managerEmail) {
-            throw new Error(
-              `Cannot queue payroll confirmation notification: ` +
-                `managerEmail is missing for payroll run ${data._id}`
-            );
-          }
+        if (data.status === "VERIFICATION" && data.managerEmail) {
 
           await enqueueNotification({
             companyId,
@@ -564,13 +568,7 @@ export async function pushPendingChanges(
           });
         }
 
-        if (data.status === "PAYÉ") {
-          if (!data.managerEmail) {
-            throw new Error(
-              `Cannot queue payroll paid notification: ` +
-                `managerEmail is missing for payroll run ${data._id}`
-            );
-          }
+        if (data.status === "PAYÉ" && data.managerEmail) {
 
           await enqueueNotification({
             companyId,
@@ -599,11 +597,11 @@ export async function pushPendingChanges(
       }
 
       case "payroll_result":
-        await markPayrollResultSynced(companyId, data._id, data.updatedAt);
+
         break;
 
       case "payroll_item":
-        await markPayrollItemSynced(companyId, data._id);
+
         break;
 
       default:
@@ -616,6 +614,12 @@ export async function pushPendingChanges(
 
   if (successfullyProcessedQueueIds.length > 0) {
     await markManySynced(companyId, successfullyProcessedQueueIds);
+    for (const item of validPending.filter((entry) => successfullyProcessedQueueIds.includes(entry._id))) {
+      const data = JSON.parse(item.payload);
+      if (item.entity === "payroll_run") await markPayrollRunSynced(companyId, data._id, data.updatedAt);
+      if (item.entity === "payroll_result") await markPayrollResultSynced(companyId, data._id, data.updatedAt);
+      if (item.entity === "payroll_item") await markPayrollItemSynced(companyId, data._id);
+    }
 
     console.log("MARKED SYNC QUEUE ITEMS AS SYNCED:", {
       companyId,
@@ -643,5 +647,7 @@ export async function pushPendingChanges(
   return {
     pendingChanges,
     syncedCount: totalSynced,
+    retryablePending: remainingPending.filter((item) => !item.blockedReason && !blockedEntities.has(`${item.entity}:${item.entityId}`)).length,
+    conflictMessage: remainingPending.find((item) => item.blockedReason)?.blockedReason ?? undefined,
   };
 }

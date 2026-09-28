@@ -24,7 +24,7 @@ export function initializeRendererSync() {
   ======================================================= */
 
   unsubscribeSyncStatus = window.electron.sync.onSyncStatus(
-    ({ status, timestamp }: SyncStatusEvent) => {
+    ({ status, timestamp, pulledChanges }: SyncStatusEvent) => {
       const syncStore = useSyncStore.getState();
 
       console.log("RENDERER RECEIVED SYNC STATUS:", status, timestamp ?? "");
@@ -68,6 +68,7 @@ export function initializeRendererSync() {
         =================================================== */
 
         case "ERROR": {
+          if (pulledChanges && timestamp) syncStore.setSyncCompleted(timestamp);
           syncStore.setSyncError();
           break;
         }

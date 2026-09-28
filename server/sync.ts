@@ -23,10 +23,60 @@ interface SyncData {
   [key: string]: any;
 }
 
+export class SyncConflict extends Error {
+  readonly retryable = false;
+  constructor(public code: string, message: string, public details?: Record<string, unknown>) {
+    super(message);
+    this.name = "SyncConflict";
+  }
+}
+
+function requireId(value: unknown, field = "_id"): asserts value is string {
+  if (typeof value !== "string" || !value.trim()) {
+    throw new SyncConflict("INVALID_ID", `SYNC FAILED: ${field} must be a non-empty string.`);
+  }
+}
+
+// Payroll amounts and identity are snapshots of generation, not fields of a status update.
+function preservePayrollSnapshot(existing: Record<string, any>, fields: Record<string, any>, keys: string[]) {
+  for (const key of keys) {
+    if (existing[key] !== undefined) fields[key] = existing[key];
+  }
+}
+
+async function syncRecord(model: any, entity: Entity, operation: SyncOperation, data: SyncData) {
+  const companyId = requireCompanyId(data);
+  const incomingDate = requireUpdatedAt(data);
+  const { _id, fields } = cleanSyncFields(data, operation);
+  fields.companyId = companyId;
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const existing = await model.findOne({ _id, companyId }).lean();
+    if (existing && new Date(existing.updatedAt).getTime() >= incomingDate.getTime()) {
+      return { success: true, _id, serverVersion: existing.serverVersion, record: existing };
+    }
+    if (!existing && operation !== "create") {
+      throw new SyncConflict("MISSING_RECORD", `${entity} ${_id} must be created before it can be ${operation}d.`);
+    }
+    if (!existing) {
+      // Update validators do not check omitted required fields on an upsert.
+      await new model({ ...fields, _id, serverVersion: 0 }).validate();
+    }
+    const serverVersion = await getServerVersion(entity);
+    const filter = existing ? { _id, companyId, serverVersion: existing.serverVersion } : { _id, companyId };
+    const saved = await model.updateOne(filter, {
+      $set: { ...fields, serverVersion }, $setOnInsert: { _id },
+    }, { upsert: !existing, runValidators: true, timestamps: false });
+    if (!saved.matchedCount && !saved.upsertedCount) continue;
+    const record = await model.findOne({ _id, companyId }).lean();
+    return { success: true, _id, serverVersion, record };
+  }
+  throw new Error(`${entity} changed during sync; retry required.`);
+}
+
 function requireCompanyId(data: SyncData): string {
-  if (!data.companyId || typeof data.companyId !== "string") {
-    throw new Error(
-      `SYNC FAILED: companyId is required for entity ${data._id ?? "unknown"}`
+  if (!data || typeof data !== "object" || Array.isArray(data) || typeof data.companyId !== "string" || !data.companyId.trim()) {
+    throw new SyncConflict("INVALID_COMPANY",
+      `SYNC FAILED: companyId is required for entity ${data?._id ?? "unknown"}`
     );
   }
 
@@ -39,7 +89,14 @@ interface UploadedFile {
   mimetype: string;
 }
 
-function cleanSyncFields(data: SyncData) {
+function cleanSyncFields(data: SyncData, operation?: SyncOperation) {
+  requireId(data._id);
+  if (operation && !["create", "update", "delete"].includes(operation)) {
+    throw new SyncConflict("INVALID_OPERATION", "Unsupported sync operation.");
+  }
+  for (const key of ["employeeId", "payrollRunId", "payrollResultId", "taskId"]) {
+    if (data[key] !== undefined) requireId(data[key], key);
+  }
   const {
     _id,
     companyId,
@@ -54,6 +111,11 @@ function cleanSyncFields(data: SyncData) {
   delete fields.serverVersion;
   delete fields.lastSyncedAt;
   delete fields.synced;
+  for (const key of Object.keys(fields)) {
+    if (key.startsWith("$") || key.includes(".")) throw new SyncConflict("INVALID_FIELD", "Invalid sync field name.");
+    if (fields[key] === undefined) delete fields[key];
+  }
+  if (operation === "delete") fields.isDeleted = 1;
 
   return {
     _id,
@@ -64,7 +126,7 @@ function cleanSyncFields(data: SyncData) {
 
 function requireUpdatedAt(data: SyncData): Date {
   if (!data.updatedAt) {
-    throw new Error(
+    throw new SyncConflict("INVALID_DATE",
       `SYNC FAILED: updatedAt is required for entity ${data._id}`
     );
   }
@@ -72,7 +134,7 @@ function requireUpdatedAt(data: SyncData): Date {
   const updatedAt = new Date(data.updatedAt);
 
   if (Number.isNaN(updatedAt.getTime())) {
-    throw new Error(`SYNC FAILED: invalid updatedAt for entity ${data._id}`);
+    throw new SyncConflict("INVALID_DATE", `SYNC FAILED: invalid updatedAt for entity ${data._id}`);
   }
 
   return updatedAt;
@@ -90,7 +152,7 @@ export async function syncCompany(operation: SyncOperation, data: SyncData) {
   const companyId = requireCompanyId(data);
   requireUpdatedAt(data);
 
-  const { fields } = cleanSyncFields(data);
+  const { fields } = cleanSyncFields(data, operation);
 
   const serverVersion = await getServerVersion("company");
 
@@ -337,47 +399,8 @@ export async function syncCompanyLogo(data: SyncData, file?: UploadedFile) {
 // ============================================================
 
 export async function syncEmployee(operation: SyncOperation, data: SyncData) {
-  const companyId = requireCompanyId(data);
-  requireUpdatedAt(data);
-
-  const { _id, fields } = cleanSyncFields(data);
-  fields.companyId = companyId;
-
-  const serverVersion = await getServerVersion("employee");
-
-  await Employee.updateOne(
-    {
-      _id,
-      companyId,
-    },
-    {
-      $set: {
-        ...fields,
-        serverVersion,
-      },
-      $setOnInsert: {
-        _id,
-      },
-    },
-    {
-      upsert: true,
-    }
-  );
-
-  const employee = await Employee.findOne({ _id, companyId }).lean();
-
-  console.log(`SYNCED ${operation.toUpperCase()} EMPLOYEE:`, {
-    _id,
-    updatedAt: data.updatedAt,
-    serverVersion,
-  });
-
-  return {
-    success: true,
-    _id,
-    serverVersion,
-    employee,
-  };
+  const { record, ...result } = await syncRecord(Employee, "employee", operation, data);
+  return { ...result, employee: record };
 }
 
 // ============================================================
@@ -666,7 +689,7 @@ export async function syncEmployeeDocument(
        * --------------------------------------------------------
        */
 
-      const { _id, fields } = cleanSyncFields(data);
+      const { _id, fields } = cleanSyncFields(data, operation);
 
       await EmployeesDocuments.updateOne(
         {
@@ -771,7 +794,8 @@ export async function syncEmployeeDocument(
 
 export async function syncAttendance(operation: SyncOperation, data: SyncData) {
   const companyId = requireCompanyId(data);
-  const { _id, fields } = cleanSyncFields(data);
+  requireUpdatedAt(data);
+  const { _id, fields } = cleanSyncFields(data, operation);
   fields.companyId = companyId;
 
   if (!_id) {
@@ -883,7 +907,7 @@ export async function syncAttendanceDailyCheck(
   const companyId = requireCompanyId(data);
   requireUpdatedAt(data);
 
-  const { _id, fields } = cleanSyncFields(data);
+  const { _id, fields } = cleanSyncFields(data, operation);
 
   fields.companyId = companyId;
 
@@ -981,47 +1005,8 @@ export async function syncAttendanceDailyCheck(
 // ============================================================
 
 export async function syncLeave(operation: SyncOperation, data: SyncData) {
-  const companyId = requireCompanyId(data);
-  requireUpdatedAt(data);
-
-  const { _id, fields } = cleanSyncFields(data);
-  fields.companyId = companyId;
-
-  const serverVersion = await getServerVersion("leave");
-
-  await Leave.updateOne(
-    {
-      _id,
-      companyId,
-    },
-    {
-      $set: {
-        ...fields,
-        serverVersion,
-      },
-      $setOnInsert: {
-        _id,
-      },
-    },
-    {
-      upsert: true,
-    }
-  );
-
-  const leave = await Leave.findOne({ _id, companyId }).lean();
-
-  console.log(`SYNCED ${operation.toUpperCase()} LEAVE:`, {
-    _id,
-    updatedAt: data.updatedAt,
-    serverVersion,
-  });
-
-  return {
-    success: true,
-    _id,
-    serverVersion,
-    leave,
-  };
+  const { record, ...result } = await syncRecord(Leave, "leave", operation, data);
+  return { ...result, leave: record };
 }
 
 // ============================================================
@@ -1032,7 +1017,7 @@ export async function syncTask(operation: SyncOperation, data: SyncData) {
   const companyId = requireCompanyId(data);
   requireUpdatedAt(data);
 
-  const { _id, fields } = cleanSyncFields(data);
+  const { _id, fields } = cleanSyncFields(data, operation);
   fields.companyId = companyId;
 
   console.log("FIELDS BEFORE", fields);
@@ -1245,6 +1230,14 @@ export async function syncUserNotes(data: SyncData) {
   const { _id, fields } = cleanSyncFields(data);
   fields.companyId = companyId;
 
+  for (const key of Object.keys(fields)) {
+    if (!["companyId", "notes", "updatedAt"].includes(key)) delete fields[key];
+  }
+  const existing = await AdminUser.findOne({ _id, companyId }).lean();
+  if (!existing) throw new SyncConflict("MISSING_RECORD", "User not found.");
+  if (new Date(existing.updatedAt).getTime() >= new Date(data.updatedAt).getTime()) {
+    return { success: true, _id, serverVersion: existing.serverVersion };
+  }
   const serverVersion = await getServerVersion("admin_user");
 
   await AdminUser.updateOne(
@@ -1262,7 +1255,8 @@ export async function syncUserNotes(data: SyncData) {
       },
     },
     {
-      upsert: true,
+      upsert: false,
+      runValidators: true,
     }
   );
 
@@ -1283,108 +1277,18 @@ export async function syncUserNotes(data: SyncData) {
 // PAYROLL SETTINGS
 // ============================================================
 
-export async function syncPayrollSettings(
-  operation: SyncOperation,
-  data: SyncData
-) {
-  const companyId = requireCompanyId(data);
-  requireUpdatedAt(data);
-
-  const { _id, fields } = cleanSyncFields(data);
-  fields.companyId = companyId;
-
-  const serverVersion = await getServerVersion("payroll_settings");
-
-  await PayrollSettings.updateOne(
-    {
-      _id,
-      companyId,
-    },
-    {
-      $set: {
-        ...fields,
-        serverVersion,
-      },
-      $setOnInsert: {
-        _id,
-      },
-    },
-    {
-      upsert: true,
-    }
-  );
-
-  const settings = await PayrollSettings.findOne({
-    _id,
-    companyId,
-  }).lean();
-
-  console.log(`SYNCED ${operation.toUpperCase()} PAYROLL SETTINGS:`, {
-    _id,
-    updatedAt: data.updatedAt,
-    serverVersion,
-  });
-
-  return {
-    success: true,
-    _id,
-    serverVersion,
-    settings,
-  };
+export async function syncPayrollSettings(operation: SyncOperation, data: SyncData) {
+  const { record, ...result } = await syncRecord(PayrollSettings, "payroll_settings", operation, data);
+  return { ...result, settings: record };
 }
 
 // ============================================================
 // PAYROLL COMPONENT
 // ============================================================
 
-export async function syncPayrollComponent(
-  operation: SyncOperation,
-  data: SyncData
-) {
-  const companyId = requireCompanyId(data);
-  requireUpdatedAt(data);
-
-  const { _id, fields } = cleanSyncFields(data);
-  fields.companyId = companyId;
-
-  const serverVersion = await getServerVersion("payroll_component");
-
-  await PayrollComponent.updateOne(
-    {
-      _id,
-      companyId,
-    },
-    {
-      $set: {
-        ...fields,
-        serverVersion,
-      },
-      $setOnInsert: {
-        _id,
-      },
-    },
-    {
-      upsert: true,
-    }
-  );
-
-  const component = await PayrollComponent.findOne({
-    _id,
-    companyId,
-  }).lean();
-
-  console.log(`SYNCED ${operation.toUpperCase()} PAYROLL COMPONENT:`, {
-    _id,
-    updatedAt: data.updatedAt,
-    serverVersion,
-  });
-
-  return {
-    success: true,
-    _id,
-    serverVersion,
-    component,
-  };
+export async function syncPayrollComponent(operation: SyncOperation, data: SyncData) {
+  const { record, ...result } = await syncRecord(PayrollComponent, "payroll_component", operation, data);
+  return { ...result, component: record };
 }
 
 // ============================================================
@@ -1398,7 +1302,7 @@ export async function syncPayrollProfile(
   const companyId = requireCompanyId(data);
   requireUpdatedAt(data);
 
-  const { _id, fields } = cleanSyncFields(data);
+  const { _id, fields } = cleanSyncFields(data, operation);
   fields.companyId = companyId;
 
   if (!_id) {
@@ -1408,11 +1312,16 @@ export async function syncPayrollProfile(
   // Older queued payloads may predate account numbers. Preserve the saved
   // profile value, or inherit the employee account when creating the profile.
   if (fields.accountNumber === undefined) {
-    const existing = await EmployeePayrollProfile.findOne({ _id, companyId }).lean();
-    const employee = existing?.accountNumber == null
-      ? await Employee.findOne({ _id: fields.employeeId, companyId }).lean()
-      : null;
-    fields.accountNumber = existing?.accountNumber ?? employee?.accountNumber ?? "cash";
+    const existing = await EmployeePayrollProfile.findOne({
+      _id,
+      companyId,
+    }).lean();
+    const employee =
+      existing?.accountNumber == null
+        ? await Employee.findOne({ _id: fields.employeeId, companyId }).lean()
+        : null;
+    fields.accountNumber =
+      existing?.accountNumber ?? employee?.accountNumber ?? "cash";
   }
   fields.accountNumber = String(fields.accountNumber ?? "").trim() || "cash";
 
@@ -1466,42 +1375,93 @@ export async function syncPayrollProfile(
 
 // Derive the batch status on the server as well: different devices may approve
 // different employees without ever seeing a locally complete batch.
-export async function refreshPayrollRunStatus(companyId: string, payrollRunId: string) {
+export async function refreshPayrollRunStatus(
+  companyId: string,
+  payrollRunId: string
+) {
   for (let attempt = 0; attempt < 10; attempt++) {
-    const payrollRun = await PayrollRun.findOne({ companyId, _id: payrollRunId }).lean();
-    if (!payrollRun || payrollRun.isDeleted || payrollRun.status === "ANNULÉ") return;
-    const results = await PayrollResult.find({ companyId, payrollRunId, isDeleted: 0 }).lean();
-    const complete = results.length > 0 && results.length >= payrollRun.employeeCount;
-    const allApproved = complete && results.every((r) => r.status === "APPROUVÉ" || r.status === "PAYÉ");
+    const payrollRun = await PayrollRun.findOne({
+      companyId,
+      _id: payrollRunId,
+    }).lean();
+    if (!payrollRun || payrollRun.isDeleted || payrollRun.status === "ANNULÉ")
+      return;
+    const results = await PayrollResult.find({
+      companyId,
+      payrollRunId,
+      isDeleted: 0,
+    }).lean();
+    const complete =
+      results.length > 0 && results.length >= payrollRun.employeeCount;
+    const allApproved =
+      complete &&
+      results.every((r) => r.status === "APPROUVÉ" || r.status === "PAYÉ");
     const allPaid = complete && results.every((r) => r.status === "PAYÉ");
-    const status = allPaid ? "PAYÉ" : allApproved ? "APPROUVÉ"
-      : (complete || payrollRun.status === "BROUILLON") && results.every((r) => r.status === "BROUILLON")
-        ? "BROUILLON" : "VERIFICATION";
-    const lastApproved = [...results].sort((a, b) => new Date(b.approvedAt ?? 0).getTime() - new Date(a.approvedAt ?? 0).getTime())[0];
-    const lastPaid = [...results].sort((a, b) => new Date(b.paidAt ?? 0).getTime() - new Date(a.paidAt ?? 0).getTime())[0];
+    const status = allPaid
+      ? "PAYÉ"
+      : allApproved
+      ? "APPROUVÉ"
+      : (complete || payrollRun.status === "BROUILLON") &&
+        results.every((r) => r.status === "BROUILLON")
+      ? "BROUILLON"
+      : "VERIFICATION";
+    const lastApproved = [...results].sort(
+      (a, b) =>
+        new Date(b.approvedAt ?? 0).getTime() -
+        new Date(a.approvedAt ?? 0).getTime()
+    )[0];
+    const lastPaid = [...results].sort(
+      (a, b) =>
+        new Date(b.paidAt ?? 0).getTime() - new Date(a.paidAt ?? 0).getTime()
+    )[0];
     const serverVersion = await getServerVersion("payroll_run");
     const saved = await PayrollRun.updateOne(
       { companyId, _id: payrollRunId, serverVersion: payrollRun.serverVersion },
-      { $set: { status, serverVersion, updatedAt: new Date(),
-        approvedAt: allApproved ? lastApproved?.approvedAt ?? payrollRun.approvedAt ?? null : null,
-        approvedBy: allApproved ? lastApproved?.approvedBy ?? payrollRun.approvedBy ?? null : null,
-        paidAt: allPaid ? lastPaid?.paidAt ?? payrollRun.paidAt ?? null : null,
-        paidBy: allPaid ? lastPaid?.paidBy ?? payrollRun.paidBy ?? null : null,
-      } }
+      {
+        $set: {
+          status,
+          serverVersion,
+          updatedAt: new Date(),
+          approvedAt: allApproved
+            ? lastApproved?.approvedAt ?? payrollRun.approvedAt ?? null
+            : null,
+          approvedBy: allApproved
+            ? lastApproved?.approvedBy ?? payrollRun.approvedBy ?? null
+            : null,
+          paidAt: allPaid
+            ? lastPaid?.paidAt ?? payrollRun.paidAt ?? null
+            : null,
+          paidBy: allPaid
+            ? lastPaid?.paidBy ?? payrollRun.paidBy ?? null
+            : null,
+        },
+      }
     );
     if (saved.matchedCount) return;
   }
   throw new Error("Payroll status changed during sync; retry required.");
 }
 
-async function cancelSyncedPayrollResults(companyId: string, payrollRunId: string, cancelledAt: Date) {
-  const results = await PayrollResult.find({ companyId, payrollRunId, isDeleted: 0 }).lean();
+async function cancelSyncedPayrollResults(
+  companyId: string,
+  payrollRunId: string,
+  cancelledAt: Date
+) {
+  const results = await PayrollResult.find({
+    companyId,
+    payrollRunId,
+    isDeleted: 0,
+  }).lean();
   for (const result of results) {
     if (result.status === "ANNULÉ") continue;
     // Give each result its own version so paginated pulls cannot skip a row.
     await syncPayrollResult("update", {
-      _id: result._id, companyId, serverVersion: 0, status: "ANNULÉ",
-      cancelledAt, updatedAt: cancelledAt,
+      _id: result._id,
+      companyId,
+      serverVersion: 0,
+      status: "ANNULÉ",
+      cancelledAt,
+      updatedAt: cancelledAt,
     });
   }
 }
@@ -1509,8 +1469,12 @@ async function cancelSyncedPayrollResults(companyId: string, payrollRunId: strin
 export async function syncPayrollRun(operation: SyncOperation, data: SyncData) {
   const companyId = requireCompanyId(data);
   requireUpdatedAt(data);
-  const { _id, fields } = cleanSyncFields(data);
+  const { _id, fields } = cleanSyncFields(data, operation);
   fields.companyId = companyId;
+  if (fields.status !== undefined && !["BROUILLON", "VERIFICATION", "APPROUVÉ", "PAYÉ", "ANNULÉ"].includes(fields.status)) {
+    throw new SyncConflict("INVALID_STATUS", "Unknown payroll status.");
+  }
+
   const fromSettings = fields.cancellationFromSettings === true;
   delete fields.cancellationFromSettings;
   for (let attempt = 0; attempt < 10; attempt++) {
@@ -1527,30 +1491,75 @@ export async function syncPayrollRun(operation: SyncOperation, data: SyncData) {
         const payrollRun = await PayrollRun.findOne({ companyId, _id }).lean();
         return { success: true, _id, serverVersion, payrollRun };
       }
-      await cancelSyncedPayrollResults(companyId, _id, existing.cancelledAt ?? existing.updatedAt);
-      return { success: true, _id, serverVersion: existing.serverVersion, payrollRun: existing };
+      await cancelSyncedPayrollResults(
+        companyId,
+        _id,
+        existing.cancelledAt ?? existing.updatedAt
+      );
+      return {
+        success: true,
+        _id,
+        serverVersion: existing.serverVersion,
+        payrollRun: existing,
+      };
     }
     const update = { ...fields };
-    const processed = await PayrollResult.exists({ companyId, payrollRunId: _id,
-      isDeleted: 0, status: { $in: ["APPROUVÉ", "PAYÉ"] } });
-    const hasProcessed = processed || existing?.status === "APPROUVÉ" || existing?.status === "PAYÉ";
-    if (hasProcessed && (update.status === "BROUILLON" || update.isDeleted === 1)) {
-      throw new Error("Cannot reset or delete payroll with approved or paid payslips.");
+    if (existing) {
+      preservePayrollSnapshot(existing, update, ["month", "year", "employeeCount", "totalBasicSalary", "totalEarnings", "totalDeductions", "totalNetSalary", "generatedBy", "createdAt"]);
+    } else if (operation !== "create") {
+      throw new SyncConflict("MISSING_RECORD", `Payroll ${_id} must be created before it can change.`);
+    }
+    const processed = await PayrollResult.exists({
+      companyId,
+      payrollRunId: _id,
+      isDeleted: 0,
+      status: { $in: ["APPROUVÉ", "PAYÉ"] },
+    });
+    const hasProcessed =
+      processed ||
+      existing?.status === "APPROUVÉ" ||
+      existing?.status === "PAYÉ";
+    if (
+      hasProcessed &&
+      (update.status === "BROUILLON" || update.isDeleted === 1)
+    ) {
+      throw new SyncConflict("INVALID_TRANSITION",
+        "Cannot reset or delete payroll with approved or paid payslips."
+      );
     }
     if (update.status === "ANNULÉ") {
-      if (hasProcessed && !fromSettings) throw new Error("Use payroll settings to cancel approved or paid payroll.");
+      if (hasProcessed && !fromSettings)
+        throw new SyncConflict("INVALID_TRANSITION",
+          "Use payroll settings to cancel approved or paid payroll."
+        );
       if (fromSettings) {
-        const actor = await AdminUser.findOne({ companyId, _id: update.cancelledBy, isDeleted: 0 }).lean();
+        const actor = await AdminUser.findOne({
+          companyId,
+          _id: update.cancelledBy,
+          isDeleted: 0,
+        }).lean();
         if (!actor || !["ADMIN", "MANAGER"].includes(actor.role)) {
-          throw new Error("Only an administrator or manager can cancel approved or paid payroll.");
+          throw new SyncConflict("FORBIDDEN",
+            "Only an administrator or manager can cancel approved or paid payroll."
+          );
         }
       }
-      if (!update.cancelledAt) throw new Error("Cancellation date is required.");
+      if (!update.cancelledAt)
+        throw new SyncConflict("INVALID_DATE", "Cancellation date is required.");
       // Retain the server's approval/payment history when cancellation was made offline.
-      for (const field of ["approvedAt", "approvedBy", "paidAt", "paidBy"] as const) {
+      for (const field of [
+        "approvedAt",
+        "approvedBy",
+        "paidAt",
+        "paidBy",
+      ] as const) {
         if (existing?.[field]) update[field] = existing[field];
       }
-    } else if (update.status === "APPROUVÉ" || update.status === "PAYÉ" || processed) {
+    } else if (
+      update.status === "APPROUVÉ" ||
+      update.status === "PAYÉ" ||
+      processed
+    ) {
       update.status = existing?.status ?? "VERIFICATION";
       delete update.approvedAt;
       delete update.approvedBy;
@@ -1558,47 +1567,100 @@ export async function syncPayrollRun(operation: SyncOperation, data: SyncData) {
       delete update.paidBy;
     }
     const serverVersion = await getServerVersion("payroll_run");
-    const filter = existing ? { _id, companyId, serverVersion: existing.serverVersion } : { _id, companyId };
-    const saved = await PayrollRun.updateOne(filter, {
-      $set: { ...update, serverVersion }, $setOnInsert: { _id },
-    }, { upsert: !existing });
+    const filter = existing
+      ? { _id, companyId, serverVersion: existing.serverVersion }
+      : { _id, companyId };
+    const saved = await PayrollRun.updateOne(
+      filter,
+      {
+        $set: { ...update, serverVersion },
+        $setOnInsert: { _id },
+      },
+      { upsert: !existing }
+    );
     if (!saved.matchedCount && !saved.upsertedCount) continue;
     if (update.status === "ANNULÉ") {
-      await cancelSyncedPayrollResults(companyId, _id, new Date(update.cancelledAt));
+      await cancelSyncedPayrollResults(
+        companyId,
+        _id,
+        new Date(update.cancelledAt)
+      );
     } else {
       await refreshPayrollRunStatus(companyId, _id);
     }
     const payrollRun = await PayrollRun.findOne({ _id, companyId }).lean();
-    return { success: true, _id, serverVersion: payrollRun?.serverVersion ?? serverVersion, payrollRun };
+    return {
+      success: true,
+      _id,
+      serverVersion: payrollRun?.serverVersion ?? serverVersion,
+      payrollRun,
+    };
   }
   throw new Error("Payroll changed during sync; retry required.");
 }
 
-export async function syncPayrollResult(operation: SyncOperation, data: SyncData) {
+export async function syncPayrollResult(
+  operation: SyncOperation,
+  data: SyncData
+) {
   const companyId = requireCompanyId(data);
   requireUpdatedAt(data);
-  const { _id, fields } = cleanSyncFields(data);
+  const { _id, fields } = cleanSyncFields(data, operation);
   fields.companyId = companyId;
-  const rank: Record<string, number> = { BROUILLON: 0, VERIFICATION: 1, "APPROUVÉ": 2, "PAYÉ": 3 };
+  if (fields.status !== undefined && !["BROUILLON", "VERIFICATION", "APPROUVÉ", "PAYÉ", "ANNULÉ"].includes(fields.status)) {
+    throw new SyncConflict("INVALID_STATUS", "Unknown payroll status.");
+  }
+
+  const rank: Record<string, number> = {
+    BROUILLON: 0,
+    VERIFICATION: 1,
+    APPROUVÉ: 2,
+    PAYÉ: 3,
+  };
   for (let attempt = 0; attempt < 10; attempt++) {
     const existing = await PayrollResult.findOne({ companyId, _id }).lean();
     const update = { ...fields };
-    if (existing && update.payrollRunId && update.payrollRunId !== existing.payrollRunId) {
-      throw new Error("Cannot move a payslip to another payroll run.");
+    if (
+      existing &&
+      update.payrollRunId &&
+      update.payrollRunId !== existing.payrollRunId
+    ) {
+      throw new SyncConflict("PAYROLL_PARENT_CONFLICT", `Payslip ${_id} belongs to payroll ${existing.payrollRunId}, but this update references ${update.payrollRunId}. Reconciliation is required.`, {
+        payslipId: _id, incomingPayrollRunId: update.payrollRunId, storedPayrollRunId: existing.payrollRunId,
+      });
+    }
+    if (existing) {
+      preservePayrollSnapshot(existing, update, ["employeeId", "month", "year", "baseSalary", "grossSalary", "taxableSalary", "totalEarnings", "totalDeductions", "netSalary", "createdAt"]);
+    } else if (operation !== "create") {
+      throw new SyncConflict("MISSING_RECORD", `Payslip ${_id} must be created before its status can change.`);
     }
     const payrollRunId = existing?.payrollRunId ?? update.payrollRunId;
-    const payrollRun = await PayrollRun.findOne({ companyId, _id: payrollRunId }).lean();
-    if (!payrollRun || payrollRun.isDeleted) throw new Error("Payroll run not found.");
+    requireId(payrollRunId, "payrollRunId");
+    const payrollRun = await PayrollRun.findOne({
+      companyId,
+      _id: payrollRunId,
+    }).lean();
+    if (!payrollRun || payrollRun.isDeleted)
+      throw new Error("Payroll run not found.");
     if (payrollRun.status === "ANNULÉ") {
       update.status = "ANNULÉ";
       update.cancelledAt = payrollRun.cancelledAt;
       update.updatedAt = payrollRun.updatedAt;
-      for (const field of ["approvedAt", "approvedBy", "paidAt", "paidBy"] as const) {
+      for (const field of [
+        "approvedAt",
+        "approvedBy",
+        "paidAt",
+        "paidBy",
+      ] as const) {
         if (existing?.[field]) update[field] = existing[field];
       }
     } else if (existing && (rank[existing.status] ?? -1) >= 2) {
-      if (update.isDeleted === 1 || update.status === "ANNULÉ" || update.status === "BROUILLON") {
-        throw new Error("Cannot reset or delete an approved or paid payslip.");
+      if (
+        update.isDeleted === 1 ||
+        update.status === "ANNULÉ" ||
+        update.status === "BROUILLON"
+      ) {
+        throw new SyncConflict("INVALID_TRANSITION", "Cannot reset or delete an approved or paid payslip.");
       }
       // Replayed verification/approval snapshots must never undo payment or audit dates.
       if ((rank[update.status] ?? -1) <= rank[existing.status]) {
@@ -1614,12 +1676,22 @@ export async function syncPayrollResult(operation: SyncOperation, data: SyncData
       }
     }
     const serverVersion = await getServerVersion("payroll_result");
-    const filter = existing ? { _id, companyId, serverVersion: existing.serverVersion } : { _id, companyId };
-    const saved = await PayrollResult.updateOne(filter, {
-      $set: { ...update, serverVersion }, $setOnInsert: { _id },
-    }, { upsert: !existing });
+    const filter = existing
+      ? { _id, companyId, serverVersion: existing.serverVersion }
+      : { _id, companyId };
+    const saved = await PayrollResult.updateOne(
+      filter,
+      {
+        $set: { ...update, serverVersion },
+        $setOnInsert: { _id },
+      },
+      { upsert: !existing }
+    );
     if (!saved.matchedCount && !saved.upsertedCount) continue;
-    const latestRun = await PayrollRun.findOne({ companyId, _id: payrollRunId }).lean();
+    const latestRun = await PayrollRun.findOne({
+      companyId,
+      _id: payrollRunId,
+    }).lean();
     if (latestRun?.status === "ANNULÉ" && update.status !== "ANNULÉ") continue;
     await refreshPayrollRunStatus(companyId, payrollRunId);
     const result = await PayrollResult.findOne({ _id, companyId }).lean();
@@ -1632,52 +1704,27 @@ export async function syncPayrollResult(operation: SyncOperation, data: SyncData
 // PAYROLL ITEM
 // ============================================================
 
-export async function syncPayrollItem(
-  operation: SyncOperation,
-  data: SyncData
-) {
+export async function syncPayrollItem(operation: SyncOperation, data: SyncData) {
   const companyId = requireCompanyId(data);
-  requireUpdatedAt(data);
-
-  const { _id, fields } = cleanSyncFields(data);
-  fields.companyId = companyId;
-
-  const serverVersion = await getServerVersion("payroll_item");
-
-  await PayrollItem.updateOne(
-    {
-      _id,
-      companyId,
-    },
-    {
-      $set: {
-        ...fields,
-        serverVersion,
-      },
-      $setOnInsert: {
-        _id,
-      },
-    },
-    {
-      upsert: true,
-    }
-  );
-
-  const item = await PayrollItem.findOne({
-    _id,
-    companyId,
-  }).lean();
-
-  console.log(`SYNCED ${operation.toUpperCase()} PAYROLL ITEM:`, {
-    _id,
-    updatedAt: data.updatedAt,
-    serverVersion,
-  });
-
-  return {
-    success: true,
-    _id,
-    serverVersion,
-    item,
-  };
+  requireId(data._id);
+  const existing = await PayrollItem.findOne({ _id: data._id, companyId }).lean();
+  if (existing && data.payrollResultId !== undefined && data.payrollResultId !== existing.payrollResultId) {
+    throw new SyncConflict("PAYROLL_PARENT_CONFLICT", `Payroll item ${data._id} cannot move to another payslip.`);
+  }
+  const payrollResultId = existing?.payrollResultId ?? data.payrollResultId;
+  requireId(payrollResultId, "payrollResultId");
+  const result = await PayrollResult.findOne({ _id: payrollResultId, companyId }).lean();
+  if (!result) throw new Error("Parent payslip has not synced yet.");
+  if (operation === "delete" && ["APPROUVÉ", "PAYÉ"].includes(result.status)) {
+    throw new SyncConflict("INVALID_TRANSITION", "Cannot delete an item from an approved or paid payslip.");
+  }
+  const snapshot = { ...data };
+  if (existing) {
+    preservePayrollSnapshot(existing, snapshot, ["payrollResultId", "employeeId", "componentId", "name", "displayName", "type", "amount", "taxable", "createdAt"]);
+    if (existing.isDeleted) snapshot.isDeleted = 1;
+  } else if (data.employeeId !== result.employeeId) {
+    throw new SyncConflict("PAYROLL_EMPLOYEE_CONFLICT", "Payroll item employee does not match its payslip.");
+  }
+  const { record, ...response } = await syncRecord(PayrollItem, "payroll_item", operation, snapshot);
+  return { ...response, item: record };
 }

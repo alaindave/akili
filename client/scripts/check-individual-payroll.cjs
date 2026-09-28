@@ -111,7 +111,22 @@ const countQueue = () => database.prepare('SELECT COUNT(*) AS n FROM sync_queue'
   await repo.markPayrollResultSynced('a', 'two', 'outdated');
   assert.equal(row('two').synced, 0);
   await repo.markPayrollResultSynced('a', 'two', row('two').updatedAt);
+  assert.equal(row('two').synced, 0); // Acknowledging one snapshot must not hide queued edits.
+  database.exec("UPDATE sync_queue SET synced = 1 WHERE entityId = 'two'");
+  await repo.markPayrollResultSynced('a', 'two', row('two').updatedAt);
   assert.equal(row('two').synced, 1);
+  const pendingSnapshot = { ...row('one'), status: 'ANNULÉ', serverVersion: 50 };
+  await repo.upsertPayrollResult('a', pendingSnapshot);
+  assert.equal(row('one').status, 'PAYÉ');
+  assert.equal(row('one').synced, 0);
+  assert.equal(database.prepare('SELECT serverVersion FROM sync_deferred WHERE entityId = ?').get('one').serverVersion, 50);
+  await repo.upsertPayrollResult('a', { ...pendingSnapshot, serverVersion: 49 });
+  assert.equal(database.prepare('SELECT serverVersion FROM sync_deferred WHERE entityId = ?').get('one').serverVersion, 50);
+  database.exec("UPDATE sync_queue SET synced = 1 WHERE entityId = 'one'");
+  await repo.markPayrollResultSynced('a', 'one', row('one').updatedAt);
+  await repo.upsertPayrollResult('a', pendingSnapshot);
+  assert.equal(row('one').status, 'ANNULÉ');
+  assert.equal(database.prepare('SELECT COUNT(*) AS n FROM sync_deferred').get().n, 0);
   // Exercise real INSERT and UPDATE SQL for pulled actor fields.
   const remote = { ...row('two'), _id: 'remote', employeeId: 'e3', serverVersion: 5 };
   await repo.upsertPayrollResult('a', remote);
@@ -155,6 +170,7 @@ const countQueue = () => database.prepare('SELECT COUNT(*) AS n FROM sync_queue'
   // Execute the actual server sync functions against an in-memory Mongo adapter.
   const runs = new Map();
   const results = new Map();
+  const items = new Map();
   const matches = (doc, filter) => Object.entries(filter).every(([key, val]) =>
     val && typeof val === 'object' && '$in' in val ? val.$in.includes(doc[key]) : doc[key] === val);
   const key = (doc) => `${doc.companyId}:${doc._id}`;
@@ -176,14 +192,20 @@ const countQueue = () => database.prepare('SELECT COUNT(*) AS n FROM sync_queue'
   const server = load(path.resolve(__dirname, '../../server/sync.ts'), (name) => {
     if (name.endsWith('/adminUser.model.js')) return { default: { findOne: ({ companyId, _id }) => ({ lean: async () => companyId === 'a' && _id === 'manager' ? { role: 'MANAGER' } : null }) } };
     if (name.endsWith('/payrollRun.model.js')) return { default: model(runs) };
+    if (name.endsWith('/payrollItem.model.js')) return { default: model(items) };
     if (name.endsWith('/payrollResult.model.js')) return { default: model(results) };
     if (name.endsWith('/syncVersion.js')) return { getNextSyncVersion: async () => ++version };
     return { default: {} };
   });
   const initialRun = { _id: 'run', companyId: 'a', employeeCount: 2, status: 'VERIFICATION', isDeleted: 0, updatedAt: '2026-09-01' };
   await server.syncPayrollRun('create', initialRun);
-  const initial = { companyId: 'a', payrollRunId: 'run', status: 'VERIFICATION', isDeleted: 0, updatedAt: '2026-09-01' };
+  const initial = { netSalary: 100, companyId: 'a', payrollRunId: 'run', status: 'VERIFICATION', isDeleted: 0, updatedAt: '2026-09-01' };
   await server.syncPayrollResult('create', { ...initial, _id: 'one' });
+  items.set('a:item', { _id: 'item', companyId: 'a', payrollResultId: 'one', amount: 100, updatedAt: '2026-09-01', serverVersion: 1 });
+  await server.syncPayrollItem('update', { _id: 'item', companyId: 'a', payrollResultId: 'one', amount: 999, updatedAt: '2026-09-02' });
+  assert.equal(items.get('a:item').amount, 100);
+  await assert.rejects(() => server.syncPayrollItem('update', { _id: 'item', companyId: 'a', payrollResultId: 'other', updatedAt: '2026-09-03' }), (error) => error.code === 'PAYROLL_PARENT_CONFLICT');
+
   await server.syncPayrollResult('update', { ...initial, _id: 'one', status: 'APPROUVÉ', approvedBy: 'manager', approvedAt: '2026-09-02' });
   assert.equal(runs.get('a:run').status, 'VERIFICATION'); // second result not downloaded yet
   await server.syncPayrollResult('create', { ...initial, _id: 'two' });
@@ -198,6 +220,10 @@ const countQueue = () => database.prepare('SELECT COUNT(*) AS n FROM sync_queue'
   await server.syncPayrollRun('update', initialRun); // stale batch snapshot
   assert.equal(results.get('a:one').status, 'PAYÉ');
   assert.equal(runs.get('a:run').status, 'PAYÉ');
+  await server.syncPayrollResult('update', { ...initial, _id: 'one', netSalary: 999 });
+  assert.equal(results.get('a:one').netSalary, 100);
+  await assert.rejects(() => server.syncPayrollResult('update', { ...initial, _id: 'absent' }), (error) => error.code === 'MISSING_RECORD' && error.retryable === false);
+  await assert.rejects(() => server.syncPayrollResult('update', { ...initial }), (error) => error.code === 'INVALID_ID');
   await assert.rejects(() => server.syncPayrollRun('update', { ...initialRun, status: 'ANNULÉ' }));
   await assert.rejects(() => server.syncPayrollResult('delete', { ...initial, _id: 'one', isDeleted: 1 }));
   await assert.rejects(() => server.syncPayrollResult('update', { ...initial, companyId: 'b', _id: 'one' }));
@@ -206,7 +232,7 @@ const countQueue = () => database.prepare('SELECT COUNT(*) AS n FROM sync_queue'
   await server.syncPayrollRun('update', { ...initialRun, _id: 'reset', employeeCount: 1, status: 'BROUILLON' });
   await server.syncPayrollResult('update', { ...initial, _id: 'reset-slip', payrollRunId: 'reset', status: 'BROUILLON' });
   assert.equal(runs.get('a:reset').status, 'BROUILLON');
-  await assert.rejects(() => server.syncPayrollResult('update', { ...initial, _id: 'one', payrollRunId: 'reset' }));
+  await assert.rejects(() => server.syncPayrollResult('update', { ...initial, _id: 'one', payrollRunId: 'reset' }), (error) => error.code === 'PAYROLL_PARENT_CONFLICT' && error.retryable === false);
   await assert.rejects(() => server.syncPayrollRun('update', { ...initialRun, status: 'ANNULÉ',
     cancellationFromSettings: true, cancelledBy: 'viewer', cancelledAt: '2026-09-05' }));
   const paidAt = results.get('a:one').paidAt;

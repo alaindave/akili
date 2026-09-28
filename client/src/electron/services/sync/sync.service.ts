@@ -106,6 +106,11 @@ export default async function sync(companyId: string) {
           break;
         }
 
+        if (pushResult.retryablePending === 0) {
+          lastPushError = new Error(pushResult.conflictMessage ?? "Sync contains unresolved conflicts.");
+          break;
+        }
+
         /*
          * Items still remain.
          *
@@ -167,23 +172,7 @@ export default async function sync(companyId: string) {
      */
 
     if (!pushSuccessful) {
-      const pendingChanges = await getPendingChangesCount(companyId);
-
-      const errorMessage =
-        lastPushError instanceof Error
-          ? lastPushError.message
-          : String(lastPushError);
-
-      console.error(`PUSH FAILED AFTER ${MAX_SYNC_RETRIES} ATTEMPTS.`);
-
-      notifyRenderer({
-        status: "ERROR",
-        timestamp: new Date().toISOString(),
-        pendingChanges,
-        error: `PUSH FAILED AFTER ${MAX_SYNC_RETRIES} ATTEMPTS: ${errorMessage}`,
-      });
-
-      return;
+      console.warn("Push has pending conflicts; continuing with pull.", lastPushError);
     }
 
     /*
@@ -230,7 +219,8 @@ export default async function sync(companyId: string) {
         status: "ERROR",
         timestamp: new Date().toISOString(),
         pendingChanges,
-        error: `SYNC INCOMPLETE: ${pendingChanges} pending change(s) remain`,
+        error: lastPushError instanceof Error ? lastPushError.message : `SYNC INCOMPLETE: ${pendingChanges} pending change(s) remain`,
+        pulledChanges: true,
       });
 
       return;

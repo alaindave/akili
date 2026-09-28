@@ -35,6 +35,7 @@ function load(filename) {
   const localRequire = (name) => {
     if (name === 'axios') return transport;
     if (name === 'electron') return { app: { isPackaged: false } };
+    if (name.endsWith('/db.js')) return { all: async () => [], get: async () => null };
     if (name.endsWith('/auth.js')) return { getToken: async () => 'token' };
     if (name.endsWith('/sync.repository.js')) return queue;
     if (name.endsWith('/incidents.repository.js')) return {

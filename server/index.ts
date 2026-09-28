@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { migratePayrollIndex } from "./utils/migratePayrollIndex.js";
 
 import express, { Request, Response } from "express";
 import http from "http";
@@ -160,6 +161,7 @@ async function startServer() {
     console.log("CONNECTING TO AFRITAN DATABASE...");
 
     await mongoose.connect(mongoUri);
+    await migratePayrollIndex();
 
     console.log("CONNECTED TO AFRITAN DATABASE");
 

@@ -66,9 +66,6 @@ import {
 } from "../../../common/types/payroll/Payroll.js";
 
 import {
-  markPayrollItemSynced,
-  markPayrollResultSynced,
-  markPayrollRunSynced,
   upsertPayrollItem,
   upsertPayrollResult,
   upsertPayrollRun,
@@ -84,7 +81,7 @@ import {
 
 import { AttendanceDailyCheck } from "../../../common/types/attendance/AttendanceDailyCheck.js";
 
-import { get } from "../../database/db.js";
+import { get, all } from "../../database/db.js";
 
 import {
   getSyncState,
@@ -1202,8 +1199,6 @@ async function syncPayrollRuns(payrollRuns: PayrollRun[]): Promise<boolean> {
     try {
       await upsertPayrollRun(payrollRun.companyId, payrollRun);
 
-      await markPayrollRunSynced(payrollRun.companyId, payrollRun._id);
-
       console.log("PAYROLL RUN SYNCED:", payrollRun._id);
     } catch (error) {
       succeeded = false;
@@ -1242,10 +1237,10 @@ async function syncPayrollResults(
         `
             SELECT _id
             FROM payroll_runs
-            WHERE _id = ?
+            WHERE _id = ? AND companyId = ?
             LIMIT 1
           `,
-        [result.payrollRunId]
+        [result.payrollRunId, result.companyId]
       );
 
       if (!payrollRun) {
@@ -1267,10 +1262,10 @@ async function syncPayrollResults(
         `
             SELECT _id
             FROM employees
-            WHERE _id = ?
+            WHERE _id = ? AND companyId = ?
             LIMIT 1
           `,
-        [result.employeeId]
+        [result.employeeId, result.companyId]
       );
 
       if (!employee) {
@@ -1289,8 +1284,6 @@ async function syncPayrollResults(
       }
 
       await upsertPayrollResult(result.companyId, result);
-
-      await markPayrollResultSynced(result.companyId, result._id);
 
       console.log("PAYROLL RESULT SYNCED:", result._id);
     } catch (error) {
@@ -1330,7 +1323,6 @@ async function syncPayrollItems(payrollItems: PayrollItem[]): Promise<boolean> {
     try {
       await upsertPayrollItem(item.companyId, item);
 
-      await markPayrollItemSynced(item.companyId, item._id);
     } catch (error) {
       succeeded = false;
 
@@ -1351,6 +1343,15 @@ async function pullEntityByVersion<T>(
   syncBatch: (items: T[]) => Promise<boolean>,
   limit = 500
 ): Promise<VersionPullResult<T>> {
+  if (["payroll_run", "payroll_result", "payroll_item"].includes(entity)) {
+    const deferred = await all<{ payload: string }>(
+      "SELECT payload FROM sync_deferred WHERE companyId = ? AND entity = ? ORDER BY serverVersion",
+      [companyId, entity]
+    );
+    if (deferred.length && !(await syncBatch(deferred.map((row) => JSON.parse(row.payload))))) {
+      throw new Error(`Unable to apply deferred ${entity} updates.`);
+    }
+  }
   const syncState = await getSyncState(companyId, entity);
 
   const token = await getToken();

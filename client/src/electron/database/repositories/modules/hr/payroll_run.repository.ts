@@ -313,299 +313,204 @@ export async function upsertPayrollRun(
   companyId: string,
   payrollRun: PayrollRun
 ) {
-  if (!companyId) {
-    throw new Error("Company ID is required.");
-  }
+  return transaction(async () => {
+    const apply = async () => {
+      if (!companyId) {
+        throw new Error("Company ID is required.");
+      }
 
-  if (payrollRun.companyId !== companyId) {
-    throw new Error(
-      "Payroll run companyId does not match the requested companyId."
-    );
-  }
+      if (payrollRun.companyId !== companyId) {
+        throw new Error(
+          "Payroll run companyId does not match the requested companyId."
+        );
+      }
 
-  console.log("PAYROLL RUN TO UPSERT", payrollRun);
+      console.log("PAYROLL RUN TO UPSERT", payrollRun);
 
-  // ----------------------------------------------------------
-  // 1. Look for canonical ID INSIDE THIS COMPANY
-  // ----------------------------------------------------------
+      // ----------------------------------------------------------
+      // 1. Look for canonical ID INSIDE THIS COMPANY
+      // ----------------------------------------------------------
 
-  const existingById = await get<
-    PayrollRun & {
-      synced: number;
-      serverVersion: number;
-    }
-  >(
-    `
-    SELECT *
-    FROM payroll_runs
-    WHERE companyId = ?
-      AND _id = ?
-    LIMIT 1
-    `,
-    [companyId, payrollRun._id]
-  );
-
-  if (existingById) {
-    // Never overwrite pending local changes.
-    if (existingById.synced === 0) {
-      console.log(
-        `SKIPPING PAYROLL RUN PULL. LOCAL CHANGES ARE PENDING: ${payrollRun._id}`
-      );
-
-      return existingById;
-    }
-
-    // ServerVersion is the source of truth.
-    if (
-      payrollRun.serverVersion &&
-      payrollRun.serverVersion <= (existingById.serverVersion ?? 0)
-    ) {
-      console.log(
-        `SKIPPING PAYROLL RUN PULL. LOCAL SERVER VERSION IS NEWER/EQUAL: ${payrollRun._id}`,
-        {
-          local: existingById.serverVersion,
-          remote: payrollRun.serverVersion,
+      const existingById = await getDirect<
+        PayrollRun & {
+          synced: number;
+          serverVersion: number;
         }
+      >(
+        `
+        SELECT *
+        FROM payroll_runs
+        WHERE companyId = ?
+          AND _id = ?
+        LIMIT 1
+        `,
+        [companyId, payrollRun._id]
       );
 
-      return existingById;
-    }
+      if (existingById) {
+        // Never overwrite pending local changes.
+        if (existingById.synced === 0) {
+          console.log(
+            `SKIPPING PAYROLL RUN PULL. LOCAL CHANGES ARE PENDING: ${payrollRun._id}`
+          );
 
-    await run(
-      `
-      UPDATE payroll_runs
-      SET
-        generatedBy = ?,
-        month = ?,
-        year = ?,
-        employeeCount = ?,
-        totalBasicSalary = ?,
-        totalEarnings = ?,
-        totalDeductions = ?,
-        totalNetSalary = ?,
-        status = ?,
-        cancelledBy = ?,
-        cancelledAt = ?,
-        submittedForVerificationBy = ?,
-        submittedForVerificationAt = ?,
-        approvedBy = ?,
-        approvedAt = ?,
-        paidBy = ?,
-        paidAt = ?,
-        serverVersion = ?,
-        synced = 1,
-        createdAt = ?,
-        updatedAt = ?,
-        isDeleted = ?
-      WHERE companyId = ?
-        AND _id = ?
-      `,
-      [
-        payrollRun.generatedBy,
-        payrollRun.month,
-        payrollRun.year,
-        payrollRun.employeeCount,
-        payrollRun.totalBasicSalary,
-        payrollRun.totalEarnings,
-        payrollRun.totalDeductions,
-        payrollRun.totalNetSalary,
-        payrollRun.status,
-        payrollRun.cancelledBy ?? null,
-        payrollRun.cancelledAt ?? null,
-        payrollRun.submittedForVerificationBy ?? null,
-        payrollRun.submittedForVerificationAt ?? null,
-        payrollRun.approvedBy ?? null,
-        payrollRun.approvedAt ?? null,
-        payrollRun.paidBy ?? null,
-        payrollRun.paidAt ?? null,
-        payrollRun.serverVersion,
-        payrollRun.createdAt,
-        payrollRun.updatedAt,
-        payrollRun.isDeleted ?? 0,
-        companyId,
-        payrollRun._id,
-      ]
-    );
+          await runDirect(`INSERT INTO sync_deferred (companyId, entity, entityId, serverVersion, payload)
+            VALUES (?, ?, ?, ?, ?) ON CONFLICT(companyId, entity, entityId) DO UPDATE SET
+            serverVersion = excluded.serverVersion, payload = excluded.payload
+            WHERE excluded.serverVersion >= sync_deferred.serverVersion`,
+            [companyId, "payroll_run", payrollRun._id, payrollRun.serverVersion ?? 0, JSON.stringify(payrollRun)]);
+          return false;
+        }
 
-    return true;
-  }
+        // ServerVersion is the source of truth.
+        if (
+          payrollRun.serverVersion &&
+          payrollRun.serverVersion <= (existingById.serverVersion ?? 0)
+        ) {
+          console.log(
+            `SKIPPING PAYROLL RUN PULL. LOCAL SERVER VERSION IS NEWER/EQUAL: ${payrollRun._id}`,
+            {
+              local: existingById.serverVersion,
+              remote: payrollRun.serverVersion,
+            }
+          );
 
-  // ----------------------------------------------------------
-  // 2. No ID match.
-  //    Check natural payroll period INSIDE THIS COMPANY.
-  // ----------------------------------------------------------
+          return existingById;
+        }
 
-  const existingByPeriod = await get<
-    PayrollRun & {
-      synced: number;
-      serverVersion: number;
-    }
-  >(
-    `
-    SELECT *
-    FROM payroll_runs
-    WHERE companyId = ?
-      AND month = ?
-      AND year = ?
-      AND isDeleted = 0
-      AND status <> 'ANNULÉ'
-    LIMIT 1
-    `,
-    [companyId, payrollRun.month, payrollRun.year]
-  );
+        await runDirect(
+          `
+          UPDATE payroll_runs
+          SET
+            generatedBy = ?,
+            month = ?,
+            year = ?,
+            employeeCount = ?,
+            totalBasicSalary = ?,
+            totalEarnings = ?,
+            totalDeductions = ?,
+            totalNetSalary = ?,
+            status = ?,
+            cancelledBy = ?,
+            cancelledAt = ?,
+            submittedForVerificationBy = ?,
+            submittedForVerificationAt = ?,
+            approvedBy = ?,
+            approvedAt = ?,
+            paidBy = ?,
+            paidAt = ?,
+            serverVersion = ?,
+            synced = 1,
+            createdAt = ?,
+            updatedAt = ?,
+            isDeleted = ?
+          WHERE companyId = ?
+            AND _id = ?
+          `,
+          [
+            payrollRun.generatedBy,
+            payrollRun.month,
+            payrollRun.year,
+            payrollRun.employeeCount,
+            payrollRun.totalBasicSalary,
+            payrollRun.totalEarnings,
+            payrollRun.totalDeductions,
+            payrollRun.totalNetSalary,
+            payrollRun.status,
+            payrollRun.cancelledBy ?? null,
+            payrollRun.cancelledAt ?? null,
+            payrollRun.submittedForVerificationBy ?? null,
+            payrollRun.submittedForVerificationAt ?? null,
+            payrollRun.approvedBy ?? null,
+            payrollRun.approvedAt ?? null,
+            payrollRun.paidBy ?? null,
+            payrollRun.paidAt ?? null,
+            payrollRun.serverVersion,
+            payrollRun.createdAt,
+            payrollRun.updatedAt,
+            payrollRun.isDeleted ?? 0,
+            companyId,
+            payrollRun._id,
+          ]
+        );
 
-  if (existingByPeriod) {
-    console.warn("PAYROLL RUN PERIOD CONFLICT", {
-      incoming: payrollRun,
-      existing: existingByPeriod,
-    });
+        return true;
+      }
 
-    if (existingByPeriod.synced === 0) {
-      console.log(
-        `SKIPPING PAYROLL RUN PERIOD CONFLICT. LOCAL CHANGES ARE PENDING: ${existingByPeriod._id}`
+      // ----------------------------------------------------------
+      // No canonical ID match: insert the distinct payroll run.
+      // ----------------------------------------------------------
+
+      await runDirect(
+        `
+        INSERT INTO payroll_runs (
+          companyId,
+          _id,
+          generatedBy,
+          month,
+          year,
+          employeeCount,
+          totalBasicSalary,
+          totalEarnings,
+          totalDeductions,
+          totalNetSalary,
+          status,
+          cancelledBy,
+          cancelledAt,
+          submittedForVerificationBy,
+          submittedForVerificationAt,
+          approvedBy,
+          approvedAt,
+          paidBy,
+          paidAt,
+          serverVersion,
+          synced,
+          createdAt,
+          updatedAt,
+          isDeleted
+        )
+        VALUES (
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?, ?, ?, ?,
+          ?, ?, 1, ?, ?, ?
+        )
+        `,
+        [
+          payrollRun.companyId,
+          payrollRun._id,
+          payrollRun.generatedBy,
+          payrollRun.month,
+          payrollRun.year,
+          payrollRun.employeeCount,
+          payrollRun.totalBasicSalary,
+          payrollRun.totalEarnings,
+          payrollRun.totalDeductions,
+          payrollRun.totalNetSalary,
+          payrollRun.status,
+          payrollRun.cancelledBy ?? null,
+          payrollRun.cancelledAt ?? null,
+          payrollRun.submittedForVerificationBy ?? null,
+          payrollRun.submittedForVerificationAt ?? null,
+          payrollRun.approvedBy ?? null,
+          payrollRun.approvedAt ?? null,
+          payrollRun.paidBy ?? null,
+          payrollRun.paidAt ?? null,
+          payrollRun.serverVersion,
+          payrollRun.createdAt,
+          payrollRun.updatedAt,
+          payrollRun.isDeleted ?? 0,
+        ]
       );
 
-      return existingByPeriod;
+      return true;
+    };
+    const result = await apply();
+    if (result !== false) {
+      await runDirect("DELETE FROM sync_deferred WHERE companyId = ? AND entity = ? AND entityId = ? AND serverVersion <= ?",
+        [companyId, "payroll_run", payrollRun._id, payrollRun.serverVersion ?? 0]);
     }
-
-    if (
-      payrollRun.serverVersion &&
-      payrollRun.serverVersion <= (existingByPeriod.serverVersion ?? 0)
-    ) {
-      console.log(
-        `SKIPPING PAYROLL RUN PERIOD CONFLICT. LOCAL SERVER VERSION IS NEWER/EQUAL`
-      );
-
-      return existingByPeriod;
-    }
-
-    await run(
-      `
-      UPDATE payroll_runs
-      SET
-        _id = ?,
-        generatedBy = ?,
-        month = ?,
-        year = ?,
-        employeeCount = ?,
-        totalBasicSalary = ?,
-        totalEarnings = ?,
-        totalDeductions = ?,
-        totalNetSalary = ?,
-        status = ?,
-        cancelledBy = ?,
-        cancelledAt = ?,
-        submittedForVerificationBy = ?,
-        submittedForVerificationAt = ?,
-        approvedBy = ?,
-        approvedAt = ?,
-        paidBy = ?,
-        paidAt = ?,
-        serverVersion = ?,
-        synced = 1,
-        createdAt = ?,
-        updatedAt = ?,
-        isDeleted = ?
-      WHERE companyId = ?
-        AND _id = ?
-      `,
-      [
-        payrollRun._id,
-        payrollRun.generatedBy,
-        payrollRun.month,
-        payrollRun.year,
-        payrollRun.employeeCount,
-        payrollRun.totalBasicSalary,
-        payrollRun.totalEarnings,
-        payrollRun.totalDeductions,
-        payrollRun.totalNetSalary,
-        payrollRun.status,
-        payrollRun.cancelledBy ?? null,
-        payrollRun.cancelledAt ?? null,
-        payrollRun.submittedForVerificationBy ?? null,
-        payrollRun.submittedForVerificationAt ?? null,
-        payrollRun.approvedBy ?? null,
-        payrollRun.approvedAt ?? null,
-        payrollRun.paidBy ?? null,
-        payrollRun.paidAt ?? null,
-        payrollRun.serverVersion,
-        payrollRun.createdAt,
-        payrollRun.updatedAt,
-        payrollRun.isDeleted ?? 0,
-        companyId,
-        existingByPeriod._id,
-      ]
-    );
-
-    return true;
-  }
-
-  // ----------------------------------------------------------
-  // 3. No local record exists.
-  // ----------------------------------------------------------
-
-  await run(
-    `
-    INSERT INTO payroll_runs (
-      companyId,
-      _id,
-      generatedBy,
-      month,
-      year,
-      employeeCount,
-      totalBasicSalary,
-      totalEarnings,
-      totalDeductions,
-      totalNetSalary,
-      status,
-      cancelledBy,
-      cancelledAt,
-      submittedForVerificationBy,
-      submittedForVerificationAt,
-      approvedBy,
-      approvedAt,
-      paidBy,
-      paidAt,
-      serverVersion,
-      synced,
-      createdAt,
-      updatedAt,
-      isDeleted
-    )
-    VALUES (
-      ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-      ?, ?, ?, ?, ?, ?, ?, ?,
-      ?, ?, 1, ?, ?, ?
-    )
-    `,
-    [
-      payrollRun.companyId,
-      payrollRun._id,
-      payrollRun.generatedBy,
-      payrollRun.month,
-      payrollRun.year,
-      payrollRun.employeeCount,
-      payrollRun.totalBasicSalary,
-      payrollRun.totalEarnings,
-      payrollRun.totalDeductions,
-      payrollRun.totalNetSalary,
-      payrollRun.status,
-      payrollRun.cancelledBy ?? null,
-      payrollRun.cancelledAt ?? null,
-      payrollRun.submittedForVerificationBy ?? null,
-      payrollRun.submittedForVerificationAt ?? null,
-      payrollRun.approvedBy ?? null,
-      payrollRun.approvedAt ?? null,
-      payrollRun.paidBy ?? null,
-      payrollRun.paidAt ?? null,
-      payrollRun.serverVersion,
-      payrollRun.createdAt,
-      payrollRun.updatedAt,
-      payrollRun.isDeleted ?? 0,
-    ]
-  );
-
-  return true;
+    return result;
+  });
 }
 
 // ============================================================
@@ -616,296 +521,197 @@ export async function upsertPayrollResult(
   companyId: string,
   payrollResult: PayrollResult
 ) {
-  if (!companyId) {
-    throw new Error("Company ID is required.");
-  }
+  return transaction(async () => {
+    const apply = async () => {
+      if (!companyId) {
+        throw new Error("Company ID is required.");
+      }
 
-  if (payrollResult.companyId !== companyId) {
-    throw new Error(
-      "Payroll result companyId does not match the requested companyId."
-    );
-  }
+      if (payrollResult.companyId !== companyId) {
+        throw new Error(
+          "Payroll result companyId does not match the requested companyId."
+        );
+      }
 
-  console.log("PAYROLL RESULT TO UPSERT", payrollResult);
+      console.log("PAYROLL RESULT TO UPSERT", payrollResult);
 
-  // ----------------------------------------------------------
-  // Look for canonical ID INSIDE THIS COMPANY
-  // ----------------------------------------------------------
+      // ----------------------------------------------------------
+      // Look for canonical ID INSIDE THIS COMPANY
+      // ----------------------------------------------------------
 
-  const existingById = await get<
-    PayrollResult & {
-      synced: number;
-      serverVersion: number;
-    }
-  >(
-    `
-    SELECT *
-    FROM payroll_results
-    WHERE companyId = ?
-      AND _id = ?
-    LIMIT 1
-    `,
-    [companyId, payrollResult._id]
-  );
-
-  if (existingById) {
-    if (existingById.synced === 0) {
-      console.log(
-        `SKIPPING PAYROLL RESULT PULL. LOCAL CHANGES ARE PENDING: ${payrollResult._id}`
-      );
-
-      return existingById;
-    }
-
-    if (
-      payrollResult.serverVersion &&
-      payrollResult.serverVersion < (existingById.serverVersion ?? 0)
-    ) {
-      console.log(
-        `SKIPPING PAYROLL RESULT PULL. LOCAL SERVER VERSION IS NEWER/EQUAL: ${payrollResult._id}`,
-        {
-          local: existingById.serverVersion,
-          remote: payrollResult.serverVersion,
+      const existingById = await getDirect<
+        PayrollResult & {
+          synced: number;
+          serverVersion: number;
         }
+      >(
+        `
+        SELECT *
+        FROM payroll_results
+        WHERE companyId = ?
+          AND _id = ?
+        LIMIT 1
+        `,
+        [companyId, payrollResult._id]
       );
 
-      return existingById;
-    }
+      if (existingById) {
+        if (existingById.synced === 0) {
+          console.log(
+            `SKIPPING PAYROLL RESULT PULL. LOCAL CHANGES ARE PENDING: ${payrollResult._id}`
+          );
 
-    await run(
-      `
-      UPDATE payroll_results
-      SET
-        payrollRunId = ?,
-        employeeId = ?,
-        month = ?,
-        year = ?,
-        baseSalary = ?,
-        grossSalary = ?,
-        totalEarnings = ?,
-        totalDeductions = ?,
-        netSalary = ?,
-        status = ?,
-        cancelledAt = ?,
-        verifiedAt = ?,
-        approvedBy = ?,
-        paidBy = ?,
-        approvedAt = ?,
-        paidAt = ?,
-        serverVersion = ?,
-        createdAt = ?,
-        updatedAt = ?,
-        synced = 1,
-        isDeleted = ?
-      WHERE companyId = ?
-        AND _id = ?
-      `,
-      [
-        payrollResult.payrollRunId,
-        payrollResult.employeeId,
-        payrollResult.month,
-        payrollResult.year,
-        payrollResult.baseSalary,
-        payrollResult.grossSalary,
-        payrollResult.totalEarnings,
-        payrollResult.totalDeductions,
-        payrollResult.netSalary,
-        payrollResult.status,
-        payrollResult.cancelledAt ?? null,
-        payrollResult.verifiedAt ?? null,
-        payrollResult.approvedBy ?? null,
-        payrollResult.paidBy ?? null,
-        payrollResult.approvedAt ?? null,
-        payrollResult.paidAt ?? null,
-        payrollResult.serverVersion,
-        payrollResult.createdAt,
-        payrollResult.updatedAt,
-        payrollResult.isDeleted ?? 0,
-        companyId,
-        payrollResult._id,
-      ]
-    );
+          await runDirect(`INSERT INTO sync_deferred (companyId, entity, entityId, serverVersion, payload)
+            VALUES (?, ?, ?, ?, ?) ON CONFLICT(companyId, entity, entityId) DO UPDATE SET
+            serverVersion = excluded.serverVersion, payload = excluded.payload
+            WHERE excluded.serverVersion >= sync_deferred.serverVersion`,
+            [companyId, "payroll_result", payrollResult._id, payrollResult.serverVersion ?? 0, JSON.stringify(payrollResult)]);
+          return false;
+        }
 
-    return true;
-  }
+        if (
+          payrollResult.serverVersion &&
+          payrollResult.serverVersion < (existingById.serverVersion ?? 0)
+        ) {
+          console.log(
+            `SKIPPING PAYROLL RESULT PULL. LOCAL SERVER VERSION IS NEWER/EQUAL: ${payrollResult._id}`,
+            {
+              local: existingById.serverVersion,
+              remote: payrollResult.serverVersion,
+            }
+          );
 
-  // ----------------------------------------------------------
-  // Check natural employee/month/year key
-  // INSIDE THIS COMPANY
-  // ----------------------------------------------------------
+          return existingById;
+        }
 
-  const existingByPeriod = await get<
-    PayrollResult & {
-      synced: number;
-      serverVersion: number;
-    }
-  >(
-    `
-    SELECT *
-    FROM payroll_results
-    WHERE companyId = ?
-      AND employeeId = ?
-      AND month = ?
-      AND year = ?
-      AND isDeleted = 0
-      AND status <> 'ANNULÉ'
-    LIMIT 1
-    `,
-    [
-      companyId,
-      payrollResult.employeeId,
-      payrollResult.month,
-      payrollResult.year,
-    ]
-  );
+        await runDirect(
+          `
+          UPDATE payroll_results
+          SET
+            payrollRunId = ?,
+            employeeId = ?,
+            month = ?,
+            year = ?,
+            baseSalary = ?,
+            grossSalary = ?,
+            totalEarnings = ?,
+            totalDeductions = ?,
+            netSalary = ?,
+            status = ?,
+            cancelledAt = ?,
+            verifiedAt = ?,
+            approvedBy = ?,
+            paidBy = ?,
+            approvedAt = ?,
+            paidAt = ?,
+            serverVersion = ?,
+            createdAt = ?,
+            updatedAt = ?,
+            synced = 1,
+            isDeleted = ?
+          WHERE companyId = ?
+            AND _id = ?
+          `,
+          [
+            payrollResult.payrollRunId,
+            payrollResult.employeeId,
+            payrollResult.month,
+            payrollResult.year,
+            payrollResult.baseSalary,
+            payrollResult.grossSalary,
+            payrollResult.totalEarnings,
+            payrollResult.totalDeductions,
+            payrollResult.netSalary,
+            payrollResult.status,
+            payrollResult.cancelledAt ?? null,
+            payrollResult.verifiedAt ?? null,
+            payrollResult.approvedBy ?? null,
+            payrollResult.paidBy ?? null,
+            payrollResult.approvedAt ?? null,
+            payrollResult.paidAt ?? null,
+            payrollResult.serverVersion,
+            payrollResult.createdAt,
+            payrollResult.updatedAt,
+            payrollResult.isDeleted ?? 0,
+            companyId,
+            payrollResult._id,
+          ]
+        );
 
-  if (existingByPeriod) {
-    console.warn("PAYROLL RESULT PERIOD CONFLICT", {
-      incoming: payrollResult,
-      existing: existingByPeriod,
-    });
+        return true;
+      }
 
-    if (existingByPeriod.synced === 0) {
-      console.log(
-        `SKIPPING PAYROLL RESULT PERIOD CONFLICT. LOCAL CHANGES ARE PENDING: ${existingByPeriod._id}`
+      // ----------------------------------------------------------
+      // Insert the distinct server payroll result without changing local IDs.
+      // ----------------------------------------------------------
+
+      await runDirect(
+        `
+        INSERT INTO payroll_results (
+          companyId,
+          _id,
+          payrollRunId,
+          employeeId,
+          month,
+          year,
+          baseSalary,
+          grossSalary,
+          totalEarnings,
+          totalDeductions,
+          netSalary,
+          status,
+          cancelledAt,
+          verifiedAt,
+          approvedBy,
+          paidBy,
+          approvedAt,
+          paidAt,
+          serverVersion,
+          createdAt,
+          updatedAt,
+          synced,
+          isDeleted
+        )
+        VALUES (
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?
+        )
+        `,
+        [
+          payrollResult.companyId,
+          payrollResult._id,
+          payrollResult.payrollRunId,
+          payrollResult.employeeId,
+          payrollResult.month,
+          payrollResult.year,
+          payrollResult.baseSalary,
+          payrollResult.grossSalary,
+          payrollResult.totalEarnings,
+          payrollResult.totalDeductions,
+          payrollResult.netSalary,
+          payrollResult.status,
+          payrollResult.cancelledAt ?? null,
+          payrollResult.verifiedAt ?? null,
+          payrollResult.approvedBy ?? null,
+          payrollResult.paidBy ?? null,
+          payrollResult.approvedAt ?? null,
+          payrollResult.paidAt ?? null,
+          payrollResult.serverVersion,
+          payrollResult.createdAt,
+          payrollResult.updatedAt,
+          payrollResult.isDeleted ?? 0,
+        ]
       );
 
-      return existingByPeriod;
+      return true;
+    };
+    const result = await apply();
+    if (result !== false) {
+      await runDirect("DELETE FROM sync_deferred WHERE companyId = ? AND entity = ? AND entityId = ? AND serverVersion <= ?",
+        [companyId, "payroll_result", payrollResult._id, payrollResult.serverVersion ?? 0]);
     }
-
-    if (
-      payrollResult.serverVersion &&
-      payrollResult.serverVersion <= (existingByPeriod.serverVersion ?? 0)
-    ) {
-      console.log(
-        `SKIPPING PAYROLL RESULT PERIOD CONFLICT. LOCAL SERVER VERSION IS NEWER/EQUAL`
-      );
-
-      return existingByPeriod;
-    }
-
-    await run(
-      `
-      UPDATE payroll_results
-      SET
-        _id = ?,
-        payrollRunId = ?,
-        employeeId = ?,
-        month = ?,
-        year = ?,
-        baseSalary = ?,
-        grossSalary = ?,
-        totalEarnings = ?,
-        totalDeductions = ?,
-        netSalary = ?,
-        status = ?,
-        cancelledAt = ?,
-        verifiedAt = ?,
-        approvedBy = ?,
-        paidBy = ?,
-        approvedAt = ?,
-        paidAt = ?,
-        serverVersion = ?,
-        createdAt = ?,
-        updatedAt = ?,
-        synced = 1,
-        isDeleted = ?
-      WHERE companyId = ?
-        AND _id = ?
-      `,
-      [
-        payrollResult._id,
-        payrollResult.payrollRunId,
-        payrollResult.employeeId,
-        payrollResult.month,
-        payrollResult.year,
-        payrollResult.baseSalary,
-        payrollResult.grossSalary,
-        payrollResult.totalEarnings,
-        payrollResult.totalDeductions,
-        payrollResult.netSalary,
-        payrollResult.status,
-        payrollResult.cancelledAt ?? null,
-        payrollResult.verifiedAt ?? null,
-        payrollResult.approvedBy ?? null,
-        payrollResult.paidBy ?? null,
-        payrollResult.approvedAt ?? null,
-        payrollResult.paidAt ?? null,
-        payrollResult.serverVersion,
-        payrollResult.createdAt,
-        payrollResult.updatedAt,
-        payrollResult.isDeleted ?? 0,
-        companyId,
-        existingByPeriod._id,
-      ]
-    );
-
-    return true;
-  }
-
-  // ----------------------------------------------------------
-  // Insert server payroll result
-  // ----------------------------------------------------------
-
-  await run(
-    `
-    INSERT INTO payroll_results (
-      companyId,
-      _id,
-      payrollRunId,
-      employeeId,
-      month,
-      year,
-      baseSalary,
-      grossSalary,
-      totalEarnings,
-      totalDeductions,
-      netSalary,
-      status,
-      cancelledAt,
-      verifiedAt,
-      approvedBy,
-      paidBy,
-      approvedAt,
-      paidAt,
-      serverVersion,
-      createdAt,
-      updatedAt,
-      synced,
-      isDeleted
-    )
-    VALUES (
-      ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-      ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?
-    )
-    `,
-    [
-      payrollResult.companyId,
-      payrollResult._id,
-      payrollResult.payrollRunId,
-      payrollResult.employeeId,
-      payrollResult.month,
-      payrollResult.year,
-      payrollResult.baseSalary,
-      payrollResult.grossSalary,
-      payrollResult.totalEarnings,
-      payrollResult.totalDeductions,
-      payrollResult.netSalary,
-      payrollResult.status,
-      payrollResult.cancelledAt ?? null,
-      payrollResult.verifiedAt ?? null,
-      payrollResult.approvedBy ?? null,
-      payrollResult.paidBy ?? null,
-      payrollResult.approvedAt ?? null,
-      payrollResult.paidAt ?? null,
-      payrollResult.serverVersion,
-      payrollResult.createdAt,
-      payrollResult.updatedAt,
-      payrollResult.isDeleted ?? 0,
-    ]
-  );
-
-  return true;
+    return result;
+  });
 }
 
 // ============================================================
@@ -916,110 +722,125 @@ export async function upsertPayrollItem(
   companyId: string,
   payrollItem: PayrollItem
 ) {
-  if (!companyId) {
-    throw new Error("Company ID is required.");
-  }
+  return transaction(async () => {
+    const apply = async () => {
+      if (!companyId) {
+        throw new Error("Company ID is required.");
+      }
 
-  if (payrollItem.companyId !== companyId) {
-    throw new Error(
-      "Payroll item companyId does not match the requested companyId."
-    );
-  }
+      if (payrollItem.companyId !== companyId) {
+        throw new Error(
+          "Payroll item companyId does not match the requested companyId."
+        );
+      }
 
-  const existing = await get<
-    PayrollItem & {
-      synced: number;
-      serverVersion: number;
-    }
-  >(
-    `
-    SELECT *
-    FROM payroll_items
-    WHERE companyId = ?
-      AND _id = ?
-    LIMIT 1
-    `,
-    [companyId, payrollItem._id]
-  );
-
-  if (existing) {
-    if (existing.synced === 0) {
-      console.log(
-        `SKIPPING PAYROLL ITEM PULL. LOCAL CHANGES ARE PENDING: ${payrollItem._id}`
+      const existing = await getDirect<
+        PayrollItem & {
+          synced: number;
+          serverVersion: number;
+        }
+      >(
+        `
+        SELECT *
+        FROM payroll_items
+        WHERE companyId = ?
+          AND _id = ?
+        LIMIT 1
+        `,
+        [companyId, payrollItem._id]
       );
 
-      return existing;
-    }
+      if (existing) {
+        if (existing.synced === 0) {
+          console.log(
+            `SKIPPING PAYROLL ITEM PULL. LOCAL CHANGES ARE PENDING: ${payrollItem._id}`
+          );
 
-    if (
-      payrollItem.serverVersion &&
-      payrollItem.serverVersion <= (existing.serverVersion ?? 0)
-    ) {
-      console.log(
-        `SKIPPING PAYROLL ITEM PULL. LOCAL SERVER VERSION IS NEWER/EQUAL: ${payrollItem._id}`
+          await runDirect(`INSERT INTO sync_deferred (companyId, entity, entityId, serverVersion, payload)
+            VALUES (?, ?, ?, ?, ?) ON CONFLICT(companyId, entity, entityId) DO UPDATE SET
+            serverVersion = excluded.serverVersion, payload = excluded.payload
+            WHERE excluded.serverVersion >= sync_deferred.serverVersion`,
+            [companyId, "payroll_item", payrollItem._id, payrollItem.serverVersion ?? 0, JSON.stringify(payrollItem)]);
+          return false;
+        }
+
+        if (
+          payrollItem.serverVersion &&
+          payrollItem.serverVersion <= (existing.serverVersion ?? 0)
+        ) {
+          console.log(
+            `SKIPPING PAYROLL ITEM PULL. LOCAL SERVER VERSION IS NEWER/EQUAL: ${payrollItem._id}`
+          );
+
+          return existing;
+        }
+      }
+
+      await runDirect(
+        `
+        INSERT INTO payroll_items (
+          companyId,
+          _id,
+          payrollResultId,
+          employeeId,
+          componentId,
+          name,
+          displayName,
+          type,
+          amount,
+          serverVersion,
+          createdAt,
+          updatedAt,
+          synced,
+          isDeleted
+        )
+        VALUES (
+          ?, ?, ?, ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, 1, ?
+        )
+        ON CONFLICT(_id)
+        DO UPDATE SET
+          companyId = excluded.companyId,
+          payrollResultId = excluded.payrollResultId,
+          employeeId = excluded.employeeId,
+          componentId = excluded.componentId,
+          name = excluded.name,
+          displayName = excluded.displayName,
+          type = excluded.type,
+          amount = excluded.amount,
+          serverVersion = excluded.serverVersion,
+          createdAt = excluded.createdAt,
+          updatedAt = excluded.updatedAt,
+          synced = 1,
+          isDeleted = excluded.isDeleted
+        WHERE payroll_items.companyId = excluded.companyId
+        `,
+        [
+          payrollItem.companyId,
+          payrollItem._id,
+          payrollItem.payrollResultId,
+          payrollItem.employeeId,
+          payrollItem.componentId,
+          payrollItem.name,
+          payrollItem.displayName ?? null,
+          payrollItem.type,
+          payrollItem.amount,
+          payrollItem.serverVersion,
+          payrollItem.createdAt,
+          payrollItem.updatedAt,
+          payrollItem.isDeleted ?? 0,
+        ]
       );
 
-      return existing;
+      return true;
+    };
+    const result = await apply();
+    if (result !== false) {
+      await runDirect("DELETE FROM sync_deferred WHERE companyId = ? AND entity = ? AND entityId = ? AND serverVersion <= ?",
+        [companyId, "payroll_item", payrollItem._id, payrollItem.serverVersion ?? 0]);
     }
-  }
-
-  await run(
-    `
-    INSERT INTO payroll_items (
-      companyId,
-      _id,
-      payrollResultId,
-      employeeId,
-      componentId,
-      name,
-      displayName,
-      type,
-      amount,
-      serverVersion,
-      createdAt,
-      updatedAt,
-      synced,
-      isDeleted
-    )
-    VALUES (
-      ?, ?, ?, ?, ?, ?, ?, ?, ?,
-      ?, ?, ?, 1, ?
-    )
-    ON CONFLICT(_id)
-    DO UPDATE SET
-      companyId = excluded.companyId,
-      payrollResultId = excluded.payrollResultId,
-      employeeId = excluded.employeeId,
-      componentId = excluded.componentId,
-      name = excluded.name,
-      displayName = excluded.displayName,
-      type = excluded.type,
-      amount = excluded.amount,
-      serverVersion = excluded.serverVersion,
-      createdAt = excluded.createdAt,
-      updatedAt = excluded.updatedAt,
-      synced = 1,
-      isDeleted = excluded.isDeleted
-    WHERE payroll_items.companyId = excluded.companyId
-    `,
-    [
-      payrollItem.companyId,
-      payrollItem._id,
-      payrollItem.payrollResultId,
-      payrollItem.employeeId,
-      payrollItem.componentId,
-      payrollItem.name,
-      payrollItem.displayName ?? null,
-      payrollItem.type,
-      payrollItem.amount,
-      payrollItem.serverVersion,
-      payrollItem.createdAt,
-      payrollItem.updatedAt,
-      payrollItem.isDeleted ?? 0,
-    ]
-  );
-
-  return true;
+    return result;
+  });
 }
 
 // ============================================================
@@ -1275,6 +1096,7 @@ export async function verifyPayrollRun(
       entityId: result._id,
       operation: "update",
       payload: JSON.stringify({
+        _id: result._id,
         companyId,
         payrollRunId,
         managerEmail,
@@ -1834,6 +1656,8 @@ export async function markPayrollRunSynced(
       lastSyncedAt = ?
     WHERE companyId = ?
       AND _id = ?
+      AND NOT EXISTS (SELECT 1 FROM sync_queue q WHERE q.companyId = payroll_runs.companyId
+        AND q.entity = 'payroll_run' AND q.entityId = payroll_runs._id AND q.synced = 0)
       AND (? IS NULL OR updatedAt = ?)
     `,
     [
@@ -1863,6 +1687,8 @@ export async function markPayrollResultSynced(
       lastSyncedAt = ?
     WHERE companyId = ?
       AND _id = ?
+      AND NOT EXISTS (SELECT 1 FROM sync_queue q WHERE q.companyId = payroll_results.companyId
+        AND q.entity = 'payroll_result' AND q.entityId = payroll_results._id AND q.synced = 0)
       AND (? IS NULL OR updatedAt = ?)
     `,
     [
@@ -1888,6 +1714,8 @@ export async function markPayrollItemSynced(companyId: string, _id: string) {
       lastSyncedAt = ?
     WHERE companyId = ?
       AND _id = ?
+      AND NOT EXISTS (SELECT 1 FROM sync_queue q WHERE q.companyId = payroll_items.companyId
+        AND q.entity = 'payroll_item' AND q.entityId = payroll_items._id AND q.synced = 0)
     `,
     [new Date().toISOString(), companyId, _id]
   );

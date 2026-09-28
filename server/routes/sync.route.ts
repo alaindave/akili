@@ -6,6 +6,7 @@ import authorize from "../middlewares/authorize.js";
 import upload from "../middlewares/sync_upload.js";
 
 import {
+  SyncConflict,
   syncEmployee,
   syncAttendance,
   syncAttendanceDailyCheck,
@@ -128,22 +129,25 @@ function validateSyncItemCompany(
   item: SyncItem,
   authenticatedCompanyId: string
 ): void {
+  if (!item || typeof item !== "object" || Array.isArray(item)) {
+    throw new SyncConflict("INVALID_ITEM", "Sync item must be an object.");
+  }
   if (!item.companyId) {
-    throw new Error(`SYNC: companyId is required for entity ${item.entity}`);
+    throw new SyncConflict("INVALID_COMPANY", `SYNC: companyId is required for entity ${item.entity}`);
   }
 
   if (item.companyId !== authenticatedCompanyId) {
-    throw new Error(`SYNC: companyId mismatch for entity ${item.entity}`);
+    throw new SyncConflict("INVALID_COMPANY", `SYNC: companyId mismatch for entity ${item.entity}`);
   }
 
   if (!item.data?.companyId) {
-    throw new Error(
+    throw new SyncConflict("INVALID_COMPANY",
       `SYNC: data.companyId is required for entity ${item.entity}`
     );
   }
 
   if (item.data.companyId !== authenticatedCompanyId) {
-    throw new Error(`SYNC: data.companyId mismatch for entity ${item.entity}`);
+    throw new SyncConflict("INVALID_COMPANY", `SYNC: data.companyId mismatch for entity ${item.entity}`);
   }
 }
 
@@ -304,6 +308,8 @@ router.post(
        */
 
       const synced: string[] = [];
+      const failed: { queueId: string; entity: string; entityId?: string; code: string; message: string; retryable: boolean; details?: unknown }[] = [];
+      const failedRecords = new Set<string>();
 
       /*
        * --------------------------------------------------------
@@ -312,7 +318,7 @@ router.post(
        */
 
       for (const item of items) {
-        const { queueId, entity, operation, data } = item;
+        const { queueId, entity, operation, data } = item ?? {};
 
         try {
           /*
@@ -322,6 +328,8 @@ router.post(
            */
 
           validateSyncItemCompany(item, companyId);
+          if (!["create", "update", "delete"].includes(operation)) throw new SyncConflict("INVALID_OPERATION", "Unknown sync operation.");
+          if (failedRecords.has(`${entity}:${data?._id}`)) throw new Error("Earlier update for this record failed; retry in order.");
 
           switch (entity) {
             /*
@@ -652,9 +660,7 @@ router.post(
              */
 
             default: {
-              console.warn(`UNKNOWN SYNC ENTITY: ${entity}`);
-
-              continue;
+              throw new SyncConflict("UNKNOWN_ENTITY", `Unknown sync entity: ${entity}`);
             }
           }
 
@@ -666,6 +672,11 @@ router.post(
 
           synced.push(queueId);
         } catch (error) {
+          failedRecords.add(`${entity}:${data?._id}`);
+          const failure = error as { code?: string | number; name?: string; message?: string; details?: unknown };
+          const permanent = error instanceof SyncConflict || failure.code === 11000 || ["ValidationError", "CastError"].includes(failure.name ?? "");
+          failed.push({ queueId, entity, entityId: data?._id, code: String(failure.code ?? "SYNC_FAILED"),
+            message: failure.message ?? "Unable to sync record.", retryable: !permanent, details: failure.details });
           console.error(`PUSH FAILED FOR ${entity}`, {
             companyId,
             queueId,
@@ -689,6 +700,7 @@ router.post(
         success: true,
         companyId,
         synced,
+        failed,
       });
     } catch (error) {
       console.error("PUSH SYNC FAILED:", error);

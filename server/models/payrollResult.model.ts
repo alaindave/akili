@@ -150,9 +150,9 @@ const PayrollResultSchema = new Schema<PayrollResultDocument>(
 );
 
 PayrollResultSchema.index({
-  employee: 1,
-  "payrollPeriod.month": 1,
-  "payrollPeriod.year": 1,
+  companyId: 1,
+  payrollRunId: 1,
+  employeeId: 1,
 });
 
 const PayrollResult = model<PayrollResultDocument>(

@@ -427,17 +427,6 @@ export default function EmployeePayslipDetails() {
                 >
                   {/* Employee information */}
                   <Box flex="1" minW={0}>
-                    <Text
-                      fontSize="1.3rem"
-                      fontWeight="700"
-                      mb={4}
-                      letterSpacing="0.04em"
-                      textTransform="uppercase"
-                      textAlign="left"
-                    >
-                      Informations de l’employé
-                    </Text>
-
                     <Box width="100%">
                       {[
                         [
