@@ -8,13 +8,14 @@ const ts = require('typescript');
 const database = new DatabaseSync(':memory:');
 let queue = Promise.resolve();
 let failQueue = false;
+let failQueueAfter = Infinity;
 function enqueue(fn) {
   const next = queue.catch(() => {}).then(fn);
   queue = next.catch(() => {});
   return next;
 }
 const runDirect = async (sql, params = []) => {
-  if (failQueue && sql.includes('INSERT INTO sync_queue')) throw new Error('queue failure');
+  if (sql.includes('INSERT INTO sync_queue') && (failQueue || failQueueAfter-- === 0)) throw new Error('queue failure');
   const result = database.prepare(sql).run(...params);
   return { changes: Number(result.changes), lastID: Number(result.lastInsertRowid) };
 };
@@ -165,7 +166,61 @@ const countQueue = () => database.prepare('SELECT COUNT(*) AS n FROM sync_queue'
     await assert.rejects(() => repo.approvePayslip('a', id + '-slip', admin));
     await assert.rejects(() => repo.verifyPayrollRun('a', 'email', id, admin));
   }
+  // Failure between a local write and any queue insertion must roll back both.
+  const batch = { employeeCount: 1, totalBasicSalary: 100, totalEarnings: 0,
+    totalDeductions: 0, totalNetSalary: 100 };
+  const dto = { companyId: 'a', month: 12, year: 2026, admin, managerEmail: 'manager@example.test' };
+  const beforeCreate = countQueue();
+  failQueue = true;
+  await assert.rejects(() => repo.createPayrollRun(batch, dto), /queue failure/);
+  failQueue = false;
+  assert.equal(database.prepare('SELECT COUNT(*) AS n FROM payroll_runs WHERE month = 12').get().n, 0);
+  assert.equal(countQueue(), beforeCreate);
+  const atomicRun = await repo.createPayrollRun(batch, dto);
+  database.exec(`INSERT INTO payroll_components (companyId, _id, name, displayName, type, calculationType, displayOrder, createdAt, updatedAt)
+    VALUES ('a', 'base', 'Base', 'Base', 'EARNING', 'FIXE', 1, '2026-09-01', '2026-09-01')`);
+  const generated = { employeeId: 'e1', baseSalary: 100, grossSalary: 100,
+    totalEarnings: 0, totalDeductions: 0, netSalary: 100, status: 'BROUILLON',
+    earnings: [{ componentId: 'base', name: 'Base', displayName: 'Base', type: 'EARNING', amount: 100 }], deductions: [] };
+  failQueueAfter = 1; // Result queued successfully, item queue insertion fails.
+  await assert.rejects(() => repo.savePayrollResult('a', atomicRun._id, generated), /queue failure/);
+  failQueueAfter = Infinity;
+  assert.equal(database.prepare('SELECT COUNT(*) AS n FROM payroll_results WHERE payrollRunId = ?').get(atomicRun._id).n, 0);
+  assert.equal(database.prepare('SELECT COUNT(*) AS n FROM payroll_items').get().n, 0);
+  assert.equal(countQueue(), beforeCreate + 1);
+  const atomicSlip = await repo.savePayrollResult('a', atomicRun._id, generated);
+  const beforeVerify = countQueue();
+  failQueueAfter = 1; // Run queued successfully, result queue insertion fails.
+  await assert.rejects(() => repo.verifyPayrollRun('a', dto.managerEmail, atomicRun._id, admin), /queue failure/);
+  failQueueAfter = Infinity;
+  assert.equal(row(atomicSlip).status, 'BROUILLON');
+  assert.equal(database.prepare('SELECT status FROM payroll_runs WHERE _id = ?').get(atomicRun._id).status, 'BROUILLON');
+  assert.equal(countQueue(), beforeVerify);
+  await repo.verifyPayrollRun('a', dto.managerEmail, atomicRun._id, admin);
+  await repo.approvePayslip('a', atomicSlip, admin);
+  await repo.payPayslip('a', atomicSlip, admin);
+  const ordered = database.prepare('SELECT operation, payload FROM sync_queue WHERE entityId = ? ORDER BY _id').all(atomicSlip);
+  assert.deepEqual(ordered.map((entry) => [entry.operation, JSON.parse(entry.payload).status]),
+    [['create', 'BROUILLON'], ['update', 'VERIFICATION'], ['update', 'APPROUVÉ'], ['update', 'PAYÉ']]);
+
   console.log('SQLite checks passed: individual transitions, totals status, roles, isolation, retries, atomic rollback, migration, pull fields, sync acknowledgements, settings cancellation.');
+
+  // Exercise the real Mongoose schema so strict casting cannot silently drop audit fields.
+  const PayrollResultModel = load(path.resolve(__dirname, '../../server/models/payrollResult.model.ts'),
+    (name) => require(require.resolve(name, { paths: [path.resolve(__dirname, '../../server')] }))).default;
+  const mongoSlip = new PayrollResultModel({
+    _id: 'schema-slip', companyId: 'a', payrollRunId: 'schema-run', employeeId: 'e1',
+    month: 9, year: 2026, status: 'PAYÉ', approvedBy: 'approver', paidBy: 'payer',
+    approvedAt: '2026-09-02', paidAt: '2026-09-03', createdAt: '2026-09-01', updatedAt: '2026-09-03',
+  });
+  await mongoSlip.validate();
+  const storedSlip = JSON.parse(JSON.stringify(mongoSlip.toObject()));
+  assert.equal(storedSlip.approvedBy, 'approver');
+  assert.equal(storedSlip.paidBy, 'payer');
+  assert.equal(storedSlip.approvedAt, '2026-09-02T00:00:00.000Z');
+  assert.equal(storedSlip.paidAt, '2026-09-03T00:00:00.000Z');
+  mongoSlip.status = 'INVALID';
+  await assert.rejects(() => mongoSlip.validate(), /status/);
 
   // Execute the actual server sync functions against an in-memory Mongo adapter.
   const runs = new Map();

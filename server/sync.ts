@@ -1576,7 +1576,7 @@ export async function syncPayrollRun(operation: SyncOperation, data: SyncData) {
         $set: { ...update, serverVersion },
         $setOnInsert: { _id },
       },
-      { upsert: !existing }
+      { upsert: !existing, runValidators: true }
     );
     if (!saved.matchedCount && !saved.upsertedCount) continue;
     if (update.status === "ANNULÉ") {
@@ -1685,7 +1685,7 @@ export async function syncPayrollResult(
         $set: { ...update, serverVersion },
         $setOnInsert: { _id },
       },
-      { upsert: !existing }
+      { upsert: !existing, runValidators: true }
     );
     if (!saved.matchedCount && !saved.upsertedCount) continue;
     const latestRun = await PayrollRun.findOne({

@@ -36,7 +36,8 @@ async function createPayrollStatusAudit(
   admin: AdminUser,
   from: PayrollStatus,
   to: PayrollStatus,
-  description: string
+  description: string,
+  withinTransaction = false
 ): Promise<void> {
   await createAuditLog({
     companyId,
@@ -47,7 +48,7 @@ async function createPayrollStatusAudit(
     entityId: payrollRunId,
     description,
     changes: { status: { from, to } },
-  });
+  }, withinTransaction);
 }
 
 // ============================================================
@@ -132,55 +133,58 @@ export async function createPayrollRun(
     isDeleted: 0,
   };
 
-  await run(
-    `
-    INSERT INTO payroll_runs (
-      companyId,
-      _id,
-      generatedBy,
-      month,
-      year,
-      employeeCount,
-      totalBasicSalary,
-      totalEarnings,
-      totalDeductions,
-      totalNetSalary,
-      status,
-      serverVersion,
-      synced,
-      createdAt,
-      updatedAt,
-      isDeleted
-    )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `,
-    [
-      payrollRun.companyId,
-      payrollRun._id,
-      payrollRun.generatedBy,
-      payrollRun.month,
-      payrollRun.year,
-      payrollRun.employeeCount,
-      payrollRun.totalBasicSalary,
-      payrollRun.totalEarnings,
-      payrollRun.totalDeductions,
-      payrollRun.totalNetSalary,
-      payrollRun.status,
-      payrollRun.serverVersion,
-      payrollRun.synced,
-      payrollRun.createdAt,
-      payrollRun.updatedAt,
-      payrollRun.isDeleted,
-    ]
-  );
+  await transaction(async () => {
+    await runDirect(
+      `
+      INSERT INTO payroll_runs (
+        companyId,
+        _id,
+        generatedBy,
+        month,
+        year,
+        employeeCount,
+        totalBasicSalary,
+        totalEarnings,
+        totalDeductions,
+        totalNetSalary,
+        status,
+        serverVersion,
+        synced,
+        createdAt,
+        updatedAt,
+        isDeleted
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      [
+        payrollRun.companyId,
+        payrollRun._id,
+        payrollRun.generatedBy,
+        payrollRun.month,
+        payrollRun.year,
+        payrollRun.employeeCount,
+        payrollRun.totalBasicSalary,
+        payrollRun.totalEarnings,
+        payrollRun.totalDeductions,
+        payrollRun.totalNetSalary,
+        payrollRun.status,
+        payrollRun.serverVersion,
+        payrollRun.synced,
+        payrollRun.createdAt,
+        payrollRun.updatedAt,
+        payrollRun.isDeleted,
+      ]
+    );
 
-  await addToSyncQueue({
-    companyId: payrollRun.companyId,
-    entity: "payroll_run",
-    entityId: payrollRun._id,
-    operation: "create",
-    payload: JSON.stringify(payrollRun),
+    await addToSyncQueue({
+      companyId: payrollRun.companyId,
+      entity: "payroll_run",
+      entityId: payrollRun._id,
+      operation: "create",
+      payload: JSON.stringify(payrollRun),
+    }, true);
   });
+  await notifyPendingChanges(payrollRun.companyId);
 
   await createAuditLog({
     companyId: payrollRun.companyId,
@@ -1000,38 +1004,35 @@ export async function verifyPayrollRun(
 
   const now = new Date().toISOString();
 
-  const payrollRun: PayrollRun | null = await get(
-    `
-    SELECT *
-    FROM payroll_runs
-    WHERE companyId = ?
-      AND _id = ?
-      AND isDeleted = 0
-    LIMIT 1
-    `,
-    [companyId, payrollRunId]
-  );
-
-  if (!payrollRun) {
-    throw new Error(`Payroll run not found for company: ${payrollRunId}`);
-  }
-
-  const results = await all<{ _id: string }>(
-    `
-    SELECT *
-    FROM payroll_results
-    WHERE companyId = ?
-      AND payrollRunId = ?
-    `,
-    [companyId, payrollRunId]
-  );
-
   await transaction(async () => {
-    const currentRun = await getDirect<PayrollRun>(
-      "SELECT * FROM payroll_runs WHERE companyId = ? AND _id = ? AND isDeleted = 0",
+    const payrollRun: PayrollRun | null = await getDirect(
+      `
+      SELECT *
+      FROM payroll_runs
+      WHERE companyId = ?
+        AND _id = ?
+        AND isDeleted = 0
+      LIMIT 1
+      `,
       [companyId, payrollRunId]
     );
-    if (!currentRun || currentRun.status !== "BROUILLON") {
+
+    if (!payrollRun) {
+      throw new Error(`Payroll run not found for company: ${payrollRunId}`);
+    }
+
+    const results = await allDirect<{ _id: string }>(
+      `
+      SELECT *
+      FROM payroll_results
+      WHERE companyId = ?
+        AND payrollRunId = ?
+        AND isDeleted = 0
+      `,
+      [companyId, payrollRunId]
+    );
+
+    if (payrollRun.status !== "BROUILLON") {
       throw new Error("Seule une paie en brouillon peut être soumise à vérification.");
     }
 
@@ -1069,52 +1070,55 @@ export async function verifyPayrollRun(
         synced = 0
       WHERE companyId = ?
         AND payrollRunId = ?
+        AND isDeleted = 0
       `,
       ["VERIFICATION", now, now, companyId, payrollRunId]
     );
-  });
 
-  await addToSyncQueue({
-    companyId,
-    entity: "payroll_run",
-    entityId: payrollRunId,
-    operation: "update",
-    payload: JSON.stringify({
-      ...payrollRun,
-      managerEmail,
-      status: "VERIFICATION",
-      submittedForVerificationBy: admin._id,
-      submittedForVerificationAt: now,
-      updatedAt: now,
-    }),
-  });
-
-  for (const result of results) {
     await addToSyncQueue({
       companyId,
-      entity: "payroll_result",
-      entityId: result._id,
+      entity: "payroll_run",
+      entityId: payrollRunId,
       operation: "update",
       payload: JSON.stringify({
-        _id: result._id,
-        companyId,
-        payrollRunId,
+        ...payrollRun,
         managerEmail,
         status: "VERIFICATION",
-        verifiedAt: now,
+        submittedForVerificationBy: admin._id,
+        submittedForVerificationAt: now,
         updatedAt: now,
       }),
-    });
-  }
+    }, true);
 
-  await createPayrollStatusAudit(
-    companyId,
-    payrollRunId,
-    admin,
-    payrollRun.status,
-    "VERIFICATION",
-    "Modification du statut de la paie"
-  );
+    for (const result of results) {
+      await addToSyncQueue({
+        companyId,
+        entity: "payroll_result",
+        entityId: result._id,
+        operation: "update",
+        payload: JSON.stringify({
+          _id: result._id,
+          companyId,
+          payrollRunId,
+          managerEmail,
+          status: "VERIFICATION",
+          verifiedAt: now,
+          updatedAt: now,
+        }),
+      }, true);
+    }
+
+    await createPayrollStatusAudit(
+      companyId,
+      payrollRunId,
+      admin,
+      payrollRun.status,
+      "VERIFICATION",
+      "Modification du statut de la paie",
+      true
+    );
+  });
+  await notifyPendingChanges(companyId);
 
   return true;
 }
@@ -1450,50 +1454,52 @@ export async function savePayrollResult(
         ]
       );
     }
-  });
 
-  // ----------------------------------------------------------
-  // Queue payroll result
-  // ----------------------------------------------------------
+    // ----------------------------------------------------------
+    // Queue payroll result
+    // ----------------------------------------------------------
 
-  await addToSyncQueue({
-    companyId,
-    entity: "payroll_result",
-    entityId: payrollResultId,
-    operation: "create",
-    payload: JSON.stringify({
-      companyId,
-      _id: payrollResultId,
-      payrollRunId,
-      employeeId: result.employeeId,
-      month,
-      year,
-      baseSalary: result.baseSalary,
-      grossSalary: result.grossSalary,
-      totalEarnings: result.totalEarnings,
-      totalDeductions: result.totalDeductions,
-      netSalary: result.netSalary,
-      status: result.status,
-      serverVersion: 0,
-      createdAt: now,
-      updatedAt: now,
-      isDeleted: 0,
-    }),
-  });
-
-  // ----------------------------------------------------------
-  // Queue payroll items
-  // ----------------------------------------------------------
-
-  for (const item of items) {
     await addToSyncQueue({
       companyId,
-      entity: "payroll_item",
-      entityId: item._id,
+      entity: "payroll_result",
+      entityId: payrollResultId,
       operation: "create",
-      payload: JSON.stringify(item),
-    });
-  }
+      payload: JSON.stringify({
+        companyId,
+        _id: payrollResultId,
+        payrollRunId,
+        employeeId: result.employeeId,
+        month,
+        year,
+        baseSalary: result.baseSalary,
+        grossSalary: result.grossSalary,
+        totalEarnings: result.totalEarnings,
+        totalDeductions: result.totalDeductions,
+        netSalary: result.netSalary,
+        status: result.status,
+        serverVersion: 0,
+        createdAt: now,
+        updatedAt: now,
+        isDeleted: 0,
+      }),
+    }, true);
+
+    // ----------------------------------------------------------
+    // Queue payroll items
+    // ----------------------------------------------------------
+
+    for (const item of items) {
+      await addToSyncQueue({
+        companyId,
+        entity: "payroll_item",
+        entityId: item._id,
+        operation: "create",
+        payload: JSON.stringify(item),
+      }, true);
+    }
+
+  });
+  await notifyPendingChanges(companyId);
 
   return payrollResultId;
 }
