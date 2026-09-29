@@ -72,6 +72,10 @@ export const attendanceApi = {
   },
 
   transportAllowance: {
+    saveWeeklyPdf: (
+      report: TransportAllowanceWeeklyReport
+    ): Promise<{ canceled: boolean; filePath?: string }> =>
+      invoke("transportAllowance:saveWeeklyPdf", report),
     createWeeklyReport: (
       companyId: string,
       weekStart: string

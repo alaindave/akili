@@ -114,8 +114,3 @@ export async function deleteSyncedItems(companyId: string): Promise<void> {
 
   await notifyPendingChanges(companyId);
 }
-
-// Keep permanent conflicts in the queue for explicit reconciliation, without retrying them.
-export async function blockSyncItem(companyId: string, id: string, reason: string) {
-  await run("UPDATE sync_queue SET blockedReason = ? WHERE companyId = ? AND _id = ? AND synced = 0", [reason, companyId, id]);
-}

@@ -41,7 +41,6 @@ export async function createPayrollComponent(
         displayOrder,
         type,
         calculationType,
-        calculationBase,
         defaultValue,
         taxable,
         isSystem,
@@ -54,7 +53,7 @@ export async function createPayrollComponent(
         isDeleted,
         serverVersion
       )
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `,
     [
       companyId,
@@ -64,7 +63,6 @@ export async function createPayrollComponent(
       component.displayOrder,
       component.type,
       component.calculationType,
-      component.calculationBase,
       component.defaultValue,
       component.taxable ?? 1,
       0,
@@ -166,7 +164,6 @@ export async function upsertPayrollComponent(component: PayrollComponent) {
       displayName,
       type,
       calculationType,
-      calculationBase,
       defaultValue,
       taxable,
       displayOrder,
@@ -181,7 +178,7 @@ export async function upsertPayrollComponent(component: PayrollComponent) {
       isDeleted
     )
 
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 
     ON CONFLICT(_id)
     DO UPDATE SET
@@ -189,7 +186,6 @@ export async function upsertPayrollComponent(component: PayrollComponent) {
       displayName = excluded.displayName,
       type = excluded.type,
       calculationType = excluded.calculationType,
-      calculationBase = excluded.calculationBase,
       defaultValue = excluded.defaultValue,
       taxable = excluded.taxable,
       displayOrder = excluded.displayOrder,
@@ -210,7 +206,6 @@ export async function upsertPayrollComponent(component: PayrollComponent) {
       component.displayName,
       component.type,
       component.calculationType,
-      component.calculationBase,
       component.defaultValue,
       component.taxable ?? 1,
       component.displayOrder,
@@ -344,7 +339,6 @@ export async function updatePayrollComponents(
         displayOrder = ?,
         type = ?,
         calculationType = ?,
-        calculationBase = ?,
         defaultValue = ?,
         taxable = ?,
         requiresHRApproval = ?,
@@ -360,7 +354,6 @@ export async function updatePayrollComponents(
         component.displayOrder,
         component.type,
         component.calculationType,
-        component.calculationBase,
         component.defaultValue,
         component.taxable ?? 1,
         component.requiresHRApproval ?? 0,
@@ -371,11 +364,6 @@ export async function updatePayrollComponents(
       ]
     );
 
-    /*
-     * Preserve the last serverVersion known by the client.
-     * The server will allocate a new version when this update
-     * is accepted.
-     */
     const updatedPayrollComponent = {
       ...component,
       companyId,

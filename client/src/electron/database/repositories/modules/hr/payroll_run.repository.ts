@@ -358,11 +358,6 @@ export async function upsertPayrollRun(
             `SKIPPING PAYROLL RUN PULL. LOCAL CHANGES ARE PENDING: ${payrollRun._id}`
           );
 
-          await runDirect(`INSERT INTO sync_deferred (companyId, entity, entityId, serverVersion, payload)
-            VALUES (?, ?, ?, ?, ?) ON CONFLICT(companyId, entity, entityId) DO UPDATE SET
-            serverVersion = excluded.serverVersion, payload = excluded.payload
-            WHERE excluded.serverVersion >= sync_deferred.serverVersion`,
-            [companyId, "payroll_run", payrollRun._id, payrollRun.serverVersion ?? 0, JSON.stringify(payrollRun)]);
           return false;
         }
 
@@ -508,12 +503,7 @@ export async function upsertPayrollRun(
 
       return true;
     };
-    const result = await apply();
-    if (result !== false) {
-      await runDirect("DELETE FROM sync_deferred WHERE companyId = ? AND entity = ? AND entityId = ? AND serverVersion <= ?",
-        [companyId, "payroll_run", payrollRun._id, payrollRun.serverVersion ?? 0]);
-    }
-    return result;
+    return apply();
   });
 }
 
@@ -565,11 +555,6 @@ export async function upsertPayrollResult(
             `SKIPPING PAYROLL RESULT PULL. LOCAL CHANGES ARE PENDING: ${payrollResult._id}`
           );
 
-          await runDirect(`INSERT INTO sync_deferred (companyId, entity, entityId, serverVersion, payload)
-            VALUES (?, ?, ?, ?, ?) ON CONFLICT(companyId, entity, entityId) DO UPDATE SET
-            serverVersion = excluded.serverVersion, payload = excluded.payload
-            WHERE excluded.serverVersion >= sync_deferred.serverVersion`,
-            [companyId, "payroll_result", payrollResult._id, payrollResult.serverVersion ?? 0, JSON.stringify(payrollResult)]);
           return false;
         }
 
@@ -709,12 +694,7 @@ export async function upsertPayrollResult(
 
       return true;
     };
-    const result = await apply();
-    if (result !== false) {
-      await runDirect("DELETE FROM sync_deferred WHERE companyId = ? AND entity = ? AND entityId = ? AND serverVersion <= ?",
-        [companyId, "payroll_result", payrollResult._id, payrollResult.serverVersion ?? 0]);
-    }
-    return result;
+    return apply();
   });
 }
 
@@ -760,11 +740,6 @@ export async function upsertPayrollItem(
             `SKIPPING PAYROLL ITEM PULL. LOCAL CHANGES ARE PENDING: ${payrollItem._id}`
           );
 
-          await runDirect(`INSERT INTO sync_deferred (companyId, entity, entityId, serverVersion, payload)
-            VALUES (?, ?, ?, ?, ?) ON CONFLICT(companyId, entity, entityId) DO UPDATE SET
-            serverVersion = excluded.serverVersion, payload = excluded.payload
-            WHERE excluded.serverVersion >= sync_deferred.serverVersion`,
-            [companyId, "payroll_item", payrollItem._id, payrollItem.serverVersion ?? 0, JSON.stringify(payrollItem)]);
           return false;
         }
 
@@ -838,12 +813,7 @@ export async function upsertPayrollItem(
 
       return true;
     };
-    const result = await apply();
-    if (result !== false) {
-      await runDirect("DELETE FROM sync_deferred WHERE companyId = ? AND entity = ? AND entityId = ? AND serverVersion <= ?",
-        [companyId, "payroll_item", payrollItem._id, payrollItem.serverVersion ?? 0]);
-    }
-    return result;
+    return apply();
   });
 }
 

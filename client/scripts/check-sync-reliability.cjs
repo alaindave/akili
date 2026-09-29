@@ -4,9 +4,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const ts = require('typescript');
-function load(file, resolve) {
+function load(file, resolve, expose = "") {
   const module = { exports: {} };
-  const code = ts.transpileModule(fs.readFileSync(path.resolve(__dirname, file), 'utf8'), {
+  const code = ts.transpileModule(fs.readFileSync(path.resolve(__dirname, file), 'utf8') + expose, {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText;
   vm.runInNewContext(code, { module, exports: module.exports, require: resolve, Date, Error,
@@ -25,7 +25,6 @@ function load(file, resolve) {
     if (name.endsWith('/auth.js')) return { getToken: async () => 'token' };
     if (name.endsWith('/sync.repository.js')) return {
       getUnsyncedItems: async () => pending.map((entry) => ({ ...entry })),
-      blockSyncItem: async (_company, id, reason) => { pending.find((entry) => entry._id === id).blockedReason = reason; },
       markManySynced: async (_company, ids) => { pending = pending.filter((entry) => !ids.includes(entry._id)); },
     };
     if (name.endsWith('/payroll_run.repository.js')) return {
@@ -37,8 +36,9 @@ function load(file, resolve) {
     if (name === 'axios') return { default: { post: async (_url, form) => {
       calls++;
       const items = JSON.parse(form.items);
-      assert.equal(items[0].data._id, 'slip'); // Repair legacy verification payload.
-      assert.equal(items.length, 3); // Contradictory IDs never leave the client.
+      if (calls === 1) assert.equal(items[0].data._id, 'slip'); // Repair legacy verification payload.
+      assert.equal(items.length, 3);
+      if (calls === 2) assert.deepEqual(items.map((entry) => entry.queueId), ['conflict', 'later', 'newer']);
       return { status: 200, data: { synced: ['legacy'], failed: [
         { queueId: 'conflict', message: 'Parent mismatch', retryable: false },
         { queueId: 'later', message: 'Earlier update failed', retryable: true },
@@ -46,16 +46,48 @@ function load(file, resolve) {
     } } };
     return {};
   });
+  await assert.rejects(() => push.pushPendingChanges('a'), /Queued payroll ID/);
+  assert.equal(calls, 0, 'Invalid IDs must fail validation before sending');
+  assert.equal(pending.length, 4, 'Validation failure preserves queued edits');
+  pending = pending.filter((entry) => entry._id !== 'invalid');
   let result = await push.pushPendingChanges('a');
-  assert.equal(result.pendingChanges, 3);
-  assert.equal(result.retryablePending, 0);
+  assert.equal(result.pendingChanges, 2);
   assert.deepEqual(acknowledged, ['slip']);
-  assert(pending.every((entry) => entry.blockedReason));
   pending.push(item('newer', 'bad', { _id: 'bad' }));
   result = await push.pushPendingChanges('a');
-  assert.equal(calls, 1, 'Permanent conflicts and later edits to the same record must not retry');
-  assert.equal(result.retryablePending, 0);
-  assert.equal(result.pendingChanges, 4, 'Conflicting edits remain stored');
+  assert.equal(calls, 2, 'Failed items and later edits must be retried');
+  assert.equal(result.pendingChanges, 3, 'Unacknowledged edits remain stored');
+
+  // Pending payroll edits must keep the cursor unchanged until a later pull can apply them.
+  let pendingEdit = true;
+  const cursors = new Map();
+  const pull = load('../src/electron/services/sync/pull.service.ts', (name) => {
+    if (name === 'electron') return { app: { isPackaged: false } };
+    if (name.endsWith('/auth.js')) return { getToken: async () => 'token' };
+    if (name.endsWith('/db.js')) return { get: async () => ({ _id: 'run' }) };
+    if (name.endsWith('/syncState.repository.js')) return {
+      getSyncState: async (_company, entity) => ({ lastPulledVersion: cursors.get(entity) ?? 0 }),
+      updateLastPulledVersion: async (_company, entity, version) => cursors.set(entity, version),
+    };
+    if (name.endsWith('/payroll_run.repository.js')) return {
+      upsertPayrollRun: async () => !pendingEdit,
+      upsertPayrollResult: async () => !pendingEdit,
+      upsertPayrollItem: async () => !pendingEdit,
+    };
+    if (name === 'axios') return { default: { get: async () => ({ data: {
+      items: [{ _id: 'record', companyId: 'a', payrollRunId: 'run' }], nextVersion: 5, hasMore: false,
+    } }) } };
+    return {};
+  }, '\nexport { pullEntityByVersion, syncPayrollRuns, syncPayrollResults, syncPayrollItems };');
+  for (const [entity, apply] of [['payroll_run', pull.syncPayrollRuns],
+    ['payroll_result', pull.syncPayrollResults], ['payroll_item', pull.syncPayrollItems]]) {
+    pendingEdit = true;
+    await assert.rejects(() => pull.pullEntityByVersion('a', entity, apply), /CURSOR WAS NOT ADVANCED/);
+    assert.equal(cursors.get(entity), undefined);
+    pendingEdit = false;
+    await pull.pullEntityByVersion('a', entity, apply);
+    assert.equal(cursors.get(entity), 5);
+  }
 
   const operations = [];
   let failIndex = false;
@@ -78,5 +110,5 @@ function load(file, resolve) {
   failIndex = true;
   await assert.rejects(() => migration.migratePayrollIndex(), /duplicate active period/);
   assert.deepEqual(operations, ['create'], 'Failed replacement must retain the existing constraint');
-  console.log('Passed: legacy IDs, partial acknowledgements, persistent conflicts, ordered retries, and safe index migration.');
+  console.log('Passed: legacy IDs, partial acknowledgements, failed-item retries, payroll cursor retention, and safe index migration.');
 })().catch((error) => { console.error(error); process.exitCode = 1; });

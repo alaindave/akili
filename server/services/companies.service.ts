@@ -80,7 +80,6 @@ export async function createCompany(
           // ==========================================
           // Get sync versions
           // ==========================================
-
           const companyServerVersion = await getNextSyncVersion("company");
 
           const adminUserServerVersion = await getNextSyncVersion("admin_user");

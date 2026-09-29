@@ -14,13 +14,6 @@ export default interface PayrollEmployeeProfile {
   displayOrder: number;
   type: PayrollComponentType;
   calculationType: PayrollCalculationType;
-  calculationBase?:
-    | "BASE_SALARY"
-    | "GROSS_SALARY"
-    | "TAXABLE_SALARY"
-    | "TOTAL_EARNINGS"
-    | "TOTAL_DEDUCTIONS"
-    | "NET_SALARY";
   value: number | null;
   taxable?: number;
   isOverridden?: number;
@@ -44,14 +37,6 @@ export interface CreatePayrollProfileDto {
   type: PayrollComponentType;
   calculationType: PayrollCalculationType;
   value: number | null;
-  calculationBase?:
-    | "BASE_SALARY"
-    | "GROSS_SALARY"
-    | "TAXABLE_SALARY"
-    | "TOTAL_EARNINGS"
-    | "TOTAL_DEDUCTIONS"
-    | "NET_SALARY"
-    | null;
   taxable?: number;
   requiresHRApproval?: number | null;
   enabled?: number;

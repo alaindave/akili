@@ -131,6 +131,7 @@ export default function PayrollComponentList({ type, showTaxable }: Props) {
       toast({
         title: "Paramètres sauvegardés.",
         status: "success",
+        duration: 2000,
       });
 
       loadComponents();

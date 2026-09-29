@@ -17,18 +17,19 @@ import {
 interface CompanyInfo {
   name: string;
   legalName?: string;
-  address?: string;
-  city?: string;
-  country?: string;
-  phone?: string;
-  email?: string;
-  website?: string;
-  logoPath?: string;
+  address?: string | null;
+  city?: string | null;
+  country?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  website?: string | null;
+  logoPath?: string | null;
 }
 
 interface Props {
   report: TransportAllowanceWeeklyReport;
   company: CompanyInfo;
+  currency: string;
 }
 
 /*
@@ -38,17 +39,11 @@ interface Props {
  */
 
 const COLORS = {
-  gold: "#F2B705",
-  goldLight: "#FFF8DD",
-  goldDark: "#B8860B",
-  dark: "#1F2937",
-  gray: "#6B7280",
-  lightGray: "#F3F4F6",
-  border: "#D1D5DB",
+  black: "#000000",
+  gray: "#555555",
+  lightGray: "#F3F3F3",
+  border: "#CCCCCC",
   white: "#FFFFFF",
-  green: "#15803D",
-  red: "#B91C1C",
-  orange: "#C2410C",
 };
 
 /*
@@ -65,7 +60,7 @@ const styles = StyleSheet.create({
     paddingRight: 30,
     fontFamily: "Helvetica",
     fontSize: 8,
-    color: COLORS.dark,
+    color: COLORS.black,
     backgroundColor: COLORS.white,
   },
 
@@ -102,7 +97,7 @@ const styles = StyleSheet.create({
   companyName: {
     fontSize: 15,
     fontFamily: "Helvetica-Bold",
-    color: COLORS.dark,
+    color: COLORS.black,
     marginBottom: 3,
   },
 
@@ -126,7 +121,7 @@ const styles = StyleSheet.create({
   reportTitle: {
     fontSize: 14,
     fontFamily: "Helvetica-Bold",
-    color: COLORS.dark,
+    color: COLORS.black,
     textAlign: "right",
     marginBottom: 5,
   },
@@ -160,9 +155,9 @@ const styles = StyleSheet.create({
 
   summaryBoxHighlight: {
     flex: 1,
-    backgroundColor: COLORS.goldLight,
+    backgroundColor: COLORS.white,
     borderWidth: 1,
-    borderColor: COLORS.gold,
+    borderColor: COLORS.border,
     borderRadius: 4,
     padding: 8,
   },
@@ -176,7 +171,7 @@ const styles = StyleSheet.create({
   summaryValue: {
     fontSize: 11,
     fontFamily: "Helvetica-Bold",
-    color: COLORS.dark,
+    color: COLORS.black,
   },
 
   /*
@@ -204,23 +199,6 @@ const styles = StyleSheet.create({
     lineHeight: 1.4,
   },
 
-  /*
-   * TABLE
-   *
-   * Total width:
-   *
-   * Employee  24%
-   * Monday     10%
-   * Tuesday    10%
-   * Wednesday  10%
-   * Thursday   10%
-   * Friday     10%
-   * Rate       12%
-   * Total      14%
-   *
-   * TOTAL = 100%
-   */
-
   table: {
     width: "100%",
     borderWidth: 1,
@@ -229,9 +207,9 @@ const styles = StyleSheet.create({
 
   tableHeader: {
     flexDirection: "row",
-    backgroundColor: COLORS.gold,
+    backgroundColor: COLORS.lightGray,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.goldDark,
+    borderBottomColor: COLORS.black,
     minHeight: 30,
     alignItems: "stretch",
   },
@@ -289,7 +267,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingLeft: 3,
     paddingRight: 3,
-    backgroundColor: COLORS.goldLight,
+    backgroundColor: COLORS.white,
   },
 
   headerText: {
@@ -320,21 +298,21 @@ const styles = StyleSheet.create({
   dayAmount: {
     fontSize: 7.5,
     fontFamily: "Helvetica-Bold",
-    color: COLORS.dark,
+    color: COLORS.black,
     textAlign: "center",
   },
 
   dayLate: {
     fontSize: 6.5,
     fontFamily: "Helvetica-Bold",
-    color: COLORS.orange,
+    color: COLORS.black,
     textAlign: "center",
   },
 
   dayAbsent: {
     fontSize: 6.5,
     fontFamily: "Helvetica-Bold",
-    color: COLORS.red,
+    color: COLORS.black,
     textAlign: "center",
   },
 
@@ -388,7 +366,7 @@ const styles = StyleSheet.create({
   grandTotalValue: {
     fontSize: 12,
     fontFamily: "Helvetica-Bold",
-    color: COLORS.dark,
+    color: COLORS.black,
   },
 
   /*
@@ -416,7 +394,7 @@ const styles = StyleSheet.create({
   signatureLine: {
     width: "100%",
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.dark,
+    borderBottomColor: COLORS.black,
     marginBottom: 4,
   },
 
@@ -454,7 +432,7 @@ const styles = StyleSheet.create({
  * ============================================================
  */
 
-const TransportAllowancePdf: React.FC<Props> = ({ report, company }) => {
+const TransportAllowancePdf: React.FC<Props> = ({ report, company, currency }) => {
   return (
     <Document
       title="Rapport de frais de déplacement"
@@ -463,9 +441,9 @@ const TransportAllowancePdf: React.FC<Props> = ({ report, company }) => {
     >
       <Page size="A4" orientation="landscape" style={styles.page}>
         <Header company={company} report={report} />
-        <Summary report={report} />
-        <TransportAllowanceTable employees={report.employees} />
-        <GrandTotal total={report.totalAllowance} />
+        <Summary report={report} currency={currency} />
+        <TransportAllowanceTable employees={report.employees} currency={currency} />
+        <GrandTotal total={report.totalAllowance} currency={currency} />
         <Signatures />
         <Footer report={report} />
       </Page>
@@ -530,7 +508,8 @@ const Header: React.FC<HeaderProps> = ({ company, report }) => {
 
 const Summary: React.FC<{
   report: TransportAllowanceWeeklyReport;
-}> = ({ report }) => {
+  currency: string;
+}> = ({ report, currency }) => {
   return (
     <View style={styles.summary}>
       <View style={styles.summaryBox}>
@@ -552,7 +531,7 @@ const Summary: React.FC<{
         <Text style={styles.summaryLabel}>TOTAL À PAYER</Text>
 
         <Text style={styles.summaryValue}>
-          {formatMoney(report.totalAllowance)} FBU
+          {formatMoney(report.totalAllowance)} {currency}
         </Text>
       </View>
     </View>
@@ -567,7 +546,8 @@ const Summary: React.FC<{
 
 const TransportAllowanceTable: React.FC<{
   employees: TransportAllowanceEmployee[];
-}> = ({ employees }) => {
+  currency: string;
+}> = ({ employees, currency }) => {
   return (
     <View style={styles.table}>
       <TableHeader />
@@ -576,6 +556,7 @@ const TransportAllowanceTable: React.FC<{
         <EmployeeRow
           key={employee.employeeId}
           employee={employee}
+          currency={currency}
           index={index}
           isLast={index === employees.length - 1}
         />
@@ -618,13 +599,11 @@ const TableHeader: React.FC = () => {
       </View>
 
       <View style={styles.rateColumn}>
-        <Text style={styles.headerText}>RATE / JOUR</Text>
+        <Text style={styles.headerText}>MONTANT/JOUR</Text>
       </View>
 
       <View style={styles.totalColumn}>
-        <Text style={styles.headerText}>ALLOCATION</Text>
-
-        <Text style={styles.headerText}>HEBDO.</Text>
+        <Text style={styles.headerText}>TOTAL</Text>
       </View>
     </View>
   );
@@ -638,6 +617,7 @@ const TableHeader: React.FC = () => {
 
 interface EmployeeRowProps {
   employee: TransportAllowanceEmployee;
+  currency: string;
 
   index: number;
 
@@ -646,6 +626,7 @@ interface EmployeeRowProps {
 
 const EmployeeRow: React.FC<EmployeeRowProps> = ({
   employee,
+  currency,
   index,
   isLast,
 }) => {
@@ -682,7 +663,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
 
       <View style={styles.totalColumn}>
         <Text style={styles.totalText}>
-          {formatMoney(employee.weeklyAllowance)} FBU
+          {formatMoney(employee.weeklyAllowance)} {currency}
         </Text>
       </View>
     </View>
@@ -747,12 +728,12 @@ const DayCell: React.FC<{
 
 const GrandTotal: React.FC<{
   total: number;
-}> = ({ total }) => {
+  currency: string;
+}> = ({ total, currency }) => {
   return (
     <View style={styles.grandTotal}>
-      <Text style={styles.grandTotalLabel}>TOTAL GÉNÉRAL :</Text>
-
-      <Text style={styles.grandTotalValue}>{formatMoney(total)} FBU</Text>
+      <Text style={styles.grandTotalLabel}>TOTAL:</Text>
+      <Text style={styles.grandTotalValue}>{formatMoney(total)} {currency}</Text>
     </View>
   );
 };
@@ -820,7 +801,8 @@ const Footer: React.FC<{
  */
 
 function formatMoney(amount: number): string {
-  return new Intl.NumberFormat("fr-FR").format(amount);
+  // Helvetica does not support French narrow no-break thousands separators.
+  return new Intl.NumberFormat("fr-FR").format(amount).replace(/[\u00a0\u202f]/g, " ");
 }
 
 function formatFrenchDate(dateString: string): string {

@@ -284,69 +284,116 @@ const PayrollDetailsPage = () => {
                 : ""}
             </Text>
           </HStack>
-          {/* Payroll results table */}
 
           <Box mt="3rem">
-            <HStack mb={4} align="flex-end" spacing={3} flexWrap="wrap">
-              <FormControl maxW="280px">
-                <FormLabel htmlFor="payroll-department" fontSize="sm">
-                  Département
-                </FormLabel>
-                <Select
-                  id="payroll-department"
-                  isDisabled={isDownloading}
-                  value={department === null ? "" : JSON.stringify(department)}
-                  onChange={(event) =>
-                    setDepartment(
-                      event.target.value === ""
-                        ? null
-                        : JSON.parse(event.target.value)
-                    )
-                  }
-                  bg="white"
-                >
-                  <option value="">Tous les départements</option>
-                  {departments.map((name) => (
-                    <option key={name} value={JSON.stringify(name)}>
-                      {name || "Sans département"}
-                    </option>
-                  ))}
-                </Select>
-              </FormControl>
-              <FormControl maxW="280px">
-                <FormLabel htmlFor="payroll-payment-method" fontSize="sm">
-                  Mode de paiement
-                </FormLabel>
-                <Select
-                  id="payroll-payment-method"
-                  value={paymentMethod}
-                  onChange={(event) =>
-                    setPaymentMethod(event.target.value as PayrollPaymentFilter)
-                  }
-                  isDisabled={isDownloading}
-                  bg="white"
-                >
-                  {Object.entries(payrollPaymentLabels).map(
-                    ([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
+            <Flex mb={4} justify="space-between" flexWrap="wrap">
+              {/* Filters and download button */}
+              <HStack>
+                <FormControl maxW="280px">
+                  <FormLabel htmlFor="payroll-department" fontSize="sm">
+                    Département
+                  </FormLabel>
+                  <Select
+                    id="payroll-department"
+                    isDisabled={isDownloading}
+                    value={
+                      department === null ? "" : JSON.stringify(department)
+                    }
+                    onChange={(event) =>
+                      setDepartment(
+                        event.target.value === ""
+                          ? null
+                          : JSON.parse(event.target.value)
+                      )
+                    }
+                    bg="white"
+                  >
+                    <option value="">Tous les départements</option>
+                    {departments.map((name) => (
+                      <option key={name} value={JSON.stringify(name)}>
+                        {name || "Sans département"}
                       </option>
-                    )
-                  )}
-                </Select>
-              </FormControl>
-              <IconButton
-                aria-label="Télécharger le rapport mensuel de paie"
-                title="Télécharger le rapport mensuel de paie"
-                icon={<DownloadIcon />}
-                onClick={downloadReport}
-                isLoading={isDownloading}
-                isDisabled={!payrollRun?._id || filteredResults.length === 0}
-                variant="outline"
-                colorScheme="blue"
-              />
-            </HStack>
-            <Box mt="2.5rem">
+                    ))}
+                  </Select>
+                </FormControl>
+                <FormControl maxW="280px">
+                  <FormLabel htmlFor="payroll-payment-method" fontSize="sm">
+                    Mode de paiement
+                  </FormLabel>
+                  <Select
+                    id="payroll-payment-method"
+                    value={paymentMethod}
+                    onChange={(event) =>
+                      setPaymentMethod(
+                        event.target.value as PayrollPaymentFilter
+                      )
+                    }
+                    isDisabled={isDownloading}
+                    bg="white"
+                  >
+                    {Object.entries(payrollPaymentLabels).map(
+                      ([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      )
+                    )}
+                  </Select>
+                </FormControl>
+                <Box mt="1.3rem">
+                  <IconButton
+                    aria-label="Télécharger le rapport mensuel de paie"
+                    title="Télécharger le rapport mensuel de paie"
+                    icon={<DownloadIcon />}
+                    onClick={downloadReport}
+                    isLoading={isDownloading}
+                    isDisabled={
+                      !payrollRun?._id || filteredResults.length === 0
+                    }
+                    variant="outline"
+                    colorScheme="blue"
+                  />
+                </Box>
+              </HStack>
+              {/* Buttons */}
+              {payrollRun?.status !== "ANNULÉ" &&
+                payrollRun?.status !== "PAYÉ" &&
+                !payrollResults.some(
+                  (result) =>
+                    result.status === "APPROUVÉ" || result.status === "PAYÉ"
+                ) && (
+                  <Flex mt="1.2rem" mr="2rem" justify="flex-end">
+                    <Button
+                      onClick={onConfirmationOpen}
+                      width="8rem"
+                      bg="#ffffff"
+                      border="1px solid gray"
+                    >
+                      <Box color="red.400" fontSize="1.2rem" mr="0.7rem">
+                        <MdOutlineCancel />
+                      </Box>
+                      Annuler
+                    </Button>
+
+                    {statusAction && (
+                      <Button
+                        onClick={statusAction.onClick}
+                        width="8rem"
+                        bg="#ffffff"
+                        border="1px solid gray"
+                        ml="0.3rem"
+                      >
+                        <Box color="green.600" fontSize="1.2rem" mr="0.7rem">
+                          <GiConfirmed />
+                        </Box>
+
+                        {statusAction.label}
+                      </Button>
+                    )}
+                  </Flex>
+                )}
+            </Flex>
+            <Box mt="2rem">
               <PayrollResultsTable payrollResults={filteredResults} />
             </Box>
             {filteredResults.length === 0 && (
@@ -358,44 +405,6 @@ const PayrollDetailsPage = () => {
         </Box>
         <PayrollAuditPopover payrollRun={payrollRun} />
       </Flex>
-
-      {/* Buttons */}
-
-      {payrollRun?.status !== "ANNULÉ" &&
-        payrollRun?.status !== "PAYÉ" &&
-        !payrollResults.some(
-          (result) => result.status === "APPROUVÉ" || result.status === "PAYÉ"
-        ) && (
-          <Flex mb="1rem" mr="2rem" justify="flex-end">
-            <Button
-              onClick={onConfirmationOpen}
-              width="8rem"
-              bg="#ffffff"
-              border="1px solid gray"
-            >
-              <Box color="red.400" fontSize="1.2rem" mr="0.7rem">
-                <MdOutlineCancel />
-              </Box>
-              Annuler
-            </Button>
-
-            {statusAction && (
-              <Button
-                onClick={statusAction.onClick}
-                width="8rem"
-                bg="#ffffff"
-                border="1px solid gray"
-                ml="0.3rem"
-              >
-                <Box color="green.600" fontSize="1.2rem" mr="0.7rem">
-                  <GiConfirmed />
-                </Box>
-
-                {statusAction.label}
-              </Button>
-            )}
-          </Flex>
-        )}
 
       <DeletionDialog
         isOpen={isConfirmationOpen}

@@ -117,17 +117,14 @@ const countQueue = () => database.prepare('SELECT COUNT(*) AS n FROM sync_queue'
   await repo.markPayrollResultSynced('a', 'two', row('two').updatedAt);
   assert.equal(row('two').synced, 1);
   const pendingSnapshot = { ...row('one'), status: 'ANNULÉ', serverVersion: 50 };
-  await repo.upsertPayrollResult('a', pendingSnapshot);
+  assert.equal(await repo.upsertPayrollResult('a', pendingSnapshot), false);
   assert.equal(row('one').status, 'PAYÉ');
   assert.equal(row('one').synced, 0);
-  assert.equal(database.prepare('SELECT serverVersion FROM sync_deferred WHERE entityId = ?').get('one').serverVersion, 50);
-  await repo.upsertPayrollResult('a', { ...pendingSnapshot, serverVersion: 49 });
-  assert.equal(database.prepare('SELECT serverVersion FROM sync_deferred WHERE entityId = ?').get('one').serverVersion, 50);
+  assert.equal(await repo.upsertPayrollResult('a', { ...pendingSnapshot, serverVersion: 49 }), false);
   database.exec("UPDATE sync_queue SET synced = 1 WHERE entityId = 'one'");
   await repo.markPayrollResultSynced('a', 'one', row('one').updatedAt);
   await repo.upsertPayrollResult('a', pendingSnapshot);
   assert.equal(row('one').status, 'ANNULÉ');
-  assert.equal(database.prepare('SELECT COUNT(*) AS n FROM sync_deferred').get().n, 0);
   // Exercise real INSERT and UPDATE SQL for pulled actor fields.
   const remote = { ...row('two'), _id: 'remote', employeeId: 'e3', serverVersion: 5 };
   await repo.upsertPayrollResult('a', remote);

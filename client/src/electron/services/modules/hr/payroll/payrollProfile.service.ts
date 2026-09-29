@@ -48,7 +48,6 @@ export async function initializeEmployeePayrollProfilesForEmployee(
       displayOrder: component.displayOrder,
       type: component.type,
       calculationType: component.calculationType,
-      calculationBase: component.calculationBase,
       value,
       taxable: component.taxable,
       requiresHRApproval: component.requiresHRApproval,
@@ -100,7 +99,6 @@ export async function initializeEmployeePayrollProfiles(companyId: string) {
         componentId: component._id,
         type: component.type,
         calculationType: component.calculationType,
-        calculationBase: component.calculationBase,
         value: value ?? null,
         taxable: component.taxable,
         requiresHRApproval: component.requiresHRApproval,
@@ -138,7 +136,6 @@ export async function addPayrollComponentToAllEmployees(
       calculationType: component.calculationType,
       value: value ?? null,
       taxable: component.taxable,
-      calculationBase: component.calculationBase,
       isOverridden: 0,
       requiresHRApproval: component.requiresHRApproval,
       enabled: component.enabled,
@@ -172,7 +169,6 @@ export async function updatePayrollComponentDefaults(
     profile.displayName = component.displayName;
     profile.displayOrder = component.displayOrder;
     profile.calculationType = component.calculationType;
-    profile.calculationBase = component.calculationBase;
     profile.value = component.defaultValue ?? null;
     profile.taxable = component.taxable;
     profile.enabled = component.enabled;
@@ -258,7 +254,6 @@ export async function resetEmployeePayrollProfileToDefaults(
     profile.displayOrder = component.displayOrder;
     profile.type = component.type;
     profile.calculationType = component.calculationType;
-    profile.calculationBase = component.calculationBase;
     profile.value = component.defaultValue ?? null;
     // Use employee salary for BASIC_SALARY
     if (component.name === "BASE_SALARY") {

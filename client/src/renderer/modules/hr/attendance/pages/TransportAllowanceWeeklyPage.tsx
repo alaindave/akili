@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Badge,
   Box,
@@ -7,11 +8,13 @@ import {
   IconButton,
   Text,
   VStack,
+  useToast,
 } from "@chakra-ui/react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { FaArrowLeft } from "react-icons/fa6";
-import { FiTrash2 } from "react-icons/fi";
+import { FiDownload, FiTrash2 } from "react-icons/fi";
 import { MdOutlineDirectionsBus } from "react-icons/md";
+import { usePayrollSettings } from "../../payroll/hooks/payroll_settings.hook";
 
 import {
   TransportAllowanceWeeklyReport,
@@ -33,9 +36,30 @@ const GRID_COLUMNS = "1fr repeat(9, 1fr) 64px";
 export default function TransportAllowanceWeeklyReportPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [saving, setSaving] = useState(false);
+  const toast = useToast();
+  const payrollSettings = usePayrollSettings();
+  const currency = payrollSettings?.currency ?? "BIF";
 
   const state = location.state as LocationState | null;
   const report = state?.report;
+
+  const download = async () => {
+    if (!report || saving) return;
+    setSaving(true);
+    try {
+      const result =
+        await window.electron.hr.attendance.transportAllowance.saveWeeklyPdf(
+          report
+        );
+      if (!result.canceled)
+        toast({ title: "Rapport enregistré", status: "success" });
+    } catch {
+      toast({ title: "Impossible d'enregistrer le rapport", status: "error" });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const updateReport = (nextReport: TransportAllowanceWeeklyReport) => {
     navigate(location.pathname, {
@@ -46,12 +70,17 @@ export default function TransportAllowanceWeeklyReportPage() {
 
   const removeRow = (employeeId: string) => {
     if (!report) return;
-    const employees = report.employees.filter((employee) => employee.employeeId !== employeeId);
+    const employees = report.employees.filter(
+      (employee) => employee.employeeId !== employeeId
+    );
     updateReport({
       ...report,
       employees,
       totalEmployees: employees.length,
-      totalAllowance: employees.reduce((total, employee) => total + employee.weeklyAllowance, 0),
+      totalAllowance: employees.reduce(
+        (total, employee) => total + employee.weeklyAllowance,
+        0
+      ),
     });
   };
 
@@ -135,7 +164,7 @@ export default function TransportAllowanceWeeklyReportPage() {
   };
 
   const formatCurrency = (amount: number) => {
-    return `${new Intl.NumberFormat("fr-FR").format(amount)} FBU`;
+    return `${new Intl.NumberFormat("fr-FR").format(amount)} ${currency}`;
   };
 
   const getStatusLabel = (status: TransportAllowanceDay["status"]) => {
@@ -191,7 +220,7 @@ export default function TransportAllowanceWeeklyReportPage() {
       return "1 retard";
     }
 
-    return "0 FBU";
+    return `0 ${currency}`;
   };
 
   const firstEmployee = report.employees[0];
@@ -254,12 +283,25 @@ export default function TransportAllowanceWeeklyReportPage() {
               </HStack>
             </Box>
 
-            <Text fontSize="20px" fontWeight="800" color="white">
-              {formatDate(report.weekStart)} — {formatDate(report.weekEnd)}
-            </Text>
+            <HStack spacing={3}>
+              <Text fontSize="20px" fontWeight="800" color="white">
+                {formatDate(report.weekStart)} — {formatDate(report.weekEnd)}
+              </Text>
+              <IconButton
+                aria-label="Télécharger le rapport PDF"
+                title="Télécharger le rapport PDF"
+                icon={<FiDownload />}
+                fontSize="1.4rem"
+                variant="ghost"
+                color="white"
+                _hover={{ bg: "whiteAlpha.200" }}
+                onClick={download}
+                isLoading={saving}
+                isDisabled={!report.employees.length}
+              />
+            </HStack>
           </Flex>
         </Box>
-
       </Flex>
 
       {/* =========================================================
@@ -509,9 +551,13 @@ export default function TransportAllowanceWeeklyReportPage() {
                 <GridBodyCell>
                   <IconButton
                     aria-label={`Supprimer la ligne de ${employee.firstName} ${employee.lastName}`}
-                    title="Supprimer la ligne" icon={<FiTrash2 />}
-                    size="sm" colorScheme="red" variant="ghost"
+                    title="Supprimer la ligne"
+                    icon={<FiTrash2 />}
+                    size="sm"
+                    colorScheme="red"
+                    variant="ghost"
                     onClick={() => removeRow(employee.employeeId)}
+                    isDisabled={saving}
                   />
                 </GridBodyCell>
               </Box>
@@ -600,7 +646,8 @@ export default function TransportAllowanceWeeklyReportPage() {
           </Text>
 
           <Text fontSize="13px" color="gray.500" mt={1}>
-            Revenez à la sélection de la semaine pour générer un nouveau rapport.
+            Revenez à la sélection de la semaine pour générer un nouveau
+            rapport.
           </Text>
         </Box>
       )}

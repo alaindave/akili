@@ -220,21 +220,6 @@ const styles = StyleSheet.create({
     color: "#525252",
   },
 });
-
-/*
- * Format amounts exactly like the payslip page.
- *
- * Examples:
- *
- * 1250000.75 -> 1 250 001 FBU
- * 1250000    -> 1 250 000 FBU
- * 50000      -> 50 000 FBU
- * 3300       -> 3 300 FBU
- *
- * No commas.
- * No decimal places.
- * Currency comes from data.currency.
- */
 const formatMoney = (value: number, currency: string): string => {
   const amount = Math.round(Number(value) || 0);
 

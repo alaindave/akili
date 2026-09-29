@@ -134,13 +134,6 @@ export interface PayrollComponentInput {
   displayOrder: number;
   type: PayrollComponentType;
   calculationType: CalculationType;
-  calculationBase?:
-    | "BASE_SALARY"
-    | "GROSS_SALARY"
-    | "TAXABLE_SALARY"
-    | "TOTAL_EARNINGS"
-    | "TOTAL_DEDUCTIONS"
-    | "NET_SALARY";
   value?: number | null;
   quantity?: number | null;
   rate?: number | null;

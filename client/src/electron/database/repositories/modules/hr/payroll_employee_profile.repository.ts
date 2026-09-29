@@ -166,7 +166,6 @@ export async function updateEmployeePayrollProfile(
           displayOrder = ?,
           type = ?,
           calculationType = ?,
-          calculationBase = ?,
           value = ?,
           taxable = ?,
           requiresHRApproval = ?,
@@ -184,7 +183,6 @@ export async function updateEmployeePayrollProfile(
           profile.displayOrder,
           profile.type,
           profile.calculationType,
-          profile.calculationBase,
           profile.value,
           profile.taxable,
           profile.requiresHRApproval,
@@ -236,7 +234,6 @@ export async function updateEmployeePayrollProfile(
     profile.displayOrder !== component.displayOrder ||
     profile.type !== component.type ||
     profile.calculationType !== component.calculationType ||
-    profile.calculationBase !== component.calculationBase ||
     profile.value !== component.defaultValue ||
     profile.enabled !== component.enabled ||
     profile.requiresHRApproval !== component.requiresHRApproval;
@@ -255,7 +252,6 @@ export async function updateEmployeePayrollProfile(
       displayOrder = ?,
       type = ?,
       calculationType = ?,
-      calculationBase = ?,
       value = ?,
       taxable = ?,
       requiresHRApproval = ?,
@@ -273,7 +269,6 @@ export async function updateEmployeePayrollProfile(
       profile.displayOrder,
       profile.type,
       profile.calculationType,
-      profile.calculationBase,
       profile.value,
       profile.taxable,
       profile.requiresHRApproval,
@@ -466,7 +461,6 @@ export async function upsertEmployeePayrollProfile(
         displayOrder = ?,
         type = ?,
         calculationType = ?,
-        calculationBase = ?,
         value = ?,
         taxable = ?,
         requiresHRApproval = ?,
@@ -484,14 +478,16 @@ export async function upsertEmployeePayrollProfile(
       [
         companyId,
         profile.employeeId,
-        (profile.accountNumber === undefined ? local.accountNumber : profile.accountNumber)?.trim() || "cash",
+        (profile.accountNumber === undefined
+          ? local.accountNumber
+          : profile.accountNumber
+        )?.trim() || "cash",
         profile.componentId,
         profile.name,
         profile.displayName,
         profile.displayOrder,
         profile.type,
         profile.calculationType,
-        profile.calculationBase,
         profile.value,
         profile.taxable,
         profile.requiresHRApproval,
@@ -525,7 +521,6 @@ export async function upsertEmployeePayrollProfile(
       displayOrder,
       type,
       calculationType,
-      calculationBase,
       value,
       taxable,
       requiresHRApproval,
@@ -551,7 +546,6 @@ export async function upsertEmployeePayrollProfile(
       profile.displayOrder,
       profile.type,
       profile.calculationType,
-      profile.calculationBase,
       profile.value,
       profile.taxable,
       profile.requiresHRApproval,
@@ -634,7 +628,6 @@ export async function getAllEmployeePayrollInputs(
       displayOrder: row.displayOrder,
       type: row.type,
       calculationType: row.calculationType,
-      calculationBase: row.calculationBase,
       enabled: row.enabled ?? 0,
       taxable: row.taxable,
       value: row.value ?? 0,

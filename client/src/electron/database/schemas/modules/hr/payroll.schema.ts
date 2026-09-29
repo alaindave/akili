@@ -49,15 +49,6 @@ export async function createPayrollTables() {
           )
         )
         DEFAULT 'MANUEL',
-      calculationBase TEXT
-        CHECK(
-          calculationBase IN (
-            'BASE_SALARY',
-            'GROSS_SALARY',
-            'TOTAL_EARNINGS',
-            'TAXABLE_SALARY'
-          )
-        ),
       defaultValue REAL DEFAULT 0,
       displayOrder INTEGER NOT NULL,
       isSystem INTEGER NOT NULL DEFAULT 1,
@@ -107,15 +98,6 @@ export async function createPayrollTables() {
       taxable INTEGER NOT NULL DEFAULT 1,
       isOverridden INTEGER NOT NULL DEFAULT 0,
       requiresHRApproval INTEGER NOT NULL DEFAULT 0,
-      calculationBase TEXT
-        CHECK(
-          calculationBase IN (
-            'BASE_SALARY',
-            'GROSS_SALARY',
-            'TOTAL_EARNINGS',
-            'TAXABLE_SALARY'
-          )
-        ),
       enabled INTEGER NOT NULL DEFAULT 1,
       serverVersion INTEGER NOT NULL DEFAULT 0,
       createdAt TEXT NOT NULL,
@@ -141,7 +123,9 @@ export async function createPayrollTables() {
   );
   if (!profileColumns.some((column) => column.name === "accountNumber")) {
     // NULL identifies legacy rows for the transactional backfill and queue.
-    await run("ALTER TABLE payroll_employee_profiles ADD COLUMN accountNumber TEXT");
+    await run(
+      "ALTER TABLE payroll_employee_profiles ADD COLUMN accountNumber TEXT"
+    );
   }
 
   /* =========================================================
@@ -261,7 +245,9 @@ export async function createPayrollTables() {
     );
   `);
 
-  const resultColumns = await all<{ name: string }>("PRAGMA table_info(payroll_results)");
+  const resultColumns = await all<{ name: string }>(
+    "PRAGMA table_info(payroll_results)"
+  );
   for (const column of ["approvedBy", "paidBy"]) {
     if (!resultColumns.some((existing) => existing.name === column)) {
       await run(`ALTER TABLE payroll_results ADD COLUMN ${column} TEXT`);
@@ -514,7 +500,9 @@ async function migrateInssCalculationType() {
      WHERE type = 'table'
        AND name IN ('payroll_components', 'payroll_employee_profiles')`
   );
-  const legacyTables = tables.filter((table) => !table.sql.includes("'FORMULE_INSS'"));
+  const legacyTables = tables.filter(
+    (table) => !table.sql.includes("'FORMULE_INSS'")
+  );
   if (legacyTables.length === 0) return;
 
   await run("PRAGMA foreign_keys = OFF");
@@ -528,17 +516,24 @@ async function migrateInssCalculationType() {
         );
         const temporaryName = `${table.name}_inss`;
         const createSql = table.sql
-          .replace(/CREATE TABLE\s+(?:IF NOT EXISTS\s+)?["`\[]?\w+["`\]]?/i,
-            `CREATE TABLE "${temporaryName}"`)
+          .replace(
+            /CREATE TABLE\s+(?:IF NOT EXISTS\s+)?["`\[]?\w+["`\]]?/i,
+            `CREATE TABLE "${temporaryName}"`
+          )
           .replace("'FORMULE_IPR'", "'FORMULE_IPR', 'FORMULE_INSS'");
         await runDirect(createSql);
-        await runDirect(`INSERT INTO "${temporaryName}" SELECT * FROM "${table.name}"`);
+        await runDirect(
+          `INSERT INTO "${temporaryName}" SELECT * FROM "${table.name}"`
+        );
         await runDirect(`DROP TABLE "${table.name}"`);
-        await runDirect(`ALTER TABLE "${temporaryName}" RENAME TO "${table.name}"`);
+        await runDirect(
+          `ALTER TABLE "${temporaryName}" RENAME TO "${table.name}"`
+        );
         for (const object of objects) await runDirect(object.sql);
       }
       const violations = await allDirect("PRAGMA foreign_key_check");
-      if (violations.length > 0) throw new Error("INSS migration: foreign key check failed");
+      if (violations.length > 0)
+        throw new Error("INSS migration: foreign key check failed");
     });
   } finally {
     await run("PRAGMA foreign_keys = ON");

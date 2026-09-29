@@ -8,7 +8,6 @@ import { getToken } from "../../auth.js";
 
 import {
   getUnsyncedItems,
-  blockSyncItem,
   markManySynced,
 } from "../../database/repositories/shared/sync.repository.js";
 
@@ -58,8 +57,6 @@ const API_URL = app.isPackaged
 interface PushPendingChangesResult {
   pendingChanges: number;
   syncedCount: number;
-  retryablePending?: number;
-  conflictMessage?: string;
 }
 
 export async function pushPendingChanges(
@@ -117,24 +114,15 @@ export async function pushPendingChanges(
 
   // Old verification entries have entityId but no payload._id. Repair only that
   // unambiguous omission; a disagreement between two supplied IDs is a conflict.
-  const blockedEntities = new Set(pending.filter((item) => item.blockedReason)
-    .map((item) => `${item.entity}:${item.entityId}`));
   for (const item of pending) {
-    if (item.blockedReason) continue;
-    try {
-      const data = JSON.parse(item.payload);
-      if (item.companyId !== companyId || data.companyId !== companyId) {
-        throw new Error("Sync company does not match the queued record.");
-      }
-      if (item.entity.startsWith("payroll_")) {
-        if (data._id && data._id !== item.entityId) throw new Error("Queued payroll ID does not match its payload ID.");
-        if (!data._id) data._id = item.entityId;
-        item.payload = JSON.stringify(data);
-      }
-    } catch (error) {
-      item.blockedReason = error instanceof Error ? error.message : "Invalid sync payload.";
-      await blockSyncItem(companyId, item._id, item.blockedReason);
-      blockedEntities.add(`${item.entity}:${item.entityId}`);
+    const data = JSON.parse(item.payload);
+    if (item.companyId !== companyId || data.companyId !== companyId) {
+      throw new Error("Sync company does not match the queued record.");
+    }
+    if (item.entity.startsWith("payroll_")) {
+      if (data._id && data._id !== item.entityId) throw new Error("Queued payroll ID does not match its payload ID.");
+      if (!data._id) data._id = item.entityId;
+      item.payload = JSON.stringify(data);
     }
   }
 
@@ -149,7 +137,6 @@ export async function pushPendingChanges(
   const validPending = [];
 
   for (const item of pending) {
-    if (blockedEntities.has(`${item.entity}:${item.entityId}`)) continue;
     if (item.entity === "employee_document" && item.operation === "update") {
       const data = JSON.parse(item.payload);
 
@@ -211,8 +198,6 @@ export async function pushPendingChanges(
     return {
       pendingChanges: remainingPending.length,
       syncedCount: obsoleteQueueIds.length,
-      retryablePending: 0,
-      conflictMessage: pending.find((item) => item.blockedReason)?.blockedReason ?? undefined,
     };
   }
 
@@ -401,20 +386,6 @@ export async function pushPendingChanges(
    */
 
   const syncedIds: string[] = response.data.synced ?? [];
-  const failures: { queueId: string; message: string; retryable: boolean }[] = response.data.failed ?? [];
-  for (const failure of failures) {
-    if (!failure.retryable) {
-      const item = validPending.find((entry) => String(entry._id) === String(failure.queueId));
-      if (item) {
-        blockedEntities.add(`${item.entity}:${item.entityId}`);
-        // Persist the conflict for this record and later snapshots of the same record.
-        for (const related of pending.filter((entry) => entry.entity === item.entity && entry.entityId === item.entityId)) {
-          await blockSyncItem(companyId, related._id, failure.message);
-        }
-      }
-    }
-  }
-
   console.log("SERVER CONFIRMED SYNCED ITEMS:", {
     companyId,
     count: syncedIds.length,
@@ -647,7 +618,5 @@ export async function pushPendingChanges(
   return {
     pendingChanges,
     syncedCount: totalSynced,
-    retryablePending: remainingPending.filter((item) => !item.blockedReason && !blockedEntities.has(`${item.entity}:${item.entityId}`)).length,
-    conflictMessage: remainingPending.find((item) => item.blockedReason)?.blockedReason ?? undefined,
   };
 }

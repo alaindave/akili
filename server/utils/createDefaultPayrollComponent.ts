@@ -8,7 +8,7 @@ import { getNextSyncVersion } from "./syncVersion.js";
 export async function createDefaultPayrollComponents(
   companyId: string,
   now: Date,
-  session: mongoose.ClientSession
+  session?: mongoose.ClientSession
 ) {
   const components = [];
 
@@ -16,7 +16,7 @@ export async function createDefaultPayrollComponents(
     const existingComponent = await PayrollComponent.findOne({
       companyId,
       name: defaultComponent.name,
-    }).session(session);
+    }).session(session ?? null);
 
     if (existingComponent) {
       components.push(existingComponent);
@@ -41,7 +41,6 @@ export async function createDefaultPayrollComponents(
           displayOrder: defaultComponent.displayOrder,
           type: defaultComponent.type,
           calculationType: defaultComponent.calculationType,
-          calculationBase: defaultComponent.calculationBase,
           defaultValue: defaultComponent.defaultValue,
           taxable: defaultComponent.taxable,
           enabled: defaultComponent.enabled ?? 1,

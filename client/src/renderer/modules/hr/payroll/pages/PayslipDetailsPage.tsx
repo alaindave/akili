@@ -55,26 +55,8 @@ export default function EmployeePayslipDetails() {
 
   const [documentScale, setDocumentScale] = useState(1);
 
-  /*
-   * Actual visible space that must remain between
-   * the bottom of the payslip paper and the lower navbar.
-   */
   const bottomPaperMargin = 50;
 
-  /*
-   * Format payroll amounts using French-style thousands
-   * separation with a normal space.
-   *
-   * Examples:
-   *
-   * 1250000.75 -> 1 250 001 FBU
-   * 1250000    -> 1 250 000 FBU
-   * 50000      -> 50 000 FBU
-   * 3300       -> 3 300 FBU
-   *
-   * Currency comes directly from the payslip document,
-   * which should be populated from payroll settings.
-   */
   const formatMoney = (value: number) => {
     const amount = Math.round(Number(value) || 0);
 

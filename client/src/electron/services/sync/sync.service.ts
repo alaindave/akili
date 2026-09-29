@@ -106,11 +106,6 @@ export default async function sync(companyId: string) {
           break;
         }
 
-        if (pushResult.retryablePending === 0) {
-          lastPushError = new Error(pushResult.conflictMessage ?? "Sync contains unresolved conflicts.");
-          break;
-        }
-
         /*
          * Items still remain.
          *

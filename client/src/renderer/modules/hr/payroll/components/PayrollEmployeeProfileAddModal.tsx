@@ -78,7 +78,6 @@ export default function AddPayrollEmployeeProfileModal({
         displayOrder,
         type,
         calculationType,
-        calculationBase: null,
         value: defaultValue,
       };
       await window.electron.hr.payrollProfile.create(

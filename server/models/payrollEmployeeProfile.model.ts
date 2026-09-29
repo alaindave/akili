@@ -21,13 +21,6 @@ export interface PayrollEmployeeProfileDocument {
     | "FORMULE_INSS"
     | "FORMULE_ABSENCE"
     | "FORMULE_RETARD";
-  calculationBase?:
-    | "BASE_SALARY"
-    | "GROSS_SALARY"
-    | "TAXABLE_SALARY"
-    | "TOTAL_EARNINGS"
-    | "TOTAL_DEDUCTIONS"
-    | "NET_SALARY";
   value: number;
   taxable: number;
   requiresHRApproval: number;
@@ -108,18 +101,6 @@ const PayrollEmployeeProfileSchema = new Schema<PayrollEmployeeProfileDocument>(
         "FORMULE_RETARD",
       ],
       required: true,
-    },
-
-    calculationBase: {
-      type: String,
-      enum: [
-        "BASE_SALARY",
-        "GROSS_SALARY",
-        "TAXABLE_SALARY",
-        "TOTAL_EARNINGS",
-        "TOTAL_DEDUCTIONS",
-        "NET_SALARY",
-      ],
     },
 
     value: {

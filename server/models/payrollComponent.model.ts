@@ -20,13 +20,7 @@ export interface PayrollComponentDocument {
   taxable?: Number;
   displayOrder: number;
   isSystem: number;
-  calculationBase?:
-    | "BASE_SALARY"
-    | "GROSS_SALARY"
-    | "TAXABLE_SALARY"
-    | "TOTAL_EARNINGS"
-    | "TOTAL_DEDUCTIONS"
-    | "NET_SALARY";
+
   requiresHRApproval: number | null;
   enabled: number;
   serverVersion: number;
@@ -76,17 +70,7 @@ const PayrollComponentSchema = new Schema<PayrollComponentDocument>({
     ],
     default: "MANUEL",
   },
-  calculationBase: {
-    type: String,
-    enum: [
-      "BASE_SALARY",
-      "GROSS_SALARY",
-      "TAXABLE_SALARY",
-      "TOTAL_EARNINGS",
-      "TOTAL_DEDUCTIONS",
-      "NET_SALARY",
-    ],
-  },
+
   defaultValue: {
     type: Number,
     default: 0,

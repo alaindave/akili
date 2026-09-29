@@ -81,7 +81,7 @@ import {
 
 import { AttendanceDailyCheck } from "../../../common/types/attendance/AttendanceDailyCheck.js";
 
-import { get, all } from "../../database/db.js";
+import { get } from "../../database/db.js";
 
 import {
   getSyncState,
@@ -1197,7 +1197,10 @@ async function syncPayrollRuns(payrollRuns: PayrollRun[]): Promise<boolean> {
     }
 
     try {
-      await upsertPayrollRun(payrollRun.companyId, payrollRun);
+      if ((await upsertPayrollRun(payrollRun.companyId, payrollRun)) === false) {
+        succeeded = false;
+        continue;
+      }
 
       console.log("PAYROLL RUN SYNCED:", payrollRun._id);
     } catch (error) {
@@ -1283,7 +1286,10 @@ async function syncPayrollResults(
         continue;
       }
 
-      await upsertPayrollResult(result.companyId, result);
+      if ((await upsertPayrollResult(result.companyId, result)) === false) {
+        succeeded = false;
+        continue;
+      }
 
       console.log("PAYROLL RESULT SYNCED:", result._id);
     } catch (error) {
@@ -1321,7 +1327,10 @@ async function syncPayrollItems(payrollItems: PayrollItem[]): Promise<boolean> {
     }
 
     try {
-      await upsertPayrollItem(item.companyId, item);
+      if ((await upsertPayrollItem(item.companyId, item)) === false) {
+        succeeded = false;
+        continue;
+      }
 
     } catch (error) {
       succeeded = false;
@@ -1343,15 +1352,6 @@ async function pullEntityByVersion<T>(
   syncBatch: (items: T[]) => Promise<boolean>,
   limit = 500
 ): Promise<VersionPullResult<T>> {
-  if (["payroll_run", "payroll_result", "payroll_item"].includes(entity)) {
-    const deferred = await all<{ payload: string }>(
-      "SELECT payload FROM sync_deferred WHERE companyId = ? AND entity = ? ORDER BY serverVersion",
-      [companyId, entity]
-    );
-    if (deferred.length && !(await syncBatch(deferred.map((row) => JSON.parse(row.payload))))) {
-      throw new Error(`Unable to apply deferred ${entity} updates.`);
-    }
-  }
   const syncState = await getSyncState(companyId, entity);
 
   const token = await getToken();

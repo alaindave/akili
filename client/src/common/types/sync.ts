@@ -40,7 +40,6 @@ export interface SyncQueueItem {
   entityId: string;
   operation: "create" | "update" | "delete";
   payload: string;
-  blockedReason?: string | null;
   synced?: number;
   createdAt?: string;
 }

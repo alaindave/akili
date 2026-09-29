@@ -50,9 +50,11 @@ interface Props {
 }
 
 const EmployeeDetailsTab = ({ employee }: Props) => {
-  const { data: currentEmployee, error: employeeError } = useEmployee(
-    employee._id
-  );
+  const {
+    data: currentEmployee,
+    refetch,
+    error: employeeError,
+  } = useEmployee(employee._id);
   const { mutateAsync: deleteEmployee, isPending: isDeleting } =
     useDeleteEmployee();
   const displayedEmployee = currentEmployee ?? employee;
@@ -78,14 +80,16 @@ const EmployeeDetailsTab = ({ employee }: Props) => {
 
   useEffect(() => {
     loadEmployeeDocuments();
+    refetch();
   }, [employee, syncVersion]);
 
   const loadEmployeeDocuments = async () => {
     try {
-      const documents = await window.electron.hr.employees_documents.getByEmployee(
-        user.companyId,
-        displayedEmployee._id
-      );
+      const documents =
+        await window.electron.hr.employees_documents.getByEmployee(
+          user.companyId,
+          displayedEmployee._id
+        );
       setDocuments(documents);
       console.log("DOCUMENTS FETCHED:", documents);
     } catch (e) {

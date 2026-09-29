@@ -1,3 +1,9 @@
+import { dialog } from "electron";
+import fs from "fs/promises";
+import { renderToBuffer } from "@react-pdf/renderer";
+import { getCompanyById } from "../../../../database/repositories/shared/companies.repository.js";
+import { getPayrollSettings } from "../../../../database/repositories/modules/hr/payroll_settings.repository.js";
+import TransportAllowancePdf from "../../../../reports/attendance/transportAllowance-report.js";
 import {
   getWeeklyTransportAllowanceData,
   TransportAllowanceEmployeeRow,
@@ -16,29 +22,36 @@ const ONE_LATE_RATE = 2500;
 
 const ZERO_RATE = 0;
 
-/**
- * Creates a weekly transport allowance report.
- *
- * Rules:
- *
- * 0 late days:
- *   3,300 FBU for every worked day.
- *
- * 1 late day:
- *   2,500 FBU for every worked day.
- *
- * 2+ late days:
- *   0 FBU for the entire week.
- *
- * Worked days:
- *   PONCTUEL
- *   RETARD
- *
- * Non-worked days:
- *   ABSENT
- *   CONGÉ
- *   missing attendance record
- */
+export async function saveWeeklyTransportAllowanceReport(
+  report: TransportAllowanceWeeklyReport
+) {
+  if (
+    !report ||
+    typeof report.companyId !== "string" ||
+    !report.companyId ||
+    !Array.isArray(report.employees)
+  ) {
+    throw new Error("Rapport de frais de déplacement invalide.");
+  }
+  validateMonday(report.weekStart);
+  const [company, settings] = await Promise.all([
+    getCompanyById(report.companyId),
+    getPayrollSettings(report.companyId),
+  ]);
+  if (!company) throw new Error("Entreprise introuvable.");
+  const destination = await dialog.showSaveDialog({
+    title: "Enregistrer le rapport de frais de déplacement",
+    defaultPath: `frais-deplacement-${report.weekStart}.pdf`,
+    filters: [{ name: "PDF", extensions: ["pdf"] }],
+  });
+  if (destination.canceled || !destination.filePath) return { canceled: true };
+  const buffer = await renderToBuffer(
+    <TransportAllowancePdf report={report} company={company} currency={settings?.currency ?? "BIF"} />
+  );
+  await fs.writeFile(destination.filePath, buffer);
+  return { canceled: false, filePath: destination.filePath };
+}
+
 export async function createWeeklyTransportAllowanceReport(
   companyId: string,
   weekStart: string

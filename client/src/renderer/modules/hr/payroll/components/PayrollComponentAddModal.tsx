@@ -77,9 +77,11 @@ export default function AddPayrollComponentModal({ type, onCreated }: Props) {
         calculationType,
         displayOrder,
         defaultValue,
-        calculationBase: null,
       };
-      await window.electron.hr.payrollComponents.create(user.companyId, component);
+      await window.electron.hr.payrollComponents.create(
+        user.companyId,
+        component
+      );
       toast({
         title: "Composante créée",
         status: "success",

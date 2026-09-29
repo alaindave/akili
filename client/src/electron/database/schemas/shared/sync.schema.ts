@@ -1,4 +1,4 @@
-import { run, all } from "../../db.js";
+import { run } from "../../db.js";
 
 export async function createSyncTable() {
   /* =========================================================
@@ -18,15 +18,6 @@ export async function createSyncTable() {
     );
   `);
 
-  const columns = await all<{ name: string }>("PRAGMA table_info(sync_queue)");
-  if (!columns.some((column) => column.name === "blockedReason")) {
-    await run("ALTER TABLE sync_queue ADD COLUMN blockedReason TEXT");
-  }
-  await run(`CREATE TABLE IF NOT EXISTS sync_deferred (
-    companyId TEXT NOT NULL, entity TEXT NOT NULL, entityId TEXT NOT NULL,
-    serverVersion INTEGER NOT NULL, payload TEXT NOT NULL,
-    PRIMARY KEY (companyId, entity, entityId)
-  )`);
 
   /* =========================================================
      SYNC STATE

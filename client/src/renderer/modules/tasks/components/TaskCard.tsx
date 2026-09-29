@@ -31,6 +31,7 @@ const TaskCard = ({ task, onTaskClick, onTaskDelete }: Props) => {
         transform: "translateY(-2px)",
         shadow: "md",
       }}
+      onClick={() => onTaskClick(task)}
     >
       <Flex justify="space-between" width="25rem">
         <Box
@@ -39,7 +40,6 @@ const TaskCard = ({ task, onTaskClick, onTaskDelete }: Props) => {
           fontWeight="800"
           mt="0.4rem"
           ml="0.4rem"
-          onClick={() => onTaskClick(task)}
           cursor="pointer"
         >
           {task.taskNumber}
