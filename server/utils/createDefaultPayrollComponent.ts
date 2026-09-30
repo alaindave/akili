@@ -8,7 +8,7 @@ import { getNextSyncVersion } from "./syncVersion.js";
 export async function createDefaultPayrollComponents(
   companyId: string,
   now: Date,
-  session?: mongoose.ClientSession
+  session: mongoose.ClientSession
 ) {
   const components = [];
 

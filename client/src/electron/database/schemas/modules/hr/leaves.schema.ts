@@ -1,4 +1,4 @@
-import { run } from "../../../db.js";
+import { all, run } from "../../../db.js";
 
 export async function createLeavesTable() {
   await run(`
@@ -12,6 +12,7 @@ export async function createLeavesTable() {
       endDate TEXT NOT NULL,
       subject TEXT NOT NULL,
       notes TEXT NOT NULL,
+      additionalNotes TEXT NOT NULL DEFAULT '',
       status TEXT NOT NULL DEFAULT 'ATTENTE_APPROBATION'
         CHECK(status IN ('APPROUVÉ', 'REFUSÉ', 'ATTENTE_APPROBATION','ANNULÉ')),
       serverVersion INTEGER NOT NULL DEFAULT 0,
@@ -24,6 +25,11 @@ export async function createLeavesTable() {
         REFERENCES employees(_id)
     )
   `);
+
+  const columns = await all<{ name: string }>("PRAGMA table_info(leaves)");
+  if (!columns.some((column) => column.name === "additionalNotes")) {
+    await run("ALTER TABLE leaves ADD COLUMN additionalNotes TEXT NOT NULL DEFAULT ''");
+  }
 
   console.log("LEAVES TABLE INITIALIZED");
 }

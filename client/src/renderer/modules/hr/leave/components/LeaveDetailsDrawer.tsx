@@ -97,7 +97,7 @@ export default function LeaveDetailsDrawer({
       await updateLeave.mutateAsync({
         _id: leave._id,
         updates: {
-          notes: [latest.notes?.trim(), entry].filter(Boolean).join("\n\n"),
+          additionalNotes: [latest.additionalNotes?.trim(), entry].filter(Boolean).join("\n\n"),
         },
       });
       setNote("");
@@ -191,14 +191,27 @@ export default function LeaveDetailsDrawer({
             <Divider />
             <Box>
               <Text fontWeight="bold" mb={3}>
-                Notes
+                Motif
               </Text>
               <Text
                 whiteSpace="pre-wrap"
                 overflowWrap="anywhere"
                 color={currentLeave.notes ? "gray.700" : "gray.500"}
               >
-                {currentLeave.notes || "Aucune note pour le moment."}
+                {currentLeave.notes || "Aucun motif renseigné."}
+              </Text>
+            </Box>
+            <Divider />
+            <Box>
+              <Text fontWeight="bold" mb={3}>
+                Notes
+              </Text>
+              <Text
+                whiteSpace="pre-wrap"
+                overflowWrap="anywhere"
+                color={currentLeave.additionalNotes ? "gray.700" : "gray.500"}
+              >
+                {currentLeave.additionalNotes || "Aucune note pour le moment."}
               </Text>
             </Box>
           </VStack>

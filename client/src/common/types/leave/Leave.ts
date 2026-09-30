@@ -11,6 +11,7 @@ export default interface Leave {
   endDate: string;
   subject: string;
   notes: string;
+  additionalNotes?: string;
   status: "ATTENTE_APPROBATION" | "APPROUVÉ" | "REFUSÉ" | "ANNULÉ";
   serverVersion: number;
   createdAt?: string;

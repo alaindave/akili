@@ -136,6 +136,7 @@ export async function getLeaveById(
       l.endDate,
       l.subject,
       l.notes,
+      l.additionalNotes,
       l.status,
       l.serverVersion,
       l.createdAt,
@@ -221,6 +222,7 @@ export async function getLeaveByMonth(companyId: string, month: string) {
       l.endDate,
       l.subject,
       l.notes,
+      l.additionalNotes,
       l.status,
       l.serverVersion,
       l.createdAt,
@@ -421,6 +423,7 @@ export async function updateLeave(
   updates: {
     subject?: string;
     notes?: string;
+    additionalNotes?: string;
     startDate?: string;
     endDate?: string;
     status?: string;
@@ -443,6 +446,11 @@ export async function updateLeave(
   if (updates.notes !== undefined) {
     fields.push("notes = ?");
     values.push(updates.notes);
+  }
+
+  if (updates.additionalNotes !== undefined) {
+    fields.push("additionalNotes = ?");
+    values.push(updates.additionalNotes);
   }
 
   if (updates.startDate !== undefined) {
@@ -618,6 +626,7 @@ export async function upsertLeave(leave: Leave) {
       endDate,
       subject,
       notes,
+      additionalNotes,
       status,
       serverVersion,
       isDeleted,
@@ -625,7 +634,7 @@ export async function upsertLeave(leave: Leave) {
       updatedAt,
       synced
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
     ON CONFLICT(_id)
     DO UPDATE SET
       employeeId = excluded.employeeId,
@@ -635,6 +644,7 @@ export async function upsertLeave(leave: Leave) {
       endDate = excluded.endDate,
       subject = excluded.subject,
       notes = excluded.notes,
+      additionalNotes = excluded.additionalNotes,
       status = excluded.status,
       serverVersion = excluded.serverVersion,
       isDeleted = excluded.isDeleted,
@@ -652,6 +662,7 @@ export async function upsertLeave(leave: Leave) {
       leave.endDate,
       leave.subject,
       leave.notes,
+      leave.additionalNotes ?? local?.additionalNotes ?? "",
       leave.status,
       leave.serverVersion ?? 0,
       leave.isDeleted ?? 0,
@@ -702,6 +713,7 @@ async function getLeaveByIdIncludingDeleted(
       l.endDate,
       l.subject,
       l.notes,
+      l.additionalNotes,
       l.status,
       l.serverVersion,
       l.createdAt,

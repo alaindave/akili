@@ -82,6 +82,7 @@ export function registerLeaveIPC() {
       updates: {
         subject?: string;
         notes?: string;
+        additionalNotes?: string;
         startDate?: string;
         endDate?: string;
         status?: string;

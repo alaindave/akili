@@ -149,7 +149,7 @@ export async function uploadEmployeeDocument(
     originalName: file.name,
     fileName,
     localPath,
-    mimeType: file.mimeType,
+    mimeType: file.mimeType || "application/octet-stream",
     fileSize: file.buffer.length,
     hash,
     serverVersion: file.serverVersion ?? 0,
@@ -216,18 +216,6 @@ export async function upsertEmployeeDocument(
   if (existing && existing.needsUpload === 1) {
     return;
   }
-
-  // ----------------------------------------------------------
-  // ALWAYS store a normalized relative path in SQLite
-  //
-  // Format:
-  //
-  // companyId/employeeId/fileName
-  //
-  // Example:
-  //
-  // abc123/employee456/Alain_Bedetse_ID_CARD.pdf
-  // ----------------------------------------------------------
 
   const normalizedLocalPath = buildRelativeDocumentPath(
     companyId,

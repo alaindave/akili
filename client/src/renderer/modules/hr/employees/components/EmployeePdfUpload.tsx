@@ -52,7 +52,7 @@ export default function PdfUpload({
         uploadedBy: uploadedBy ?? user._id,
         documentType,
         name: selectedFile.name,
-        mimeType: selectedFile.type,
+        mimeType: selectedFile.type || "application/octet-stream",
         buffer: new Uint8Array(arrayBuffer),
       });
 
@@ -68,18 +68,11 @@ export default function PdfUpload({
   const handleFile = async (selected: File | null) => {
     if (!selected) return;
 
-    if (documentType === "EMPLOYMENT_CONTRACT") {
-      if (selected.type !== "application/pdf") {
-        alert("Veuillez sélectionner un document PDF.");
-        return;
-      }
-    } else {
-      const allowedTypes = ["application/pdf", "image/jpeg", "image/png"];
+    const allowedTypes = ["application/pdf", "image/jpeg", "image/png"];
 
-      if (!allowedTypes.includes(selected.type)) {
-        alert("Veuillez sélectionner un fichier PDF ou une image JPG/JPEG.");
-        return;
-      }
+    if (documentType === "NATIONAL_ID" && !allowedTypes.includes(selected.type)) {
+      alert("Veuillez sélectionner un fichier PDF ou une image JPG/JPEG ou PNG.");
+      return;
     }
 
     if (selected.size > MAX_FILE_SIZE) {
@@ -166,7 +159,7 @@ export default function PdfUpload({
         type="file"
         accept={
           documentType === "EMPLOYMENT_CONTRACT"
-            ? "application/pdf"
+            ? undefined
             : "application/pdf,image/jpeg,image/jpg,image/png"
         }
         display="none"
@@ -198,8 +191,8 @@ export default function PdfUpload({
 
             <Text color="gray.400" fontSize="sm">
               {documentType === "EMPLOYMENT_CONTRACT"
-                ? "Cliquez ici pour sélectionner un document PDF"
-                : "Cliquez ici pour sélectionner un document PDF ou JPG"}
+                ? "Cliquez ici pour sélectionner un fichier — tous les formats sont acceptés"
+                : "Cliquez ici pour sélectionner un document PDF, JPG ou PNG"}
             </Text>
 
             <Text fontSize="xs" color="gray.500">

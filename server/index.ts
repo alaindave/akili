@@ -19,9 +19,7 @@ import employee_photos from "./routes/employees_photos.route.js";
 import employee_documents from "./routes/employees_documents.route.js";
 import jobsRouter from "./routes/jobs.route.js";
 import notifications from "./routes/notification.route.js";
-
 import { initializeSocketService } from "./services/socket.service.js";
-import { createDefaultPayrollComponents } from "./utils/createDefaultPayrollComponent.js";
 
 const app = express();
 
@@ -180,12 +178,6 @@ async function startServer() {
     }
 
     console.log("MONGODB CONNECTION READY");
-
-    // Temp helper
-    await createDefaultPayrollComponents(
-      "72b4c3da-8251-404b-bf51-9de8f00b2d81",
-      new Date()
-    );
 
     /*
      * ----------------------------------------------------------
