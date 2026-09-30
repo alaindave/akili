@@ -232,7 +232,7 @@ export async function upsertEmployeeDocument(
   const normalizedLocalPath = buildRelativeDocumentPath(
     companyId,
     document.employeeId,
-    path.basename(document.fileName)
+    sanitizeFilePart(path.basename(document.fileName))
   );
 
   await run(

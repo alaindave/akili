@@ -135,42 +135,14 @@ export async function uploadEmployeePhoto(
   // Filename
   // ----------------------------------------------------------
 
-  const fileName = `${employeeId}_photo${ext}`;
-
-  // ----------------------------------------------------------
-  // Actual filesystem path
-  // ----------------------------------------------------------
-
-  const absolutePath = path.join(employeePhotoDir, fileName);
-
-  // ----------------------------------------------------------
-  // Relative path stored in SQLite
-  // ----------------------------------------------------------
+  const hash = crypto.createHash("sha256").update(file.buffer).digest("hex");
+  const fileName = `${employeeId}_photo_v${photoVersion}_${hash}${ext}`;
 
   const relativePath = buildRelativePhotoPath(companyId, employeeId, fileName);
-
-  // ----------------------------------------------------------
-  // Hash
-  // ----------------------------------------------------------
-
-  const hash = crypto.createHash("sha256").update(file.buffer).digest("hex");
-
+  const absolutePath = resolveLocalPhotoPath(relativePath);
   const CURRENT_TIMESTAMP = new Date().toISOString();
 
-  // ----------------------------------------------------------
-  // Delete previous photo if path changed
-  // ----------------------------------------------------------
-
-  if (employee.photo_path && employee.photo_path !== relativePath) {
-    try {
-      const previousAbsolutePath = resolveLocalPhotoPath(employee.photo_path);
-
-      await fs.unlink(previousAbsolutePath);
-    } catch {
-      // Previous file does not exist.
-      // Continue with new photo.
-    }
-  }
+  // Keep earlier files while an upload may still be reading them.
 
   // ----------------------------------------------------------
   // Save photo locally
@@ -300,7 +272,7 @@ export async function updateEmployeePhotoMetadata(
   // Update metadata
   // ----------------------------------------------------------
 
-  await run(
+  const result = await run(
     `
     UPDATE employees
     SET
@@ -313,6 +285,7 @@ export async function updateEmployeePhotoMetadata(
       photo_needs_upload = 0
     WHERE companyId = ?
       AND _id = ?
+      AND COALESCE(photo_needs_upload, 0) = 0
     `,
     [
       data.photo_path,
@@ -325,6 +298,9 @@ export async function updateEmployeePhotoMetadata(
       employeeId,
     ]
   );
+  if (!result.changes) {
+    throw new Error(`Employee ${employeeId} photo changed during download; retry required`);
+  }
 }
 
 // ============================================================
@@ -333,7 +309,8 @@ export async function updateEmployeePhotoMetadata(
 
 export async function markEmployeePhotoSynced(
   companyId: string,
-  employeeId: string
+  employeeId: string,
+  photoHash?: string
 ) {
   if (!companyId) {
     throw new Error("Cannot mark employee photo synced without companyId");
@@ -346,8 +323,9 @@ export async function markEmployeePhotoSynced(
       photo_needs_upload = 0
     WHERE companyId = ?
       AND _id = ?
+      AND (? IS NULL OR photo_hash = ?)
     `,
-    [companyId, employeeId]
+    [companyId, employeeId, photoHash ?? null, photoHash ?? null]
   );
 
   return true;

@@ -8,6 +8,7 @@
     "dev": "nodemon --watch . --ignore dist --ext ts --exec \"npm run build && node dist/index.js\"",
     "build": "tsc -p tsconfig.json --pretty",
     "start": "node dist/index.js",
+    "test:sync": "node scripts/check-incidents.cjs && node scripts/check-media-sync.cjs",
     "create-company": "npm run build && node dist/scripts/createCompany.js"
   },
   "keywords": [],

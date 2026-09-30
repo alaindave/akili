@@ -2,6 +2,7 @@ import axios from "axios";
 import fs from "fs/promises";
 import path from "path";
 import { app } from "electron";
+import { createHash } from "crypto";
 
 import { getEmployeePhotoDir } from "../storage/directories.js";
 import { getEmployeeById } from "../database/repositories/modules/hr/employees.repository.js";
@@ -9,7 +10,9 @@ import { getEmployeeById } from "../database/repositories/modules/hr/employees.r
 export async function downloadEmployeePhoto(
   companyId: string,
   employeeId: string,
-  photo_version: number
+  photo_version: number,
+  mimeType?: string | null,
+  expectedHash?: string | null
 ) {
   const API_URL = app.isPackaged
     ? "https://leather-works.onrender.com"
@@ -30,7 +33,7 @@ export async function downloadEmployeePhoto(
 
   // Determine file extension from the employee's MIME type
   const extension = (() => {
-    const mimeType = employee.photo_mime_type;
+    mimeType = mimeType ?? employee.photo_mime_type;
 
     switch (mimeType) {
       case "image/png":
@@ -38,6 +41,9 @@ export async function downloadEmployeePhoto(
 
       case "image/webp":
         return ".webp";
+
+      case "image/gif":
+        return ".gif";
 
       case "image/jpeg":
       case "image/jpg":
@@ -69,7 +75,14 @@ export async function downloadEmployeePhoto(
 
   const response = await axios.get(`${API_URL}/photos/${employeeId}`, {
     responseType: "arraybuffer",
+    params: { version: photo_version, hash: expectedHash },
+    timeout: 90000,
   });
+
+  const buffer = Buffer.from(response.data);
+  if (!buffer.length || (expectedHash && createHash("sha256").update(buffer).digest("hex") !== expectedHash)) {
+    throw new Error(`Downloaded photo does not match employee ${employeeId}; retry required`);
+  }
 
   try {
     const existing = await fs.stat(absolutePath);
@@ -86,7 +99,9 @@ export async function downloadEmployeePhoto(
     }
   }
 
-  await fs.writeFile(absolutePath, Buffer.from(response.data));
+  const temporaryPath = `${absolutePath}.tmp`;
+  await fs.writeFile(temporaryPath, buffer);
+  await fs.rename(temporaryPath, absolutePath);
 
   console.log("PHOTO SAVED SUCCESSFULLY:", absolutePath);
 

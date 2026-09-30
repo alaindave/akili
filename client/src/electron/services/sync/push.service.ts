@@ -135,8 +135,18 @@ export async function pushPendingChanges(
   const obsoleteQueueIds: string[] = [];
 
   const validPending = [];
+  const latestPhotos = new Map<string, string>();
+  const supersededPhotos = new Map<string, string[]>();
+  for (const item of pending) {
+    if (item.entity === "employee_photo") latestPhotos.set(item.entityId, item._id);
+  }
 
   for (const item of pending) {
+    if (item.entity === "employee_photo" && latestPhotos.get(item.entityId) !== item._id) {
+      const latestId = latestPhotos.get(item.entityId)!;
+      supersededPhotos.set(latestId, [...(supersededPhotos.get(latestId) ?? []), item._id]);
+      continue;
+    }
     if (item.entity === "employee_document" && item.operation === "update") {
       const data = JSON.parse(item.payload);
 
@@ -367,6 +377,7 @@ export async function pushPendingChanges(
   });
 
   const response = await axios.post(`${API_URL}/sync/push`, form, {
+    timeout: 90000,
     headers: {
       ...form.getHeaders(),
       "x-auth-token": token,
@@ -386,13 +397,19 @@ export async function pushPendingChanges(
    */
 
   const syncedIds: string[] = response.data.synced ?? [];
+  // Retire older photo snapshots only when the replacement was accepted.
+  const supersededIds = syncedIds.flatMap((id) => supersededPhotos.get(id) ?? []);
+  syncedIds.push(...supersededIds);
   console.log("SERVER CONFIRMED SYNCED ITEMS:", {
     companyId,
     count: syncedIds.length,
     queueIds: syncedIds,
   });
 
-  const successfullyProcessedQueueIds: string[] = [];
+  const successfullyProcessedQueueIds: string[] = [...supersededIds];
+  const stillPending = (await getUnsyncedItems(companyId)).filter(
+    (item) => !syncedIds.includes(item._id)
+  );
 
   for (const item of validPending) {
     if (!syncedIds.includes(item._id)) {
@@ -401,13 +418,20 @@ export async function pushPendingChanges(
 
     const data = JSON.parse(item.payload);
 
+    // An acknowledgement applies to the sent queue entry, not edits made
+    // while the network request was in flight.
+    if (stillPending.some((entry) => entry.entity === item.entity && entry.entityId === item.entityId)) {
+      successfullyProcessedQueueIds.push(item._id);
+      continue;
+    }
+
     switch (item.entity) {
       case "company":
-        await markCompanySynced(companyId, data.serverVersion);
+        await markCompanySynced(companyId);
         break;
 
       case "company_logo":
-        await markCompanySynced(companyId, data.serverVersion);
+        await markCompanySynced(companyId);
         break;
 
       case "employee":
@@ -415,7 +439,7 @@ export async function pushPendingChanges(
         break;
 
       case "employee_photo":
-        await markEmployeePhotoSynced(companyId, data.employeeId);
+        await markEmployeePhotoSynced(companyId, data.employeeId, data.photo_hash);
         break;
 
       case "employee_document":

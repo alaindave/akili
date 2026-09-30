@@ -62,6 +62,7 @@ function load(file, resolve, expose = "") {
   let pendingEdit = true;
   const cursors = new Map();
   const pull = load('../src/electron/services/sync/pull.service.ts', (name) => {
+    if (name.endsWith('/sync.repository.js')) return { getUnsyncedItems: async () => [] };
     if (name === 'electron') return { app: { isPackaged: false } };
     if (name.endsWith('/auth.js')) return { getToken: async () => 'token' };
     if (name.endsWith('/db.js')) return { get: async () => ({ _id: 'run' }) };

@@ -57,6 +57,7 @@ const service = load('services/incidents.service.ts', {
   './socket.service.js': { broadcastEntityChange: (event) => broadcasts.push(event) },
 });
 const router = load('routes/sync.route.ts', {
+  '../sync.js': load('sync.ts'),
   '../models/incident.model.js': { default: Incident, __esModule: true },
   '../services/incidents.service.js': service,
   '../middlewares/authorize.js': { default: (_req, _res, next) => next(), __esModule: true },

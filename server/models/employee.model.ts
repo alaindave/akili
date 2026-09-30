@@ -24,7 +24,7 @@ export interface EmployeeDocument {
   photo_path: string | null;
   photo_version: number;
   photo_hash: string | null;
-  photo_mime_type: "image/jpeg" | "image/png" | "image/webp" | null;
+  photo_mime_type: "image/jpeg" | "image/png" | "image/webp" | "image/gif" | null;
   photo_last_modified: Date | null;
   serverVersion: number;
   createdAt: Date;
@@ -171,7 +171,7 @@ const employeeSchema = new Schema<EmployeeDocument>(
 
     photo_mime_type: {
       type: String,
-      enum: ["image/jpeg", "image/png", "image/webp", null],
+      enum: ["image/jpeg", "image/png", "image/webp", "image/gif", null],
       default: null,
     },
 

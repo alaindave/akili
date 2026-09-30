@@ -29,9 +29,22 @@ router.get(
         });
       }
 
-      const { data, error } = await supabase.storage
+      let { data, error } = await supabase.storage
         .from("employees_photos")
         .download(employee.photo_path);
+
+      // Older employee edits could replace the cloud path with a local filename.
+      // The upload handler stores photos under this versioned path.
+      if (error || !data) {
+        const extensions: Record<string, string> = {
+          "image/png": ".png", "image/webp": ".webp", "image/gif": ".gif",
+        };
+        const extension = extensions[employee.photo_mime_type ?? ""] ?? ".jpg";
+        const cloudPath = `${employee.companyId}/${employee._id}/photo_v${employee.photo_version}${extension}`;
+        if (cloudPath !== employee.photo_path) {
+          ({ data, error } = await supabase.storage.from("employees_photos").download(cloudPath));
+        }
+      }
 
       if (error || !data) {
         return res.status(404).json({
@@ -43,7 +56,7 @@ router.get(
 
       res.setHeader("Content-Type", data.type || "application/octet-stream");
 
-      res.setHeader("Cache-Control", "public, max-age=3600");
+      res.setHeader("Cache-Control", "no-cache");
 
       return res.status(200).send(buffer);
     } catch (err) {

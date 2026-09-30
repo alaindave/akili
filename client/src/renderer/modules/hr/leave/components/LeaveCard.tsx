@@ -144,7 +144,7 @@ const EmployeeLeaveCard = ({ leave, onDelete, gridTemplate }: Props) => {
 
         if (cancelled) return;
 
-        setPhotoUrl(`data:image/jpeg;base64,${base64}`);
+        setPhotoUrl(`data:${employee.photo_mime_type || "image/jpeg"};base64,${base64}`);
       } catch (error) {
         if (cancelled) return;
 
@@ -159,7 +159,7 @@ const EmployeeLeaveCard = ({ leave, onDelete, gridTemplate }: Props) => {
     return () => {
       cancelled = true;
     };
-  }, [employee?.photo_path]);
+  }, [employee?.photo_path, employee?.photo_mime_type, syncVersion]);
 
   /* =======================================================
      APPROVE LEAVE

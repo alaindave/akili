@@ -1,4 +1,5 @@
 import Employee from "./models/employee.model.js";
+import { createHash } from "crypto";
 import Attendance from "./models/attendance.model.js";
 import Leave from "./models/leave.model.js";
 import Task from "./models/task.model.js";
@@ -153,6 +154,9 @@ export async function syncCompany(operation: SyncOperation, data: SyncData) {
   requireUpdatedAt(data);
 
   const { fields } = cleanSyncFields(data, operation);
+  // Storage paths belong to the media upload handler, not the local form.
+  delete fields.logoPath;
+  delete fields.logoUrl;
 
   const serverVersion = await getServerVersion("company");
 
@@ -399,7 +403,13 @@ export async function syncCompanyLogo(data: SyncData, file?: UploadedFile) {
 // ============================================================
 
 export async function syncEmployee(operation: SyncOperation, data: SyncData) {
-  const { record, ...result } = await syncRecord(Employee, "employee", operation, data);
+  // Employee forms contain installation-local photo paths. Only the photo
+  // upload handler may change storage metadata after the bytes are uploaded.
+  const employeeData = { ...data };
+  for (const key of Object.keys(employeeData)) {
+    if (key.startsWith("photo_")) delete employeeData[key];
+  }
+  const { record, ...result } = await syncRecord(Employee, "employee", operation, employeeData);
   return { ...result, employee: record };
 }
 
@@ -436,7 +446,7 @@ export async function syncEmployeePhoto(data: SyncData, file?: UploadedFile) {
 
   const photoVersion = Number(data.photo_version ?? 1);
 
-  if (!Number.isFinite(photoVersion) || photoVersion < 1) {
+  if (!Number.isSafeInteger(photoVersion) || photoVersion < 1) {
     throw new Error(`INVALID PHOTO VERSION: ${data.photo_version}`);
   }
 
@@ -470,6 +480,9 @@ export async function syncEmployeePhoto(data: SyncData, file?: UploadedFile) {
       case "image/webp":
         return ".webp";
 
+      case "image/gif":
+        return ".gif";
+
       case "image/jpeg":
       case "image/jpg":
       default:
@@ -478,6 +491,19 @@ export async function syncEmployeePhoto(data: SyncData, file?: UploadedFile) {
   })();
 
   const objectPath = `${companyId}/${employeeId}/photo_v${photoVersion}${extension}`;
+  const incomingPhotoTime = new Date(data.photo_last_modified ?? data.updatedAt).getTime();
+  if (!Number.isFinite(incomingPhotoTime)) throw new Error("INVALID PHOTO MODIFICATION DATE");
+  const existingPhotoTime = employee.photo_last_modified
+    ? new Date(employee.photo_last_modified).getTime() : 0;
+  if (existingPhotoTime > incomingPhotoTime ||
+      (employee.photo_path === objectPath && data.photo_hash && employee.photo_hash === data.photo_hash)) {
+    return { success: true, companyId, employeeId, serverVersion: employee.serverVersion,
+      updatedAt: employee.updatedAt, photoVersion: employee.photo_version, photoPath: employee.photo_path };
+  }
+  const photoHash = createHash("sha256").update(file.buffer).digest("hex");
+  if (data.photo_hash && data.photo_hash !== photoHash) {
+    throw new Error("PHOTO CONTENT DOES NOT MATCH QUEUED HASH");
+  }
 
   const previousObjectPath = employee.photo_path;
 
@@ -519,6 +545,34 @@ export async function syncEmployeePhoto(data: SyncData, file?: UploadedFile) {
 
   /*
    * ---------------------------------------------------------
+   * UPDATE EMPLOYEE
+   * ---------------------------------------------------------
+   */
+
+  const serverVersion = await getServerVersion("employee");
+
+  Object.assign(employee, {
+    companyId,
+
+    photo_filename: data.photo_filename,
+    photo_path: objectPath,
+    photo_hash: photoHash,
+    photo_mime_type: data.photo_mime_type || file.mimetype,
+
+    photo_last_modified: data.photo_last_modified
+      ? new Date(data.photo_last_modified)
+      : new Date(data.updatedAt as string),
+
+    photo_version: photoVersion,
+
+    updatedAt: new Date(data.updatedAt as string),
+    serverVersion,
+  });
+
+  await employee.save();
+
+  /*
+   * ---------------------------------------------------------
    * DELETE PREVIOUS PHOTO
    * ---------------------------------------------------------
    *
@@ -539,12 +593,9 @@ export async function syncEmployeePhoto(data: SyncData, file?: UploadedFile) {
 
     if (deleteError) {
       /*
-       * The new photo exists, but the old one could not be
-       * removed. Throw so the sync is NOT considered successful.
+       * The new photo is already committed. Cleanup can be retried separately.
        */
-      throw new Error(
-        `NEW PHOTO UPLOADED BUT FAILED TO DELETE OLD PHOTO: ${deleteError.message}`
-      );
+      console.warn("Could not remove previous employee photo:", deleteError.message);
     }
 
     console.log("OLD EMPLOYEE PHOTO DELETED:", {
@@ -553,34 +604,6 @@ export async function syncEmployeePhoto(data: SyncData, file?: UploadedFile) {
       previousObjectPath,
     });
   }
-
-  /*
-   * ---------------------------------------------------------
-   * UPDATE EMPLOYEE
-   * ---------------------------------------------------------
-   */
-
-  const serverVersion = await getServerVersion("employee");
-
-  Object.assign(employee, {
-    companyId,
-
-    photo_filename: data.photo_filename,
-    photo_path: objectPath,
-    photo_hash: data.photo_hash,
-    photo_mime_type: data.photo_mime_type || file.mimetype,
-
-    photo_last_modified: data.photo_last_modified
-      ? new Date(data.photo_last_modified)
-      : new Date(data.updatedAt as string),
-
-    photo_version: photoVersion,
-
-    updatedAt: new Date(data.updatedAt as string),
-    serverVersion,
-  });
-
-  await employee.save();
 
   console.log("EMPLOYEE PHOTO SYNCED SUCCESSFULLY:", {
     companyId,

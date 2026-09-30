@@ -201,7 +201,6 @@ async function pullVersionedCollection<
     serverVersion: {
       $gt: nextVersion,
     },
-    isDeleted: 0,
   });
 
   return {
@@ -329,7 +328,7 @@ router.post(
 
           validateSyncItemCompany(item, companyId);
           if (!["create", "update", "delete"].includes(operation)) throw new SyncConflict("INVALID_OPERATION", "Unknown sync operation.");
-          if (failedRecords.has(`${entity}:${data?._id}`)) throw new Error("Earlier update for this record failed; retry in order.");
+          if (failedRecords.has(`${entity}:${data?._id ?? data?.employeeId ?? data?.companyId}`)) throw new Error("Earlier update for this record failed; retry in order.");
 
           switch (entity) {
             /*
@@ -672,7 +671,7 @@ router.post(
 
           synced.push(queueId);
         } catch (error) {
-          failedRecords.add(`${entity}:${data?._id}`);
+          failedRecords.add(`${entity}:${data?._id ?? data?.employeeId ?? data?.companyId}`);
           const failure = error as { code?: string | number; name?: string; message?: string; details?: unknown };
           const permanent = error instanceof SyncConflict || failure.code === 11000 || ["ValidationError", "CastError"].includes(failure.name ?? "");
           failed.push({ queueId, entity, entityId: data?._id, code: String(failure.code ?? "SYNC_FAILED"),

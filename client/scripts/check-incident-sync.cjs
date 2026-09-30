@@ -9,6 +9,7 @@ let pending = [], failPush = false, failApply = false;
 let acknowledged = [], applied = [], cursor = 0;
 const snapshot = { _id: 'incident-1', companyId: 'company-a', updatedAt: '2026-09-22T09:00:00.000Z' };
 let confirmed = ['queue-1'];
+let includeBrokenPhoto = false;
 const transport = {
   post: async (url) => {
     assert(url.endsWith('/sync/push'));
@@ -18,6 +19,10 @@ const transport = {
   get: async (_url, options) => {
     assert.equal(options.headers['x-company-id'], 'company-a');
     const { entity, afterVersion } = options.params;
+    if (includeBrokenPhoto && entity === 'employee') return { data: {
+      items: [{ _id: 'e1', companyId: 'company-a', photo_filename: 'missing.png', photo_version: 1 }],
+      nextVersion: 1, hasMore: false,
+    } };
     if (entity !== 'incident' || afterVersion >= 2) return { data: { items: [], hasMore: false } };
     return { data: { items: [{ ...snapshot, serverVersion: afterVersion + 1 }], nextVersion: afterVersion + 1,
       hasMore: afterVersion === 0, serverTime: '2026-09-22T10:00:00.000Z' } };
@@ -55,12 +60,12 @@ function load(filename) {
 (async () => {
   const { pushPendingChanges } = load('push.service.ts');
   const { pullLatestChanges } = load('pull.service.ts');
-  const entry = (id) => ({ _id: id, companyId: 'company-a', entity: 'incident', operation: 'update', payload: JSON.stringify(snapshot) });
+  const entry = (id) => ({ _id: id, entityId: snapshot._id, companyId: 'company-a', entity: 'incident', operation: 'update', payload: JSON.stringify(snapshot) });
   pending = [entry('queue-1'), entry('queue-2')];
   await pushPendingChanges('company-a');
   assert.equal(pending.length, 1);
   assert.equal(pending[0]._id, 'queue-2');
-  assert.deepEqual(acknowledged[0], ['company-a', snapshot._id, snapshot.updatedAt]);
+  assert.equal(acknowledged.length, 0, 'Unacknowledged edits must keep the record unsynced');
   failPush = true;
   await assert.rejects(() => pushPendingChanges('company-a'));
   assert.equal(pending.length, 1);
@@ -68,6 +73,7 @@ function load(filename) {
   confirmed = ['queue-2'];
   await pushPendingChanges('company-a');
   assert.equal(pending.length, 0);
+  assert.deepEqual(acknowledged[0], ['company-a', snapshot._id, snapshot.updatedAt]);
   failApply = true;
   await assert.rejects(() => pullLatestChanges('company-a'));
   assert.equal(cursor, 0, 'Failed batch must not advance cursor');
@@ -77,5 +83,9 @@ function load(filename) {
   assert.deepEqual(applied.map((item) => item.serverVersion), [1, 2]);
   await pullLatestChanges('company-a');
   assert.equal(applied.length, 2, 'Completed cursor must not reapply old changes');
+  includeBrokenPhoto = true;
+  cursor = 0;
+  await assert.rejects(() => pullLatestChanges('company-a'), /CURSOR WAS NOT ADVANCED/);
+  assert.equal(cursor, 2, 'Failed photo download must not prevent unrelated records from pulling');
   console.log('Passed: incident push routing, partial acknowledgements, offline retry, paginated pull and failed-batch cursor retention.');
 })().catch((error) => { console.error(error); process.exitCode = 1; });

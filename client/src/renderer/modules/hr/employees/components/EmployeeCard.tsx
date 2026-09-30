@@ -211,7 +211,7 @@ const EmployeeCard = ({ employeeId }: Props) => {
           employee.photo_path
         );
 
-        setPhotoUrl(`data:image/jpeg;base64,${base64}`);
+        setPhotoUrl(`data:${employee.photo_mime_type || "image/jpeg"};base64,${base64}`);
       } catch (error) {
         console.error("FAILED TO LOAD EMPLOYEE PHOTO:", error);
         setPhotoUrl("");
@@ -219,7 +219,7 @@ const EmployeeCard = ({ employeeId }: Props) => {
     }
 
     load();
-  }, [employee?.photo_path, syncVersion]);
+  }, [employee?.photo_path, employee?.photo_mime_type, syncVersion]);
 
   /* =======================================================
      CLOCK IN EDIT

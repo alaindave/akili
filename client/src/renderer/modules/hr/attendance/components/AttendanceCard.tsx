@@ -21,6 +21,7 @@ import defaultAvatar from "../../../../assets/default-avatar.jpeg";
 import { useUpdateAttendance } from "../hooks/useAttendance";
 import { useEmployee } from "../../employees/hooks/useEmployees";
 import useAdminUser from "../../../../../store/auth.store";
+import useSyncStore from "../../../../../store/sync.store";
 
 interface Props {
   attendance: AttendanceWithEmployee | null;
@@ -129,6 +130,7 @@ const EmployeeAttendanceCard = ({
   toggleOff,
 }: Props) => {
   const user = useAdminUser((store) => store.adminUser);
+  const syncVersion = useSyncStore((store) => store.syncVersion);
 
   /*
    * Hooks MUST be called before any conditional return.
@@ -231,7 +233,7 @@ const EmployeeAttendanceCard = ({
         );
 
         if (!cancelled) {
-          setPhotoUrl(`data:image/jpeg;base64,${base64}`);
+          setPhotoUrl(`data:${employee.photo_mime_type || "image/jpeg"};base64,${base64}`);
         }
       } catch (error) {
         console.error("FAILED TO LOAD EMPLOYEE PHOTO:", error);
@@ -247,7 +249,7 @@ const EmployeeAttendanceCard = ({
     return () => {
       cancelled = true;
     };
-  }, [employee?.photo_path]);
+  }, [employee?.photo_path, employee?.photo_mime_type, syncVersion]);
 
   /* =========================================================
      ERROR MESSAGE TIMER

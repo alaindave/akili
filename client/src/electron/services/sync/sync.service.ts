@@ -190,6 +190,7 @@ export default async function sync(companyId: string) {
         timestamp: new Date().toISOString(),
         pendingChanges,
         error: getErrorMessage(error),
+        pulledChanges: true,
       });
 
       return;

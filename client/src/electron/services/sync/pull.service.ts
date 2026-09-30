@@ -81,7 +81,7 @@ import {
 
 import { AttendanceDailyCheck } from "../../../common/types/attendance/AttendanceDailyCheck.js";
 
-import { get } from "../../database/db.js";
+import { all, get } from "../../database/db.js";
 
 import {
   getSyncState,
@@ -96,8 +96,9 @@ import {
 } from "../../database/repositories/shared/companies.repository.js";
 
 import { getToken } from "../../auth.js";
+import { getUnsyncedItems } from "../../database/repositories/shared/sync.repository.js";
 
-import { getEmployeeDocumentsDir } from "../../storage/directories.js";
+import { getEmployeeDocumentsDir, getEmployeePhotoDir } from "../../storage/directories.js";
 import { downloadCompanyLogo } from "../../util/downloadCompanyLogo.util.js";
 import {
   markAttendanceSynced,
@@ -201,11 +202,13 @@ export async function pullLatestChanges(companyId: string) {
 
     const employees = employeesResult.items;
 
-    /* =====================================================
-       EMPLOYEE PHOTOS
-    ===================================================== */
-
-    await syncEmployeePhotos(employees);
+    // Media failure must be reported, while allowing unrelated records to pull.
+    let photoSyncError: unknown;
+    try {
+      await syncEmployeePhotoFiles(companyId);
+    } catch (error) {
+      photoSyncError = error;
+    }
 
     /* =====================================================
        EMPLOYEE DOCUMENTS
@@ -370,6 +373,8 @@ export async function pullLatestChanges(companyId: string) {
     latestServerTime = payrollItemsResult.serverTime ?? latestServerTime;
 
     const payrollItems = payrollItemsResult.items;
+
+    if (photoSyncError) throw photoSyncError;
 
     /* =====================================================
        SYNC METADATA
@@ -745,10 +750,34 @@ async function syncEmployees(employees: Employee[]): Promise<boolean> {
    EMPLOYEE PHOTOS
 ========================================================= */
 
-async function syncEmployeePhotos(employees: Employee[]) {
+async function syncEmployeePhotoFiles(companyId: string) {
+  // Recheck downloaded files so a missing cache can recover without a remote edit.
+  const cached = await all<Employee>(
+    `SELECT * FROM employees WHERE companyId = ? AND isDeleted = 0
+      AND photo_path IS NOT NULL AND COALESCE(photo_needs_upload, 0) = 0`,
+    [companyId]
+  );
+  for (const employee of cached) {
+    const exists = await fs.stat(path.join(getEmployeePhotoDir(), employee.photo_path!.replace(/\\/g, "/")))
+      .then((stat) => stat.isFile() && stat.size > 0)
+      .catch((error: NodeJS.ErrnoException) => {
+        if (error.code === "ENOENT") return false;
+        throw error;
+      });
+    if (!exists) {
+      await updateLastPulledVersion(companyId, "employee_photo", 0);
+      break;
+    }
+  }
+  // A separate cursor also recovers photos skipped by older installations.
+  return pullEntityByVersion<Employee>(companyId, "employee", syncEmployeePhotos, 500, "employee_photo");
+}
+
+async function syncEmployeePhotos(employees: Employee[]): Promise<boolean> {
+  let succeeded = true;
   for (const employee of employees) {
     try {
-      if (!employee.photo_filename || employee.photo_version == null) {
+      if (employee.isDeleted || !employee.photo_filename || employee.photo_version == null) {
         continue;
       }
 
@@ -759,13 +788,28 @@ async function syncEmployeePhotos(employees: Employee[]) {
 
       const localPhotoVersion = localEmployee?.photo_version ?? 0;
 
+      if (!localEmployee) throw new Error(`Employee ${employee._id} not found locally`);
+      if (localEmployee.photo_needs_upload) {
+        throw new Error(`Employee ${employee._id} has a pending photo upload`);
+      }
+
+      const localPhotoExists = localEmployee.photo_path
+        ? await fs.stat(path.join(getEmployeePhotoDir(), localEmployee.photo_path.replace(/\\/g, "/")))
+            .then((stat) => stat.isFile() && stat.size > 0)
+            .catch((error: NodeJS.ErrnoException) => {
+              if (error.code === "ENOENT") return false;
+              throw error;
+            })
+        : false;
+
       console.log("=====EMPLOYEE PHOTO SYNC=====");
 
       console.log("REMOTE PHOTO VERSION:", employee.photo_version);
 
       console.log("LOCAL PHOTO VERSION:", localPhotoVersion);
 
-      if (localPhotoVersion >= employee.photo_version) {
+      if (localPhotoExists && localPhotoVersion >= employee.photo_version &&
+          (!employee.photo_hash || localEmployee.photo_hash === employee.photo_hash)) {
         console.log(
           `PHOTO ALREADY UP TO DATE FOR ` +
             `${employee.firstName} ` +
@@ -775,30 +819,14 @@ async function syncEmployeePhotos(employees: Employee[]) {
         continue;
       }
 
-      await downloadEmployeePhoto(
+      const absolutePath = await downloadEmployeePhoto(
         employee.companyId,
         employee._id,
-        employee.photo_version
+        employee.photo_version,
+        employee.photo_mime_type,
+        employee.photo_hash
       );
-
-      const extension = (() => {
-        const mimeType = employee.photo_mime_type;
-
-        switch (mimeType) {
-          case "image/png":
-            return ".png";
-
-          case "image/webp":
-            return ".webp";
-
-          case "image/jpeg":
-          case "image/jpg":
-          default:
-            return ".jpg";
-        }
-      })();
-
-      const photo_path = `${employee.companyId}/${employee._id}/photo_v${employee.photo_version}${extension}`;
+      const photo_path = path.relative(getEmployeePhotoDir(), absolutePath).split(path.sep).join("/");
 
       await updateEmployeePhotoMetadata(employee.companyId, employee._id, {
         photo_path,
@@ -821,9 +849,11 @@ async function syncEmployeePhotos(employees: Employee[]) {
           `Version ${employee.photo_version}`
       );
     } catch (error) {
+      succeeded = false;
       console.error(`FAILED TO SYNC PHOTO FOR EMPLOYEE ${employee._id}`, error);
     }
   }
+  return succeeded;
 }
 
 /* =========================================================
@@ -927,18 +957,13 @@ async function syncEmployeeDocuments(
          DOWNLOAD DOCUMENT
       ===================================================== */
 
-      await downloadEmployeeDocument(employee, document);
+      const absolutePath = await downloadEmployeeDocument(employee, document);
 
       /* =====================================================
          LOCAL STORED PATH
       ===================================================== */
 
-      const localPath = [
-        document.companyId,
-        document.employeeId,
-        document.documentType,
-        document.fileName,
-      ].join("/");
+      const localPath = path.relative(getEmployeeDocumentsDir(), absolutePath).split(path.sep).join("/");
 
       await upsertEmployeeDocument({
         ...document,
@@ -1350,9 +1375,10 @@ async function pullEntityByVersion<T>(
   companyId: string,
   entity: string,
   syncBatch: (items: T[]) => Promise<boolean>,
-  limit = 500
+  limit = 500,
+  cursorEntity = entity
 ): Promise<VersionPullResult<T>> {
-  const syncState = await getSyncState(companyId, entity);
+  const syncState = await getSyncState(companyId, cursorEntity);
 
   const token = await getToken();
 
@@ -1420,11 +1446,20 @@ async function pullEntityByVersion<T>(
       break;
     }
 
-    const succeeded = await syncBatch(batch);
+    // A failed push must not let a pull overwrite the remaining local edits or
+    // mark them synced. Retain this page until those edits are acknowledged.
+    const pending = await getUnsyncedItems(companyId);
+    const hasPendingChanges = pending.some((item) =>
+      item.entity === cursorEntity ||
+      (entity === "task" && item.entity === "task_comment") ||
+      (entity === "admin_user" && item.entity === "user_notes") ||
+      (entity === "company" && item.entity === "company_logo")
+    );
+    const succeeded = !hasPendingChanges && await syncBatch(batch);
 
     if (!succeeded) {
       throw new Error(
-        `${entity.toUpperCase()} SYNC FAILED AFTER VERSION ` +
+        `${cursorEntity.toUpperCase()} SYNC FAILED AFTER VERSION ` +
           `${afterVersion}. SYNC CURSOR WAS NOT ADVANCED.`
       );
     }
@@ -1446,7 +1481,7 @@ async function pullEntityByVersion<T>(
       );
     }
 
-    await updateLastPulledVersion(companyId, entity, newVersion);
+    await updateLastPulledVersion(companyId, cursorEntity, newVersion);
 
     afterVersion = newVersion;
 

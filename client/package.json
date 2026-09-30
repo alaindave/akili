@@ -48,6 +48,7 @@
     "test:ipc": "node scripts/check-electron-ipc.cjs",
     "test:payslip": "node scripts/check-payslip-report.cjs",
     "test:payroll": "node scripts/check-individual-payroll.cjs",
+    "test:sync": "node scripts/check-sync-reliability.cjs && node scripts/check-media-sync.cjs",
     "build:electron": "tsc -p src/electron/tsconfig.json",
     "build": "npm run clean && npm run build:renderer && npm run build:electron",
     "dist:win": "npm run build && electron-builder --win --x64",
