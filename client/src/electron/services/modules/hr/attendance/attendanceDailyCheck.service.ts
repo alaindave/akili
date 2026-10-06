@@ -1,8 +1,8 @@
-import { Attendance } from "../../../../../common/types/attendance/Attendance.js";
+import { Attendance } from "../../../../../common/types/hr/attendance/Attendance.js";
 import {
   VerifyAttendanceDailyCheckInput,
   VerifyDailyAttendanceResult,
-} from "../../../../../common/types/attendance/AttendanceDailyCheck.js";
+} from "../../../../../common/types/hr/attendance/AttendanceDailyCheck.js";
 import {
   getAttendanceDailyCheckByDate,
   verifyAttendanceDailyCheck,

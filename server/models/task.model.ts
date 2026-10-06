@@ -1,3 +1,4 @@
+import { APP_MODULES, type AppModule } from "./appModule.js";
 import { Schema, model, HydratedDocument } from "mongoose";
 
 export interface TaskComment {
@@ -14,6 +15,7 @@ export interface TaskComment {
 
 export interface Task {
   companyId: string;
+  module: AppModule;
   _id: string;
   taskNumber: string;
   author: string;
@@ -99,6 +101,12 @@ const taskSchema = new Schema<Task>(
       type: String,
       required: true,
       trim: true,
+    },
+    module: {
+      type: String,
+      required: true,
+      enum: APP_MODULES,
+      default: "HR",
     },
     _id: {
       type: String,

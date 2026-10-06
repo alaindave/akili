@@ -9,7 +9,7 @@ import {
   getAllOfflineUsers,
   deleteOfflineUser,
 } from "../../database/repositories/shared/offline_users.repository.js";
-import OfflineUser from "../../../common/types/OfflineUser.js";
+import OfflineUser from "../../../common/types/shared/OfflineUser.js";
 
 export function registerOfflineUsersIPC() {
   console.log("REGISTERING OFFLINE USERS IPC");

@@ -1,6 +1,6 @@
-type PayslipDocumentData = import("../../../common/types/payroll/PayslipDocument", { with: { "resolution-mode": "require" } }).PayslipDocumentData;
-type PayrollPaymentFilter = import("../../../common/types/payroll/payrollPayment", { with: { "resolution-mode": "require" } }).PayrollPaymentFilter;
-type AdminUser = import("../../../common/types/AdminUser", {
+type PayslipDocumentData = import("../../../common/types/hr/payroll/PayslipDocument", { with: { "resolution-mode": "require" } }).PayslipDocumentData;
+type PayrollPaymentFilter = import("../../../common/types/hr/payroll/payrollPayment", { with: { "resolution-mode": "require" } }).PayrollPaymentFilter;
+type AdminUser = import("../../../common/types/shared/AdminUser", {
   with: { "resolution-mode": "require" },
 }).default;
  
@@ -46,6 +46,9 @@ export const payrollRunApi = {
 
   returnToDraft: (companyId: string, payrollRunId: string) =>
     invoke("payroll:returnToDraft", companyId, payrollRunId),
+
+  verifyPayslip: (companyId: string, payrollResultId: string, admin: AdminUser) =>
+    invoke("payroll:verifyPayslip", companyId, payrollResultId, admin),
 
   approvePayslip: (companyId: string, payrollResultId: string, admin: AdminUser) =>
     invoke("payroll:approvePayslip", companyId, payrollResultId, admin),

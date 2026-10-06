@@ -13,7 +13,7 @@ import {
 } from "@chakra-ui/react";
 import { ViewIcon, DownloadIcon } from "@chakra-ui/icons";
 import { LuPrinter } from "react-icons/lu";
-import { PayrollResult } from "../../../../../common/types/payroll/Payroll";
+import { PayrollResult } from "../../../../../common/types/hr/payroll/Payroll";
 import { usePayrollSettings } from "../hooks/payroll_settings.hook";
 import { useNavigate } from "react-router-dom";
 import { formatCurrency } from "../../../../lib/formatter";
@@ -23,10 +23,10 @@ interface Props {
 }
 
 const statusColor = {
-  BROUILLON: "yellow",
-  VERIFICATION: "blue",
-  APPROUVÉ: "green",
-  PAYÉ: "purple",
+  BROUILLON: "gray",
+  VERIFIÉ: "yellow",
+  APPROUVÉ: "blue",
+  PAYÉ: "green",
   ANNULÉ: "red",
 } as const;
 
@@ -100,15 +100,15 @@ export default function PayrollResultsTable({ payrollResults }: Props) {
 
               <Td isNumeric>{formatCurrency(result.baseSalary, currency)}</Td>
 
-              <Td isNumeric color="blue.500">
+              <Td isNumeric>
                 {formatCurrency(result.totalEarnings, currency)}
               </Td>
 
-              <Td isNumeric color="red.500">
+              <Td isNumeric>
                 {formatCurrency(result.totalDeductions, currency)}
               </Td>
 
-              <Td isNumeric fontWeight="bold" color="green.500">
+              <Td isNumeric fontWeight="bold">
                 {formatCurrency(result.netSalary, currency)}
               </Td>
 
@@ -127,7 +127,7 @@ export default function PayrollResultsTable({ payrollResults }: Props) {
                     variant="ghost"
                     onClick={() =>
                       navigate(
-                        `/employees_admin/employees_list/${result.employeeId}/payslips/${result.payrollRunId}`
+                        `/hr/employees_list/${result.employeeId}/payslips/${result.payrollRunId}`
                       )
                     }
                   />

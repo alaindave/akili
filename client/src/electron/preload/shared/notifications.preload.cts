@@ -1,9 +1,9 @@
 import { ipcRenderer } from "electron";
 import { invoke } from "../../ipc/ipc.cjs";
-type EmailNotification = import("../../../common/types/EmailNotification", {
+type EmailNotification = import("../../../common/types/notifications/EmailNotification", {
   with: { "resolution-mode": "require" },
 }).EmailNotification;
-type AppNotification = import("../../../common/types/AppNotification", {
+type AppNotification = import("../../../common/types/notifications/AppNotification", {
   with: { "resolution-mode": "require" },
 }).AppNotification;
 

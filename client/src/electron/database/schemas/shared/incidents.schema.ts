@@ -4,6 +4,7 @@ export async function createIncidentsTable() {
   await run(`CREATE TABLE IF NOT EXISTS incidents (
     _id TEXT PRIMARY KEY,
     companyId TEXT NOT NULL,
+    module TEXT NOT NULL DEFAULT 'HR',
     incidentNumber TEXT NOT NULL,
     reporterName TEXT NOT NULL CHECK(length(trim(reporterName)) > 0),
     reporterContact TEXT NOT NULL CHECK(length(trim(reporterContact)) > 0),
@@ -21,6 +22,7 @@ export async function createIncidentsTable() {
   )`);
   const columns = await all<{ name: string }>("PRAGMA table_info(incidents)");
   const additions = {
+    module: "TEXT NOT NULL DEFAULT 'HR'",
     updatedAt: "TEXT",
     serverVersion: "INTEGER NOT NULL DEFAULT 0",
     synced: "INTEGER NOT NULL DEFAULT 0",
@@ -32,7 +34,9 @@ export async function createIncidentsTable() {
       await run(`ALTER TABLE incidents ADD COLUMN ${name} ${definition}`);
     }
   }
-  await run("UPDATE incidents SET updatedAt = createdAt WHERE updatedAt IS NULL");
+  await run(
+    "UPDATE incidents SET updatedAt = createdAt WHERE updatedAt IS NULL"
+  );
   await run(`CREATE INDEX IF NOT EXISTS idx_incidents_company_date
     ON incidents(companyId, occurredAt DESC)`);
   await run(`CREATE INDEX IF NOT EXISTS idx_incidents_company_location

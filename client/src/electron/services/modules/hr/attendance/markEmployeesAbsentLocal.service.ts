@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import Employee from "../../../../../common/types/Employee.js";
+import Employee from "../../../../../common/types/hr/employees/Employee.js";
 import {
   createAbsentAttendance,
   getEmployeesWhoDidNotClockIn,

@@ -1,5 +1,5 @@
 import { BrowserWindow } from "electron";
-import type { AppNotification } from "../../../common/types/AppNotification.js";
+import type { AppNotification } from "../../../common/types/notifications/AppNotification.js";
 
 export function emitNotification(notification: AppNotification): void {
   const windows = BrowserWindow.getAllWindows();

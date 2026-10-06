@@ -1,13 +1,42 @@
-import type Task from "../../../../common/types/task/Task.js";
+import type {
+  default as Task,
+  AppModule,
+} from "../../../../common/types/task/Task.js";
 import { all, get, run } from "../../db.js";
 import { addToSyncQueue } from "./sync.repository.js";
 import { randomUUID } from "crypto";
 import { getTaskCommentsWithAuthor } from "./tasks_comments.repository.js";
 
+function requireModule(module: AppModule): AppModule {
+  if (
+    ![
+      "HR",
+      "INVENTORY",
+      "PROCUREMENT",
+      "PRODUCTION",
+      "SALES",
+      "ACCOUNTING",
+    ].includes(module)
+  ) {
+    throw new Error("A valid task module is required");
+  }
+  return module;
+}
+
+const moduleTaskCode: Record<AppModule, string> = {
+  HR: "RH",
+  INVENTORY: "INV",
+  PROCUREMENT: "APP",
+  PRODUCTION: "PROD",
+  SALES: "VTE",
+  ACCOUNTING: "COM",
+};
+
 type Priority = "HAUTE" | "MOYENNE" | "BASSE";
 
 type TaskRow = {
   companyId: string;
+  module: AppModule;
 
   taskId: string;
   taskNumber: string;
@@ -48,13 +77,14 @@ type TaskRow = {
  * assigned a server revision.
  */
 export async function createTask(companyId: string, task: Task) {
+  const module = requireModule(task.module);
   console.log("TASK TO CREATE:", {
     companyId,
     task,
   });
 
   const _id = randomUUID();
-  const taskNumber = generateTaskNumber(task.priority);
+  const taskNumber = generateTaskNumber(task.priority, module);
   const now = new Date().toISOString();
 
   const serverVersion = 0;
@@ -66,6 +96,7 @@ export async function createTask(companyId: string, task: Task) {
     `
     INSERT INTO tasks (
       companyId,
+      module,
       _id,
       taskNumber,
       author,
@@ -80,10 +111,11 @@ export async function createTask(companyId: string, task: Task) {
       updatedAt,
       isDeleted
     )
-    VALUES (?,?,?,?,?,?,?, ?,0,?,?,?,?,0)
+    VALUES (?,?,?,?,?,?,?,?,?,0,?,?,?,?,0)
     `,
     [
       companyId,
+      module,
       _id,
       taskNumber,
       task.author._id,
@@ -117,6 +149,7 @@ export async function createTask(companyId: string, task: Task) {
 
   const savedTask = {
     ...task,
+    module,
     companyId,
     _id,
     taskNumber,
@@ -138,13 +171,17 @@ export async function createTask(companyId: string, task: Task) {
     payload: JSON.stringify(savedTask),
   });
 
-  return getTaskById(companyId, _id);
+  return getTaskById(companyId, _id, module);
 }
 
 /**
  * Update task locally.
  */
 export async function updateTask(companyId: string, task: Task) {
+  const module = requireModule(task.module);
+  const current = await getTaskById(companyId, task._id, module);
+  if (!current || current.isDeleted)
+    throw new Error("Task not found in this module");
   const updatedAt = new Date().toISOString();
 
   await run("BEGIN TRANSACTION");
@@ -168,6 +205,7 @@ export async function updateTask(companyId: string, task: Task) {
         updatedAt = ?,
         synced = 0
       WHERE companyId = ?
+        AND module = ?
         AND _id = ?
         AND isDeleted = 0
       `,
@@ -182,6 +220,7 @@ export async function updateTask(companyId: string, task: Task) {
         task.resolvedAt ?? null,
         updatedAt,
         companyId,
+        module,
         task._id,
       ]
     );
@@ -194,8 +233,9 @@ export async function updateTask(companyId: string, task: Task) {
       DELETE FROM task_recipients
       WHERE companyId = ?
         AND taskId = ?
+        AND EXISTS (SELECT 1 FROM tasks WHERE tasks._id = task_recipients.taskId AND tasks.companyId = task_recipients.companyId AND tasks.module = ?)
       `,
-      [companyId, task._id]
+      [companyId, task._id, module]
     );
 
     for (const recipient of task.recipients) {
@@ -217,18 +257,21 @@ export async function updateTask(companyId: string, task: Task) {
      */
     const existing = await get<{
       serverVersion: number;
+      module: AppModule;
     }>(
       `
-      SELECT serverVersion
+      SELECT serverVersion, module
       FROM tasks
       WHERE companyId = ?
+        AND module = ?
         AND _id = ?
       `,
-      [companyId, task._id]
+      [companyId, module, task._id]
     );
 
     const updatedTask = {
       ...task,
+      module,
       companyId,
       recipients: task.recipients.map((r) => r._id),
       updatedAt,
@@ -251,13 +294,18 @@ export async function updateTask(companyId: string, task: Task) {
     throw error;
   }
 
-  return getTaskById(companyId, task._id);
+  return getTaskById(companyId, task._id, module);
 }
 
 /**
  * Get task by ID.
  */
-export async function getTaskById(companyId: string, _id: string) {
+export async function getTaskById(
+  companyId: string,
+  _id: string,
+  module: AppModule
+) {
+  requireModule(module);
   const row = await get<
     TaskRow & {
       serverVersion: number;
@@ -266,7 +314,7 @@ export async function getTaskById(companyId: string, _id: string) {
     `
     SELECT 
       t.companyId,
-
+      t.module,
       t._id AS taskId,
       t.taskNumber,
       t.subject,
@@ -298,9 +346,11 @@ export async function getTaskById(companyId: string, _id: string) {
       AND a.companyId = t.companyId
 
     WHERE t.companyId = ?
+      AND t.module = ?
       AND t._id = ?
+      AND t.isDeleted = 0
     `,
-    [companyId, _id]
+    [companyId, module, _id]
   );
 
   if (!row) return null;
@@ -339,6 +389,7 @@ export async function getTaskById(companyId: string, _id: string) {
 
   return {
     companyId: row.companyId,
+    module: row.module,
 
     _id: row.taskId,
     taskNumber: row.taskNumber,
@@ -384,12 +435,17 @@ export async function getTaskById(companyId: string, _id: string) {
 /**
  * Get top tasks for dashboard display.
  */
-export async function getTopTasks(companyId: string, userId: string) {
+export async function getTopTasks(
+  companyId: string,
+  userId: string,
+  module: AppModule
+) {
+  requireModule(module);
   const rows = await all<TaskRow>(
     `
     SELECT
       t.companyId,
-
+      t.module,
       t._id AS taskId,
       t.taskNumber,
       t.subject,
@@ -436,6 +492,7 @@ export async function getTopTasks(companyId: string, userId: string) {
       AND r.companyId = tr.companyId
 
     WHERE t.companyId = ?
+      AND t.module = ?
       AND t.isDeleted = 0
       AND t.isResolved = 0
       AND (
@@ -466,7 +523,7 @@ export async function getTopTasks(companyId: string, userId: string) {
 
       datetime(t.createdAt) ASC
     `,
-    [companyId, userId, userId]
+    [companyId, module, userId, userId]
   );
 
   const map = new Map<string, Task>();
@@ -475,6 +532,7 @@ export async function getTopTasks(companyId: string, userId: string) {
     if (!map.has(row.taskId)) {
       map.set(row.taskId, {
         companyId: row.companyId,
+        module: row.module,
 
         _id: row.taskId,
         taskNumber: row.taskNumber,
@@ -542,11 +600,17 @@ export async function getTopTasks(companyId: string, userId: string) {
 /**
  * Get all tasks for a user.
  */
-export async function getAllTasksForUser(companyId: string, userId: string) {
+export async function getAllTasksForUser(
+  companyId: string,
+  userId: string,
+  module: AppModule
+) {
+  requireModule(module);
   const rows = await all<TaskRow>(
     `
     SELECT
       t.companyId,
+      t.module,
 
       t._id AS taskId,
       t.taskNumber,
@@ -594,6 +658,7 @@ export async function getAllTasksForUser(companyId: string, userId: string) {
       AND r.companyId = tr.companyId
 
     WHERE t.companyId = ?
+      AND t.module = ?
       AND t.isDeleted = 0
       AND (
         t.author = ?
@@ -616,7 +681,7 @@ export async function getAllTasksForUser(companyId: string, userId: string) {
 
       datetime(t.createdAt) DESC
     `,
-    [companyId, userId, userId]
+    [companyId, module, userId, userId]
   );
 
   const map = new Map<string, Task>();
@@ -625,6 +690,7 @@ export async function getAllTasksForUser(companyId: string, userId: string) {
     if (!map.has(row.taskId)) {
       map.set(row.taskId, {
         companyId: row.companyId,
+        module: row.module,
 
         _id: row.taskId,
         taskNumber: row.taskNumber,
@@ -695,11 +761,13 @@ export async function getAllTasksForUser(companyId: string, userId: string) {
 /**
  * Get all tasks.
  */
-export async function getAllTasks(companyId: string) {
+export async function getAllTasks(companyId: string, module: AppModule) {
+  requireModule(module);
   const rows = await all<TaskRow>(
     `
     SELECT 
       t.companyId,
+      t.module,
 
       t._id AS taskId,
       t.taskNumber,
@@ -747,11 +815,12 @@ export async function getAllTasks(companyId: string) {
       AND r.companyId = tr.companyId
 
     WHERE t.companyId = ?
+      AND t.module = ?
       AND t.isDeleted = 0
 
     ORDER BY t.submittedAt DESC
     `,
-    [companyId]
+    [companyId, module]
   );
 
   const map = new Map<string, Task>();
@@ -760,6 +829,7 @@ export async function getAllTasks(companyId: string) {
     if (!map.has(row.taskId)) {
       map.set(row.taskId, {
         companyId: row.companyId,
+        module: row.module,
 
         _id: row.taskId,
         taskNumber: row.taskNumber,
@@ -832,7 +902,14 @@ export async function getAllTasks(companyId: string) {
  * The server will assign the next version when this deletion
  * is synchronized.
  */
-export async function deleteTask(companyId: string, _id: string) {
+export async function deleteTask(
+  companyId: string,
+  _id: string,
+  module: AppModule
+) {
+  requireModule(module);
+  const deletedTask = await getTaskById(companyId, _id, module);
+  if (!deletedTask) return null;
   const updatedAt = new Date().toISOString();
 
   await run(
@@ -843,13 +920,15 @@ export async function deleteTask(companyId: string, _id: string) {
       synced = 0,
       updatedAt = ?
     WHERE companyId = ?
+      AND module = ?
       AND _id = ?
       AND isDeleted = 0
     `,
-    [updatedAt, companyId, _id]
+    [updatedAt, companyId, module, _id]
   );
 
   const deletePayload = {
+    module: deletedTask.module,
     companyId,
     _id,
     isDeleted: 1,
@@ -866,13 +945,18 @@ export async function deleteTask(companyId: string, _id: string) {
     payload: JSON.stringify(deletePayload),
   });
 
-  return getTaskById(companyId, _id);
+  return { ...deletedTask, isDeleted: 1, updatedAt };
 }
 
 /**
  * Mark task as synchronized.
  */
-export async function markTaskSynced(companyId: string, _id: string) {
+export async function markTaskSynced(
+  companyId: string,
+  _id: string,
+  module: AppModule
+) {
+  requireModule(module);
   await run(
     `
     UPDATE tasks
@@ -880,9 +964,10 @@ export async function markTaskSynced(companyId: string, _id: string) {
       synced = 1,
       lastSyncedAt = CURRENT_TIMESTAMP
     WHERE companyId = ?
+      AND module = ?
       AND _id = ?
     `,
-    [companyId, _id]
+    [companyId, module, _id]
   );
 
   return true;
@@ -895,6 +980,7 @@ export async function markTaskSynced(companyId: string, _id: string) {
  * companyId comes from the server task itself.
  */
 export async function upsertTask(task: Task) {
+  const module = requireModule(task.module);
   console.log("TASK TO UPSERT:", task);
 
   const companyId = task.companyId;
@@ -924,9 +1010,10 @@ export async function upsertTask(task: Task) {
       updatedAt
     FROM tasks
     WHERE companyId = ?
+      AND module = ?
       AND _id = ?
     `,
-    [companyId, task._id]
+    [companyId, module, task._id]
   );
 
   /**
@@ -940,7 +1027,7 @@ export async function upsertTask(task: Task) {
       `SKIPPING TASK ${task._id}: LOCAL serverVersion ${existing.serverVersion} IS NEWER THAN INCOMING ${incomingServerVersion}`
     );
 
-    return getTaskById(companyId, task._id);
+    return getTaskById(companyId, task._id, module);
   }
 
   /**
@@ -948,10 +1035,11 @@ export async function upsertTask(task: Task) {
    *
    * Accept the server record.
    */
-  await run(
+  const result = await run(
     `
     INSERT INTO tasks (
       companyId,
+      module,
       _id,
       taskNumber,
       author,
@@ -972,10 +1060,9 @@ export async function upsertTask(task: Task) {
       isDeleted
     )
     VALUES (
-      ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?
+      ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?
     )
     ON CONFLICT(_id) DO UPDATE SET
-      companyId = excluded.companyId,
       taskNumber = excluded.taskNumber,
       author = excluded.author,
       subject = excluded.subject,
@@ -993,9 +1080,11 @@ export async function upsertTask(task: Task) {
       synced = 1,
       serverVersion = excluded.serverVersion,
       isDeleted = excluded.isDeleted
+    WHERE tasks.companyId = excluded.companyId AND tasks.module = excluded.module
     `,
     [
       companyId,
+      module,
       task._id,
       task.taskNumber,
       task.author,
@@ -1017,6 +1106,9 @@ export async function upsertTask(task: Task) {
     ]
   );
 
+  if (!result.changes)
+    throw new Error("Task belongs to another company or module");
+
   /*
    * Replace recipients with server recipients.
    */
@@ -1025,8 +1117,9 @@ export async function upsertTask(task: Task) {
     DELETE FROM task_recipients
     WHERE companyId = ?
       AND taskId = ?
+      AND EXISTS (SELECT 1 FROM tasks WHERE tasks._id = task_recipients.taskId AND tasks.companyId = task_recipients.companyId AND tasks.module = ?)
     `,
-    [companyId, task._id]
+    [companyId, task._id, module]
   );
 
   for (const recipient of task.recipients) {
@@ -1048,7 +1141,7 @@ export async function upsertTask(task: Task) {
     );
   }
 
-  return getTaskById(companyId, task._id);
+  return getTaskById(companyId, task._id, module);
 }
 
 /**
@@ -1063,24 +1156,24 @@ function taskMapping(task_priority: string): string {
 /**
  * Generate task numbers.
  */
-function generateTaskNumber(task_priority: string) {
+function generateTaskNumber(task_priority: string, module: AppModule) {
   const now = new Date();
 
   const date =
     String(now.getDate()).padStart(2, "0") +
     String(now.getMonth() + 1).padStart(2, "0") +
-    now.getFullYear();
+    String(now.getFullYear()).slice(-2);
 
   const time =
     String(now.getHours()).padStart(2, "0") +
-    String(now.getMinutes()).padStart(2, "0") +
-    String(now.getSeconds()).padStart(2, "0");
+    String(now.getMinutes()).padStart(2, "0");
 
   const random = Math.floor(Math.random() * 1000)
     .toString()
     .padStart(3, "0");
 
-  const priority_letter = taskMapping(task_priority);
+  const priorityLetter = taskMapping(task_priority);
+  const moduleCode = moduleTaskCode[module];
 
-  return `TACHE-${date}-${time}-${random}-${priority_letter}`;
+  return `TACHE-${moduleCode}-${date}-${time}-${random}-${priorityLetter}`;
 }

@@ -1,3 +1,4 @@
+import PayrollResultAuditPopover from "../components/PayrollResultAuditPopover";
 import {
   Box,
   Button,
@@ -20,7 +21,7 @@ import {
   PayslipDocumentData,
   payslipPeriod,
   payslipRows,
-} from "../../../../../common/types/payroll/PayslipDocument";
+} from "../../../../../common/types/hr/payroll/PayslipDocument";
 import useSyncStore from "../../../../../store/sync.store";
 import useAdminUser from "../../../../../store/auth.store";
 
@@ -204,7 +205,9 @@ export default function EmployeePayslipDetails() {
     setIsUpdating(true);
 
     try {
-      if (data.payroll.status === "VERIFICATION") {
+      if (data.payroll.status === "BROUILLON") {
+        await api.verifyPayslip(user.companyId, data.payroll._id, user);
+      } else if (data.payroll.status === "VERIFIÉ") {
         await api.approvePayslip(user.companyId, data.payroll._id, user);
       } else if (data.payroll.status === "APPROUVÉ") {
         await api.markPayslipAsPaid(user.companyId, data.payroll._id, user);
@@ -297,9 +300,11 @@ export default function EmployeePayslipDetails() {
         <HStack spacing={3} flexWrap="wrap">
           {data &&
             ready &&
-            user.role === "MANAGER" &&
-            (data.payroll.status === "VERIFICATION" ||
-              data.payroll.status === "APPROUVÉ") && (
+            ((data.payroll.status === "BROUILLON" &&
+              ["ADMIN", "MANAGER"].includes(user.role)) ||
+              (user.role === "MANAGER" &&
+                (data.payroll.status === "VERIFIÉ" ||
+                  data.payroll.status === "APPROUVÉ"))) && (
               <Button
                 size="sm"
                 variant="outline"
@@ -310,7 +315,11 @@ export default function EmployeePayslipDetails() {
                 isDisabled={isDownloading}
                 fontSize="1.1rem"
               >
-                {data.payroll.status === "VERIFICATION" ? "Approuver" : "Payer"}
+                {data.payroll.status === "BROUILLON"
+                  ? "Vérifier"
+                  : data.payroll.status === "VERIFIÉ"
+                  ? "Approuver"
+                  : "Payer"}
               </Button>
             )}
 
@@ -343,7 +352,7 @@ export default function EmployeePayslipDetails() {
         mx="auto"
         position="relative"
         overflow="hidden"
-        mt="1.5rem"
+        mt="4rem"
       >
         <Box
           position="absolute"
@@ -458,10 +467,7 @@ export default function EmployeePayslipDetails() {
                       color="#525252"
                       whiteSpace="nowrap"
                     >
-                      Statut:{" "}
-                      <Text as="span" fontWeight="700" color="#171717">
-                        {data.payroll.status}
-                      </Text>
+                      <PayrollResultAuditPopover payroll={data.payroll} />
                     </Text>
                   </Box>
                 </Flex>

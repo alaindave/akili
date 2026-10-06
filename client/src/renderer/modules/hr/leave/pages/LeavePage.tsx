@@ -1,4 +1,4 @@
-import PageSubtitle from "../../../../components/PageSubtitle";
+import PageSubtitle from "../../../../components/common/PageSubtitle";
 import {
   Box,
   Button,
@@ -14,17 +14,17 @@ import { useEffect, useState } from "react";
 import { FaCirclePlus } from "react-icons/fa6";
 import { FaSyncAlt } from "react-icons/fa";
 import EmployeeLeaveCard from "../components/LeaveCard";
-import MonthDropDown from "../../../../components/MonthDropDown";
+import MonthDropDown from "../../../../components/common/MonthDropDown";
 import LeaveSubmissionModal from "../components/LeaveSubmissionModal";
-import DeletionDialog from "../../../../components/DeletionDialog";
 import { useLeavesByMonth, useDeleteLeave } from "../hooks/useLeave";
 import { useEmployees } from "../../employees/hooks/useEmployees";
 import useSyncStore from "../../../../../store/sync.store";
 import EmployeeFilterMenu from "../../employees/components/EmployeeFilterMenu";
-import SearchBar from "../../../../components/SearchBar";
+import SearchBar from "../../../../components/common/SearchBar";
 import useAdminUser from "../../../../../store/auth.store";
-import type { LeaveWithEmployee } from "../../../../../common/types/leave/LeaveWithEmployee";
+import type { LeaveWithEmployee } from "../../../../../common/types/hr/leave/LeaveWithEmployee";
 import LeaveStatusFilter from "../components/LeaveStatusFilter";
+import DeletionDialog from "../../../../components/common/DeletionDialog";
 
 const shimmerKeyframes = `
 @keyframes shimmer {

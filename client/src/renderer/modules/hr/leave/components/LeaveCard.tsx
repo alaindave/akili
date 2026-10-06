@@ -23,14 +23,12 @@ import { PiDotsThreeOutlineVerticalDuotone } from "react-icons/pi";
 import { TiDeleteOutline } from "react-icons/ti";
 import { FaRegEdit } from "react-icons/fa";
 
-import LeaveNotesPopover from "./LeaveNotesPopover";
 import LeaveEdit from "./LeaveEdit";
 import LeaveDetailsDrawer from "./LeaveDetailsDrawer";
 
-import type { LeaveWithEmployee } from "../../../../../common/types/leave/LeaveWithEmployee";
+import type { LeaveWithEmployee } from "../../../../../common/types/hr/leave/LeaveWithEmployee";
 
 import defaultAvatar from "../../../../assets/default-avatar.jpeg";
-import DeletionDialog from "../../../../components/DeletionDialog";
 
 import { useCancelLeave, useUpdateLeave } from "../hooks/useLeave";
 
@@ -39,6 +37,7 @@ import {
   useUpdateEmployee,
 } from "../../employees/hooks/useEmployees";
 import useSyncStore from "../../../../../store/sync.store";
+import DeletionDialog from "../../../../components/common/DeletionDialog";
 
 /* =========================================================
    TYPES
@@ -96,7 +95,6 @@ const EmployeeLeaveCard = ({ leave, onDelete, gridTemplate }: Props) => {
     startDate,
     endDate,
     subject,
-    notes,
     status,
   } = leave;
 
@@ -144,7 +142,9 @@ const EmployeeLeaveCard = ({ leave, onDelete, gridTemplate }: Props) => {
 
         if (cancelled) return;
 
-        setPhotoUrl(`data:${employee.photo_mime_type || "image/jpeg"};base64,${base64}`);
+        setPhotoUrl(
+          `data:${employee.photo_mime_type || "image/jpeg"};base64,${base64}`
+        );
       } catch (error) {
         if (cancelled) return;
 

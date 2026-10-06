@@ -1,8 +1,10 @@
-import { Schema, model } from "mongoose";
+import { APP_MODULES, type AppModule } from "./appModule.js";
+import { Schema, model, type HydratedDocument } from "mongoose";
 
 export interface Incident {
-  _id: string;
   companyId: string;
+  module: AppModule;
+  _id: string;
   incidentNumber: string;
   reporterName: string;
   reporterContact: string;
@@ -17,14 +19,22 @@ export interface Incident {
   isDeleted: number;
 }
 
+export type IncidentDocument = HydratedDocument<Incident>;
+
 const incidentSchema = new Schema<Incident>(
   {
+    companyId: { type: String, required: true, trim: true, maxlength: 200 },
+    module: {
+      type: String,
+      required: true,
+      enum: APP_MODULES,
+      default: "HR",
+    },
     _id: {
       type: String,
       required: true,
       match: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
     },
-    companyId: { type: String, required: true, trim: true, maxlength: 200 },
     incidentNumber: {
       type: String,
       required: true,

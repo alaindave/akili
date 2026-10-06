@@ -1,4 +1,4 @@
-import { PayrollEmployeeInput } from "../../../../../common/types/payroll/Payroll.js";
+import { PayrollEmployeeInput } from "../../../../../common/types/hr/payroll/Payroll.js";
 
 export interface PayrollValidationResult {
   valid: boolean;

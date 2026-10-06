@@ -1,6 +1,6 @@
 import { all } from "../../../db.js";
-import { LateAttendanceRecord } from "../../../../../common/types/attendance/LateAttendanceReport.js";
-import { attendanceWeekDates } from "../../../../../common/types/attendance/WeeklyAttendanceReport.js";
+import { LateAttendanceRecord } from "../../../../../common/types/hr/attendance/LateAttendanceReport.js";
+import { attendanceWeekDates } from "../../../../../common/types/hr/attendance/WeeklyAttendanceReport.js";
 
 export async function getLateAttendanceReport(
   companyId: string,

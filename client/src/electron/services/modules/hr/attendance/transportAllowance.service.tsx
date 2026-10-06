@@ -2,7 +2,7 @@ import { dialog } from "electron";
 import fs from "fs/promises";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { getCompanyById } from "../../../../database/repositories/shared/companies.repository.js";
-import { getPayrollSettings } from "../../../../database/repositories/modules/hr/payroll_settings.repository.js";
+import { getPayrollSettings } from "../../../../database/repositories/modules/hr/payrollSettings.repository.js";
 import TransportAllowancePdf from "../../../../reports/attendance/transportAllowance-report.js";
 import {
   getWeeklyTransportAllowanceData,
@@ -14,7 +14,7 @@ import {
   TransportAllowanceDayStatus,
   TransportAllowanceEmployee,
   TransportAllowanceWeeklyReport,
-} from "../../../../../common/types/TransportAllowance.js";
+} from "../../../../../common/types/hr/attendance/TransportAllowance.js";
 
 const NORMAL_RATE = 3300;
 
@@ -46,7 +46,11 @@ export async function saveWeeklyTransportAllowanceReport(
   });
   if (destination.canceled || !destination.filePath) return { canceled: true };
   const buffer = await renderToBuffer(
-    <TransportAllowancePdf report={report} company={company} currency={settings?.currency ?? "BIF"} />
+    <TransportAllowancePdf
+      report={report}
+      company={company}
+      currency={settings?.currency ?? "BIF"}
+    />
   );
   await fs.writeFile(destination.filePath, buffer);
   return { canceled: false, filePath: destination.filePath };

@@ -1,4 +1,4 @@
-import PageSubtitle from "../../../../components/PageSubtitle";
+import PageSubtitle from "../../../../components/common/PageSubtitle";
 import {
   Box,
   Button,
@@ -13,22 +13,22 @@ import { useEffect, useRef, useState } from "react";
 import { FaBell } from "react-icons/fa";
 import { IoReloadOutline } from "react-icons/io5";
 
-import type AdminUser from "../../../../../common/types/AdminUser";
-import type { Attendance } from "../../../../../common/types/attendance/Attendance";
-import type Employee from "../../../../../common/types/Employee";
-import type Leave from "../../../../../common/types/leave/Leave";
+import type AdminUser from "../../../../../common/types/shared/AdminUser";
+import type { Attendance } from "../../../../../common/types/hr/attendance/Attendance";
+import type Employee from "../../../../../common/types/hr/employees/Employee";
+import type Leave from "../../../../../common/types/hr/leave/Leave";
 import type Task from "../../../../../common/types/task/Task";
 
 import useAdminUser from "../../../../../store/auth.store";
 import useSyncStore from "../../../../../store/sync.store";
 import useTaskStore from "../../../../../store/task.store";
 
-import ReminderModal from "../../../../components/ReminderModal";
-import TaskCard from "../../../tasks/components/TaskCard";
-import TaskDetailsDrawer from "../../../tasks/components/TaskDetailsDrawer";
-import TaskSubmissionModal from "../../../tasks/components/TaskSubmissionModal";
+import ReminderModal from "../../../../components/common/ReminderModal";
 import EmployeeDashboard from "../components/EmployeeDashboard";
 import QuickActions from "../components/EmployeeQuickActions";
+import TaskSubmissionModal from "../../../../components/tasks/TaskSubmissionModal";
+import TaskDetailsDrawer from "../../../../components/tasks/TaskDetailsDrawer";
+import TaskCard from "../../../../components/tasks/TaskCard";
 
 const EmployeeAdminPage = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -43,7 +43,8 @@ const EmployeeAdminPage = () => {
   const saveNotes = useAdminUser((store) => store.saveNotes);
   const loadTopTasks = useTaskStore((store) => store.loadTopTasks);
   const deleteTask = useTaskStore((store) => store.deleteTask);
-  const tasks = useTaskStore((store) => store.tasks);
+  const allTasks = useTaskStore((store) => store.tasks);
+  const tasks = allTasks.filter((task) => task.module === "HR" && task.companyId === user.companyId);
   const syncVersion = useSyncStore((store) => store.syncVersion);
   const previousSyncVersion = useRef(syncVersion);
 
@@ -132,7 +133,7 @@ const EmployeeAdminPage = () => {
 
     try {
       console.log("LOADING TOP TASKS FOR USER:", user._id);
-      await loadTopTasks(user.companyId, user._id);
+      await loadTopTasks(user.companyId, user._id, "HR");
       console.log("TOP TASKS LOADED SUCCESSFULLY");
     } catch (error) {
       console.error("AN ERROR OCCURRED WHILE FETCHING TASKS:", error);

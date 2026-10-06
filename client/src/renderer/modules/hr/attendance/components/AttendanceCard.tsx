@@ -16,7 +16,7 @@ import { MdPunchClock } from "react-icons/md";
 import { FaWindowClose } from "react-icons/fa";
 import { MdDisabledByDefault } from "react-icons/md";
 import ClockIn from "./ClockIn";
-import type { AttendanceWithEmployee } from "../../../../../common/types/attendance/Attendance";
+import type { AttendanceWithEmployee } from "../../../../../common/types/hr/attendance/Attendance";
 import defaultAvatar from "../../../../assets/default-avatar.jpeg";
 import { useUpdateAttendance } from "../hooks/useAttendance";
 import { useEmployee } from "../../employees/hooks/useEmployees";
@@ -233,7 +233,9 @@ const EmployeeAttendanceCard = ({
         );
 
         if (!cancelled) {
-          setPhotoUrl(`data:${employee.photo_mime_type || "image/jpeg"};base64,${base64}`);
+          setPhotoUrl(
+            `data:${employee.photo_mime_type || "image/jpeg"};base64,${base64}`
+          );
         }
       } catch (error) {
         console.error("FAILED TO LOAD EMPLOYEE PHOTO:", error);
@@ -721,7 +723,7 @@ const EmployeeAttendanceCard = ({
         ) : localAttendance.status === "ABSENT" ||
           localAttendance.status === "CONGÉ" ? (
           <Badge
-            fontSize="0.9rem"
+            fontSize="0.8rem"
             bg={localAttendance.status === "CONGÉ" ? "#3182CE" : "#E53E3E"}
             color="gray.200"
             mt="0.25rem"

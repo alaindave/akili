@@ -32,9 +32,9 @@ const db = {
     catch (error) { database.exec('ROLLBACK'); throw error; }
   }),
 };
-function load(file, resolver) {
+function load(file, resolver, transform = (source) => source) {
   const module = { exports: {} };
-  const code = ts.transpileModule(fs.readFileSync(file, 'utf8'), {
+  const code = ts.transpileModule(transform(fs.readFileSync(file, 'utf8')), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText;
   vm.runInNewContext(code, { module, exports: module.exports,
@@ -55,17 +55,20 @@ function local(file) {
   return result;
 }
 const root = path.resolve(__dirname, '../src/electron');
-const repo = local(`${root}/database/repositories/modules/hr/payroll_run.repository.ts`);
+const repo = local(`${root}/database/repositories/modules/hr/payrollRun.repository.ts`);
 const admin = { _id: 'manager', companyId: 'a', role: 'MANAGER', firstName: 'A', lastName: 'Manager' };
 const row = (id) => database.prepare('SELECT * FROM payroll_results WHERE _id = ?').get(id);
 const run = () => database.prepare("SELECT * FROM payroll_runs WHERE _id = 'run'").get();
 const countQueue = () => database.prepare('SELECT COUNT(*) AS n FROM sync_queue').get().n;
 (async () => {
-  await local(`${root}/database/schemas/modules/hr/payroll.schema.ts`).createPayrollTables();
-  await local(`${root}/database/schemas/modules/hr/payroll.schema.ts`).createPayrollTables(); // migration is idempotent
+  const payrollSchema = `${root}/database/schemas/modules/hr/payroll.schema.ts`;
+  const legacySchema = load(payrollSchema, () => db, (source) => source
+    .replace("'VERIFIÉ'", "'VERIFICATION'")
+    .replace('  await migratePayrollResultStatus();', ''));
+  await legacySchema.createPayrollTables();
   await local(`${root}/database/schemas/shared/sync.schema.ts`).createSyncTable();
-  database.exec(`CREATE TABLE admin_users (_id TEXT PRIMARY KEY);
-    INSERT INTO admin_users VALUES ('manager');
+  database.exec(`CREATE TABLE admin_users (_id TEXT PRIMARY KEY, companyId TEXT, firstName TEXT, lastName TEXT);
+    INSERT INTO admin_users VALUES ('manager', 'a', 'A', 'Manager');
     CREATE TABLE employees (_id TEXT PRIMARY KEY);
     INSERT INTO employees VALUES ('e1'), ('e2'), ('e3');
     CREATE TABLE audit_logs (_id TEXT, companyId TEXT, userId TEXT, userName TEXT,
@@ -75,6 +78,42 @@ const countQueue = () => database.prepare('SELECT COUNT(*) AS n FROM sync_queue'
     INSERT INTO payroll_results (companyId, _id, payrollRunId, employeeId, month, year, status, createdAt, updatedAt, synced)
       VALUES ('a', 'one', 'run', 'e1', 9, 2026, 'VERIFICATION', '2026-09-01', '2026-09-01', 1),
              ('a', 'two', 'run', 'e2', 9, 2026, 'VERIFICATION', '2026-09-01', '2026-09-01', 1);`);
+  database.exec(`
+    INSERT INTO payroll_components (companyId, _id, name, displayName, type, calculationType, displayOrder, createdAt, updatedAt)
+      VALUES ('a', 'migration-component', 'Base', 'Base', 'EARNING', 'FIXE', 1, '2026-09-01', '2026-09-01');
+    INSERT INTO payroll_items (companyId, _id, payrollResultId, employeeId, componentId, name, displayName, type, amount, createdAt, updatedAt)
+      VALUES ('a', 'migration-item', 'one', 'e1', 'migration-component', 'Base', 'Base', 'EARNING', 100, '2026-09-01', '2026-09-01');
+    CREATE INDEX migration_test_index ON payroll_results(verifiedBy);
+    PRAGMA foreign_keys = ON;
+  `);
+  for (const entity of ['payroll_result', 'payroll_run']) {
+    database.prepare("INSERT INTO sync_queue(companyId, entity, entityId, operation, payload) VALUES ('a', ?, 'one', 'update', ?)")
+      .run(entity, JSON.stringify({ status: 'VERIFICATION', verifiedBy: 'manager' }));
+  }
+  await local(payrollSchema).createPayrollTables();
+  await local(payrollSchema).createPayrollTables(); // idempotent
+  assert.equal(row('one').status, 'VERIFIÉ');
+  assert.equal(run().status, 'VERIFICATION');
+  assert.equal(row('one').updatedAt, '2026-09-01');
+  assert.equal(database.prepare('PRAGMA foreign_keys').get().foreign_keys, 1);
+  assert.equal(database.prepare("SELECT amount FROM payroll_items WHERE _id = 'migration-item'").get().amount, 100);
+  assert(database.prepare("SELECT name FROM sqlite_master WHERE name = 'migration_test_index'").get());
+  const migratedQueue = database.prepare('SELECT entity, payload FROM sync_queue').all();
+  assert.equal(JSON.parse(migratedQueue.find((q) => q.entity === 'payroll_result').payload).status, 'VERIFIÉ');
+  assert.equal(JSON.parse(migratedQueue.find((q) => q.entity === 'payroll_run').payload).status, 'VERIFICATION');
+  assert.throws(() => database.exec("UPDATE payroll_results SET status = 'VERIFICATION'"), /CHECK/);
+  database.exec("DELETE FROM payroll_items WHERE _id = 'migration-item'; DELETE FROM payroll_components WHERE _id = 'migration-component'; DELETE FROM sync_queue; PRAGMA foreign_keys = OFF");
+  database.exec("UPDATE payroll_results SET status = 'BROUILLON'; UPDATE payroll_runs SET status = 'BROUILLON'");
+  await repo.verifyPayslip('a', 'one', { ...admin, role: 'ADMIN' });
+  assert.equal(run().status, 'BROUILLON');
+  assert.equal(row('two').status, 'BROUILLON');
+  await repo.refreshPayrollRunStatuses('a');
+  assert.equal(run().status, 'BROUILLON');
+  await repo.verifyPayslip('a', 'two', admin);
+  assert.equal(run().status, 'VERIFICATION');
+  assert.equal(run().submittedForVerificationBy, admin._id);
+  assert.equal((await repo.getEmployeePayrollResults('a', 'e1', 'run')).verifiedByName, 'A Manager');
+  database.exec('DELETE FROM sync_queue');
   await assert.rejects(() => repo.payPayslip('a', 'one', admin), /approuvé/);
   await assert.rejects(() => repo.approvePayslip('a', 'one', { ...admin, role: 'ADMIN' }));
   await assert.rejects(() => repo.approvePayslip('b', 'one', admin));
@@ -83,12 +122,12 @@ const countQueue = () => database.prepare('SELECT COUNT(*) AS n FROM sync_queue'
   failQueue = true;
   await assert.rejects(() => repo.approvePayslip('a', 'one', admin), /queue failure/);
   failQueue = false;
-  assert.equal(row('one').status, 'VERIFICATION');
+  assert.equal(row('one').status, 'VERIFIÉ');
   assert.equal(run().status, 'VERIFICATION');
   await Promise.all([repo.approvePayslip('a', 'one', admin), repo.approvePayslip('a', 'one', admin)]);
   assert.equal(countQueue(), 1);
   assert.equal(row('one').approvedBy, admin._id);
-  assert.equal(row('two').status, 'VERIFICATION');
+  assert.equal(row('two').status, 'VERIFIÉ');
   assert.equal(run().status, 'VERIFICATION');
   await repo.payPayslip('a', 'one', admin);
   assert.equal(row('one').status, 'PAYÉ');
@@ -131,9 +170,12 @@ const countQueue = () => database.prepare('SELECT COUNT(*) AS n FROM sync_queue'
   assert.equal(row('remote').approvedBy, admin._id);
   await repo.upsertPayrollResult('a', { ...remote, paidBy: 'other', serverVersion: 6 });
   assert.equal(row('remote').paidBy, 'other');
-  database.exec("UPDATE payroll_results SET status = 'VERIFICATION', approvedAt = NULL, paidAt = NULL WHERE _id = 'remote'");
+  assert.equal(row('remote').verifiedBy, admin._id);
+  assert.equal(row('remote').verifiedAt, remote.verifiedAt);
+  assert.equal(row('remote').approvedAt, remote.approvedAt);
+  database.exec("UPDATE payroll_results SET status = 'VERIFIÉ', approvedAt = NULL, paidAt = NULL WHERE _id = 'remote'");
   await repo.refreshPayrollRunStatuses('a');
-  assert.equal(run().status, 'VERIFICATION');
+  assert.equal(run().status, 'BROUILLON');
   assert.equal(run().paidAt, null);
   for (const status of ['APPROUVÉ', 'PAYÉ']) {
     const id = status === 'PAYÉ' ? 'cancel-paid' : 'cancel-approved';
@@ -187,35 +229,77 @@ const countQueue = () => database.prepare('SELECT COUNT(*) AS n FROM sync_queue'
   assert.equal(countQueue(), beforeCreate + 1);
   const atomicSlip = await repo.savePayrollResult('a', atomicRun._id, generated);
   const beforeVerify = countQueue();
-  failQueueAfter = 1; // Run queued successfully, result queue insertion fails.
-  await assert.rejects(() => repo.verifyPayrollRun('a', dto.managerEmail, atomicRun._id, admin), /queue failure/);
-  failQueueAfter = Infinity;
+  await assert.rejects(() => repo.verifyPayslip('b', atomicSlip, admin));
+  await assert.rejects(() => repo.verifyPayslip('a', atomicSlip, { ...admin, role: 'VIEWER' }));
+  failQueue = true;
+  await assert.rejects(() => repo.verifyPayslip('a', atomicSlip, admin), /queue failure/);
+  failQueue = false;
   assert.equal(row(atomicSlip).status, 'BROUILLON');
-  assert.equal(database.prepare('SELECT status FROM payroll_runs WHERE _id = ?').get(atomicRun._id).status, 'BROUILLON');
   assert.equal(countQueue(), beforeVerify);
-  await repo.verifyPayrollRun('a', dto.managerEmail, atomicRun._id, admin);
+  await repo.verifyPayslip('a', atomicSlip, admin);
+  await repo.verifyPayslip('a', atomicSlip, admin);
+  assert.equal(countQueue(), beforeVerify + 1);
+  assert.equal(row(atomicSlip).verifiedBy, admin._id);
+  assert(row(atomicSlip).verifiedAt);
+  assert.equal(database.prepare('SELECT status FROM payroll_runs WHERE _id = ?').get(atomicRun._id).status, 'VERIFICATION');
   await repo.approvePayslip('a', atomicSlip, admin);
   await repo.payPayslip('a', atomicSlip, admin);
   const ordered = database.prepare('SELECT operation, payload FROM sync_queue WHERE entityId = ? ORDER BY _id').all(atomicSlip);
   assert.deepEqual(ordered.map((entry) => [entry.operation, JSON.parse(entry.payload).status]),
-    [['create', 'BROUILLON'], ['update', 'VERIFICATION'], ['update', 'APPROUVÉ'], ['update', 'PAYÉ']]);
+    [['create', 'BROUILLON'], ['update', 'VERIFIÉ'], ['update', 'APPROUVÉ'], ['update', 'PAYÉ']]);
 
   console.log('SQLite checks passed: individual transitions, totals status, roles, isolation, retries, atomic rollback, migration, pull fields, sync acknowledgements, settings cancellation.');
+
+  const legacyMongo = [
+    { _id: 'legacy-a', status: 'VERIFICATION', serverVersion: 1, updatedAt: '2026-09-01' },
+    { _id: 'legacy-b', status: 'VERIFICATION', serverVersion: 2, updatedAt: '2026-09-02' },
+    { _id: 'paid', status: 'PAYÉ', serverVersion: 3, updatedAt: '2026-09-03' },
+  ];
+  let migrationVersion = 3;
+  const migration = load(path.resolve(__dirname, '../../server/utils/migratePayrollResultStatus.ts'), (name) => {
+    if (name.endsWith('/syncVersion.js')) return { getNextSyncVersion: async (entity) => {
+      assert.equal(entity, 'payroll_result');
+      return ++migrationVersion;
+    } };
+    return { default: { collection: {
+      find: ({ status }) => (async function* () {
+        for (const doc of legacyMongo) if (doc.status === status) yield { _id: doc._id };
+      })(),
+      updateOne: async (filter, update) => {
+        const doc = legacyMongo.find((doc) => doc._id === filter._id && doc.status === filter.status);
+        if (doc) Object.assign(doc, update.$set);
+      },
+    } } };
+  });
+  await migration.migratePayrollResultStatus();
+  await migration.migratePayrollResultStatus();
+  assert.deepEqual(legacyMongo.map((doc) => doc.status), ['VERIFIÉ', 'VERIFIÉ', 'PAYÉ']);
+  assert.deepEqual(legacyMongo.map((doc) => doc.serverVersion), [4, 5, 3]);
+  assert.equal(legacyMongo[0].updatedAt, '2026-09-01');
+  assert.equal(migrationVersion, 5);
 
   // Exercise the real Mongoose schema so strict casting cannot silently drop audit fields.
   const PayrollResultModel = load(path.resolve(__dirname, '../../server/models/payrollResult.model.ts'),
     (name) => require(require.resolve(name, { paths: [path.resolve(__dirname, '../../server')] }))).default;
   const mongoSlip = new PayrollResultModel({
     _id: 'schema-slip', companyId: 'a', payrollRunId: 'schema-run', employeeId: 'e1',
-    month: 9, year: 2026, status: 'PAYÉ', approvedBy: 'approver', paidBy: 'payer',
+    month: 9, year: 2026, status: 'PAYÉ', approvedBy: 'approver', paidBy: 'payer', verifiedBy: 'verifier', cancelledBy: 'canceller', verifiedAt: '2026-09-01', cancelledAt: '2026-09-04',
     approvedAt: '2026-09-02', paidAt: '2026-09-03', createdAt: '2026-09-01', updatedAt: '2026-09-03',
   });
   await mongoSlip.validate();
   const storedSlip = JSON.parse(JSON.stringify(mongoSlip.toObject()));
+  assert.equal(storedSlip.verifiedBy, 'verifier');
+  assert.equal(storedSlip.cancelledBy, 'canceller');
+  assert.equal(storedSlip.verifiedAt, '2026-09-01T00:00:00.000Z');
+  assert.equal(storedSlip.cancelledAt, '2026-09-04T00:00:00.000Z');
   assert.equal(storedSlip.approvedBy, 'approver');
   assert.equal(storedSlip.paidBy, 'payer');
   assert.equal(storedSlip.approvedAt, '2026-09-02T00:00:00.000Z');
   assert.equal(storedSlip.paidAt, '2026-09-03T00:00:00.000Z');
+  mongoSlip.status = 'VERIFIÉ';
+  await mongoSlip.validate();
+  mongoSlip.status = 'VERIFICATION';
+  await assert.rejects(() => mongoSlip.validate(), /status/);
   mongoSlip.status = 'INVALID';
   await assert.rejects(() => mongoSlip.validate(), /status/);
 
@@ -249,9 +333,20 @@ const countQueue = () => database.prepare('SELECT COUNT(*) AS n FROM sync_queue'
     if (name.endsWith('/syncVersion.js')) return { getNextSyncVersion: async () => ++version };
     return { default: {} };
   });
+  const draftRun = { _id: 'draft-run', companyId: 'a', employeeCount: 2, status: 'BROUILLON', isDeleted: 0, updatedAt: '2026-09-01' };
+  await server.syncPayrollRun('create', draftRun);
+  const draftSlip = { companyId: 'a', payrollRunId: 'draft-run', status: 'BROUILLON', isDeleted: 0, updatedAt: '2026-09-01' };
+  await server.syncPayrollResult('create', { ...draftSlip, _id: 'draft-one' });
+  await server.syncPayrollResult('create', { ...draftSlip, _id: 'draft-two' });
+  await server.syncPayrollResult('update', { ...draftSlip, _id: 'draft-one', status: 'VERIFICATION', verifiedBy: 'manager', verifiedAt: '2026-09-02' });
+  assert.equal(runs.get('a:draft-run').status, 'BROUILLON');
+  assert.equal(results.get('a:draft-one').status, 'VERIFIÉ');
+  await server.syncPayrollResult('update', { ...draftSlip, _id: 'draft-two', status: 'VERIFIÉ', verifiedBy: 'manager2', verifiedAt: '2026-09-03' });
+  assert.equal(runs.get('a:draft-run').status, 'VERIFICATION');
+  assert.equal(runs.get('a:draft-run').submittedForVerificationBy, 'manager2');
   const initialRun = { _id: 'run', companyId: 'a', employeeCount: 2, status: 'VERIFICATION', isDeleted: 0, updatedAt: '2026-09-01' };
   await server.syncPayrollRun('create', initialRun);
-  const initial = { netSalary: 100, companyId: 'a', payrollRunId: 'run', status: 'VERIFICATION', isDeleted: 0, updatedAt: '2026-09-01' };
+  const initial = { netSalary: 100, companyId: 'a', payrollRunId: 'run', status: 'VERIFIÉ', isDeleted: 0, updatedAt: '2026-09-01' };
   await server.syncPayrollResult('create', { ...initial, _id: 'one' });
   items.set('a:item', { _id: 'item', companyId: 'a', payrollResultId: 'one', amount: 100, updatedAt: '2026-09-01', serverVersion: 1 });
   await server.syncPayrollItem('update', { _id: 'item', companyId: 'a', payrollResultId: 'one', amount: 999, updatedAt: '2026-09-02' });
@@ -259,7 +354,7 @@ const countQueue = () => database.prepare('SELECT COUNT(*) AS n FROM sync_queue'
   await assert.rejects(() => server.syncPayrollItem('update', { _id: 'item', companyId: 'a', payrollResultId: 'other', updatedAt: '2026-09-03' }), (error) => error.code === 'PAYROLL_PARENT_CONFLICT');
 
   await server.syncPayrollResult('update', { ...initial, _id: 'one', status: 'APPROUVÉ', approvedBy: 'manager', approvedAt: '2026-09-02' });
-  assert.equal(runs.get('a:run').status, 'VERIFICATION'); // second result not downloaded yet
+  assert.equal(runs.get('a:run').status, 'BROUILLON'); // second result not downloaded yet
   await server.syncPayrollResult('create', { ...initial, _id: 'two' });
   await server.syncPayrollResult('update', { ...initial, _id: 'two', status: 'APPROUVÉ', approvedBy: 'manager2', approvedAt: '2026-09-03' });
   assert.equal(runs.get('a:run').status, 'APPROUVÉ');
@@ -300,6 +395,7 @@ const countQueue = () => database.prepare('SELECT COUNT(*) AS n FROM sync_queue'
   assert.equal(results.get('a:one').status, 'ANNULÉ');
   assert.equal(results.get('a:one').paidAt, paidAt);
   assert(results.get('a:one').cancelledAt);
+  assert.equal(results.get('a:one').cancelledBy, 'manager');
   await server.syncPayrollRun('delete', { ...initialRun, isDeleted: 1 });
   assert.equal(runs.get('a:run').isDeleted, 1);
   console.log('Server sync checks passed: aggregate completion, partial downloads, concurrent payments, stale replays, audit actors, tenant isolation, terminal cancellation and deletion.');

@@ -1,11 +1,15 @@
-import { getPayrollPaymentMethod, payrollPaymentLabels, PayrollPaymentFilter } from "../../../common/types/payroll/payrollPayment.js";
+import {
+  getPayrollPaymentMethod,
+  payrollPaymentLabels,
+  PayrollPaymentFilter,
+} from "../../../common/types/hr/payroll/payrollPayment.js";
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
-import Company from "../../../common/types/Company.js";
+import Company from "../../../common/types/shared/Company.js";
 import {
   PayrollResult,
   PayrollRun,
   PayrollStatus,
-} from "../../../common/types/payroll/Payroll.js";
+} from "../../../common/types/hr/payroll/Payroll.js";
 
 const statusColors: Record<
   PayrollStatus,
@@ -186,7 +190,9 @@ export function MonthlyPayrollReportDocument({
                 ? "Tous les départements"
                 : department || "Sans département"}
             </Text>
-            <Text style={styles.details}>{payrollPaymentLabels[paymentMethod]}</Text>
+            <Text style={styles.details}>
+              {payrollPaymentLabels[paymentMethod]}
+            </Text>
             <StatusBadge status={run.status} />
           </View>
         </View>

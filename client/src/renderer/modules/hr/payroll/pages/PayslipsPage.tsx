@@ -17,12 +17,13 @@ import { FaArrowLeftLong } from "react-icons/fa6";
 import { IoSettings } from "react-icons/io5";
 import { MdOutlineChevronRight } from "react-icons/md";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import Employee from "../../../../../common/types/Employee";
-import { PayrollRun } from "../../../../../common/types/payroll/Payroll";
-import MonthDropDown from "../../../../components/MonthDropDown";
+import Employee from "../../../../../common/types/hr/employees/Employee";
+import { PayrollResult, PayrollRun } from "../../../../../common/types/hr/payroll/Payroll";
+import MonthDropDown from "../../../../components/common/MonthDropDown";
 import PayrollStatusFilter from "../components/PayrollStatusFilter";
 import { getPayrollPeriod } from "../../../../lib/date";
 import useAdminUser from "../../../../../store/auth.store";
+import useSyncStore from "../../../../../store/sync.store";
 
 type EmployeeState = {
   employee?: Employee;
@@ -34,7 +35,8 @@ type PhotoState = {
 
 const EmployeePayrollReport = () => {
   const user = useAdminUser((store: { adminUser: any }) => store.adminUser);
-  const [payrollRuns, setPayrollRuns] = useState<PayrollRun[]>([]);
+  const [payrollRuns, setPayrollRuns] = useState<(Omit<PayrollRun, "status"> & Pick<PayrollResult, "status">)[]>([]);
+  const syncVersion = useSyncStore((store) => store.syncVersion);
   const [statusFilter, setStatusFilter] = useState("");
   const location = useLocation();
   const { employee } = (location.state as EmployeeState) || {};
@@ -45,7 +47,7 @@ const EmployeePayrollReport = () => {
   const navigate = useNavigate();
   const statusColor = {
     BROUILLON: "#e6b800",
-    VERIFICATION: "#1a53ff",
+    VERIFIÉ: "#1a53ff",
     APPROUVÉ: "green",
     PAYÉ: "purple",
     ANNULÉ: "red",
@@ -53,20 +55,25 @@ const EmployeePayrollReport = () => {
 
   useEffect(() => {
     loadPayrollRun();
-  }, [employee, submissionMonth]);
+  }, [employee, submissionMonth, user.companyId, syncVersion]);
 
   const loadPayrollRun = async () => {
+    if (!employee?._id) {
+      setPayrollRuns([]);
+      return;
+    }
     const [year, month] = submissionMonth.split("-");
-    console.log("Selected year", year);
-    console.log("Selected month", month);
     try {
-      const payrollRuns = await window.electron.hr.payrollRun.getPayrollRuns(
-        user.companyId,
-        Number(year),
-        Number(month)
-      );
-      console.log("FETCHED PAYROLL RUNS", payrollRuns);
-      setPayrollRuns(payrollRuns);
+      const [runs, results]: [PayrollRun[], PayrollResult[]] = await Promise.all([
+        window.electron.hr.payrollRun.getPayrollRuns(user.companyId, Number(year), Number(month)),
+        window.electron.hr.payrollRun.getEmployeePayrollResults(user.companyId, employee._id),
+      ]);
+      // Keep run metadata and navigation, but display this employee's result status.
+      const statuses = new Map(results.map((result) => [result.payrollRunId, result.status]));
+      setPayrollRuns(runs.flatMap((run) => {
+        const status = statuses.get(run._id);
+        return status ? [{ ...run, status }] : [];
+      }));
     } catch (e) {
       console.error("AN ERROR OCCURED WHILE LOADING PAYROLL RUNS", e);
     }
@@ -88,7 +95,7 @@ const EmployeePayrollReport = () => {
           <HStack mt="1.4rem">
             <Link
               to={{
-                pathname: `/employees_admin/employees_list/${employee?._id}`,
+                pathname: `/hr/employees_list/${employee?._id}`,
               }}
               state={{ photo_url }}
             >
@@ -125,7 +132,7 @@ const EmployeePayrollReport = () => {
           </HStack>
           <Link
             to={{
-              pathname: `/employees_admin/employees_list/${employee?._id}/payslips/settings`,
+              pathname: `/hr/employees_list/${employee?._id}/payslips/settings`,
             }}
             state={{ employee, photo_url }}
           >
@@ -168,7 +175,7 @@ const EmployeePayrollReport = () => {
                         transition="background 0.2s"
                         onClick={() =>
                           navigate(
-                            `/employees_admin/employees_list/${employee?._id}/payslips/${run._id}`,
+                            `/hr/employees_list/${employee?._id}/payslips/${run._id}`,
                             {
                               state: {
                                 employee,
@@ -248,7 +255,7 @@ const EmployeePayrollReport = () => {
           <MonthDropDown onChange={(month) => setSubmissionMonth(month)} />
         </Box>
         <Box ml="5rem">
-          <PayrollStatusFilter onFilterClicked={setStatusFilter} />
+          <PayrollStatusFilter resultStatuses onFilterClicked={setStatusFilter} />
         </Box>
       </Flex>
     </Flex>

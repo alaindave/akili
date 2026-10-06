@@ -1,11 +1,11 @@
 type CreatePayrollComponentDto = import(
-  "../../../common/types/payroll/PayrollComponent",
+  "../../../common/types/hr/payroll/PayrollComponent",
   {
     with: { "resolution-mode": "require" },
   }
 ).CreatePayrollComponentDto;
 type PayrollComponent = import(
-  "../../../common/types/payroll/PayrollComponent",
+  "../../../common/types/hr/payroll/PayrollComponent",
   {
     with: { "resolution-mode": "require" },
   }

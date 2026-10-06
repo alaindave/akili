@@ -13,6 +13,12 @@ const API_URL = app.isPackaged
   ? "https://leather-works.onrender.com"
   : process.env.VITE_API_URL;
 
+function requireTaskModule(module: unknown) {
+  if (!["HR", "INVENTORY", "PROCUREMENT", "PRODUCTION", "SALES", "ACCOUNTING"].includes(module as string)) {
+    throw new Error("A valid task module is required");
+  }
+}
+
 export function registerTaskIPC() {
   console.log("REGISTERING TASKS IPC");
   console.log("TASKS API URL:", API_URL);
@@ -21,6 +27,7 @@ export function registerTaskIPC() {
   ipcMain.handle("tasks:create", async (_, companyId, task) => {
     console.log("TASK CREATE CALLED: ", task);
     try {
+      requireTaskModule(task.module);
       const result = await createTask(companyId, task);
       console.log("Created task: ", result);
       return result;
@@ -31,9 +38,10 @@ export function registerTaskIPC() {
   });
 
   //Get all tasks
-  ipcMain.handle("tasks:getAll", async (_, companyId) => {
+  ipcMain.handle("tasks:getAll", async (_, companyId, module) => {
     try {
-      const tasks = await getAllTasks(companyId);
+      requireTaskModule(module);
+      const tasks = await getAllTasks(companyId, module);
       console.log("From main: Tasks fetched: ", tasks);
       return tasks;
     } catch (error) {
@@ -43,9 +51,10 @@ export function registerTaskIPC() {
   });
 
   //Get  task by ID
-  ipcMain.handle("tasks:getById", async (_, companyId, _id) => {
+  ipcMain.handle("tasks:getById", async (_, companyId, _id, module) => {
     try {
-      const task = await getTaskById(companyId, _id);
+      requireTaskModule(module);
+      const task = await getTaskById(companyId, _id, module);
       console.log(" TASK FETCHED: ", task);
       return task;
     } catch (error) {
@@ -55,9 +64,10 @@ export function registerTaskIPC() {
   });
 
   //Get tasks for user(eithr author or recipient )
-  ipcMain.handle("tasks:getUserTasks", async (_, companyId, userId) => {
+  ipcMain.handle("tasks:getUserTasks", async (_, companyId, userId, module) => {
     try {
-      const tasks = await getAllTasksForUser(companyId, userId);
+      requireTaskModule(module);
+      const tasks = await getAllTasksForUser(companyId, userId, module);
       console.log("TASKS FETCHED: ", tasks);
       return tasks;
     } catch (error) {
@@ -67,9 +77,10 @@ export function registerTaskIPC() {
   });
 
   //Get top tasks
-  ipcMain.handle("tasks:getTopTasks", async (_, companyId, userId) => {
+  ipcMain.handle("tasks:getTopTasks", async (_, companyId, userId, module) => {
     try {
-      const top_tasks = await getTopTasks(companyId, userId);
+      requireTaskModule(module);
+      const top_tasks = await getTopTasks(companyId, userId, module);
       console.log("From main: Tasks fetched: ", top_tasks);
       return top_tasks;
     } catch (error) {
@@ -82,6 +93,7 @@ export function registerTaskIPC() {
   ipcMain.handle("tasks:update", async (_, companyId, task) => {
     console.log("TASK UPDATE CALLED: ", task);
     try {
+      requireTaskModule(task.module);
       const result = await updateTask(companyId, task);
       console.log("Updated task: ", result);
       return result;
@@ -92,9 +104,10 @@ export function registerTaskIPC() {
   });
 
   //Delete tasks
-  ipcMain.handle("tasks:delete", async (_, companyId, taskId) => {
+  ipcMain.handle("tasks:delete", async (_, companyId, taskId, module) => {
     try {
-      const task = await deleteTask(companyId, taskId);
+      requireTaskModule(module);
+      const task = await deleteTask(companyId, taskId, module);
       console.log("From main: Task deleted: ", task);
       return task;
     } catch (error) {

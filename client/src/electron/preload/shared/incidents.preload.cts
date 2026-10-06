@@ -4,6 +4,7 @@ type IncidentApi = import("../../../common/types/incident/Incident", {
 }).IncidentApi;
 
 export const incidentApi: IncidentApi = {
+  addNote: (companyId, id, note) => invoke("incidents:addNote", companyId, id, note),
   update: (companyId, id, input) => invoke("incidents:update", companyId, id, input),
   create: (companyId, input) => invoke("incidents:create", companyId, input),
   getAll: (companyId, filters = {}) => invoke("incidents:getAll", companyId, filters),

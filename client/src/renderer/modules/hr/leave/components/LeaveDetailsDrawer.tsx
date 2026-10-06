@@ -21,7 +21,7 @@ import {
   useToast,
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
-import type { LeaveWithEmployee } from "../../../../../common/types/leave/LeaveWithEmployee";
+import type { LeaveWithEmployee } from "../../../../../common/types/hr/leave/LeaveWithEmployee";
 import useAdminUser from "../../../../../store/auth.store";
 import useSyncStore from "../../../../../store/sync.store";
 import { useLeave, useUpdateLeave } from "../hooks/useLeave";
@@ -97,7 +97,9 @@ export default function LeaveDetailsDrawer({
       await updateLeave.mutateAsync({
         _id: leave._id,
         updates: {
-          additionalNotes: [latest.additionalNotes?.trim(), entry].filter(Boolean).join("\n\n"),
+          additionalNotes: [latest.additionalNotes?.trim(), entry]
+            .filter(Boolean)
+            .join("\n\n"),
         },
       });
       setNote("");

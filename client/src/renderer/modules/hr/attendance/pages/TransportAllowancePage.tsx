@@ -1,4 +1,4 @@
-import PageSubtitle from "../../../../components/PageSubtitle";
+import PageSubtitle from "../../../../components/common/PageSubtitle";
 import {
   Box,
   Button,
@@ -17,7 +17,7 @@ import { useMemo, useState } from "react";
 import { FiArrowLeft, FiArrowRight, FiCalendar, FiTruck } from "react-icons/fi";
 import { MdOutlineChevronRight } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
-import { TransportAllowanceWeeklyReport } from "../../../../../common/types/TransportAllowance";
+import { TransportAllowanceWeeklyReport } from "../../../../../common/types/hr/attendance/TransportAllowance";
 import useAdminUser from "../../../../../store/auth.store";
 
 function formatDate(date: Date): string {
@@ -113,7 +113,7 @@ export default function TransportAllowancePage() {
   const user = useAdminUser((store) => store.adminUser);
 
   const handleBack = () => {
-    navigate("/employees_admin/reports");
+    navigate("/hr/reports");
   };
 
   const handleGenerateReport = async () => {
@@ -153,7 +153,7 @@ export default function TransportAllowancePage() {
       console.log("REPORT GENERATED", report);
 
       navigate(
-        "/employees_admin/reports/transport_allowance/transport_allowance_weekly",
+        "/hr/reports/transport_allowance/transport_allowance_weekly",
         {
           state: {
             report,

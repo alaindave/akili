@@ -26,20 +26,20 @@ import { FaUserEdit } from "react-icons/fa";
 import { MdAttachMoney, MdWork } from "react-icons/md";
 import { LuPaperclip } from "react-icons/lu";
 import useAdminUser from "../../../../../store/auth.store";
-import type Employee from "../../../../../common/types/Employee";
+import type Employee from "../../../../../common/types/hr/employees/Employee";
 import EmployeeDetailsCard from "./EmployeeDetailsCard";
 import { useState, useRef, useEffect } from "react";
 import { useDeleteEmployee, useEmployee } from "../hooks/useEmployees";
-import { EmployeeDocument } from "../../../../../common/types/EmployeeDocuments";
+import { EmployeeDocument } from "../../../../../common/types/hr/employees/EmployeeDocuments";
 import EmployeeDocumentsList from "./EmployeeDocumentsList";
 import UploadDocumentModal from "./EmployeeDocumentUpload.tsx";
-import NotAuthorized from "../../../../components/NotAuthorized";
+import NotAuthorized from "../../../../components/common/NotAuthorized";
 import { ErrorBoundary } from "react-error-boundary";
 import UpdateEmployee from "./EmployeeUpdate";
-import ComponentErrorFallback from "../../../../components/ComponentErrorFallback";
-import DeletionDialog from "../../../../components/DeletionDialog";
+import ComponentErrorFallback from "../../../../components/common/ComponentErrorFallback";
 import { useNavigate } from "react-router-dom";
 import useSyncStore from "../../../../../store/sync.store";
+import DeletionDialog from "../../../../components/common/DeletionDialog";
 
 interface Props {
   employee: Employee;
@@ -164,7 +164,7 @@ const EmployeeDetailsTab = ({ employee }: Props) => {
     if (!employee._id) return;
     try {
       await deleteEmployee(employee._id);
-      navigate("/employees_admin/employees_list");
+      navigate("/hr/employees_list");
     } catch (error) {
       console.error("UNABLE TO DELETE EMPLOYEE:", error);
     }

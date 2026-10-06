@@ -1,4 +1,4 @@
-import type OfflineUser from "../../../../common/types/OfflineUser.js";
+import type OfflineUser from "../../../../common/types/shared/OfflineUser.js";
 import { get, all, run } from "../../db.js";
 import { addToSyncQueue } from "./sync.repository.js";
 

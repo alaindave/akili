@@ -19,7 +19,7 @@ import { MdOutlineChevronRight } from "react-icons/md";
 import { FaArrowLeftLong } from "react-icons/fa6";
 import PayrollEmployeeProfileList from "../components/PayrollProfileList";
 import { Link, useLocation, useParams } from "react-router-dom";
-import Employee from "../../../../../common/types/Employee";
+import Employee from "../../../../../common/types/hr/employees/Employee";
 import {
   useEmployee,
   useUpdateEmployee,
@@ -80,7 +80,7 @@ export default function PayrollEmployeeProfileSettingsPage() {
       <HStack>
         <Link
           to={{
-            pathname: `/employees_admin/employees_list/${employee?._id}`,
+            pathname: `/hr/employees_list/${employee?._id}`,
           }}
           state={{ photo_url, employee }}
         >

@@ -20,7 +20,7 @@ import { useEffect, useState } from "react";
 import { FaDeleteLeft } from "react-icons/fa6";
 
 import AddPayrollEmployeeProfileModal from "./PayrollEmployeeProfileAddModal";
-import PayrollEmployeeProfile from "../../../../../common/types/payroll/PayrollEmployeeProfile";
+import PayrollEmployeeProfile from "../../../../../common/types/hr/payroll/PayrollEmployeeProfile";
 import useAdminUser from "../../../../../store/auth.store";
 
 interface Props {

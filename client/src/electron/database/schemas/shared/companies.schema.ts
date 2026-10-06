@@ -26,7 +26,9 @@ CREATE TABLE IF NOT EXISTS companies (
 
   const columns = await all<{ name: string }>("PRAGMA table_info(companies)");
   if (!columns.some((column) => column.name === "attendanceClockIn")) {
-    await run("ALTER TABLE companies ADD COLUMN attendanceClockIn TEXT NOT NULL DEFAULT '08:00'");
+    await run(
+      "ALTER TABLE companies ADD COLUMN attendanceClockIn TEXT NOT NULL DEFAULT '08:00'"
+    );
   }
 
   console.log("COMPANY TABLE INITIALIZED");

@@ -1,6 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Box, Button, Flex, Grid, Text, VStack } from "@chakra-ui/react";
-
 import { IoSettings } from "react-icons/io5";
 import { FaRegArrowAltCircleRight } from "react-icons/fa";
 import { BsFillPeopleFill, BsBoxSeamFill } from "react-icons/bs";
@@ -8,12 +7,12 @@ import { GiFactory } from "react-icons/gi";
 import { MdOutlineShoppingCart } from "react-icons/md";
 
 // @ts-ignore
-import Logo from "../../../components/Logo";
 
 import { useEffect } from "react";
 import { checkOnline } from "../../../services/connectivity_check.service";
 import useAdminUser from "../../../../store/auth.store";
 import useSyncStore from "../../../../store/sync.store";
+import Logo from "../../../components/common/Logo";
 
 const AdminPage = () => {
   const user = useAdminUser((store) => store.adminUser);
@@ -224,17 +223,7 @@ const AdminPage = () => {
               hoverColor="#106EBE"
               activeColor="#005A9E"
               title="Personnel"
-              to="/employees_admin"
-            />
-
-            {/* APPROVISIONNEMENT */}
-            <ModuleCard
-              icon={<MdOutlineShoppingCart color="#7C3AED" size="1.9rem" />}
-              color="#7C3AED"
-              hoverColor="#6D28D9"
-              activeColor="#5B21B6"
-              title="Approvisionnement"
-              to="/admin"
+              to="/hr"
             />
 
             {/* STOCK */}
@@ -244,6 +233,16 @@ const AdminPage = () => {
               hoverColor="#0E6E0E"
               activeColor="#0A5C0A"
               title="Stock"
+              to="/inventory"
+            />
+
+            {/* APPROVISIONNEMENT */}
+            <ModuleCard
+              icon={<MdOutlineShoppingCart color="#7C3AED" size="1.9rem" />}
+              color="#7C3AED"
+              hoverColor="#6D28D9"
+              activeColor="#5B21B6"
+              title="Approvisionnement"
               to="/admin"
             />
 

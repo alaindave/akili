@@ -14,7 +14,7 @@ import {
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import useAdminUser from "../../../../store/auth.store";
-import type { AttendanceDailyCheck } from "../../../../common/types/attendance/AttendanceDailyCheck";
+import type { AttendanceDailyCheck } from "../../../../common/types/hr/attendance/AttendanceDailyCheck";
 
 export default function AttendanceSettingsPage() {
   const user = useAdminUser((store) => store.adminUser);

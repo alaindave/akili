@@ -1,8 +1,18 @@
 import { updatePayrollAccountInTransaction } from "./payrollAccount.repository.js";
-import { run, get, all, runDirect, getDirect, transaction } from "../../../db.js";
+import {
+  run,
+  get,
+  all,
+  runDirect,
+  getDirect,
+  transaction,
+} from "../../../db.js";
 import { randomUUID } from "crypto";
-import Employee from "../../../../../common/types/Employee.js";
-import { addToSyncQueue, notifyPendingChanges } from "../../shared/sync.repository.js";
+import Employee from "../../../../../common/types/hr/employees/Employee.js";
+import {
+  addToSyncQueue,
+  notifyPendingChanges,
+} from "../../shared/sync.repository.js";
 import { initializeEmployeePayrollProfilesForEmployee } from "../../../../services/modules/hr/payroll/payrollProfile.service.js";
 
 /*
@@ -206,7 +216,10 @@ export async function updateEmployee(
   data: Partial<Omit<Employee, "companyId">>
 ) {
   const result = await transaction(async () => {
-    const existing = await getDirect<Employee>("SELECT * FROM employees WHERE companyId = ? AND _id = ?", [companyId, _id]);
+    const existing = await getDirect<Employee>(
+      "SELECT * FROM employees WHERE companyId = ? AND _id = ?",
+      [companyId, _id]
+    );
 
     if (!existing) {
       throw new Error("Employee not found");
@@ -251,7 +264,10 @@ export async function updateEmployee(
         data.lastName ?? existing.lastName,
         data.matricule ?? existing.matricule,
         data.idNum ?? existing.idNum,
-        (data.accountNumber === undefined ? existing.accountNumber : data.accountNumber)?.trim() || "cash",
+        (data.accountNumber === undefined
+          ? existing.accountNumber
+          : data.accountNumber
+        )?.trim() || "cash",
         data.dateBirth ?? existing.dateBirth,
         data.role ?? existing.role,
         data.dateHired ?? existing.dateHired,
@@ -271,7 +287,10 @@ export async function updateEmployee(
       ]
     );
 
-    const updatedEmployee = await getDirect<Employee>("SELECT * FROM employees WHERE companyId = ? AND _id = ?", [companyId, _id]);
+    const updatedEmployee = await getDirect<Employee>(
+      "SELECT * FROM employees WHERE companyId = ? AND _id = ?",
+      [companyId, _id]
+    );
 
     if (!updatedEmployee) {
       throw new Error("Failed to retrieve updated employee");
@@ -279,16 +298,24 @@ export async function updateEmployee(
 
     console.log("EMPLOYEE TO SAVE TO SYNC QUEUE:", updatedEmployee);
 
-    await addToSyncQueue({
-      companyId,
-      entity: "employee",
-      entityId: _id,
-      operation: "update",
-      payload: JSON.stringify(updatedEmployee),
-    }, true);
+    await addToSyncQueue(
+      {
+        companyId,
+        entity: "employee",
+        entityId: _id,
+        operation: "update",
+        payload: JSON.stringify(updatedEmployee),
+      },
+      true
+    );
 
     if (data.accountNumber !== undefined) {
-      await updatePayrollAccountInTransaction(companyId, _id, updatedEmployee.accountNumber || "cash", updatedAt);
+      await updatePayrollAccountInTransaction(
+        companyId,
+        _id,
+        updatedEmployee.accountNumber || "cash",
+        updatedAt
+      );
     }
 
     return updatedEmployee;

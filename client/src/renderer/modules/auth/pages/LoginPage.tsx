@@ -76,7 +76,7 @@ const LoginPage = () => {
           notes: offlineUser.notes ?? "",
         });
 
-        await loadTopTasks(offlineUser.companyId, offlineUser._id);
+        await loadTopTasks(offlineUser.companyId, offlineUser._id, "HR");
         navigate("/admin", { replace: true });
 
         return;
@@ -115,7 +115,7 @@ const LoginPage = () => {
           notes: adminUser.admin.notes,
         });
 
-        await loadTopTasks(adminUser.company.companyId, adminUser.admin._id);
+        await loadTopTasks(adminUser.company.companyId, adminUser.admin._id, "HR");
         navigate("/admin", { replace: true });
       }
     } catch (error) {

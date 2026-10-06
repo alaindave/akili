@@ -1,14 +1,14 @@
 import { invoke } from "../../ipc/ipc.cjs";
 
-type AttendanceWithEmployee = import("../../../common/types/attendance/Attendance", {
+type AttendanceWithEmployee = import("../../../common/types/hr/attendance/Attendance", {
   with: { "resolution-mode": "require" },
 }).AttendanceWithEmployee;
-type CreateAttendanceDto = import("../../../common/types/attendance/Attendance", {
+type CreateAttendanceDto = import("../../../common/types/hr/attendance/Attendance", {
   with: { "resolution-mode": "require" },
 }).CreateAttendanceDto;
 
 
-type TransportAllowanceWeeklyReport = import( "../../../common/types/TransportAllowance", { with: { "resolution-mode": "require" }, } ).TransportAllowanceWeeklyReport;
+type TransportAllowanceWeeklyReport = import( "../../../common/types/hr/attendance/TransportAllowance", { with: { "resolution-mode": "require" }, } ).TransportAllowanceWeeklyReport;
 
 export const attendanceApi = {
   create: (companyId: string, input: CreateAttendanceDto) =>

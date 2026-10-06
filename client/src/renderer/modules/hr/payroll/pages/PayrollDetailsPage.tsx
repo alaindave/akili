@@ -2,10 +2,9 @@ import {
   matchesPayrollFilters,
   payrollPaymentLabels,
   PayrollPaymentFilter,
-} from "../../../../../common/types/payroll/payrollPayment";
+} from "../../../../../common/types/hr/payroll/payrollPayment";
 import {
   Box,
-  Button,
   Flex,
   HStack,
   FormControl,
@@ -14,26 +13,23 @@ import {
   IconButton,
   useToast,
   Text,
-  useDisclosure,
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { DownloadIcon } from "@chakra-ui/icons";
 import { FaArrowLeftLong } from "react-icons/fa6";
-import { MdOutlineCancel, MdOutlineChevronRight } from "react-icons/md";
+import { MdOutlineChevronRight } from "react-icons/md";
 import { Link, useParams } from "react-router-dom";
 
-import { GiConfirmed } from "react-icons/gi";
 import {
   PayrollResult,
   PayrollRun,
-} from "../../../../../common/types/payroll/Payroll";
-import User from "../../../../../common/types/User";
+} from "../../../../../common/types/hr/payroll/Payroll";
+import User from "../../../../../common/types/shared/User";
 import useAdminUser from "../../../../../store/auth.store";
-import DeletionDialog from "../../../../components/DeletionDialog";
-import PayrollResultsTable from "../components/PayrollResultsTable";
 import useSyncStore from "../../../../../store/sync.store";
 import { getPayrollPeriod } from "../../../../lib/date";
 import PayrollAuditPopover from "../components/PayrollAuditPopover";
+import PayrollResultsTable from "../components/PayrollResultsTable";
 
 const PayrollDetailsPage = () => {
   const { _id } = useParams();
@@ -92,41 +88,6 @@ const PayrollDetailsPage = () => {
   );
   const syncVersion = useSyncStore((store) => store.syncVersion);
 
-  const {
-    isOpen: isConfirmationOpen,
-    onOpen: onConfirmationOpen,
-    onClose: onConfirmationClose,
-  } = useDisclosure();
-
-  /*
-   * ---------------------------------------------------------
-   * GET PAYROLL STATUS / ACTION
-   * ---------------------------------------------------------
-   */
-
-  const getStatus = () => {
-    if (!payrollRun?.status) {
-      return null;
-    }
-
-    switch (payrollRun.status) {
-      case "BROUILLON":
-        return {
-          label: "Verifier",
-          onClick: verify,
-        };
-
-      default:
-        return null;
-    }
-  };
-
-  /*
-   * ---------------------------------------------------------
-   * LOAD DATA
-   * ---------------------------------------------------------
-   */
-
   useEffect(() => {
     loadPayrollRun();
     loadPayrollResuts();
@@ -166,80 +127,6 @@ const PayrollDetailsPage = () => {
     }
   };
 
-  /*
-   * ---------------------------------------------------------
-   * PAYROLL ACTIONS
-   * ---------------------------------------------------------
-   */
-
-  const handlePayrollCancellation = async () => {
-    onConfirmationClose();
-
-    if (!_id) return;
-
-    try {
-      const results = await window.electron.hr.payrollRun.cancelPayroll(
-        user.companyId,
-        _id,
-        user
-      );
-
-      console.log("CANCELLATION RESULTS", results);
-
-      window.electron.sync.sync(user.companyId).catch((error: Error) => {
-        console.error("IMMEDIATE SYNC FAILED:", error);
-      });
-
-      loadPayrollRun();
-      loadPayrollResuts();
-    } catch (e) {
-      toast({
-        title: "Impossible d’annuler cette paie",
-        description: e instanceof Error ? e.message : "Veuillez réessayer.",
-        status: "error",
-        isClosable: true,
-      });
-    }
-  };
-
-  const verify = async () => {
-    if (!_id) return;
-
-    try {
-      const results = await window.electron.hr.payrollRun.submitForVerification(
-        user.companyId,
-        "afritanleather@yahoo.fr",
-        _id,
-        user
-      );
-
-      console.log("VERIFICATION RESULTS", results);
-
-      window.electron.sync.sync(user.companyId).catch((error: Error) => {
-        console.error("IMMEDIATE SYNC FAILED:", error);
-      });
-
-      loadPayrollRun();
-      loadPayrollResuts();
-    } catch (e) {
-      console.error("AN ERROR OCCURED WHILE SUBMITTING FOR VERIFICATION", e);
-    }
-  };
-
-  /*
-   * ---------------------------------------------------------
-   * CURRENT STATUS ACTION
-   * ---------------------------------------------------------
-   */
-
-  const statusAction = getStatus();
-
-  /*
-   * ---------------------------------------------------------
-   * RENDER
-   * ---------------------------------------------------------
-   */
-
   return (
     <Flex
       bg="#ffffff"
@@ -252,7 +139,7 @@ const PayrollDetailsPage = () => {
       <Flex>
         <Link
           to={{
-            pathname: `/employees_admin/payroll/`,
+            pathname: `/hr/payroll/`,
           }}
         >
           <Box
@@ -288,7 +175,7 @@ const PayrollDetailsPage = () => {
           <Box mt="3rem">
             <Flex mb={4} justify="space-between" flexWrap="wrap">
               {/* Filters and download button */}
-              <HStack>
+              <Flex width="100%" justify="space-between">
                 <FormControl maxW="280px">
                   <FormLabel htmlFor="payroll-department" fontSize="sm">
                     Département
@@ -316,82 +203,47 @@ const PayrollDetailsPage = () => {
                     ))}
                   </Select>
                 </FormControl>
-                <FormControl maxW="280px">
-                  <FormLabel htmlFor="payroll-payment-method" fontSize="sm">
-                    Mode de paiement
-                  </FormLabel>
-                  <Select
-                    id="payroll-payment-method"
-                    value={paymentMethod}
-                    onChange={(event) =>
-                      setPaymentMethod(
-                        event.target.value as PayrollPaymentFilter
-                      )
-                    }
-                    isDisabled={isDownloading}
-                    bg="white"
-                  >
-                    {Object.entries(payrollPaymentLabels).map(
-                      ([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      )
-                    )}
-                  </Select>
-                </FormControl>
-                <Box mt="1.3rem">
-                  <IconButton
-                    aria-label="Télécharger le rapport mensuel de paie"
-                    title="Télécharger le rapport mensuel de paie"
-                    icon={<DownloadIcon />}
-                    onClick={downloadReport}
-                    isLoading={isDownloading}
-                    isDisabled={
-                      !payrollRun?._id || filteredResults.length === 0
-                    }
-                    variant="outline"
-                    colorScheme="blue"
-                  />
-                </Box>
-              </HStack>
-              {/* Buttons */}
-              {payrollRun?.status !== "ANNULÉ" &&
-                payrollRun?.status !== "PAYÉ" &&
-                !payrollResults.some(
-                  (result) =>
-                    result.status === "APPROUVÉ" || result.status === "PAYÉ"
-                ) && (
-                  <Flex mt="1.2rem" mr="2rem" justify="flex-end">
-                    <Button
-                      onClick={onConfirmationOpen}
-                      width="8rem"
-                      bg="#ffffff"
-                      border="1px solid gray"
+                <HStack>
+                  <FormControl maxW="280px">
+                    <FormLabel htmlFor="payroll-payment-method" fontSize="sm">
+                      Mode de paiement
+                    </FormLabel>
+                    <Select
+                      id="payroll-payment-method"
+                      value={paymentMethod}
+                      onChange={(event) =>
+                        setPaymentMethod(
+                          event.target.value as PayrollPaymentFilter
+                        )
+                      }
+                      isDisabled={isDownloading}
+                      bg="white"
                     >
-                      <Box color="red.400" fontSize="1.2rem" mr="0.7rem">
-                        <MdOutlineCancel />
-                      </Box>
-                      Annuler
-                    </Button>
-
-                    {statusAction && (
-                      <Button
-                        onClick={statusAction.onClick}
-                        width="8rem"
-                        bg="#ffffff"
-                        border="1px solid gray"
-                        ml="0.3rem"
-                      >
-                        <Box color="green.600" fontSize="1.2rem" mr="0.7rem">
-                          <GiConfirmed />
-                        </Box>
-
-                        {statusAction.label}
-                      </Button>
-                    )}
-                  </Flex>
-                )}
+                      {Object.entries(payrollPaymentLabels).map(
+                        ([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        )
+                      )}
+                    </Select>
+                  </FormControl>
+                  <Box mt="1.3rem">
+                    <IconButton
+                      aria-label="Télécharger le rapport mensuel de paie"
+                      title="Télécharger le rapport mensuel de paie"
+                      icon={<DownloadIcon />}
+                      onClick={downloadReport}
+                      isLoading={isDownloading}
+                      isDisabled={
+                        !payrollRun?._id || filteredResults.length === 0
+                      }
+                      variant="outline"
+                      colorScheme="blue"
+                    />
+                  </Box>
+                </HStack>
+              </Flex>
             </Flex>
             <Box mt="2rem">
               <PayrollResultsTable payrollResults={filteredResults} />
@@ -405,14 +257,6 @@ const PayrollDetailsPage = () => {
         </Box>
         <PayrollAuditPopover payrollRun={payrollRun} />
       </Flex>
-
-      <DeletionDialog
-        isOpen={isConfirmationOpen}
-        onClose={onConfirmationClose}
-        onConfirmation={handlePayrollCancellation}
-        header="Annuler"
-        body="Etes vous sur de vouloir annuler cette fiche de paye?"
-      />
     </Flex>
   );
 };

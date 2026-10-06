@@ -5,12 +5,12 @@ import {
   AttendanceWithEmployee,
   CreateAttendanceDto,
   PayrollAttendanceSummary,
-} from "../../../../../common/types/attendance/Attendance.js";
+} from "../../../../../common/types/hr/attendance/Attendance.js";
 import { isAttendanceDateLocked } from "./attendanceDailyCheck.repository.js";
 import { getEmployeeById } from "./employees.repository.js";
 import { all, get, run } from "../../../db.js";
 import { addToSyncQueue } from "../../shared/sync.repository.js";
-import Employee from "../../../../../common/types/Employee.js";
+import Employee from "../../../../../common/types/hr/employees/Employee.js";
 import { getLeaveByEmployeeId } from "./leaves.repository.js";
 
 /**

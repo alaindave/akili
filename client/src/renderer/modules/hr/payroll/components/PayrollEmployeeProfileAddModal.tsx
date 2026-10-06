@@ -19,7 +19,7 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { useState } from "react";
-import { CreatePayrollProfileDto } from "../../../../../common/types/payroll/PayrollEmployeeProfile";
+import { CreatePayrollProfileDto } from "../../../../../common/types/hr/payroll/PayrollEmployeeProfile";
 import useAdminUser from "../../../../../store/auth.store";
 
 interface Props {

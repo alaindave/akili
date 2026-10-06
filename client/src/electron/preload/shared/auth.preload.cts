@@ -1,4 +1,4 @@
-type OfflineUser = import("../../../common/types/OfflineUser", {
+type OfflineUser = import("../../../common/types/shared/OfflineUser", {
   with: { "resolution-mode": "require" },
 }).default;
 import { invoke } from "../../ipc/ipc.cjs";

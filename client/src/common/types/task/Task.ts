@@ -1,11 +1,20 @@
-import AdminUser from "../AdminUser.js";
+import AdminUser from "../shared/AdminUser.js";
 import PopulatedTaskComment from "./PopulatedTaskComment.js";
-import User from "../User.js";
+import User from "../shared/User.js";
 
 export type Priority = "HAUTE" | "MOYENNE" | "BASSE";
 
+export type AppModule =
+  | "HR"
+  | "INVENTORY"
+  | "PROCUREMENT"
+  | "PRODUCTION"
+  | "SALES"
+  | "ACCOUNTING";
+
 export default interface Task {
   companyId: string;
+  module: AppModule;
   _id: string;
   taskNumber?: string;
   author: Omit<User, "password" | "notes">;

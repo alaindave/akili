@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import useAdminUser from "../../../../../store/auth.store";
-import Employee from "../../../../../common/types/Employee";
+import Employee from "../../../../../common/types/hr/employees/Employee";
 
 type UpdateEmployeeInput = {
   companyId: string;

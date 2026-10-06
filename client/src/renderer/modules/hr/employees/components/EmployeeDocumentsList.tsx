@@ -12,7 +12,7 @@ import {
   VStack,
 } from "@chakra-ui/react";
 import { FiDownload, FiEye, FiFileText, FiTrash2 } from "react-icons/fi";
-import { EmployeeDocument } from "../../../../../common/types/EmployeeDocuments";
+import { EmployeeDocument } from "../../../../../common/types/hr/employees/EmployeeDocuments";
 import useAdminUser from "../../../../../store/auth.store";
 
 interface EmployeeDocumentsListProps {

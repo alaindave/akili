@@ -16,6 +16,7 @@ export async function syncIncident(
   const candidate = new Incident({
     _id: data._id,
     companyId: data.companyId,
+    module: data.module,
     incidentNumber: data.incidentNumber,
     reporterName: data.reporterName,
     reporterContact: data.reporterContact,
@@ -55,6 +56,7 @@ export async function syncIncident(
         createdAt: _created,
         ...mutable
       } = fields;
+      if (data.module === undefined) mutable.module = existing.module ?? "HR";
       saved = await Incident.findOneAndUpdate(
         { _id, companyId, serverVersion: existing.serverVersion },
         { $set: { ...mutable, serverVersion } },

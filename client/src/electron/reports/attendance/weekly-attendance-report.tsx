@@ -2,7 +2,7 @@ import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 import {
   WeeklyAttendanceReport,
   formatAttendanceReportDate,
-} from "../../../common/types/attendance/WeeklyAttendanceReport.js";
+} from "../../../common/types/hr/attendance/WeeklyAttendanceReport.js";
 
 const styles = StyleSheet.create({
   page: {

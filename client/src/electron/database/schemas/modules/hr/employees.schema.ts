@@ -62,7 +62,9 @@ export async function createEmployeesTable() {
   const columns = await all<{ name: string }>(`PRAGMA table_info(employees)`);
 
   if (!columns.some((column) => column.name === "accountNumber")) {
-    await run(`ALTER TABLE employees ADD COLUMN accountNumber TEXT NOT NULL DEFAULT 'cash'`);
+    await run(
+      `ALTER TABLE employees ADD COLUMN accountNumber TEXT NOT NULL DEFAULT 'cash'`
+    );
   }
 
   const hasCompanyId = columns.some((column) => column.name === "companyId");

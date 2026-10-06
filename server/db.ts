@@ -33,6 +33,7 @@ interface AdminUserInput {
 }
 
 interface TaskInput {
+  module: import("./models/task.model.js").Task["module"];
   companyId: string;
   author: string;
   recipients: string[];
@@ -314,6 +315,7 @@ export const deleteLeave = async (id: string) => {
 
 export const saveTask = async (task: TaskInput) => {
   const newTask = new Task({
+    module: task.module ?? "HR",
     _id: randomUUID(),
     author: task.author,
     recipients: task.recipients,

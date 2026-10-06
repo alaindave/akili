@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import type Leave from "../../../../../common/types/leave/Leave";
+import type Leave from "../../../../../common/types/hr/leave/Leave";
 
 /* =========================================================
    QUERY KEYS

@@ -20,7 +20,7 @@ import {
   TransportAllowanceWeeklyReport,
   TransportAllowanceEmployee,
   TransportAllowanceDay,
-} from "../../../../../common/types/TransportAllowance";
+} from "../../../../../common/types/hr/attendance/TransportAllowance";
 
 interface LocationState {
   report?: TransportAllowanceWeeklyReport;
@@ -125,7 +125,7 @@ export default function TransportAllowanceWeeklyReportPage() {
               color="white"
               _hover={{ bg: "#081d4f" }}
               onClick={() =>
-                navigate("/employees_admin/reports/transport_allowance")
+                navigate("/hr/reports/transport_allowance")
               }
             >
               Retour
@@ -262,7 +262,7 @@ export default function TransportAllowanceWeeklyReportPage() {
                   color="white"
                   size="sm"
                   onClick={() =>
-                    navigate("/employees_admin/reports/transport_allowance")
+                    navigate("/hr/reports/transport_allowance")
                   }
                   _hover={{
                     bg: "whiteAlpha.200",

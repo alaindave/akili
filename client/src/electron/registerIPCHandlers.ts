@@ -20,6 +20,17 @@ import { registerAttendanceDailyCheckIPC } from "./ipc/modules/hr/attendance_dai
 import { registerEmailIPC } from "./ipc/shared/email.ipc.js";
 import { registerTransportAllowanceIpc } from "./ipc/modules/hr/transportAllowance.ipc.js";
 import { registerCompanyIpc } from "./ipc/shared/companies.ipc.js";
+import { registerInventoryMovementIpc } from "./ipc/modules/inventory/inventoryMovement.ipc.js";
+import { registerInventoryBalanceIpc } from "./ipc/modules/inventory/inventoryBalance.ipc.js";
+import { registerInventoryItemIpc } from "./ipc/modules/inventory/inventoryItem.ipc.js";
+
+import { registerInventoryDocumentIpc } from "./ipc/modules/inventory/inventoryDocument.ipc.js";
+
+import { registerInventoryDocumentLinesIpc } from "./ipc/modules/inventory/inventoryDocumentLines.ipc.js";
+
+import { registerInventoryWarehouseIpc } from "./ipc/modules/inventory/inventoryWarehouse.ipc.js";
+
+import { registerInventoryLocationIpc } from "./ipc/modules/inventory/inventoryLocation.ipc.js";
 
 export function registerIPCHandlers() {
   registerAuthIPC();
@@ -44,4 +55,11 @@ export function registerIPCHandlers() {
   registerEmailIPC();
   registerTransportAllowanceIpc();
   registerCompanyIpc();
+  registerInventoryItemIpc();
+  registerInventoryBalanceIpc();
+  registerInventoryMovementIpc();
+  registerInventoryDocumentIpc();
+  registerInventoryDocumentLinesIpc();
+  registerInventoryWarehouseIpc();
+  registerInventoryLocationIpc();
 }

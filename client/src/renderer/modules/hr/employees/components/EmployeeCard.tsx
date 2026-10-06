@@ -30,7 +30,7 @@ import { useEffect, useRef, useState } from "react";
 import { GoDotFill } from "react-icons/go";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { Link } from "react-router-dom";
-import Leave from "../../../../../common/types/leave/Leave";
+import Leave from "../../../../../common/types/hr/leave/Leave";
 import "../../../../styles/App.css";
 import AddClockInNotesPopover from "../../attendance/components/AddClockInNotesPopover";
 import AbsenceNotesPopover from "../../attendance/components/AbsenceNotesPopover";
@@ -211,7 +211,9 @@ const EmployeeCard = ({ employeeId }: Props) => {
           employee.photo_path
         );
 
-        setPhotoUrl(`data:${employee.photo_mime_type || "image/jpeg"};base64,${base64}`);
+        setPhotoUrl(
+          `data:${employee.photo_mime_type || "image/jpeg"};base64,${base64}`
+        );
       } catch (error) {
         console.error("FAILED TO LOAD EMPLOYEE PHOTO:", error);
         setPhotoUrl("");
@@ -556,7 +558,7 @@ const EmployeeCard = ({ employeeId }: Props) => {
       >
         <Link
           to={{
-            pathname: `/employees_admin/employees_list/${employee._id}`,
+            pathname: `/hr/employees_list/${employee._id}`,
           }}
           state={{ photo_url }}
         >
@@ -720,7 +722,7 @@ const EmployeeCard = ({ employeeId }: Props) => {
             fontSize={{
               base: "0.65rem",
               sm: "0.75rem",
-              md: "0.85rem",
+              md: "0.75rem",
             }}
             px={{
               base: "0.4rem",
@@ -914,9 +916,15 @@ const EmployeeCard = ({ employeeId }: Props) => {
             </Box>
           </PopoverAnchor>
           <Portal>
-            <PopoverContent width="300px" maxW="calc(100vw - 24px)" zIndex={10000}>
+            <PopoverContent
+              width="300px"
+              maxW="calc(100vw - 24px)"
+              zIndex={10000}
+            >
               <PopoverArrow />
-              <PopoverHeader fontWeight="semibold">Billet de sortie</PopoverHeader>
+              <PopoverHeader fontWeight="semibold">
+                Billet de sortie
+              </PopoverHeader>
               <PopoverBody>
                 <Textarea
                   ref={exitPassNotesRef}

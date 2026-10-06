@@ -11,7 +11,7 @@ import { FaSearch } from "react-icons/fa";
 import { FaPlus } from "react-icons/fa6";
 import { IoStatsChart } from "react-icons/io5";
 import LeaveSubmissionModal from "../../leave/components/LeaveSubmissionModal";
-import Employee from "../../../../../common/types/Employee";
+import Employee from "../../../../../common/types/hr/employees/Employee";
 import { useNavigate } from "react-router-dom";
 
 interface Props {
@@ -146,7 +146,7 @@ const QuickActions = ({ onTaskCreate, employees }: Props) => {
             whiteSpace={{ base: "normal", lg: "nowrap" }}
             overflow="hidden"
             textOverflow="ellipsis"
-            onClick={() => navigate("/employees_admin/reports")}
+            onClick={() => navigate("/hr/reports")}
           >
             Générer un rapport
           </Text>

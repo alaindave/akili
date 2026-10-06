@@ -13,7 +13,7 @@ function load(file, resolve) {
   return module.exports;
 }
 (async () => {
-  const helpers = load('../src/common/types/attendance/WeeklyAttendanceReport.ts', require);
+  const helpers = load('../src/common/types/hr/attendance/WeeklyAttendanceReport.ts', require);
   assert.equal(helpers.attendanceWeekDates('2026-09-27')[0], '2026-09-21');
   assert.equal(helpers.attendanceWeekDates('2027-01-01')[0], '2026-12-28');
   assert.throws(() => helpers.attendanceWeekDates('2026-02-30'));

@@ -1,4 +1,4 @@
-import { PayrollSettings } from "../../../../../common/types/payroll/Payroll.js";
+import { PayrollSettings } from "../../../../../common/types/hr/payroll/Payroll.js";
 
 export function calculateLateDeduction(
   employeeId: string | undefined,

@@ -1,6 +1,6 @@
 import { getOngoingLeaves } from "../../../../database/repositories/modules/hr/leaves.repository.js";
 
-import Leave from "../../../../../common/types/leave/Leave.js";
+import Leave from "../../../../../common/types/hr/leave/Leave.js";
 import {
   createAbsenceLeaveAttendance,
   getAttendanceRecord,

@@ -12,7 +12,7 @@ function load(file, resolve) {
   return module.exports;
 }
 (async () => {
-  const helpers = load('../src/common/types/payroll/payrollPayment.ts', require);
+  const helpers = load('../src/common/types/hr/payroll/payrollPayment.ts', require);
   const { getPayrollPaymentMethod: method, matchesPayrollFilters: matches } = helpers;
   for (const account of [undefined, null, '', '   ', 'cash', ' CASH ']) assert.equal(method(account), 'cash');
   assert.equal(method('001234'), 'bank');

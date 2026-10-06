@@ -1,5 +1,5 @@
-type LeaveWithEmployee = import("../../../common/types/leave/LeaveWithEmployee", { with: { "resolution-mode": "require" } }).LeaveWithEmployee;
-type Leave = import("../../../common/types/leave/Leave", {
+type LeaveWithEmployee = import("../../../common/types/hr/leave/LeaveWithEmployee", { with: { "resolution-mode": "require" } }).LeaveWithEmployee;
+type Leave = import("../../../common/types/hr/leave/Leave", {
   with: { "resolution-mode": "require" },
 }).default;
 import { invoke } from "../../ipc/ipc.cjs";

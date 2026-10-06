@@ -1,5 +1,5 @@
-import type { AttendanceDailyCheck } from "../../../../../common/types/attendance/AttendanceDailyCheck.js";
-import type NotificationQueueItem from "../../../../../common/types/EmailNotificationQueueItem.js";
+import type { AttendanceDailyCheck } from "../../../../../common/types/hr/attendance/AttendanceDailyCheck.js";
+import type NotificationQueueItem from "../../../../../common/types/notifications/EmailNotificationQueueItem.js";
 import { getCompanyById } from "../../../../database/repositories/shared/companies.repository.js";
 
 import {

@@ -1,4 +1,4 @@
-import { formatAttendanceReportDate } from "../../../../../common/types/attendance/WeeklyAttendanceReport.js";
+import { formatAttendanceReportDate } from "../../../../../common/types/hr/attendance/WeeklyAttendanceReport.js";
 import { dialog } from "electron";
 import fs from "fs/promises";
 import { renderToBuffer } from "@react-pdf/renderer";

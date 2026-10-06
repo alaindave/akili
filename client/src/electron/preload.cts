@@ -16,11 +16,11 @@
 //   with: { "resolution-mode": "require" },
 // }).default;
 
-// type AttendanceWithEmployee = typeof import("../common/types/attendance/Attendance", {
+// type AttendanceWithEmployee = typeof import("../common/types/hr/attendance/Attendance", {
 //   with: { "resolution-mode": "require" },
 // });
 
-// type Leave = import("../common/types/leave/Leave", {
+// type Leave = import("../common/types/hr/leave/Leave", {
 //   with: { "resolution-mode": "require" },
 // }).default;
 
@@ -45,28 +45,28 @@
 // });
 
 // type CreatePayrollComponentDto = import(
-//   "../common/types/payroll/PayrollComponent",
+//   "../common/types/hr/payroll/PayrollComponent",
 //   {
 //     with: { "resolution-mode": "require" },
 //   }
 // ).default;
 
 // type CreatePayrollProfileDto = import(
-//   "../common/types/payroll/PayrollEmployeeProfile",
+//   "../common/types/hr/payroll/PayrollEmployeeProfile",
 //   {
 //     with: { "resolution-mode": "require" },
 //   }
 // ).default;
 
 // type PayrollComponent = import(
-//   "../common/types/payroll/PayrollComponent",
+//   "../common/types/hr/payroll/PayrollComponent",
 //   {
 //     with: { "resolution-mode": "require" },
 //   }
 // ).default;
 
 // type EmployeePayrollProfile = import(
-//   "../common/types/payroll/PayrollEmployeeProfile",
+//   "../common/types/hr/payroll/PayrollEmployeeProfile",
 //   {
 //     with: { "resolution-mode": "require" },
 //   }
@@ -75,34 +75,34 @@
 // type TransportAllowanceWeeklyReport = import( "../common/types/TransportAllowance", { with: { "resolution-mode": "require" }, } ).TransportAllowanceWeeklyReport;
 
 // type AttendanceDailyCheckPreparationInput = typeof import(
-//   "../common/types/attendance/AttendanceDailyCheck",
+//   "../common/types/hr/attendance/AttendanceDailyCheck",
 //   {
 //     with: { "resolution-mode": "require" },
 //   }
 // );
 
 // type LockAttendanceDailyCheckInput = typeof import(
-//   "../common/types/attendance/AttendanceDailyCheck",
+//   "../common/types/hr/attendance/AttendanceDailyCheck",
 //   {
 //     with: { "resolution-mode": "require" },
 //   }
 // );
 
 // type MarkManagerNotifiedInput = typeof import(
-//   "../common/types/attendance/AttendanceDailyCheck",
+//   "../common/types/hr/attendance/AttendanceDailyCheck",
 //   {
 //     with: { "resolution-mode": "require" },
 //   }
 // );
 
 // type VerifyAttendanceDailyCheckInput = typeof import(
-//   "../common/types/attendance/AttendanceDailyCheck",
+//   "../common/types/hr/attendance/AttendanceDailyCheck",
 //   {
 //     with: { "resolution-mode": "require" },
 //   }
 // );
 
-// type CreateAttendanceDto = typeof import("../common/types/attendance/Attendance", {
+// type CreateAttendanceDto = typeof import("../common/types/hr/attendance/Attendance", {
 //   with: { "resolution-mode": "require" },
 // });
 

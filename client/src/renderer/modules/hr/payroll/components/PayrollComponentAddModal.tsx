@@ -19,7 +19,7 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { useState } from "react";
-import { CreatePayrollComponentDto } from "../../../../../common/types/payroll/PayrollComponent";
+import { CreatePayrollComponentDto } from "../../../../../common/types/hr/payroll/PayrollComponent";
 import useAdminUser from "../../../../../store/auth.store";
 
 interface Props {
@@ -104,8 +104,7 @@ export default function AddPayrollComponentModal({ type, onCreated }: Props) {
   return (
     <>
       <Button
-        bg="#4F46E5"
-        color="#ffffff"
+        colorScheme="blue"
         padding="16px"
         _hover={{
           bg: "#4338CA",

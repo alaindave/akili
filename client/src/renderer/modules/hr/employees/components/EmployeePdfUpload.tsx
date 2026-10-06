@@ -14,7 +14,7 @@ import {
   FiCheckCircle,
 } from "react-icons/fi";
 import { useRef, useState } from "react";
-import { EmployeeDocumentType } from "../../../../../common/types/EmployeeDocuments";
+import { EmployeeDocumentType } from "../../../../../common/types/hr/employees/EmployeeDocuments";
 import useAdminUser from "../../../../../store/auth.store";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -70,8 +70,13 @@ export default function PdfUpload({
 
     const allowedTypes = ["application/pdf", "image/jpeg", "image/png"];
 
-    if (documentType === "NATIONAL_ID" && !allowedTypes.includes(selected.type)) {
-      alert("Veuillez sélectionner un fichier PDF ou une image JPG/JPEG ou PNG.");
+    if (
+      documentType === "NATIONAL_ID" &&
+      !allowedTypes.includes(selected.type)
+    ) {
+      alert(
+        "Veuillez sélectionner un fichier PDF ou une image JPG/JPEG ou PNG."
+      );
       return;
     }
 

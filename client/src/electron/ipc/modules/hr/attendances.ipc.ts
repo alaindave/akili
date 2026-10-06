@@ -1,8 +1,8 @@
 import { ipcMain } from "electron";
 
-import { AttendanceWithEmployee } from "../../../../common/types/attendance/Attendance.js";
+import { AttendanceWithEmployee } from "../../../../common/types/hr/attendance/Attendance.js";
 import { markEmployeesAbsent } from "../../../services/modules/hr/attendance/markEmployeesAbsent.service.js";
-import { CreateAttendanceDto } from "../../../../common/types/attendance/Attendance.js";
+import { CreateAttendanceDto } from "../../../../common/types/hr/attendance/Attendance.js";
 import {
   createAbsenceLeaveAttendance,
   createAttendance,

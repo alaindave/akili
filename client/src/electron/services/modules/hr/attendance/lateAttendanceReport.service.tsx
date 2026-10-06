@@ -4,7 +4,7 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import { getLateAttendanceReport } from "../../../../database/repositories/modules/hr/lateAttendanceReport.repository.js";
 import { getCompanyById } from "../../../../database/repositories/shared/companies.repository.js";
 import { LateAttendanceReportDocument } from "../../../../reports/attendance/late-attendance-report.js";
-import { lateReportDate } from "../../../../../common/types/attendance/LateAttendanceReport.js";
+import { lateReportDate } from "../../../../../common/types/hr/attendance/LateAttendanceReport.js";
 
 export async function saveLateAttendanceReport(
   companyId: string,

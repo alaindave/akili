@@ -4,7 +4,6 @@ import {
   Divider,
   HStack,
   Icon,
-  IconButton,
   Popover,
   PopoverArrow,
   PopoverBody,
@@ -21,9 +20,8 @@ import {
   TimeIcon,
   WarningIcon,
   CloseIcon,
-  ViewIcon,
 } from "@chakra-ui/icons";
-import { PayrollRun } from "../../../../../common/types/payroll/Payroll";
+import { PayrollRun } from "../../../../../common/types/hr/payroll/Payroll";
 
 interface Props {
   payrollRun?: PayrollRun | null;
@@ -146,10 +144,10 @@ export default function PayrollAuditPopover({ payrollRun }: Props) {
   const isPaid = payrollRun.status === "PAYÉ";
 
   const statusColor = {
-    BROUILLON: "#e6b800",
-    VERIFICATION: "#1a53ff",
-    APPROUVÉ: "green",
-    PAYÉ: "purple",
+    BROUILLON: "gray",
+    VERIFICATION: "#e6b800",
+    APPROUVÉ: "#008ae6",
+    PAYÉ: "green",
     ANNULÉ: "red",
   } as const;
 

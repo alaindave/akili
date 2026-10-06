@@ -1,6 +1,6 @@
 import { ipcRenderer } from "electron";
 import { invoke } from "../../ipc/ipc.cjs";
-type SyncStatusEvent = import("../../../common/types/Sync", {
+type SyncStatusEvent = import("../../../common/types/shared/Sync", {
   with: { "resolution-mode": "require" },
 }).SyncStatusEvent;
 

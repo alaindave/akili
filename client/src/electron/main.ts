@@ -4,7 +4,7 @@ import { app, BrowserWindow } from "electron";
 import path from "path";
 import { fileURLToPath } from "url";
 
-import { initializeDatabase } from "./database/initializeDatabase.js";
+import { initializeDatabase } from "./database/schemas/shared/initializeDatabase.js";
 import { getPreloadPath } from "./pathResolver.js";
 import { registerIPCHandlers } from "./registerIPCHandlers.js";
 
@@ -18,14 +18,14 @@ import {
 import {
   startBackgroundSync,
   stopBackgroundSync,
-} from "./services/sync/backgroundSync.service.js";
+} from "./services/shared/sync/backgroundSync.service.js";
 
 import { createSocket } from "./socket.js";
 import { ensureStorageDirectories } from "./storage/directories.js";
 import { isDev } from "./util/env.util.js";
 import { getCompanyId } from "./database/repositories/shared/companies.repository.js";
 import { getInstallationId } from "./util/installationId.js";
-import { processNotificationQueue } from "./services/email/notificationQueue.service.js";
+import { processNotificationQueue } from "./services/shared/email/notificationQueue.service.js";
 
 /* =========================================================
    PATHS

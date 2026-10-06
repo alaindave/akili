@@ -16,7 +16,7 @@ import {
   Badge,
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
-import type { AttendanceWithEmployee } from "../../../../../common/types/attendance/Attendance";
+import type { AttendanceWithEmployee } from "../../../../../common/types/hr/attendance/Attendance";
 import { useUpdateAttendance } from "../hooks/useAttendance";
 import useAdminUser from "../../../../../store/auth.store";
 
@@ -320,7 +320,7 @@ const ClockIn = ({
                   mr="0.3rem"
                   bg={awayStatus === "CONGÉ" ? "#3182CE" : "#E53E3E"}
                   color="gray.200"
-                  fontSize="14px"
+                  fontSize="0.8rem"
                 >
                   {awayStatus}
                 </Badge>
@@ -351,7 +351,7 @@ const ClockIn = ({
             mr="0.3rem"
             bg={awayStatus === "CONGÉ" ? "#3182CE" : "#E53E3E"}
             color="gray.200"
-            fontSize="0.9rem"
+            fontSize="0.8rem"
           >
             {awayStatus}
           </Badge>

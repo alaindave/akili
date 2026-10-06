@@ -28,7 +28,9 @@ export async function createLeavesTable() {
 
   const columns = await all<{ name: string }>("PRAGMA table_info(leaves)");
   if (!columns.some((column) => column.name === "additionalNotes")) {
-    await run("ALTER TABLE leaves ADD COLUMN additionalNotes TEXT NOT NULL DEFAULT ''");
+    await run(
+      "ALTER TABLE leaves ADD COLUMN additionalNotes TEXT NOT NULL DEFAULT ''"
+    );
   }
 
   console.log("LEAVES TABLE INITIALIZED");

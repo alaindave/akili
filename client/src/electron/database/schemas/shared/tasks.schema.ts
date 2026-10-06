@@ -1,9 +1,10 @@
-import { run } from "../../db.js";
+import { all, run } from "../../db.js";
 
 export async function createTasksTables() {
   await run(`
     CREATE TABLE IF NOT EXISTS tasks (
       companyId TEXT NOT NULL,
+      module TEXT NOT NULL DEFAULT 'HR',
       _id TEXT PRIMARY KEY,
       taskNumber TEXT NOT NULL,
       author TEXT NOT NULL,
@@ -59,6 +60,11 @@ export async function createTasksTables() {
       REFERENCES admin_users(_id)
   )
 `);
+
+  const columns = await all<{ name: string }>("PRAGMA table_info(tasks)");
+  if (!columns.some((column) => column.name === "module")) {
+    await run("ALTER TABLE tasks ADD COLUMN module TEXT NOT NULL DEFAULT 'HR'");
+  }
 
   console.log("TASKS TABLES INITIALIZED");
 }

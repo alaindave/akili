@@ -4,7 +4,7 @@ import { IoCalendarNumberSharp } from "react-icons/io5";
 import { FaDollarSign, FaRegClock } from "react-icons/fa";
 import { GoDotFill } from "react-icons/go";
 import { Link, useLocation, useParams } from "react-router-dom";
-import ComponentErrorFallback from "../../../../components/ComponentErrorFallback";
+import ComponentErrorFallback from "../../../../components/common/ComponentErrorFallback";
 import EmployeeDetailsTab from "./EmployeeDetailsTab";
 import EmployeePhotoUpload from "./EmployeePhotoUpload";
 import { useEmployee } from "../hooks/useEmployees";
@@ -170,7 +170,7 @@ const EmployeeDetailsPage = () => {
 
             <Link
               to={{
-                pathname: `/employees_admin/employees_list/${employee._id}/attendances`,
+                pathname: `/hr/employees_list/${employee._id}/attendances`,
               }}
               state={{
                 employee,
@@ -195,7 +195,7 @@ const EmployeeDetailsPage = () => {
 
             <Link
               to={{
-                pathname: `/employees_admin/employees_list/${employee._id}/leaves`,
+                pathname: `/hr/employees_list/${employee._id}/leaves`,
               }}
               state={{
                 employee,
@@ -219,7 +219,7 @@ const EmployeeDetailsPage = () => {
 
             <Link
               to={{
-                pathname: `/employees_admin/employees_list/${employee._id}/payslips`,
+                pathname: `/hr/employees_list/${employee._id}/payslips`,
               }}
               state={{
                 employee,

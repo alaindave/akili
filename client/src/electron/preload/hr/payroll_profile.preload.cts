@@ -1,17 +1,17 @@
 type PayrollComponent = import(
-  "../../../common/types/payroll/PayrollComponent",
+  "../../../common/types/hr/payroll/PayrollComponent",
   {
     with: { "resolution-mode": "require" },
   }
 ).default;
 type CreatePayrollProfileDto = import(
-  "../../../common/types/payroll/PayrollEmployeeProfile",
+  "../../../common/types/hr/payroll/PayrollEmployeeProfile",
   {
     with: { "resolution-mode": "require" },
   }
 ).CreatePayrollProfileDto;
 type PayrollEmployeeProfile = import(
-  "../../../common/types/payroll/PayrollEmployeeProfile",
+  "../../../common/types/hr/payroll/PayrollEmployeeProfile",
   {
     with: { "resolution-mode": "require" },
   }

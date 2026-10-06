@@ -12,7 +12,7 @@ import {
   TransportAllowanceWeeklyReport,
   TransportAllowanceEmployee,
   TransportAllowanceDay,
-} from "../../../common/types/TransportAllowance.js";
+} from "../../../common/types/hr/attendance/TransportAllowance.js";
 
 interface CompanyInfo {
   name: string;
@@ -432,7 +432,11 @@ const styles = StyleSheet.create({
  * ============================================================
  */
 
-const TransportAllowancePdf: React.FC<Props> = ({ report, company, currency }) => {
+const TransportAllowancePdf: React.FC<Props> = ({
+  report,
+  company,
+  currency,
+}) => {
   return (
     <Document
       title="Rapport de frais de déplacement"
@@ -442,7 +446,10 @@ const TransportAllowancePdf: React.FC<Props> = ({ report, company, currency }) =
       <Page size="A4" orientation="landscape" style={styles.page}>
         <Header company={company} report={report} />
         <Summary report={report} currency={currency} />
-        <TransportAllowanceTable employees={report.employees} currency={currency} />
+        <TransportAllowanceTable
+          employees={report.employees}
+          currency={currency}
+        />
         <GrandTotal total={report.totalAllowance} currency={currency} />
         <Signatures />
         <Footer report={report} />
@@ -733,7 +740,9 @@ const GrandTotal: React.FC<{
   return (
     <View style={styles.grandTotal}>
       <Text style={styles.grandTotalLabel}>TOTAL:</Text>
-      <Text style={styles.grandTotalValue}>{formatMoney(total)} {currency}</Text>
+      <Text style={styles.grandTotalValue}>
+        {formatMoney(total)} {currency}
+      </Text>
     </View>
   );
 };
@@ -802,7 +811,9 @@ const Footer: React.FC<{
 
 function formatMoney(amount: number): string {
   // Helvetica does not support French narrow no-break thousands separators.
-  return new Intl.NumberFormat("fr-FR").format(amount).replace(/[\u00a0\u202f]/g, " ");
+  return new Intl.NumberFormat("fr-FR")
+    .format(amount)
+    .replace(/[\u00a0\u202f]/g, " ");
 }
 
 function formatFrenchDate(dateString: string): string {

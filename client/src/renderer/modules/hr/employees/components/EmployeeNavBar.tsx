@@ -28,10 +28,10 @@ import { MdPersonOutline } from "react-icons/md";
 import { NavLink, useNavigate } from "react-router-dom";
 import useAdminUser from "../../../../../store/auth.store";
 import useTaskStore from "../../../../../store/task.store";
-import Logo from "../../../../components/Logo";
-import PageErrorFallback from "../../../../components/PageErrorFallback";
-import SyncStatus from "../../../../components/SyncStatus";
+import PageErrorFallback from "../../../../components/common/PageErrorFallback";
+import SyncStatus from "../../../../components/common/SyncStatus";
 import "../../../../styles/App.css";
+import Logo from "../../../../components/common/Logo";
 
 const EmployeeNavBar = () => {
   const user = useAdminUser((store) => store.adminUser);
@@ -128,7 +128,7 @@ const EmployeeNavBar = () => {
               <NavLink
                 className="nav-button"
                 end
-                to="/employees_admin"
+                to="/hr"
                 style={{
                   display: "flex",
                   width: "100%",
@@ -168,7 +168,7 @@ const EmployeeNavBar = () => {
             <ListItem flex="1" display="flex" alignItems="center">
               <ErrorBoundary FallbackComponent={PageErrorFallback}>
                 <NavLink
-                  to="/employees_admin/employees_list"
+                  to="/hr/employees_list"
                   className="nav-button"
                   style={{
                     display: "flex",
@@ -211,7 +211,7 @@ const EmployeeNavBar = () => {
               <ErrorBoundary FallbackComponent={PageErrorFallback}>
                 <NavLink
                   className="nav-button"
-                  to="/employees_admin/attendances"
+                  to="/hr/attendances"
                   style={{
                     display: "flex",
                     width: "100%",
@@ -253,7 +253,7 @@ const EmployeeNavBar = () => {
               <ErrorBoundary FallbackComponent={PageErrorFallback}>
                 <NavLink
                   className="nav-button"
-                  to="/employees_admin/leaves"
+                  to="/hr/leaves"
                   style={{
                     display: "flex",
                     width: "100%",
@@ -294,7 +294,7 @@ const EmployeeNavBar = () => {
             <ListItem flex="1" display="flex" alignItems="center">
               <NavLink
                 className="nav-button"
-                to="/employees_admin/payroll"
+                to="/hr/payroll"
                 style={{
                   display: "flex",
                   width: "100%",
@@ -334,7 +334,7 @@ const EmployeeNavBar = () => {
             <ListItem flex="1" display="flex" alignItems="center">
               <NavLink
                 className="nav-button"
-                to="/employees_admin/reports"
+                to="/hr/reports"
                 style={{
                   display: "flex",
                   width: "100%",
@@ -374,7 +374,7 @@ const EmployeeNavBar = () => {
             <ListItem flex="1" display="flex" alignItems="center">
               <NavLink
                 className="nav-button"
-                to="/employees_admin/incidents"
+                to="/hr/incidents"
                 style={{
                   display: "flex",
                   width: "100%",
@@ -414,7 +414,7 @@ const EmployeeNavBar = () => {
             <ListItem flex="1" display="flex" alignItems="center">
               <NavLink
                 className="nav-button"
-                to="/employees_admin/tasks"
+                to="/hr/tasks"
                 style={{
                   display: "flex",
                   width: "100%",

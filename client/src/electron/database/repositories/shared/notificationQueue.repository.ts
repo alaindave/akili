@@ -1,7 +1,7 @@
 import crypto from "crypto";
 
-import type { EmailAttachment } from "../../../../common/types/EmailNotification.js";
-import NotificationQueueItem from "../../../../common/types/EmailNotificationQueueItem.js";
+import type { EmailAttachment } from "../../../../common/types/notifications/EmailNotification.js";
+import NotificationQueueItem from "../../../../common/types/notifications/EmailNotificationQueueItem.js";
 import { all, get, runDirect } from "../../db.js";
 
 function generateQueueId(): string {

@@ -1,23 +1,23 @@
 type AttendanceDailyCheckPreparationInput  = import(
-  "../../../common/types/attendance/AttendanceDailyCheck",
+  "../../../common/types/hr/attendance/AttendanceDailyCheck",
   {
     with: { "resolution-mode": "require" },
   }
 ).AttendanceDailyCheckPreparationInput;
 type VerifyAttendanceDailyCheckInput  = import(
-  "../../../common/types/attendance/AttendanceDailyCheck",
+  "../../../common/types/hr/attendance/AttendanceDailyCheck",
   {
     with: { "resolution-mode": "require" },
   }
 ).VerifyAttendanceDailyCheckInput ;
 type MarkManagerNotifiedInput  = import(
-  "../../../common/types/attendance/AttendanceDailyCheck",
+  "../../../common/types/hr/attendance/AttendanceDailyCheck",
   {
     with: { "resolution-mode": "require" },
   }
 ).MarkManagerNotifiedInput ;
 type LockAttendanceDailyCheckInput  = import(
-  "../../../common/types/attendance/AttendanceDailyCheck",
+  "../../../common/types/hr/attendance/AttendanceDailyCheck",
   {
     with: { "resolution-mode": "require" },
   }

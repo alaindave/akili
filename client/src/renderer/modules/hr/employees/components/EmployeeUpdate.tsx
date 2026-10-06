@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
-import type Employee from "../../../../../common/types/Employee";
+import type Employee from "../../../../../common/types/hr/employees/Employee";
 
 import {
   Box,

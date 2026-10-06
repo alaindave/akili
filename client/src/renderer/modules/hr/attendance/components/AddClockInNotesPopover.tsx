@@ -67,7 +67,7 @@ const AddClockInNotesPopover = ({ onSubmit, existingNotes }: Props) => {
       initialFocusRef={textareaRef}
     >
       <PopoverTrigger>
-        <Badge bg="#DD6B20" color="gray.200" fontSize="14px" cursor="pointer">
+        <Badge bg="#DD6B20" color="gray.200" fontSize="0.8rem" cursor="pointer">
           En retard
         </Badge>
       </PopoverTrigger>

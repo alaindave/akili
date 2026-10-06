@@ -1,4 +1,4 @@
-import PageSubtitle from "../../../../components/PageSubtitle";
+import PageSubtitle from "../../../../components/common/PageSubtitle";
 import { Box, Flex, Grid, Text, VStack } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
 import { ReactNode } from "react";
@@ -167,7 +167,7 @@ export default function ReportsPage() {
                 title="Rapport de présence quotidien"
                 description="Choisir une journée et télécharger le rapport de présence."
                 onClick={() =>
-                  navigate("/employees_admin/reports/daily_attendance")
+                  navigate("/hr/reports/daily_attendance")
                 }
               />
 
@@ -175,7 +175,7 @@ export default function ReportsPage() {
                 title="Rapport de présence hebdomadaire"
                 description="Heures d’arrivée, absences et congés du lundi au vendredi."
                 onClick={() =>
-                  navigate("/employees_admin/reports/weekly_attendance")
+                  navigate("/hr/reports/weekly_attendance")
                 }
               />
 
@@ -183,13 +183,15 @@ export default function ReportsPage() {
                 title="Frais de déplacement"
                 description="Calculer et consulter le rapport de frais de déplacement."
                 onClick={() =>
-                  navigate("/employees_admin/reports/transport_allowance")
+                  navigate("/hr/reports/transport_allowance")
                 }
               />
 
               <ReportItem
                 title="Rapport des retards"
-                onClick={() => navigate("/employees_admin/reports/late_attendance")}
+                onClick={() =>
+                  navigate("/hr/reports/late_attendance")
+                }
                 description="Consulter les retards enregistrés des employés."
               />
 

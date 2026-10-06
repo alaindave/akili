@@ -1,8 +1,8 @@
-type EmployeeDocument = import("../../../common/types/EmployeeDocuments", {
+type EmployeeDocument = import("../../../common/types/hr/employees/EmployeeDocuments", {
   with: { "resolution-mode": "require" },
 }).EmployeeDocument;
 
-type UploadedEmployeeDocument = import("../../../common/types/EmployeeDocuments", {
+type UploadedEmployeeDocument = import("../../../common/types/hr/employees/EmployeeDocuments", {
   with: { "resolution-mode": "require" },
 }).UploadedEmployeeDocument;
 

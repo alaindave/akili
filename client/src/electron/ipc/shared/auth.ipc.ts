@@ -1,5 +1,5 @@
 import { ipcMain, app } from "electron";
-import { NetworkService } from "../../services/sync/network.service.js";
+import { NetworkService } from "../../services/shared/sync/network.service.js";
 import axios from "axios";
 import { clearToken, saveToken } from "../../auth.js";
 

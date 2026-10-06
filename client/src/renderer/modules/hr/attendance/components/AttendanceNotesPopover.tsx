@@ -9,7 +9,7 @@ import {
   Text,
   useDisclosure,
 } from "@chakra-ui/react";
-import { Attendance } from "../../../../../common/types/attendance/Attendance";
+import { Attendance } from "../../../../../common/types/hr/attendance/Attendance";
 
 interface Props {
   attendance: Attendance;
@@ -85,7 +85,7 @@ const AttendanceNotesPopover = ({ attendance }: Props) => {
           mr="0.3rem"
           bg={statusColor[attendance.status]}
           color="#ffffff"
-          fontSize="14px"
+          fontSize="0.76rem"
         >
           {attendance.status}
         </Badge>

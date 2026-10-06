@@ -17,9 +17,11 @@ export interface PayrollResultDocument {
   deductions: PayrollItemDocument[];
   totalEarnings: number;
   totalDeductions: number;
-  status: "BROUILLON" | "VERIFICATION" | "APPROUVÉ" | "PAYÉ" | "ANNULÉ";
+  status: "BROUILLON" | "VERIFIÉ" | "APPROUVÉ" | "PAYÉ" | "ANNULÉ";
   notes?: string;
   netSalary: number;
+  cancelledBy?: string;
+  verifiedBy?: string;
   cancelledAt?: Date;
   verifiedAt?: Date;
   approvedBy?: string;
@@ -103,10 +105,12 @@ const PayrollResultSchema = new Schema<PayrollResultDocument>(
 
     status: {
       type: String,
-      enum: ["BROUILLON", "VERIFICATION", "APPROUVÉ", "PAYÉ", "ANNULÉ"],
+      enum: ["BROUILLON", "VERIFIÉ", "APPROUVÉ", "PAYÉ", "ANNULÉ"],
       default: "BROUILLON",
     },
 
+    cancelledBy: { type: String },
+    verifiedBy: { type: String },
     cancelledAt: {
       type: Date,
     },

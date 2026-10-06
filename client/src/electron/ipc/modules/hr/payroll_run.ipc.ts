@@ -1,11 +1,15 @@
-import { getPayslipDocumentData, savePayslipReport } from "../../../services/modules/hr/payroll/payslipReport.service.js";
-import { PayrollPaymentFilter } from "../../../../common/types/payroll/payrollPayment.js";
+import {
+  getPayslipDocumentData,
+  savePayslipReport,
+} from "../../../services/modules/hr/payroll/payslipReport.service.js";
+import { PayrollPaymentFilter } from "../../../../common/types/hr/payroll/payrollPayment.js";
 import { ipcMain } from "electron";
 import { saveMonthlyPayrollReport } from "../../../services/modules/hr/payroll/monthlyPayrollReport.service.js";
-import AdminUser from "../../../../common/types/AdminUser.js";
-import { getAllEmployeePayrollInputs } from "../../../database/repositories/modules/hr/payroll_employee_profile.repository.js";
+import AdminUser from "../../../../common/types/shared/AdminUser.js";
+import { getAllEmployeePayrollInputs } from "../../../database/repositories/modules/hr/payrollProfile.repository.js";
 import {
   approvePayslip,
+  verifyPayslip,
   cancelPayrollRun,
   cancelProcessedPayrollRun,
   getProcessedPayrollRuns,
@@ -20,22 +24,33 @@ import {
   savePayrollResults,
   updatePayrollStatus,
   verifyPayrollRun,
-} from "../../../database/repositories/modules/hr/payroll_run.repository.js";
-import { getPayrollSettings } from "../../../database/repositories/modules/hr/payroll_settings.repository.js";
+} from "../../../database/repositories/modules/hr/payrollRun.repository.js";
+import { getPayrollSettings } from "../../../database/repositories/modules/hr/payrollSettings.repository.js";
 import { calculatePayrollsWithSummary } from "../../../services/modules/hr/payroll/calculatePayroll.js";
 import { validatePayrolls } from "../../../services/modules/hr/payroll/validatePayroll.js";
 import { getPayrollAttendanceSummary } from "../../../database/repositories/modules/hr/attendances.repository.js";
 import { PayrollRunDto } from "../../../preload/hr/payroll_run.preload.cjs";
 
 export function registerPayrollGenerationIPC() {
-  ipcMain.handle("payroll:getPayslipDocument", (_, companyId: string, employeeId: string, payrollRunId: string) =>
-    getPayslipDocumentData(companyId, employeeId, payrollRunId)
+  ipcMain.handle(
+    "payroll:getPayslipDocument",
+    (_, companyId: string, employeeId: string, payrollRunId: string) =>
+      getPayslipDocumentData(companyId, employeeId, payrollRunId)
   );
-  ipcMain.handle("payroll:savePayslipReport", (_, companyId: string, employeeId: string, payrollRunId: string) =>
-    savePayslipReport(companyId, employeeId, payrollRunId)
+  ipcMain.handle(
+    "payroll:savePayslipReport",
+    (_, companyId: string, employeeId: string, payrollRunId: string) =>
+      savePayslipReport(companyId, employeeId, payrollRunId)
   );
-  ipcMain.handle("payroll:saveMonthlyReport", (_, companyId: string, runId: string, department: string | null, paymentMethod: PayrollPaymentFilter = "all") =>
-    saveMonthlyPayrollReport(companyId, runId, department, paymentMethod)
+  ipcMain.handle(
+    "payroll:saveMonthlyReport",
+    (
+      _,
+      companyId: string,
+      runId: string,
+      department: string | null,
+      paymentMethod: PayrollPaymentFilter = "all"
+    ) => saveMonthlyPayrollReport(companyId, runId, department, paymentMethod)
   );
   console.log("REGISTERING PAYROLL GENERATION IPC");
 
@@ -147,6 +162,10 @@ export function registerPayrollGenerationIPC() {
     }
   );
 
+  ipcMain.handle("payroll:verifyPayslip", (_, companyId: string, payrollResultId: string, admin: AdminUser) =>
+    verifyPayslip(companyId, payrollResultId, admin)
+  );
+
   ipcMain.handle(
     "payroll:approvePayslip",
     (_, companyId: string, payrollResultId: string, admin: AdminUser) =>
@@ -165,8 +184,10 @@ export function registerPayrollGenerationIPC() {
   ipcMain.handle("payroll:getProcessedRuns", (_, companyId: string) =>
     getProcessedPayrollRuns(companyId)
   );
-  ipcMain.handle("payroll:cancelProcessed", (_, companyId: string, payrollRunId: string, admin: AdminUser) =>
-    cancelProcessedPayrollRun(companyId, payrollRunId, admin)
+  ipcMain.handle(
+    "payroll:cancelProcessed",
+    (_, companyId: string, payrollRunId: string, admin: AdminUser) =>
+      cancelProcessedPayrollRun(companyId, payrollRunId, admin)
   );
 
   ipcMain.handle(

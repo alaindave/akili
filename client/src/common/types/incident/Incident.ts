@@ -1,4 +1,7 @@
+import type { AppModule } from "../task/Task.js";
+
 export interface IncidentInput {
+  module: AppModule;
   reporterName: string;
   reporterContact: string;
   occurredAt: string;
@@ -9,9 +12,9 @@ export interface IncidentInput {
 }
 
 export interface Incident extends IncidentInput {
+  companyId: string;
   _id: string;
   incidentNumber: string;
-  companyId: string;
   createdAt: string;
   updatedAt: string;
   serverVersion: number;
@@ -28,8 +31,13 @@ export interface IncidentFilters {
 }
 
 export interface IncidentApi {
+  addNote(companyId: string, id: string, note: string): Promise<Incident>;
   create(companyId: string, input: IncidentInput): Promise<Incident>;
-  update(companyId: string, id: string, input: IncidentInput): Promise<Incident>;
+  update(
+    companyId: string,
+    id: string,
+    input: IncidentInput
+  ): Promise<Incident>;
   getAll(companyId: string, filters?: IncidentFilters): Promise<Incident[]>;
   getById(companyId: string, id: string): Promise<Incident | null>;
   getLocations(companyId: string): Promise<string[]>;

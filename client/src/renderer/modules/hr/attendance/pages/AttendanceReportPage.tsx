@@ -3,11 +3,13 @@ import { useEffect, useState } from "react";
 import { FaArrowLeftLong } from "react-icons/fa6";
 import { MdOutlineChevronRight } from "react-icons/md";
 import { Link, useLocation } from "react-router-dom";
-import { Attendance } from "../../../../../common/types/attendance/Attendance";
-import type Employee from "../../../../../common/types/Employee";
+import { Attendance } from "../../../../../common/types/hr/attendance/Attendance";
+import type Employee from "../../../../../common/types/hr/employees/Employee";
 import useAdminUser from "../../../../../store/auth.store";
 import AttendanceTable from "../components/AttendanceRecordTable";
-import DateRangePicker, { DateRange } from "../../../../components/DatePicker";
+import DateRangePicker, {
+  DateRange,
+} from "../../../../components/common/DatePicker";
 import AttendanceStatusFilter from "../components/AttendanceStatusFilter";
 
 type EmployeeState = {
@@ -68,7 +70,7 @@ const EmployeeAttendanceReport = () => {
         <HStack mt="1.5rem">
           <Link
             to={{
-              pathname: `/employees_admin/employees_list/${employee?._id}`,
+              pathname: `/hr/employees_list/${employee?._id}`,
             }}
             state={{ photo_url }}
           >

@@ -1,5 +1,5 @@
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
-import { LateAttendanceRecord, lateReportDate, lateReportTime } from "../../../common/types/attendance/LateAttendanceReport.js";
+import { LateAttendanceRecord, lateReportDate, lateReportTime } from "../../../common/types/hr/attendance/LateAttendanceReport.js";
 
 const styles = StyleSheet.create({
   page: { padding: 30, paddingBottom: 45, fontFamily: "Helvetica", fontSize: 9 },

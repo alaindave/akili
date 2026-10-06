@@ -1,6 +1,9 @@
 import { allDirect, getDirect, runDirect, transaction } from "../../../db.js";
-import PayrollEmployeeProfile from "../../../../../common/types/payroll/PayrollEmployeeProfile.js";
-import { addToSyncQueue, notifyPendingChanges } from "../../shared/sync.repository.js";
+import PayrollEmployeeProfile from "../../../../../common/types/hr/payroll/PayrollEmployeeProfile.js";
+import {
+  addToSyncQueue,
+  notifyPendingChanges,
+} from "../../shared/sync.repository.js";
 
 // The caller owns the transaction so employee, profiles, and queue commit together.
 export async function updatePayrollAccountInTransaction(
@@ -21,19 +24,30 @@ export async function updatePayrollAccountInTransaction(
        WHERE companyId = ? AND _id = ?`,
       [accountNumber, updatedAt, companyId, profile._id]
     );
-    await addToSyncQueue({
-      companyId,
-      entity: "payroll_profile",
-      entityId: profile._id!,
-      operation: "update",
-      payload: JSON.stringify({ ...profile, accountNumber, updatedAt, synced: 0 }),
-    }, true);
+    await addToSyncQueue(
+      {
+        companyId,
+        entity: "payroll_profile",
+        entityId: profile._id!,
+        operation: "update",
+        payload: JSON.stringify({
+          ...profile,
+          accountNumber,
+          updatedAt,
+          synced: 0,
+        }),
+      },
+      true
+    );
   }
 }
 
 export async function migratePayrollAccounts() {
   const companies = await transaction(async () => {
-    const employees = await allDirect<{ companyId: string; employeeId: string }>(
+    const employees = await allDirect<{
+      companyId: string;
+      employeeId: string;
+    }>(
       `SELECT DISTINCT companyId, employeeId FROM payroll_employee_profiles
        WHERE accountNumber IS NULL AND isDeleted = 0`
     );
@@ -43,7 +57,10 @@ export async function migratePayrollAccounts() {
         [companyId, employeeId]
       );
       await updatePayrollAccountInTransaction(
-        companyId, employeeId, employee?.accountNumber?.trim() || "cash", new Date().toISOString()
+        companyId,
+        employeeId,
+        employee?.accountNumber?.trim() || "cash",
+        new Date().toISOString()
       );
     }
     return [...new Set(employees.map((employee) => employee.companyId))];

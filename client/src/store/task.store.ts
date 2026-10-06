@@ -1,13 +1,13 @@
 import { create } from "zustand";
 
-import User from "../common/types/User";
-import Task from "../common/types/task/Task";
+import User from "../common/types/shared/User";
+import Task, { AppModule } from "../common/types/task/Task";
 import PopulatedTaskComment from "../common/types/task/PopulatedTaskComment";
 
 interface TaskStore {
   tasks: Task[];
   loading: boolean;
-  loadTopTasks: (companyId: string, userId: string) => Promise<void>;
+  loadTopTasks: (companyId: string, userId: string, module: AppModule) => Promise<void>;
   createTask: (companyId: string, task: Task) => Promise<void>;
   updateTask: (companyId: string, task: Task) => Promise<void>;
   deleteTask: (companyId: string, taskId: string) => void;
@@ -15,7 +15,8 @@ interface TaskStore {
     companyId: string,
     taskId: string,
     author: Omit<User, "password">,
-    message: string
+    message: string,
+    module: AppModule
   ) => Promise<void>;
 
   setTasks: (tasks: Task[]) => void;
@@ -28,13 +29,14 @@ const useTaskStore = create<TaskStore>((set, get) => ({
 
   setTasks: (tasks) => set({ tasks }),
 
-  loadTopTasks: async (companyId: string, userId: string) => {
+  loadTopTasks: async (companyId: string, userId: string, module: AppModule) => {
     set({ loading: true });
 
     try {
       const tasks = await window.electron.tasks.tasks.getTopTasks(
         companyId,
-        userId
+        userId,
+        module
       );
 
       console.log("LOADED TOP TASKS IN STORE:", tasks);
@@ -66,7 +68,10 @@ const useTaskStore = create<TaskStore>((set, get) => ({
     }));
 
     try {
-      const savedTask = await window.electron.tasks.tasks.create(companyId, taskData);
+      const savedTask = await window.electron.tasks.tasks.create(
+        companyId,
+        taskData
+      );
 
       set((state) => ({
         tasks: state.tasks.map((t) =>
@@ -118,7 +123,7 @@ const useTaskStore = create<TaskStore>((set, get) => ({
       loading: false,
     }),
 
-  addComment: async (companyId: string, taskId: string, author, comment) => {
+  addComment: async (companyId: string, taskId: string, author, comment, module) => {
     const tempId = crypto.randomUUID();
     const optimisticComment: PopulatedTaskComment = {
       companyId,
@@ -154,7 +159,8 @@ const useTaskStore = create<TaskStore>((set, get) => ({
       });
       const refreshedTask = await window.electron.tasks.tasks.getById(
         companyId,
-        taskId
+        taskId,
+        module
       );
 
       if (!refreshedTask) {

@@ -1,4 +1,4 @@
-import { SyncStatusEvent } from "../../common/types/Sync";
+import { SyncStatusEvent } from "../../common/types/shared/Sync";
 import useSyncStore from "../../store/sync.store";
 
 let initialized = false;

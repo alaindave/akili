@@ -28,7 +28,7 @@ import {
   lateReportDate,
   lateReportTime,
   topLateEmployees,
-} from "../../../../../common/types/attendance/LateAttendanceReport";
+} from "../../../../../common/types/hr/attendance/LateAttendanceReport";
 import useAdminUser from "../../../../../store/auth.store";
 import useSyncStore from "../../../../../store/sync.store";
 
@@ -112,7 +112,7 @@ export default function LateAttendanceReportPage() {
         <HStack>
           <Button
             as={Link}
-            to="/employees_admin/reports"
+            to="/hr/reports"
             variant="outline"
             mb={5}
           >

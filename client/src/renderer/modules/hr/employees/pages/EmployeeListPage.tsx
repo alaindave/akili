@@ -1,4 +1,4 @@
-import PageSubtitle from "../../../../components/PageSubtitle";
+import PageSubtitle from "../../../../components/common/PageSubtitle";
 import {
   Box,
   Button,
@@ -23,8 +23,8 @@ import EmployeeCard from "../components/EmployeeCard";
 import EmployeeFilterMenu from "../components/EmployeeFilterMenu";
 import { useEmployees } from "../hooks/useEmployees";
 
-import NotAuthorized from "../../../../components/NotAuthorized";
-import SearchBar from "../../../../components/SearchBar";
+import NotAuthorized from "../../../../components/common/NotAuthorized";
+import SearchBar from "../../../../components/common/SearchBar";
 import useSyncStore from "../../../../../store/sync.store";
 
 const EmployeeListPage = () => {

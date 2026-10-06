@@ -1,7 +1,7 @@
 import { markEmployeesAbsentOnline } from "./markEmployeesAbsentOnline.service.js";
 import { markEmployeesAbsentLocally } from "./markEmployeesAbsentLocal.service.js";
 import { markEmployeesOnLeave } from "./markEmployeesOnLeave.service.js";
-import { NetworkService } from "../../../sync/network.service.js";
+import { NetworkService } from "../../../shared/sync/network.service.js";
 import {
   completeMarkAbsent,
   getAttendanceDailyCheckByDate,

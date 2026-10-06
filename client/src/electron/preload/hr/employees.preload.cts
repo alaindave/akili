@@ -1,4 +1,4 @@
-type Employee = import("../../../common/types/Employee", {
+type Employee = import("../../../common/types/hr/employees/Employee", {
   with: { "resolution-mode": "require" },
 }).default;
 import { invoke } from "../../ipc/ipc.cjs";

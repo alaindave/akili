@@ -9,7 +9,7 @@ import {
 import {
   DailyAttendanceEmployee,
   DailyAttendanceReport,
-} from "../../../common/types/attendance/AttendanceReport.js";
+} from "../../../common/types/hr/attendance/AttendanceReport.js";
 
 /* =========================================================
    COLORS

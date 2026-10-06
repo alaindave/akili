@@ -3,7 +3,7 @@ import { all, run, runDirect } from "../../db.js";
 import type {
   AuditLog,
   CreateAuditLogInput,
-} from "../../../../common/types/AuditLog.js";
+} from "../../../../common/types/shared/AuditLog.js";
 
 /**
  * Persist an immutable audit entry. `changes` is serialized so callers can

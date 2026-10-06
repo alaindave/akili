@@ -19,7 +19,7 @@ import {
 import { Editable, EditableInput, EditablePreview } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { FaDeleteLeft } from "react-icons/fa6";
-import PayrollComponent from "../../../../../common/types/payroll/PayrollComponent";
+import PayrollComponent from "../../../../../common/types/hr/payroll/PayrollComponent";
 import AddPayrollComponentModal from "./PayrollComponentAddModal";
 import useAdminUser from "../../../../../store/auth.store";
 
@@ -346,7 +346,7 @@ export default function PayrollComponentList({ type, showTaxable }: Props) {
                     <Checkbox
                       isChecked={item.taxable === 1}
                       onChange={() => toggleTaxable(item._id)}
-                      colorScheme="purple"
+                      colorScheme="blue"
                     />
                   </Td>
                 ) : null}

@@ -1,4 +1,4 @@
-import PageSubtitle from "../../../../components/PageSubtitle";
+import PageSubtitle from "../../../../components/common/PageSubtitle";
 import { MdPunchClock } from "react-icons/md";
 import {
   Box,
@@ -15,17 +15,17 @@ import {
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { FaCheckDouble, FaLock, FaSyncAlt } from "react-icons/fa";
-import { FaCirclePlus } from "react-icons/fa6";
 import { GiConfirmed } from "react-icons/gi";
 import { PiSealCheck } from "react-icons/pi";
 import { RiPresentationFill } from "react-icons/ri";
-import { AttendanceWithEmployee } from "../../../../../common/types/attendance/Attendance";
-import { AttendanceDailyCheck } from "../../../../../common/types/attendance/AttendanceDailyCheck";
+import { AttendanceWithEmployee } from "../../../../../common/types/hr/attendance/Attendance";
+import { AttendanceDailyCheck } from "../../../../../common/types/hr/attendance/AttendanceDailyCheck";
 import useAdminUser from "../../../../../store/auth.store";
-import DateDropdown from "../../../../components/DateDropdown";
-import DateRangePicker, { DateRange } from "../../../../components/DatePicker";
-import DeletionDialog from "../../../../components/DeletionDialog";
-import SearchBar from "../../../../components/SearchBar";
+import DateDropdown from "../../../../components/common/DateDropdown";
+import DateRangePicker, {
+  DateRange,
+} from "../../../../components/common/DatePicker";
+import SearchBar from "../../../../components/common/SearchBar";
 import EmployeeFilterMenu from "../../employees/components/EmployeeFilterMenu";
 import AddAttendanceModal from "../components/AttendanceAddModal";
 import EmployeeAttendanceCard from "../components/AttendanceCard";
@@ -37,6 +37,7 @@ import {
 import useSyncStore from "../../../../../store/sync.store";
 import AttendanceStatusFilter from "../components/AttendanceStatusFilter";
 import { useErrorToast } from "../../../../hooks/useErrorToast";
+import DeletionDialog from "../../../../components/common/DeletionDialog";
 
 /* ================= SHIMMER ================= */
 

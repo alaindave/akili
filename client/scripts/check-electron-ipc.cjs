@@ -96,4 +96,35 @@ assert.deepEqual(invocations.at(-1).args, [document]);
 const check = { companyId: 'company', date: '2026-09-22' };
 api.hr.attendanceDailyCheck.lock(check);
 assert.deepEqual(invocations.at(-1).args, [check]);
+// Every inventory bridge must forward its arguments to the matching channel.
+const inventoryGroups = {
+  items: "item",
+  balances: "balance",
+  movements: "movement",
+  documents: "document",
+  documentLines: "documentLine",
+  warehouses: "warehouse",
+  locations: "location",
+};
+const coveredInventoryChannels = new Set();
+for (const [group, resource] of Object.entries(inventoryGroups)) {
+  assert(api.inventory[group], `Missing inventory bridge: ${group}`);
+  for (const [method, invokeMethod] of Object.entries(api.inventory[group])) {
+    const channel = `inventory:${resource}:${method}`;
+    assert(handlers.has(channel), `Unexpected inventory method: ${channel}`);
+    const args = Array.from({ length: handlers.get(channel) }, (_, index) =>
+      ({ argument: index })
+    );
+    const result = invokeMethod(...args);
+    assert.equal(typeof result.then, 'function', `${channel} must return a promise`);
+    assert.equal(invocations.at(-1).channel, channel);
+    assert.deepEqual(invocations.at(-1).args, args);
+    coveredInventoryChannels.add(channel);
+  }
+}
+for (const channel of handlers.keys()) {
+  if (channel.startsWith('inventory:')) {
+    assert(coveredInventoryChannels.has(channel), `Missing inventory bridge: ${channel}`);
+  }
+}
 console.log(`Passed: ${handlers.size} handlers, ${calls.length} preload calls, ${registrations.size} registrations, preload loading and event cleanup.`);

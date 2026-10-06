@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { PayrollSettings } from "../../../../../common/types/payroll/Payroll";
+import { PayrollSettings } from "../../../../../common/types/hr/payroll/Payroll";
 import useAdminUser from "../../../../../store/auth.store";
 
 export function usePayrollSettings() {

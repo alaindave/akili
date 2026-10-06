@@ -218,7 +218,7 @@ export async function createPayrollTables() {
         CHECK(
           status IN (
             'BROUILLON',
-            'VERIFICATION',
+            'VERIFIÉ',
             'APPROUVÉ',
             'PAYÉ',
             'ANNULÉ'
@@ -226,9 +226,13 @@ export async function createPayrollTables() {
         )
         DEFAULT 'BROUILLON',
       cancelledAt TEXT,
+      cancelledBy TEXT,
       verifiedAt TEXT,
+      verifiedBy TEXT,
       approvedAt TEXT,
+      approvedBy TEXT,
       paidAt TEXT,
+      paidBy TEXT,
       synced INTEGER NOT NULL DEFAULT 0,
       serverVersion INTEGER NOT NULL DEFAULT 0,
       createdAt TEXT NOT NULL,
@@ -248,11 +252,13 @@ export async function createPayrollTables() {
   const resultColumns = await all<{ name: string }>(
     "PRAGMA table_info(payroll_results)"
   );
-  for (const column of ["approvedBy", "paidBy"]) {
+  for (const column of ["cancelledBy", "verifiedBy", "approvedBy", "paidBy"]) {
     if (!resultColumns.some((existing) => existing.name === column)) {
       await run(`ALTER TABLE payroll_results ADD COLUMN ${column} TEXT`);
     }
   }
+
+  await migratePayrollResultStatus();
 
   /* =========================================================
      PAYROLL ITEMS
@@ -537,5 +543,48 @@ async function migrateInssCalculationType() {
     });
   } finally {
     await run("PRAGMA foreign_keys = ON");
+  }
+}
+
+// Schema initialization runs before application queries and sync start.
+// Rebuild the legacy CHECK constraint without deleting dependent payroll items.
+async function migratePayrollResultStatus() {
+  const [table] = await all<{ sql: string }>(
+    "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'payroll_results'"
+  );
+  if (table?.sql.includes("'VERIFICATION'")) {
+    const [foreignKeys] = await all<{ foreign_keys: number }>("PRAGMA foreign_keys");
+    await run("PRAGMA foreign_keys = OFF");
+    try {
+      await transaction(async () => {
+        const objects = await allDirect<{ sql: string }>(
+          "SELECT sql FROM sqlite_master WHERE tbl_name = 'payroll_results' AND type IN ('index', 'trigger') AND sql IS NOT NULL"
+        );
+        const columns = await allDirect<{ name: string }>("PRAGMA table_info(payroll_results)");
+        const quote = (name: string) => `"${name.replace(/"/g, '""')}"`;
+        const createSql = table.sql
+          .replace(/CREATE TABLE\s+(?:IF NOT EXISTS\s+)?["`\[]?\w+["`\]]?/i, 'CREATE TABLE "payroll_results_verified"')
+          .replace("'VERIFICATION'", "'VERIFIÉ'");
+        await runDirect(createSql);
+        await runDirect(`INSERT INTO payroll_results_verified (${columns.map((c) => quote(c.name)).join(', ')})
+          SELECT ${columns.map((c) => c.name === 'status'
+            ? "CASE WHEN status = 'VERIFICATION' THEN 'VERIFIÉ' ELSE status END"
+            : quote(c.name)).join(', ')} FROM payroll_results`);
+        await runDirect("DROP TABLE payroll_results");
+        await runDirect("ALTER TABLE payroll_results_verified RENAME TO payroll_results");
+        for (const object of objects) await runDirect(object.sql);
+        const violations = await allDirect("PRAGMA foreign_key_check");
+        if (violations.length) throw new Error("Payroll result status migration: foreign key check failed");
+      });
+    } finally {
+      await run(`PRAGMA foreign_keys = ${foreignKeys?.foreign_keys ? 'ON' : 'OFF'}`);
+    }
+  }
+  const queue = await all("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'sync_queue'");
+  if (queue.length) {
+    await run(`UPDATE sync_queue
+      SET payload = json_set(payload, '$.status', 'VERIFIÉ')
+      WHERE entity = 'payroll_result' AND json_valid(payload)
+        AND json_extract(payload, '$.status') = 'VERIFICATION'`);
   }
 }

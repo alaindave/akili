@@ -1,12 +1,12 @@
 import { getAttendanceClockIn, saveAttendanceClockIn } from "../../../database/repositories/modules/hr/attendanceSettings.repository.js";
 import { ipcMain } from "electron";
 
-import type { AttendanceDailyCheckPreparationInput } from "../../../../common/types/attendance/AttendanceDailyCheck.js";
+import type { AttendanceDailyCheckPreparationInput } from "../../../../common/types/hr/attendance/AttendanceDailyCheck.js";
 import {
   LockAttendanceDailyCheckInput,
   MarkManagerNotifiedInput,
   VerifyAttendanceDailyCheckInput,
-} from "../../../../common/types/attendance/AttendanceDailyCheck.js";
+} from "../../../../common/types/hr/attendance/AttendanceDailyCheck.js";
 import { verifyDailyAttendance } from "../../../services/modules/hr/attendance/attendanceDailyCheck.service.js";
 import {
   completeMarkAbsent,

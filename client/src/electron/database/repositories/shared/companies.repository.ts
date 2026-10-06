@@ -1,6 +1,6 @@
 import { get, run } from "../../db.js";
 import { addToSyncQueue } from "./sync.repository.js";
-import Company from "../../../../common/types/Company.js";
+import Company from "../../../../common/types/shared/Company.js";
 import { app } from "electron";
 import path from "path";
 import fs from "fs";

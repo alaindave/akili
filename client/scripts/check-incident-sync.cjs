@@ -4,14 +4,16 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const ts = require('typescript');
-const sourceRoot = path.resolve(__dirname, '../src/electron/services/sync');
+const sourceRoot = path.resolve(__dirname, '../src/electron/services/shared/sync');
 let pending = [], failPush = false, failApply = false;
 let acknowledged = [], applied = [], cursor = 0;
-const snapshot = { _id: 'incident-1', companyId: 'company-a', updatedAt: '2026-09-22T09:00:00.000Z' };
+const snapshot = { module: 'INVENTORY', _id: 'incident-1', companyId: 'company-a', updatedAt: '2026-09-22T09:00:00.000Z' };
 let confirmed = ['queue-1'];
 let includeBrokenPhoto = false;
 const transport = {
-  post: async (url) => {
+  post: async (url, body) => {
+    const items = JSON.parse(body.get("items"));
+    assert(items.every(item => item.data.module === "INVENTORY"));
     assert(url.endsWith('/sync/push'));
     if (failPush) throw new Error('offline');
     return { status: 200, data: { synced: confirmed } };
@@ -38,6 +40,12 @@ function load(filename) {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true },
   }).outputText;
   const localRequire = (name) => {
+    if (name === 'form-data') return class {
+      fields = new Map();
+      append(key, value) { this.fields.set(key, value); }
+      get(key) { return this.fields.get(key); }
+      getHeaders() { return {}; }
+    };
     if (name === 'axios') return transport;
     if (name === 'electron') return { app: { isPackaged: false } };
     if (name.endsWith('/db.js')) return { all: async () => [], get: async () => null };
@@ -81,6 +89,7 @@ function load(filename) {
   await pullLatestChanges('company-a');
   assert.equal(cursor, 2);
   assert.deepEqual(applied.map((item) => item.serverVersion), [1, 2]);
+  assert(applied.every(item => item.module === "INVENTORY"));
   await pullLatestChanges('company-a');
   assert.equal(applied.length, 2, 'Completed cursor must not reapply old changes');
   includeBrokenPhoto = true;

@@ -25,7 +25,7 @@ import { useEffect, useState } from "react";
 import TimePicker from "react-time-picker";
 import "react-datepicker/dist/react-datepicker.css";
 import "react-time-picker/dist/TimePicker.css";
-import Employee from "../../../../../common/types/Employee";
+import Employee from "../../../../../common/types/hr/employees/Employee";
 import useAdminUser from "../../../../../store/auth.store";
 
 interface AddAttendanceModalProps {
@@ -61,10 +61,20 @@ const AddAttendanceModal = ({
   useEffect(() => {
     if (!isOpen) return;
     let active = true;
-    window.electron.hr.attendanceDailyCheck.getClockIn(user.companyId)
-      .then((time) => { if (active) { setDefaultClockIn(time); setClockIn(time); } })
-      .catch((error) => console.error("Unable to load attendance clock-in setting", error));
-    return () => { active = false; };
+    window.electron.hr.attendanceDailyCheck
+      .getClockIn(user.companyId)
+      .then((time) => {
+        if (active) {
+          setDefaultClockIn(time);
+          setClockIn(time);
+        }
+      })
+      .catch((error) =>
+        console.error("Unable to load attendance clock-in setting", error)
+      );
+    return () => {
+      active = false;
+    };
   }, [isOpen, user.companyId]);
 
   useEffect(() => {
@@ -219,9 +229,13 @@ const AddAttendanceModal = ({
         /*
          * Deduct one day from the employee's balance.
          */
-        await window.electron.hr.employees.update(user.companyId, employee._id, {
-          remainingLeave: remainingLeave - 1,
-        });
+        await window.electron.hr.employees.update(
+          user.companyId,
+          employee._id,
+          {
+            remainingLeave: remainingLeave - 1,
+          }
+        );
 
         /*
          * Create the corresponding attendance record.

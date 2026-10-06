@@ -42,6 +42,7 @@ function load(relativePath) {
   await createIncidentsTable();
   await createIncidentsTable();
   const input = {
+    module: 'INVENTORY',
     reporterName: '  Alice  ', reporterContact: '+257 12345678',
     occurredAt: '2026-09-22T09:00:00+02:00', location: 'Atelier',
     notes: "Déversement à 100% près de l'entrée", preventiveActions: '', remedialActions: 'Nettoyage',
@@ -49,6 +50,8 @@ function load(relativePath) {
   const first = await repo.createIncident('company-a', input);
   const second = await repo.createIncident('company-a', { ...input, occurredAt: '2026-09-23T00:00:00Z', location: 'Entrepôt' });
   await repo.createIncident('company-b', { ...input, location: 'Confidentiel' });
+  assert.equal(first.module, 'INVENTORY');
+  assert.equal((await repo.getIncidentById('company-a', first._id)).module, 'INVENTORY');
   assert.match(first.incidentNumber, /^INC-\d{6}-\d{4}-([1-9]\d{0,2}|1000)$/);
   assert.equal((await repo.getIncidentById('company-a', first._id)).incidentNumber, first.incidentNumber);
   assert.equal((await repo.getIncidents('company-a', { search: first.incidentNumber }))[0]._id, first._id);
@@ -68,7 +71,7 @@ function load(relativePath) {
   assert.equal(day[0]._id, first._id);
   assert.equal((await repo.getIncidents('company-a', { from: first.occurredAt, to: first.occurredAt })).length, 1);
   assert.equal(JSON.stringify(await repo.getIncidentLocations('company-a')), JSON.stringify(['Atelier', 'Entrepôt']));
-  for (const invalid of [{ reporterName: ' ' }, { reporterContact: '' }, { notes: '' }, { location: ' ' }, { occurredAt: 'invalid' }, { notes: 'a'.repeat(10001) }]) {
+  for (const invalid of [{ module: 'INVALID' }, { reporterName: ' ' }, { reporterContact: '' }, { notes: '' }, { location: ' ' }, { occurredAt: 'invalid' }, { notes: 'a'.repeat(10001) }]) {
     await assert.rejects(() => repo.createIncident('company-a', { ...input, ...invalid }));
   }
   await assert.rejects(() => repo.createIncident('', input));
@@ -77,16 +80,18 @@ function load(relativePath) {
   const sync = load('repositories/shared/sync.repository.ts');
   assert.equal((await sync.getUnsyncedItems('company-a')).length, 2);
   const updated = await repo.updateIncident('company-a', first._id, { ...input, notes: 'Updated locally' });
+  assert.equal(updated.module, 'INVENTORY');
   assert.equal(updated.incidentNumber, first.incidentNumber);
   assert(updated.updatedAt > first.updatedAt);
   const pending = await sync.getUnsyncedItems('company-a');
   assert.equal(pending.length, 3);
   assert.equal(pending[2].operation, 'update');
+  assert.equal(JSON.parse(pending[2].payload).module, 'INVENTORY');
   assert.equal(JSON.parse(pending[2].payload).notes, 'Updated locally');
   await assert.rejects(() => repo.updateIncident('company-b', first._id, input));
   await repo.markIncidentSynced('company-a', first._id, first.updatedAt);
   assert.equal((await repo.getIncidentById('company-a', first._id)).synced, 0);
-  const remote = { ...updated, serverVersion: 5, notes: 'From server' };
+  const remote = { ...updated, serverVersion: 5, module: 'SALES', notes: 'From server' };
   await assert.rejects(() => repo.upsertIncident('company-a', remote));
   await repo.markIncidentSynced('company-a', first._id, updated.updatedAt);
   await repo.upsertIncident('company-a', remote);
@@ -95,17 +100,27 @@ function load(relativePath) {
   assert.equal((await repo.getIncidentById('company-a', first._id)).notes, 'From server');
   await assert.rejects(() => repo.upsertIncident('company-b', remote));
 
+  const withNote = await repo.addIncidentNote('company-a', first._id, '  Follow-up note  ');
+  assert.equal(withNote.notes, 'From server\n\nFollow-up note');
+  assert.equal(withNote.module, 'SALES');
+  assert.equal(withNote.reporterName, remote.reporterName);
+  assert.equal((await repo.getIncidentById('company-a', first._id)).notes, withNote.notes);
+  await assert.rejects(() => repo.addIncidentNote('company-b', first._id, 'Private'));
+  await assert.rejects(() => repo.addIncidentNote('company-a', first._id, ' '));
+  await assert.rejects(() => repo.addIncidentNote('company-a', first._id, 'a'.repeat(10000)));
+
   // Queue failure rolls back both create and update.
   db.exec("CREATE TRIGGER fail_incident_queue BEFORE INSERT ON sync_queue BEGIN SELECT RAISE(ABORT, 'queue failure'); END");
   await assert.rejects(() => repo.createIncident('company-a', input));
   await assert.rejects(() => repo.updateIncident('company-a', first._id, { ...input, notes: 'Must roll back' }));
   assert.equal((await repo.getIncidents('company-a')).length, 2);
-  assert.equal((await repo.getIncidentById('company-a', first._id)).notes, 'From server');
+  await assert.rejects(() => repo.addIncidentNote('company-a', first._id, 'Must roll back'));
+  assert.equal((await repo.getIncidentById('company-a', first._id)).notes, withNote.notes);
   db.exec('DROP TRIGGER fail_incident_queue');
 
   // Existing local-only installations gain metadata and one queue item per report.
   db.exec("DELETE FROM sync_queue; UPDATE incidents SET synced = 0, serverVersion = 0");
-  for (const column of ['updatedAt', 'serverVersion', 'synced', 'lastSyncedAt', 'isDeleted']) {
+  for (const column of ['module', 'updatedAt', 'serverVersion', 'synced', 'lastSyncedAt', 'isDeleted']) {
     db.exec(`ALTER TABLE incidents DROP COLUMN ${column}`);
   }
   await createIncidentsTable();
@@ -114,5 +129,7 @@ function load(relativePath) {
   assert.equal((await sync.getUnsyncedItems('company-a')).length, 2);
   assert.equal((await sync.getUnsyncedItems('company-b')).length, 1);
   assert.equal((await repo.getIncidentById('company-a', first._id)).updatedAt, first.createdAt);
+  assert.equal((await repo.getIncidentById('company-a', first._id)).module, 'HR');
+  assert.equal(JSON.parse((await sync.getUnsyncedItems('company-a'))[0].payload).module, 'HR');
   console.log('Passed: incident schema, round-trip persistence, company isolation, ordering, search, combined filters, date boundaries validation, atomic queue writes, acknowledgements, pull conflicts and schema upgrades.');
 })().catch((error) => { console.error(error); process.exitCode = 1; }).finally(() => db.close());

@@ -1,4 +1,4 @@
-import PageSubtitle from "../../../../components/PageSubtitle";
+import PageSubtitle from "../../../../components/common/PageSubtitle";
 import {
   Badge,
   Box,
@@ -23,17 +23,16 @@ import {
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { FaSyncAlt } from "react-icons/fa";
-import { IoSettings } from "react-icons/io5";
 import { PiDotsThreeOutlineVerticalDuotone } from "react-icons/pi";
 import { MdOutlineDeleteForever } from "react-icons/md";
 import { IoIosRemoveCircleOutline } from "react-icons/io";
-import { Link, useNavigate } from "react-router-dom";
-import User from "../../../../../common/types/User";
-import { PayrollRun } from "../../../../../common/types/payroll/Payroll";
+import { useNavigate } from "react-router-dom";
+import User from "../../../../../common/types/shared/User";
+import { PayrollRun } from "../../../../../common/types/hr/payroll/Payroll";
 import useAdminUser from "../../../../../store/auth.store";
 import { useErrorToast } from "../../../../hooks/useErrorToast";
 import useSyncStore from "../../../../../store/sync.store";
-import MonthDropDown from "../../../../components/MonthDropDown";
+import MonthDropDown from "../../../../components/common/MonthDropDown";
 import PayrollStatusFilter from "../components/PayrollStatusFilter";
 import { getPayrollPeriod } from "../../../../lib/date";
 
@@ -277,11 +276,11 @@ export default function PayrollPage() {
   };
 
   const statusColor = {
-    BROUILLON: "#e6b800",
-    VERIFICATION: "#1a53ff",
+    BROUILLON: "gray",
+    VERIFICATION: "#e6b800",
     APPROUVÉ: "green",
-    PAYÉ: "purple",
-    ANNULÉ: "red",
+    PAYÉ: "green",
+    ANNULÉ: "#ff3333",
   } as const;
 
   return (
@@ -374,7 +373,7 @@ export default function PayrollPage() {
                 borderWidth="1px"
                 borderRadius="lg"
                 overflowY="auto"
-                mt="2.5rem"
+                mt="4rem"
               >
                 <Table mt="1rem" variant="simple" size="md">
                   <Thead position="sticky" top={0} zIndex={1} bg="gray.50">
@@ -399,9 +398,7 @@ export default function PayrollPage() {
                             _hover={{ bg: "transparent" }}
                             transition="background 0.2s"
                             onClick={() =>
-                              navigate(
-                                `/employees_admin/payroll/details/${run._id}`
-                              )
+                              navigate(`/hr/payroll/details/${run._id}`)
                             }
                           >
                             Du{" "}
@@ -561,11 +558,6 @@ export default function PayrollPage() {
             <PayrollStatusFilter onFilterClicked={setStatusFilter} />
           </Box>
         </HStack>
-        <Box>
-          <Link to="/employees_admin/payroll/settings">
-            <IoSettings fontSize="1.9rem" />
-          </Link>
-        </Box>
       </Flex>
     </Flex>
   );

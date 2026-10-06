@@ -1,7 +1,10 @@
 import { ipcMain } from "electron";
 
-import { createWeeklyTransportAllowanceReport, saveWeeklyTransportAllowanceReport } from "../../../services/modules/hr/attendance/transportAllowance.service.js";
-import { TransportAllowanceWeeklyReport } from "../../../../common/types/TransportAllowance.js";
+import {
+  createWeeklyTransportAllowanceReport,
+  saveWeeklyTransportAllowanceReport,
+} from "../../../services/modules/hr/attendance/transportAllowance.service.js";
+import { TransportAllowanceWeeklyReport } from "../../../../common/types/hr/attendance/TransportAllowance.js";
 
 /**
  * Register Transport Allowance IPC handlers
@@ -9,7 +12,8 @@ import { TransportAllowanceWeeklyReport } from "../../../../common/types/Transpo
 export function registerTransportAllowanceIpc(): void {
   ipcMain.handle(
     "transportAllowance:saveWeeklyPdf",
-    (_, report: TransportAllowanceWeeklyReport) => saveWeeklyTransportAllowanceReport(report)
+    (_, report: TransportAllowanceWeeklyReport) =>
+      saveWeeklyTransportAllowanceReport(report)
   );
   console.log("REGISTERING TRANSPORT ALLOWANCE IPC ");
   ipcMain.handle(

@@ -3,7 +3,7 @@ import {
   scheduleReminder,
   cancelReminder,
   cancelAllReminders,
-} from "../../services/notification/reminder.service.js";
+} from "../../services/shared/notification/reminder.service.js";
 
 export function registerNotificationIPC(): void {
   console.log("REGISTERING NOTIFICATION IPC");

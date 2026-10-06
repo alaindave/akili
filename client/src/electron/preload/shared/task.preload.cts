@@ -4,6 +4,8 @@ type Task = import("../../../common/types/task/Task", {
   with: { "resolution-mode": "require" },
 }).default;
 
+type AppModule = Task["module"];
+
 export const taskApi = {
   tasks: {
     create: (companyId: string, task: Omit<Task, "_id">) =>
@@ -12,19 +14,19 @@ export const taskApi = {
     update: (companyId: string, task: Task) =>
       invoke("tasks:update", companyId, task),
 
-    getAll: (companyId: string) => invoke("tasks:getAll", companyId),
+    getAll: (companyId: string, module: AppModule) => invoke("tasks:getAll", companyId, module),
 
-    getById: (companyId: string, _id: string) =>
-      invoke("tasks:getById", companyId, _id),
+    getById: (companyId: string, _id: string, module: AppModule) =>
+      invoke("tasks:getById", companyId, _id, module),
 
-    getUserTasks: (companyId: string, userId: string) =>
-      invoke("tasks:getUserTasks", companyId, userId),
+    getUserTasks: (companyId: string, userId: string, module: AppModule) =>
+      invoke("tasks:getUserTasks", companyId, userId, module),
 
-    getTopTasks: (companyId: string, userId: string) =>
-      invoke("tasks:getTopTasks", companyId, userId),
+    getTopTasks: (companyId: string, userId: string, module: AppModule) =>
+      invoke("tasks:getTopTasks", companyId, userId, module),
 
-    delete: (companyId: string, taskId: string) =>
-      invoke("tasks:delete", companyId, taskId),
+    delete: (companyId: string, taskId: string, module: AppModule) =>
+      invoke("tasks:delete", companyId, taskId, module),
 
     onNew: (callback: (data: any) => void) => {
       const handler = (_event: Electron.IpcRendererEvent, data: any) => {

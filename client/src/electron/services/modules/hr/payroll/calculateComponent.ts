@@ -1,7 +1,7 @@
-import { PayrollCalculationContext } from "../../../../../common/types/payroll/Payroll.js";
+import { PayrollCalculationContext } from "../../../../../common/types/hr/payroll/Payroll.js";
 import { calculateAbsenceDeduction } from "./calculateAbsentDeduction.js";
 import calculateIPR from "./calculateIPR.js";
-import { PayrollComponentInput } from "../../../../../common/types/payroll/Payroll.js";
+import { PayrollComponentInput } from "../../../../../common/types/hr/payroll/Payroll.js";
 import { calculateLateDeduction } from "./calculateLateDeduction.js";
 
 export function calculateComponent(

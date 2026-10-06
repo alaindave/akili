@@ -13,13 +13,13 @@ import {
   getUnsyncedEmployeeDocuments,
   markEmployeeDocumentUploaded,
   uploadEmployeeDocument,
-} from "../../../database/repositories/modules/hr/employees_documents.repository.js";
+} from "../../../database/repositories/modules/hr/employeesDocuments.repository.js";
 
 import {
   EmployeeDocument,
   EmployeeDocumentType,
   UploadedEmployeeDocument,
-} from "../../../../common/types/EmployeeDocuments.js";
+} from "../../../../common/types/hr/employees/EmployeeDocuments.js";
 
 function resolveEmployeeDocumentPath(
   companyId: string,

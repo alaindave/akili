@@ -4,7 +4,7 @@ import {
   PayslipDocumentData,
   payslipPeriod,
   payslipRows,
-} from "../../../common/types/payroll/PayslipDocument.js";
+} from "../../../common/types/hr/payroll/PayslipDocument.js";
 
 const styles = StyleSheet.create({
   page: {

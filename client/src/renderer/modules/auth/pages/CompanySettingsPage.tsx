@@ -1,4 +1,4 @@
-import PageSubtitle from "../../../components/PageSubtitle";
+import PageSubtitle from "../../../components/common/PageSubtitle";
 import {
   Alert,
   AlertIcon,

@@ -1,4 +1,4 @@
-type Company = import("../../../common/types/Company", {
+type Company = import("../../../common/types/shared/Company", {
   with: { "resolution-mode": "require" },
 }).default;
 

@@ -2,7 +2,7 @@ import { dialog } from "electron";
 import fs from "fs/promises";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { AttendanceReportDocument } from "../../../../reports/attendance/attendance-report.js";
-import { DailyAttendanceReport } from "../../../../../common/types/attendance/AttendanceReport.js";
+import { DailyAttendanceReport } from "../../../../../common/types/hr/attendance/AttendanceReport.js";
 import { getCompanyById } from "../../../../database/repositories/shared/companies.repository.js";
 import { getDailyAttendanceReport } from "../../../../database/repositories/modules/hr/attendances.repository.js";
 

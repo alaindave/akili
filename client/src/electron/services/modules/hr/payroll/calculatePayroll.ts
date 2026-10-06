@@ -1,12 +1,12 @@
-import AdminUser from "../../../../../common/types/AdminUser.js";
+import AdminUser from "../../../../../common/types/shared/AdminUser.js";
 import {
   PayrollEmployeeInput,
   PayrollResult,
   PayrollItem,
   PayrollBatchResult,
   PayrollCalculationContext,
-} from "../../../../../common/types/payroll/Payroll.js";
-import { PayrollSettings } from "../../../../../common/types/payroll/Payroll.js";
+} from "../../../../../common/types/hr/payroll/Payroll.js";
+import { PayrollSettings } from "../../../../../common/types/hr/payroll/Payroll.js";
 
 import { calculateComponent } from "./calculateComponent.js";
 

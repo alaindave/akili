@@ -35,7 +35,7 @@ export default function SettingsPage() {
           ],
           [
             "Paramètres de paie",
-            "Annulation des paies approuvées ou payées.",
+            "Rémunérations, déductions, paramètres généraux et annulation des paies.",
             "/admin/settings/payroll",
           ],
         ].map(([title, description, path]) => (

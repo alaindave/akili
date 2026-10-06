@@ -12,7 +12,7 @@ import {
   upsertPayrollComponent,
   getUnsyncedPayrollComponents,
   markPayrollComponentSynced,
-} from "../../../database/repositories/modules/hr/payroll_components.repository.js";
+} from "../../../database/repositories/modules/hr/payrollComponents.repository.js";
 
 export function registerPayrollComponentIPC() {
   console.log("REGISTERING PAYROLL COMPONENT IPC");

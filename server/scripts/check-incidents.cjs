@@ -14,6 +14,7 @@ function load(file, overrides = {}) {
   }).outputText;
   const localRequire = (name) => {
     if (name in overrides) return overrides[name];
+    if (name === './appModule.js') return load('models/appModule.ts');
     if (name.startsWith('.')) return {};
     return require(name);
   };
@@ -74,6 +75,7 @@ async function request(method, routePath, payload, companyId = 'company-a') {
 (async () => {
   const data = {
     _id: randomUUID(), companyId: 'company-a', incidentNumber: 'INC-220926-0905-742',
+    module: 'INVENTORY',
     reporterName: 'Alice', reporterContact: 'alice@example.com', occurredAt: '2026-09-22T07:05:00.000Z',
     location: 'Atelier', notes: 'Original', preventiveActions: '', remedialActions: '',
     createdAt: '2026-09-22T08:00:00.000Z', updatedAt: '2026-09-22T08:00:00.000Z',
@@ -82,13 +84,15 @@ async function request(method, routePath, payload, companyId = 'company-a') {
   const item = (queueId, operation, snapshot) => ({ queueId, entity: 'incident', operation, companyId: snapshot.companyId, data: snapshot });
   let response = await request('post', '/push', [item('1', 'create', data)]);
   assert.deepEqual(response.body.synced, ['1']);
+  assert.equal(records.get(data._id).module, 'INVENTORY');
   assert.equal(records.get(data._id).serverVersion, 1);
   assert.equal(records.get(data._id).synced, undefined);
   await request('post', '/push', [item('1', 'create', data)]);
   assert.equal(version, 1, 'Retry must not generate a new version');
-  const updated = { ...data, notes: 'Updated', updatedAt: '2026-09-22T09:00:00.000Z', incidentNumber: 'Attempted replacement' };
+  const updated = { ...data, module: 'SALES', notes: 'Updated', updatedAt: '2026-09-22T09:00:00.000Z', incidentNumber: 'Attempted replacement' };
   response = await request('post', '/push', [item('2', 'update', updated)]);
   assert.deepEqual(response.body.synced, ['2']);
+  assert.equal(records.get(data._id).module, 'SALES');
   assert.equal(records.get(data._id).notes, 'Updated');
   assert.equal(records.get(data._id).incidentNumber, data.incidentNumber);
   await request('post', '/push', [item('1', 'create', data)]);
@@ -99,6 +103,7 @@ async function request(method, routePath, payload, companyId = 'company-a') {
   assert.deepEqual(response.body.synced, []);
   await assert.rejects(() => service.syncIncident('update', { ...updated, companyId: 'company-b' }));
   await assert.rejects(() => service.syncIncident('delete', data));
+  await assert.rejects(() => service.syncIncident('create', { ...data, module: 'INVALID' }));
   await service.syncIncident('update', { ...updated, _id: randomUUID(), incidentNumber: data.incidentNumber });
   await service.syncIncident('create', { ...data, _id: randomUUID(), companyId: 'company-b' });
   response = await request('get', '/pull', { entity: 'incident', afterVersion: '0', limit: '1' });
@@ -108,6 +113,7 @@ async function request(method, routePath, payload, companyId = 'company-a') {
   response = await request('get', '/pull', { entity: 'incident', afterVersion: String(cursor), limit: '1' });
   assert.equal(response.body.items.length, 1);
   assert.equal(response.body.items[0].companyId, 'company-a');
+  assert.equal(response.body.items[0].module, 'SALES');
   assert.equal(response.body.hasMore, false);
   response = await request('get', '/pull', { entity: 'incident', afterVersion: String(response.body.nextVersion), limit: '1' });
   assert.equal(response.body.items.length, 0);

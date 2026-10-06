@@ -25,7 +25,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
-import Employee from "../../../../../common/types/Employee";
+import Employee from "../../../../../common/types/hr/employees/Employee";
 import DatePicker from "react-datepicker";
 import { FaSave } from "react-icons/fa";
 import { RxCrossCircled } from "react-icons/rx";

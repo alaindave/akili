@@ -13,7 +13,7 @@ import {
   getLogoUrl,
   updateLogo,
 } from "../../database/repositories/shared/companies.repository.js";
-import type Company from "../../../common/types/Company.js";
+import type Company from "../../../common/types/shared/Company.js";
 
 /* =========================================================
    REGISTER COMPANY IPC

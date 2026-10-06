@@ -10,7 +10,7 @@ import {
   restorePayrollSettings,
   markPayrollSettingsSynced,
   getUnsyncedPayrollSettings,
-} from "../../../database/repositories/modules/hr/payroll_settings.repository.js";
+} from "../../../database/repositories/modules/hr/payrollSettings.repository.js";
 
 export function registerPayrollSettingsIPC() {
   console.log("REGISTERING PAYROLL SETTINGS IPC");

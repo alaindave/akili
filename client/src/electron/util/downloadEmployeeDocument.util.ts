@@ -2,8 +2,8 @@ import axios from "axios";
 import { app } from "electron";
 import fs from "fs/promises";
 import path from "path";
-import Employee from "../../common/types/Employee.js";
-import { EmployeeDocument } from "../../common/types/EmployeeDocuments.js";
+import Employee from "../../common/types/hr/employees/Employee.js";
+import { EmployeeDocument } from "../../common/types/hr/employees/EmployeeDocuments.js";
 import { getEmployeeDocumentsDir } from "../storage/directories.js";
 
 const API_URL = app.isPackaged

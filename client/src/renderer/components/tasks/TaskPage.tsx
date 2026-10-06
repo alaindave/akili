@@ -1,0 +1,149 @@
+import { useModule } from "../../context/ModuleContext";
+import PageSubtitle from "../common/PageSubtitle";
+import {
+  Box,
+  Flex,
+  Text,
+  HStack,
+  Button,
+  useDisclosure,
+  Grid,
+} from "@chakra-ui/react";
+import { FaSyncAlt } from "react-icons/fa";
+import { useEffect, useState } from "react";
+import Task from "../../../common/types/task/Task";
+import useAdminUser from "../../../store/auth.store";
+import useSyncStore from "../../../store/sync.store";
+import AdminUser from "../../../common/types/shared/AdminUser";
+import SearchBar from "../common/SearchBar";
+import TaskPriorityFilter from "./TaskPriorityFilter";
+import TaskStatusFilter from "./TaskStatusFilter";
+import TaskSubmissionModal from "./TaskSubmissionModal";
+import TaskTable from "./TaskTable";
+
+const TaskPage = () => {
+  const { module } = useModule();
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const [priorityFilter, setPriorityFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [adminUsersList, setAdminUsersList] = useState<AdminUser[]>([]);
+  const user = useAdminUser((store) => store.adminUser);
+  const syncVersion = useSyncStore((store) => store.syncVersion);
+
+  const {
+    isOpen: isCreateOpen,
+    onOpen: onCreateOpen,
+    onClose: onCreateClose,
+  } = useDisclosure();
+
+  useEffect(() => {
+    console.log("TASK PAGE: SYNC COMPLETED, RELOADING TASKS");
+    loadTasks();
+    loadAdminUsers();
+  }, [syncVersion, module, user.companyId, user._id]);
+
+  const loadTasks = async () => {
+    try {
+      setLoading(true);
+      const tasks = await window.electron.tasks.tasks.getUserTasks(
+        user.companyId,
+        user._id,
+        module
+      );
+      console.log("FETCHED TASKS", tasks);
+      setTasks(tasks);
+    } catch (error) {
+      console.log("AN ERROR OCCURED WHILE FETCHING LOADING TASKS:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadAdminUsers = async () => {
+    try {
+      const admin_users = await window.electron.company.adminUsers.getAll(
+        user.companyId
+      );
+      setAdminUsersList(admin_users);
+    } catch (error) {
+      console.log("AN ERROR OCCURED WHILE FETCHING ADMIN USERS:", error);
+    }
+  };
+
+  return (
+    <Flex bg="#F8FAFC" direction="column" height="100%" width="100%">
+      <Flex width="100%" justify="space-between">
+        <Box>
+          <HStack>
+            <Text
+              color="#1F2937"
+              fontSize="clamp(1.3rem, 1vw + 0.8rem, 1.4rem)"
+              fontWeight="700"
+              ml="1rem"
+              mt="1.3rem"
+            >
+              Taches
+            </Text>
+            <Button
+              bg="transparent"
+              isLoading={loading}
+              color="gray.800"
+              _hover={{ bg: "transparent" }}
+              fontSize="1rem"
+              position="relative"
+              top="0.7rem"
+              right="1rem"
+              onClick={loadTasks}
+            >
+              <FaSyncAlt />
+            </Button>
+          </HStack>
+          <PageSubtitle position="relative" left="1rem">
+            Gérez les taches
+          </PageSubtitle>
+        </Box>
+        <Button
+          mt="1.2rem"
+          mr="4rem"
+          colorScheme="blue"
+          onClick={() => onCreateOpen()}
+        >
+          Créer une nouvelle tache
+        </Button>
+      </Flex>
+      <Grid templateColumns="6fr 2fr 2fr">
+        <Flex width="200px" mt="3rem" ml="1rem" wrap="wrap">
+          <SearchBar
+            placeholderText="Rechercher une tache"
+            onSearch={setSearchText}
+          />
+        </Flex>
+        <Flex width="200px" mt="3rem" mr="4rem" wrap="wrap">
+          <TaskPriorityFilter onFilterClicked={setPriorityFilter} />
+        </Flex>
+        <Flex width="200px" mt="3rem" mr="4rem" wrap="wrap">
+          <TaskStatusFilter onFilterClicked={setStatusFilter} />
+        </Flex>
+      </Grid>
+      <Box mt="2.5rem" ml="1rem">
+        <TaskTable
+          tasks={tasks.filter((task) => task.module === module && task.companyId === user.companyId)}
+          searchText={searchText}
+          priorityFilter={priorityFilter}
+          statusFilter={statusFilter}
+        />
+      </Box>
+      <TaskSubmissionModal
+        isOpen={isCreateOpen}
+        onClose={onCreateClose}
+        onRefresh={loadTasks}
+        adminUsersList={adminUsersList}
+        author={user}
+      />
+    </Flex>
+  );
+};
+
+export default TaskPage;

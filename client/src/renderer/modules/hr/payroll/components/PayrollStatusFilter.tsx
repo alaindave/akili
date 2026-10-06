@@ -12,10 +12,11 @@ import { FaSlidersH } from "react-icons/fa";
 import { GoDotFill } from "react-icons/go";
 
 interface Props {
+  resultStatuses?: boolean;
   onFilterClicked: (filter: string) => void;
 }
 
-const PayrollStatusFilter = ({ onFilterClicked }: Props) => {
+const PayrollStatusFilter = ({ onFilterClicked, resultStatuses = false }: Props) => {
   const [filter, setFilter] = useState("");
 
   return (
@@ -84,14 +85,14 @@ const PayrollStatusFilter = ({ onFilterClicked }: Props) => {
             backgroundColor: "rgba(255,196,0,0.14)",
           }}
           onClick={() => {
-            onFilterClicked("VERIFICATION");
-            setFilter("En verification");
+            onFilterClicked(resultStatuses ? "VERIFIÉ" : "VERIFICATION");
+            setFilter(resultStatuses ? "Vérifié" : "En vérification");
           }}
         >
           <Box>
             <GoDotFill />
           </Box>
-          <Text ml="1rem">En verification</Text>
+          <Text ml="1rem">{resultStatuses ? "Vérifié" : "En vérification"}</Text>
         </MenuItem>
         <MenuItem
           color="gray.800"

@@ -27,7 +27,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import {
   attendanceWeekDates,
   formatAttendanceReportDate,
-} from "../../../../../common/types/attendance/WeeklyAttendanceReport";
+} from "../../../../../common/types/hr/attendance/WeeklyAttendanceReport";
 import useAdminUser from "../../../../../store/auth.store";
 import useSyncStore from "../../../../../store/sync.store";
 
@@ -87,7 +87,7 @@ export default function WeeklyAttendanceReportPage() {
         <HStack>
           <Button
             as={Link}
-            to="/employees_admin/reports"
+            to="/hr/reports"
             variant="outline"
             mb={5}
           >

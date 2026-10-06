@@ -1,5 +1,5 @@
 import { BrowserWindow } from "electron";
-import { SyncQueueItem } from "../../../../common/types/Sync.js";
+import { SyncQueueItem } from "../../../../common/types/shared/Sync.js";
 import { all, run, runDirect } from "../../db.js";
 
 export async function notifyPendingChanges(companyId: string): Promise<void> {

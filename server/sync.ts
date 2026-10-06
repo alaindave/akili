@@ -1046,6 +1046,7 @@ export async function syncTask(operation: SyncOperation, data: SyncData) {
   console.log("FIELDS BEFORE", fields);
 
   delete fields.comments;
+  if (fields.module === undefined && operation === "create") fields.module = "HR";
 
   console.log("FIELDS AFTER", fields);
 
@@ -1068,6 +1069,7 @@ export async function syncTask(operation: SyncOperation, data: SyncData) {
     },
     {
       upsert: true,
+      runValidators: true,
       timestamps: false,
     }
   );
@@ -1416,6 +1418,7 @@ export async function refreshPayrollRunStatus(
     }).lean();
     const complete =
       results.length > 0 && results.length >= payrollRun.employeeCount;
+    const allVerified = complete && results.every((r) => ["VERIFIÉ", "APPROUVÉ", "PAYÉ"].includes(r.status));
     const allApproved =
       complete &&
       results.every((r) => r.status === "APPROUVÉ" || r.status === "PAYÉ");
@@ -1424,10 +1427,10 @@ export async function refreshPayrollRunStatus(
       ? "PAYÉ"
       : allApproved
       ? "APPROUVÉ"
-      : (complete || payrollRun.status === "BROUILLON") &&
-        results.every((r) => r.status === "BROUILLON")
-      ? "BROUILLON"
-      : "VERIFICATION";
+      : allVerified
+      ? "VERIFICATION"
+      : "BROUILLON";
+    const lastVerified = [...results].sort((a, b) => new Date(b.verifiedAt ?? 0).getTime() - new Date(a.verifiedAt ?? 0).getTime())[0];
     const lastApproved = [...results].sort(
       (a, b) =>
         new Date(b.approvedAt ?? 0).getTime() -
@@ -1445,6 +1448,8 @@ export async function refreshPayrollRunStatus(
           status,
           serverVersion,
           updatedAt: new Date(),
+          submittedForVerificationAt: allVerified ? lastVerified?.verifiedAt ?? payrollRun.submittedForVerificationAt ?? null : null,
+          submittedForVerificationBy: allVerified ? lastVerified?.verifiedBy ?? payrollRun.submittedForVerificationBy ?? null : null,
           approvedAt: allApproved
             ? lastApproved?.approvedAt ?? payrollRun.approvedAt ?? null
             : null,
@@ -1571,6 +1576,8 @@ export async function syncPayrollRun(operation: SyncOperation, data: SyncData) {
         throw new SyncConflict("INVALID_DATE", "Cancellation date is required.");
       // Retain the server's approval/payment history when cancellation was made offline.
       for (const field of [
+        "submittedForVerificationAt",
+        "submittedForVerificationBy",
         "approvedAt",
         "approvedBy",
         "paidAt",
@@ -1630,13 +1637,15 @@ export async function syncPayrollResult(
   requireUpdatedAt(data);
   const { _id, fields } = cleanSyncFields(data, operation);
   fields.companyId = companyId;
-  if (fields.status !== undefined && !["BROUILLON", "VERIFICATION", "APPROUVÉ", "PAYÉ", "ANNULÉ"].includes(fields.status)) {
+  // Normalize queued updates from older clients during the rollout.
+  if (fields.status === "VERIFICATION") fields.status = "VERIFIÉ";
+  if (fields.status !== undefined && !["BROUILLON", "VERIFIÉ", "APPROUVÉ", "PAYÉ", "ANNULÉ"].includes(fields.status)) {
     throw new SyncConflict("INVALID_STATUS", "Unknown payroll status.");
   }
 
   const rank: Record<string, number> = {
     BROUILLON: 0,
-    VERIFICATION: 1,
+    VERIFIÉ: 1,
     APPROUVÉ: 2,
     PAYÉ: 3,
   };
@@ -1668,8 +1677,11 @@ export async function syncPayrollResult(
     if (payrollRun.status === "ANNULÉ") {
       update.status = "ANNULÉ";
       update.cancelledAt = payrollRun.cancelledAt;
+      update.cancelledBy = payrollRun.cancelledBy;
       update.updatedAt = payrollRun.updatedAt;
       for (const field of [
+        "verifiedAt",
+        "verifiedBy",
         "approvedAt",
         "approvedBy",
         "paidAt",

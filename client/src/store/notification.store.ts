@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { AppNotification } from "../common/types/AppNotification";
+import { AppNotification } from "../common/types/notifications/AppNotification";
 
 interface NotificationState {
   notifications: AppNotification[];

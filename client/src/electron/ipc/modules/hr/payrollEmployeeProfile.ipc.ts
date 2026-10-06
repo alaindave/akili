@@ -2,7 +2,7 @@ import { IpcMainInvokeEvent, ipcMain } from "electron";
 
 import EmployeePayrollProfile, {
   CreatePayrollProfileDto,
-} from "../../../../common/types/payroll/PayrollEmployeeProfile.js";
+} from "../../../../common/types/hr/payroll/PayrollEmployeeProfile.js";
 
 import {
   createEmployeePayrollProfile,
@@ -22,7 +22,7 @@ import {
   employeePayrollProfileExists,
   countEmployeePayrollProfiles,
   createManyEmployeePayrollProfiles,
-} from "../../../database/repositories/modules/hr/payroll_employee_profile.repository.js";
+} from "../../../database/repositories/modules/hr/payrollProfile.repository.js";
 
 import {
   initializeEmployeePayrollProfiles,

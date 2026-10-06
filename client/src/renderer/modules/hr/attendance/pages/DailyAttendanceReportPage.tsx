@@ -49,7 +49,7 @@ export default function DailyAttendanceReportPage() {
         <HStack>
           <Button
             as={Link}
-            to="/employees_admin/reports"
+            to="/hr/reports"
             variant="outline"
             mb={5}
           >

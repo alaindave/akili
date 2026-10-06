@@ -2,12 +2,14 @@ import { Box, Flex, HStack, Text, VStack } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import LeaveHistoryTable from "../components/LeaveHistoryTable";
 import { Link, useLocation } from "react-router-dom";
-import Employee from "../../../../../common/types/Employee";
-import Leave from "../../../../../common/types/leave/Leave";
+import Employee from "../../../../../common/types/hr/employees/Employee";
+import Leave from "../../../../../common/types/hr/leave/Leave";
 import { MdOutlineChevronRight } from "react-icons/md";
 import { FaArrowLeftLong } from "react-icons/fa6";
 import useAdminUser from "../../../../../store/auth.store";
-import DateRangePicker, { DateRange } from "../../../../components/DatePicker";
+import DateRangePicker, {
+  DateRange,
+} from "../../../../components/common/DatePicker";
 import LeaveStatusFilter from "../components/LeaveStatusFilter";
 
 type EmployeeState = {
@@ -70,7 +72,7 @@ const EmployeeLeaveReport = () => {
         <HStack mt="1.4rem">
           <Link
             to={{
-              pathname: `/employees_admin/employees_list/${employee?._id}`,
+              pathname: `/hr/employees_list/${employee?._id}`,
             }}
             state={{ photo_url }}
           >

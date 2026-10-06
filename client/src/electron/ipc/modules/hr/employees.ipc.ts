@@ -11,7 +11,7 @@ import {
   searchEmployees,
 } from "../../../database/repositories/modules/hr/employees.repository.js";
 
-import { uploadEmployeePhoto } from "../../../database/repositories/modules/hr/employees_photos.repository.js";
+import { uploadEmployeePhoto } from "../../../database/repositories/modules/hr/employeesPhotos.repository.js";
 import { getEmployeePhotoDir } from "../../../storage/directories.js";
 
 export function registerEmployeeIPC() {

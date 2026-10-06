@@ -4,7 +4,7 @@ import type {
   Attendance,
   AttendanceWithEmployee,
   CreateAttendanceDto,
-} from "../../../../../common/types/attendance/Attendance";
+} from "../../../../../common/types/hr/attendance/Attendance";
 
 /* =========================================================
    QUERY KEYS

@@ -1,5 +1,5 @@
-type LateAttendanceRecord = import("../../../common/types/attendance/LateAttendanceReport", { with: { "resolution-mode": "require" } }).LateAttendanceRecord;
-type WeeklyAttendanceReport = import("../../../common/types/attendance/WeeklyAttendanceReport", { with: { "resolution-mode": "require" } }).WeeklyAttendanceReport;
+type LateAttendanceRecord = import("../../../common/types/hr/attendance/LateAttendanceReport", { with: { "resolution-mode": "require" } }).LateAttendanceRecord;
+type WeeklyAttendanceReport = import("../../../common/types/hr/attendance/WeeklyAttendanceReport", { with: { "resolution-mode": "require" } }).WeeklyAttendanceReport;
 import { invoke } from "../../ipc/ipc.cjs";
 
 export const attendanceReportsApi = {

@@ -12,7 +12,7 @@ function load(file, resolve) {
   return module.exports;
 }
 (async () => {
-  const helpers = load('../src/common/types/payroll/PayslipDocument.ts', require);
+  const helpers = load('../src/common/types/hr/payroll/PayslipDocument.ts', require);
   const renderer = await import('@react-pdf/renderer');
   const document = load('../src/electron/reports/payroll/payslip-report.tsx', (name) => {
     if (name === '@react-pdf/renderer') return renderer;
@@ -30,13 +30,13 @@ function load(file, resolve) {
     if (name.endsWith('/payslip-report.js')) return document;
     if (name.endsWith('/companies.repository.js')) return { getCompanyById: async (id) => id === 'company' ? { name: 'Entreprise Démonstration', address: 'Avenue du Commerce, 12', city: 'Bujumbura', country: 'Burundi', email: 'contact@example.com' } : null };
     if (name.endsWith('/employees.repository.js')) return { getEmployeeById: async (companyId, id) => companyId === 'company' && id === employee._id ? employee : null };
-    if (name.endsWith('/payroll_run.repository.js')) return {
+    if (name.endsWith('/payrollRun.repository.js')) return {
       getEmployeePayrollResults: async (companyId, id, run) => companyId === 'company' && id === employee._id && run === 'run' && !missing ? payroll : null,
       getPayrollItems: async (companyId, resultId, employeeId) => {
         assert.equal(companyId, 'company'); assert.equal(resultId, 'payslip'); assert.equal(employeeId, 'employee'); return items;
       },
     };
-    if (name.endsWith('/payroll_settings.repository.js')) return { getPayrollSettings: async () => ({ currency: 'BIF' }) };
+    if (name.endsWith('/payrollSettings.repository.js')) return { getPayrollSettings: async () => ({ currency: 'BIF' }) };
     if (name === 'electron') return { dialog: { showSaveDialog: async (options) => {
       destination = options.defaultPath; return { canceled, filePath: '/tmp/akili-payslip-preview.pdf' };
     } } };

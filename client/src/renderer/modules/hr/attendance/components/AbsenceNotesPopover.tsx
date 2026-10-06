@@ -66,7 +66,10 @@ const AbsenceNotesPopover = ({
     setIsSubmitting(true);
 
     try {
-      const employee = await window.electron.hr.employees.getById(user.companyId, employeeId);
+      const employee = await window.electron.hr.employees.getById(
+        user.companyId,
+        employeeId
+      );
 
       if (!employee) {
         toast({
@@ -116,7 +119,10 @@ const AbsenceNotesPopover = ({
       };
 
       // Create leave
-      const savedLeave = await window.electron.hr.leave.create(user.companyId, leave);
+      const savedLeave = await window.electron.hr.leave.create(
+        user.companyId,
+        leave
+      );
 
       console.log("LEAVE SUCCESSFULLY SAVED:", savedLeave);
 
@@ -201,7 +207,7 @@ const AbsenceNotesPopover = ({
           animation={`${flashLate} 1.5s ease-in-out 2`}
           bg="red.500"
           color="gray.200"
-          fontSize="14px"
+          fontSize="0.8rem"
           cursor="pointer"
         >
           ABSENT

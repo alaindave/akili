@@ -6,6 +6,7 @@ const router = express.Router();
 
 interface CreateTaskBody {
   companyId: string;
+  module: import("../models/task.model.js").Task["module"];
   author: string;
   recipients: string[];
   message: string;
@@ -28,6 +29,7 @@ router.post(
 
       const task = {
         companyId: req.body.companyId,
+        module: req.body.module ?? "HR",
         author: req.body.author,
         recipients: req.body.recipients,
         message: req.body.message,
