@@ -1,4 +1,5 @@
 import type Company from "../../shared/Company.js";
+import { formatReportDate, reportMonthPeriod } from "../../../utils/reportDate.js";
 import type Employee from "../employees/Employee.js";
 import type { PayrollItem, PayrollResult } from "./Payroll.js";
 
@@ -11,11 +12,7 @@ export interface PayslipDocumentData {
 }
 
 export function payslipPeriod(month: number, year: number) {
-  const lastDay = new Date(year, month, 0).getDate();
-  const name = new Intl.DateTimeFormat("fr-FR", { month: "long" }).format(
-    new Date(year, month - 1, 1)
-  );
-  return `1 au ${lastDay} ${name} ${year}`;
+  return reportMonthPeriod(month, year);
 }
 
 export function payslipMoney(amount: number, currency: string) {
@@ -25,7 +22,7 @@ export function payslipMoney(amount: number, currency: string) {
 }
 
 export function payslipDate(date?: string) {
-  return date ? new Date(date).toLocaleDateString("fr-FR") : "—";
+  return formatReportDate(date);
 }
 
 export function payslipRows(data: PayslipDocumentData) {

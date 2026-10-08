@@ -59,7 +59,9 @@ export default function InventoryItemsPage() {
 }
 
 function CompanyItems({ companyId }: { companyId: string }) {
-  const [numbering, setNumbering] = useState<SkuNumberingSettings>({ enabled: false });
+  const [numbering, setNumbering] = useState<SkuNumberingSettings>({
+    enabled: false,
+  });
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [units, setUnits] = useState<InventoryUnit[]>([]);
   const [categories, setCategories] = useState<InventoryCategory[]>([]);
@@ -145,11 +147,11 @@ function CompanyItems({ companyId }: { companyId: string }) {
             Articles
           </Heading>
           <Text fontSize="sm" color="#737373">
-            Catalogues de matières et produits
+            Catalogues des produits de stock
           </Text>
         </Box>
         <Button
-          {...primaryButton}
+          colorScheme="yellow"
           leftIcon={<FiPlus />}
           fontSize="sm"
           h="42px"
@@ -194,13 +196,6 @@ function CompanyItems({ companyId }: { companyId: string }) {
               {loading ? "…" : total}
             </Badge>
           </HStack>
-          <Text
-            fontSize="xs"
-            color="#737373"
-            display={{ base: "none", lg: "block" }}
-          >
-            Références, unités et règles de stock
-          </Text>
         </Flex>
         <Flex p={5} gap={3} wrap="wrap" borderBottom="1px solid #EAEAEA">
           <InputGroup flex="1" minW="200px">

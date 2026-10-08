@@ -1,5 +1,30 @@
-import type { InventoryWarehouse } from "../../../../../common/types/inventory/InventoryWarehouse.js";
-import { all, get } from "../../../db.js";
+import type {
+  CreateInventoryWarehouseInput,
+  InventoryWarehouse,
+} from "../../../../../common/types/inventory/InventoryWarehouse.js";
+import { all, get, run } from "../../../db.js";
+import { randomUUID } from "node:crypto";
+import { z } from "zod";
+
+const createSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .min(1, "Le code est obligatoire.")
+    .max(100)
+    .transform((value) => value.toUpperCase()),
+  name: z.string().trim().min(1, "Le nom est obligatoire.").max(255),
+  description: z.string().trim().max(2000).optional(),
+  address: z.string().trim().max(500).optional(),
+  type: z.enum([
+    "RAW_MATERIAL",
+    "PRODUCTION",
+    "FINISHED_GOODS",
+    "GENERAL",
+    "OTHER",
+  ]),
+  isActive: z.boolean(),
+});
 
 export interface InventoryWarehouseListOptions {
   search?: string;
@@ -9,12 +34,16 @@ export interface InventoryWarehouseListOptions {
   offset?: number;
 }
 
-type WarehouseRow = Omit<InventoryWarehouse,
-  "isActive" | "allowNegativeStock" | "synced" | "isDeleted" |
-  "customFields" | "description" | "address"
+type WarehouseRow = Omit<
+  InventoryWarehouse,
+  | "isActive"
+  | "synced"
+  | "isDeleted"
+  | "customFields"
+  | "description"
+  | "address"
 > & {
   isActive: number;
-  allowNegativeStock: number;
   synced: number;
   isDeleted: number;
   customFields: string | null;
@@ -28,7 +57,6 @@ function mapRow(row: WarehouseRow): InventoryWarehouse {
     description: row.description ?? undefined,
     address: row.address ?? undefined,
     isActive: row.isActive === 1,
-    allowNegativeStock: row.allowNegativeStock === 1,
     synced: row.synced === 1,
     isDeleted: row.isDeleted === 1,
     customFields: row.customFields ? JSON.parse(row.customFields) : undefined,
@@ -52,7 +80,56 @@ function filters(companyId: string, options: InventoryWarehouseListOptions) {
 }
 
 export class InventoryWarehouseRepository {
-  async getById(companyId: string, id: string): Promise<InventoryWarehouse | null> {
+  async create(
+    companyId: string,
+    input: CreateInventoryWarehouseInput
+  ): Promise<InventoryWarehouse> {
+    const data = createSchema.parse(input);
+    const now = new Date().toISOString();
+    const warehouse: InventoryWarehouse = {
+      ...data,
+      _id: randomUUID(),
+      companyId,
+      createdAt: now,
+      updatedAt: now,
+      serverVersion: 0,
+      synced: false,
+      isDeleted: false,
+    };
+    try {
+      await run(
+        `INSERT INTO inventory_warehouses
+        (_id, companyId, code, name, description, address, type, isActive, createdAt, updatedAt)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          warehouse._id,
+          companyId,
+          data.code,
+          data.name,
+          data.description || null,
+          data.address || null,
+          data.type,
+          data.isActive ? 1 : 0,
+          now,
+          now,
+        ]
+      );
+    } catch (error) {
+      if (
+        (error as { code?: string }).code === "SQLITE_CONSTRAINT" &&
+        (await this.codeExists(companyId, data.code))
+      ) {
+        throw new Error("Un entrepôt avec ce code existe déjà.");
+      }
+      throw error;
+    }
+    return warehouse;
+  }
+
+  async getById(
+    companyId: string,
+    id: string
+  ): Promise<InventoryWarehouse | null> {
     const row = await get<WarehouseRow>(
       "SELECT * FROM inventory_warehouses WHERE companyId = ? AND _id = ? AND isDeleted = 0 LIMIT 1",
       [companyId, id]
@@ -60,7 +137,10 @@ export class InventoryWarehouseRepository {
     return row ? mapRow(row) : null;
   }
 
-  async getByCode(companyId: string, code: string): Promise<InventoryWarehouse | null> {
+  async getByCode(
+    companyId: string,
+    code: string
+  ): Promise<InventoryWarehouse | null> {
     const row = await get<WarehouseRow>(
       "SELECT * FROM inventory_warehouses WHERE companyId = ? AND code = ? AND isDeleted = 0 LIMIT 1",
       [companyId, code]
@@ -69,16 +149,25 @@ export class InventoryWarehouseRepository {
   }
 
   // Deleted warehouses still reserve their code under UNIQUE(companyId, code).
-  async codeExists(companyId: string, code: string, excludeId?: string): Promise<boolean> {
+  async codeExists(
+    companyId: string,
+    code: string,
+    excludeId?: string
+  ): Promise<boolean> {
     const row = await get<{ found: number }>(
       `SELECT 1 AS found FROM inventory_warehouses
-       WHERE companyId = ? AND code = ? ${excludeId ? "AND _id != ?" : ""} LIMIT 1`,
+       WHERE companyId = ? AND code = ? ${
+         excludeId ? "AND _id != ?" : ""
+       } LIMIT 1`,
       excludeId ? [companyId, code, excludeId] : [companyId, code]
     );
     return row != null;
   }
 
-  async list(companyId: string, options: InventoryWarehouseListOptions = {}): Promise<InventoryWarehouse[]> {
+  async list(
+    companyId: string,
+    options: InventoryWarehouseListOptions = {}
+  ): Promise<InventoryWarehouse[]> {
     const { where, params } = filters(companyId, options);
     const rows = await all<WarehouseRow>(
       `SELECT * FROM inventory_warehouses WHERE ${where}
@@ -88,10 +177,14 @@ export class InventoryWarehouseRepository {
     return rows.map(mapRow);
   }
 
-  async count(companyId: string, options: Omit<InventoryWarehouseListOptions, "limit" | "offset"> = {}): Promise<number> {
+  async count(
+    companyId: string,
+    options: Omit<InventoryWarehouseListOptions, "limit" | "offset"> = {}
+  ): Promise<number> {
     const { where, params } = filters(companyId, options);
     const row = await get<{ count: number }>(
-      `SELECT COUNT(*) AS count FROM inventory_warehouses WHERE ${where}`, params
+      `SELECT COUNT(*) AS count FROM inventory_warehouses WHERE ${where}`,
+      params
     );
     return row?.count ?? 0;
   }
@@ -100,7 +193,8 @@ export class InventoryWarehouseRepository {
     const rows = await all<WarehouseRow>(
       `SELECT * FROM inventory_warehouses
        WHERE companyId = ? AND isActive = 1 AND isDeleted = 0
-       ORDER BY name COLLATE NOCASE ASC`, [companyId]
+       ORDER BY name COLLATE NOCASE ASC`,
+      [companyId]
     );
     return rows.map(mapRow);
   }

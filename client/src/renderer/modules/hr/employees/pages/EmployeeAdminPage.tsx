@@ -22,6 +22,7 @@ import type Task from "../../../../../common/types/task/Task";
 import useAdminUser from "../../../../../store/auth.store";
 import useSyncStore from "../../../../../store/sync.store";
 import useTaskStore from "../../../../../store/task.store";
+import useDashboardTasksStore, { dashboardTaskScope } from "../../../../../store/dashboardTasks.store";
 
 import ReminderModal from "../../../../components/common/ReminderModal";
 import EmployeeDashboard from "../components/EmployeeDashboard";
@@ -42,9 +43,12 @@ const EmployeeAdminPage = () => {
   const [notes, setNotes] = useState(user.notes);
   const saveNotes = useAdminUser((store) => store.saveNotes);
   const loadTopTasks = useTaskStore((store) => store.loadTopTasks);
-  const deleteTask = useTaskStore((store) => store.deleteTask);
+  const scope = dashboardTaskScope(user.companyId, user._id, "HR");
+  const dismissed = useDashboardTasksStore(store => store.dismissed[scope]);
+  const dismiss = useDashboardTasksStore(store => store.dismiss);
+  const restore = useDashboardTasksStore(store => store.restore);
   const allTasks = useTaskStore((store) => store.tasks);
-  const tasks = allTasks.filter((task) => task.module === "HR" && task.companyId === user.companyId);
+  const tasks = allTasks.filter((task) => task.module === "HR" && task.companyId === user.companyId && !dismissed?.includes(task._id));
   const syncVersion = useSyncStore((store) => store.syncVersion);
   const previousSyncVersion = useRef(syncVersion);
 
@@ -208,17 +212,7 @@ const EmployeeAdminPage = () => {
     onDetailsClose();
   };
 
-  const handleTaskDelete = async (_id: string) => {
-    console.log("ID TO DELETE:", _id);
-
-    try {
-      const deletedTask = await deleteTask(user.companyId, _id);
-
-      console.log("DELETED TASK:", deletedTask);
-    } catch (error) {
-      console.error("AN ERROR OCCURRED WHILE DELETING TASK:", error);
-    }
-  };
+  const handleTaskDelete = (_id: string) => dismiss(scope, _id);
 
   const handleNotesSubmission = () => {
     window.electron.auth.offlineUsers
@@ -290,7 +284,7 @@ const EmployeeAdminPage = () => {
             MANUAL TASK REFRESH
         ==================================================== */}
 
-        <Button mb="1rem" colorScheme="blue" onClick={loadTasks}>
+        <Button mb="1rem" colorScheme="blue" onClick={() => { restore(scope); void loadTasks(); }}>
           <Box>
             <IoReloadOutline />
           </Box>

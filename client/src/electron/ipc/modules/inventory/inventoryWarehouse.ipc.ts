@@ -15,6 +15,10 @@ function requireId(value: string, label: string): string {
 }
 
 export function registerInventoryWarehouseIpc(): void {
+  ipcMain.handle("inventory:warehouse:create", async (_, companyId: string, input: Parameters<InventoryWarehouseRepository["create"]>[1]) => {
+    return repository.create(await requireAuthenticatedCompanyId(companyId), input);
+  });
+
   ipcMain.handle(
     "inventory:warehouse:getById",
     async (_, companyId: string, id: string) => {

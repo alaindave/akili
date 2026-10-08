@@ -15,8 +15,7 @@ export async function createInventoryWarehouseTable() {
       name TEXT NOT NULL,
       description TEXT,
       address TEXT,
-      allowNegativeStock INTEGER NOT NULL DEFAULT 0
-        CHECK (allowNegativeStock IN (0, 1)),
+      type TEXT,
       isActive INTEGER NOT NULL DEFAULT 1
         CHECK (isActive IN (0, 1)),
       customFields TEXT,

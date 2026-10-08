@@ -1,4 +1,5 @@
 import { dialog } from "electron";
+import { formatReportDate } from "../../../../../common/utils/reportDate.js";
 import fs from "fs/promises";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { AttendanceReportDocument } from "../../../../reports/attendance/attendance-report.js";
@@ -11,11 +12,11 @@ export interface GeneratedAttendanceReport {
   pdfBuffer: Buffer;
 }
 
-/** Generates the daily attendance PDF without opening a save dialog. */
-export async function generateAttendanceReport(
+/** Shared data for the on-screen report and PDF export. */
+export async function getAttendanceReportData(
   companyId: string,
   date: string
-): Promise<GeneratedAttendanceReport> {
+): Promise<DailyAttendanceReport> {
   /*
    * ------------------------------------------------------------
    * LOAD ATTENDANCE
@@ -68,20 +69,22 @@ export async function generateAttendanceReport(
     },
   };
 
-  /*
-   * ------------------------------------------------------------
-   * GENERATE PDF
-   * ------------------------------------------------------------
-   */
+  return report;
+}
+
+/** Generates the daily attendance PDF without opening a save dialog. */
+export async function generateAttendanceReport(
+  companyId: string,
+  date: string
+): Promise<GeneratedAttendanceReport> {
+  const report = await getAttendanceReportData(companyId, date);
 
   const pdfBuffer = await renderToBuffer(
     <AttendanceReportDocument report={report} />
   );
 
   return {
-    filename: `rapport-presences-${new Date(date).toLocaleDateString(
-      "fr-FR"
-    )}.pdf`,
+    filename: `rapport-presences-${formatReportDate(date)}.pdf`,
 
     pdfBuffer: Buffer.from(pdfBuffer),
   };
@@ -94,7 +97,7 @@ export async function saveAttendanceReport(companyId: string, date: string) {
   const result = await dialog.showSaveDialog({
     title: "Enregistrer le rapport de présence",
 
-    defaultPath: `rapport-presences-${date}.pdf`,
+    defaultPath: `rapport-presences-${formatReportDate(date)}.pdf`,
 
     filters: [
       {

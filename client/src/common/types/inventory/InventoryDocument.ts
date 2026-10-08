@@ -52,7 +52,6 @@ export interface InventoryDocumentTypeConfig extends InventoryBase {
   requiresReason: boolean;
   requiresWarehouse: boolean;
   requiresLocation: boolean;
-  allowNegativeStock: boolean;
   numberPrefix: string;
   isActive: boolean;
 }

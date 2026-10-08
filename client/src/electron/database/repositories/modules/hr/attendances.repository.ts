@@ -614,7 +614,7 @@ export async function getDailyAttendanceReport(
       e.department,
 
       a._id,
-      a.employeeId,
+      e._id AS employeeId,
       a.date,
       a.clockIn,
       a.clockOut,

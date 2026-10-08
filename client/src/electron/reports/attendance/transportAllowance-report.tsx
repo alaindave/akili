@@ -1,4 +1,5 @@
 import React from "react";
+import { formatReportDate } from "../../../common/utils/reportDate.js";
 import {
   Document,
   Page,
@@ -817,35 +818,20 @@ function formatMoney(amount: number): string {
 }
 
 function formatFrenchDate(dateString: string): string {
-  const date = new Date(`${dateString}T00:00:00`);
-
-  return new Intl.DateTimeFormat("fr-FR", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  }).format(date);
+  return formatReportDate(dateString);
 }
 
 function formatShortDate(dateString: string): string {
-  const date = new Date(`${dateString}T00:00:00`);
-
-  return new Intl.DateTimeFormat("fr-FR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(date);
+  return formatReportDate(dateString);
 }
 
 function formatDateTime(dateString: string): string {
   const date = new Date(dateString);
 
-  return new Intl.DateTimeFormat("fr-FR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
+  return `${formatReportDate(date)} ${new Intl.DateTimeFormat("fr-FR", {
     hour: "2-digit",
     minute: "2-digit",
-  }).format(date);
+  }).format(date)}`;
 }
 
 function buildCompanyDetails(company: CompanyInfo): string {

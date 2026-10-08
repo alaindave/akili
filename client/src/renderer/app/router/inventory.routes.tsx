@@ -8,6 +8,7 @@ import { Outlet } from "react-router-dom";
 import { ModuleProvider } from "../../context/ModuleContext";
 import InventoryDashboardPage from "../../modules/inventory/pages/InventoryDashboardPage";
 import InventoryItemsPage from "../../modules/inventory/pages/InventoryItemsPage";
+import InventoryWarehousesPage from "../../modules/inventory/pages/InventoryWarehousesPage";
 // import InventoryStockPage from "../modules/inventory/pages/InventoryStockPage";
 // import InventoryMovementsPage from "../modules/inventory/pages/InventoryMovementsPage";
 // import InventoryDocumentsPage from "../modules/inventory/pages/InventoryDocumentsPage";
@@ -65,6 +66,16 @@ export const inventoryRoutes = {
         <Flex direction={{ base: "column", md: "row" }} h="100vh" bg="#FAFAFA" overflow="hidden">
           <InventoryNavBar />
           <Box flex="1" minW={0} overflowY="auto"><InventoryItemsPage /></Box>
+        </Flex>
+      ),
+    },
+
+    {
+      path: "warehouses",
+      element: (
+        <Flex direction={{ base: "column", md: "row" }} h="100vh" bg="#FAFAFA" overflow="hidden">
+          <InventoryNavBar />
+          <Box as="main" flex="1" minW={0} overflowY="auto"><InventoryWarehousesPage /></Box>
         </Flex>
       ),
     },

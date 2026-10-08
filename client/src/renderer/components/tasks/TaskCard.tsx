@@ -46,12 +46,18 @@ const TaskCard = ({ task, onTaskClick, onTaskDelete }: Props) => {
         </Box>
         <Text mt="0.4rem">{task.author.firstName}</Text>
         <Box
+          as="button"
+          type="button"
+          aria-label="Retirer la tâche de la page"
           fontSize="1.2rem"
           fontWeight="800"
           mt="0.3rem"
           mr="0.5rem"
           cursor="pointer"
-          onClick={() => onTaskDelete(task._id)}
+          onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
+            event.stopPropagation();
+            onTaskDelete(task._id);
+          }}
         >
           <TiDeleteOutline />
         </Box>

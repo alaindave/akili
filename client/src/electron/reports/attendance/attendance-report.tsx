@@ -466,7 +466,7 @@ function ReportHeader({ report }: { report: DailyAttendanceReport }) {
         <View style={styles.reportSection}>
           <Text style={styles.reportTitle}>LISTE DE PRÉSENCE</Text>
           <Text style={styles.reportDate}>
-            {new Date(report.date).toLocaleDateString("fr-FR")}
+            {formatReportDate(report.date)}
           </Text>
         </View>
       </View>
@@ -644,7 +644,7 @@ export function AttendanceReportDocument({
 }) {
   return (
     <Document
-      title={`Rapport de présence - ${report.date}`}
+      title={`Rapport de présence - ${formatReportDate(report.date)}`}
       author={report.company.name}
       subject="Rapport de présence"
       creator="Akili"
@@ -686,3 +686,4 @@ export function AttendanceReportDocument({
 }
 
 export default AttendanceReportDocument;
+import { formatReportDate } from "../../../common/utils/reportDate.js";

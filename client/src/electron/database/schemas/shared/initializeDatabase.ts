@@ -17,6 +17,7 @@ import { createAuditLogsTable } from "./audit_logs.schema.js";
 import { createNotificationTable } from "./notification_queue.schema.js";
 import { createInventoryWarehouseTable } from "../modules/inventory/inventory_warehouses.schema.js";
 import { createInventoryItemsTable } from "../modules/inventory/inventory_items.schema.js";
+import { createInventoryMovementsTables } from "../modules/inventory/inventory_movements.schema.js";
 
 export async function initializeDatabase() {
   // Shared tables
@@ -40,6 +41,7 @@ export async function initializeDatabase() {
   await migratePayrollAccounts();
   // Inventory tables
   await createInventoryItemsTable();
+  await createInventoryMovementsTables();
   await createInventoryWarehouseTable();
 
   console.log("DATABASE INITIALIZED");

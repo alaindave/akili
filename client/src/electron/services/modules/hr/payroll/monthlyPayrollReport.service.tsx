@@ -51,10 +51,7 @@ export async function saveMonthlyPayrollReport(
     .slice(0, 80);
   const destination = await dialog.showSaveDialog({
     title: "Enregistrer le rapport mensuel de paie",
-    defaultPath: `rapport-paie-${run.year}-${String(run.month).padStart(
-      2,
-      "0"
-    )}-${safeDepartment}-${paymentMethod}.pdf`,
+    defaultPath: `rapport-paie-${reportMonthPeriod(run.month, run.year).replace(/ /g, "-")}-${safeDepartment}-${paymentMethod}.pdf`,
     filters: [{ name: "PDF", extensions: ["pdf"] }],
   });
   if (destination.canceled || !destination.filePath) return { canceled: true };
@@ -71,3 +68,4 @@ export async function saveMonthlyPayrollReport(
   await fs.writeFile(destination.filePath, buffer);
   return { canceled: false, filePath: destination.filePath };
 }
+import { reportMonthPeriod } from "../../../../../common/utils/reportDate.js";

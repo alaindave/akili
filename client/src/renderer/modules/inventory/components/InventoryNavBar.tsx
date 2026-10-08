@@ -37,7 +37,7 @@ const navigationItems = [
   { label: "Articles", to: "/inventory/items", icon: FaBoxOpen },
   { label: "Stocks", to: "/inventory", icon: FaBoxes },
   { label: "Mouvements", to: "/inventory", icon: FaExchangeAlt },
-  { label: "Entrepôts", to: "/inventory", icon: FaWarehouse },
+  { label: "Entrepôts", to: "/inventory/warehouses", icon: FaWarehouse },
   { label: "Rapports", to: "/inventory", icon: BiSolidReport },
   { label: "Incidents", to: "/inventory/incidents", icon: CgDanger },
   { label: "Tâches", to: "/inventory/tasks", icon: FaTasks },

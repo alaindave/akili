@@ -136,10 +136,7 @@ export function MonthlyPayrollReportDocument({
     `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 })
       .format(Math.ceil(value))
       .replace(/[\u202f\u00a0]/g, " ")} ${currency}`;
-  const period = new Date(run.year, run.month - 1, 1).toLocaleDateString(
-    "fr-FR",
-    { month: "long", year: "numeric" }
-  );
+  const period = reportMonthPeriod(run.month, run.year);
   const totals = results.reduce(
     (sum, row) => ({
       base: sum.base + row.baseSalary,
@@ -281,3 +278,4 @@ export function MonthlyPayrollReportDocument({
     </Document>
   );
 }
+import { reportMonthPeriod } from "../../../common/utils/reportDate.js";

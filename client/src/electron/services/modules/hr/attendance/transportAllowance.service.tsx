@@ -1,4 +1,5 @@
 import { dialog } from "electron";
+import { formatReportDate } from "../../../../../common/utils/reportDate.js";
 import fs from "fs/promises";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { getCompanyById } from "../../../../database/repositories/shared/companies.repository.js";
@@ -41,7 +42,7 @@ export async function saveWeeklyTransportAllowanceReport(
   if (!company) throw new Error("Entreprise introuvable.");
   const destination = await dialog.showSaveDialog({
     title: "Enregistrer le rapport de frais de déplacement",
-    defaultPath: `frais-deplacement-${report.weekStart}.pdf`,
+    defaultPath: `frais-deplacement-${formatReportDate(report.weekStart)}.pdf`,
     filters: [{ name: "PDF", extensions: ["pdf"] }],
   });
   if (destination.canceled || !destination.filePath) return { canceled: true };

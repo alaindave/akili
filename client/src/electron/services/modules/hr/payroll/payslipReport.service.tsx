@@ -1,4 +1,5 @@
 import { dialog } from "electron";
+import { reportMonthPeriod } from "../../../../../common/utils/reportDate.js";
 import fs from "fs/promises";
 import { renderToBuffer } from "@react-pdf/renderer";
 import type { PayslipDocumentData } from "../../../../../common/types/hr/payroll/PayslipDocument.js";
@@ -66,9 +67,7 @@ export async function savePayslipReport(
     .slice(0, 80);
   const destination = await dialog.showSaveDialog({
     title: "Enregistrer le bulletin de paie",
-    defaultPath: `bulletin-paie-${reference}-${data.payroll.year}-${String(
-      data.payroll.month
-    ).padStart(2, "0")}.pdf`,
+    defaultPath: `bulletin-paie-${reference}-${reportMonthPeriod(data.payroll.month, data.payroll.year).replace(/ /g, "-")}.pdf`,
     filters: [{ name: "PDF", extensions: ["pdf"] }],
   });
   if (destination.canceled || !destination.filePath) return { canceled: true };
