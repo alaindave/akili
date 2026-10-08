@@ -24,7 +24,7 @@ interface Props {
 
 const statusColor = {
   BROUILLON: "gray",
-  VERIFIÉ: "yellow",
+  VERIFIÉ: "blue",
   APPROUVÉ: "blue",
   PAYÉ: "green",
   ANNULÉ: "red",

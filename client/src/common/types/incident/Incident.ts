@@ -24,6 +24,7 @@ export interface Incident extends IncidentInput {
 }
 
 export interface IncidentFilters {
+  module?: AppModule;
   search?: string;
   location?: string;
   from?: string;
@@ -31,7 +32,7 @@ export interface IncidentFilters {
 }
 
 export interface IncidentApi {
-  addNote(companyId: string, id: string, note: string): Promise<Incident>;
+  addNote(companyId: string, id: string, note: string, authorId: string): Promise<Incident>;
   create(companyId: string, input: IncidentInput): Promise<Incident>;
   update(
     companyId: string,
@@ -39,6 +40,6 @@ export interface IncidentApi {
     input: IncidentInput
   ): Promise<Incident>;
   getAll(companyId: string, filters?: IncidentFilters): Promise<Incident[]>;
-  getById(companyId: string, id: string): Promise<Incident | null>;
-  getLocations(companyId: string): Promise<string[]>;
+  getById(companyId: string, id: string, module?: AppModule): Promise<Incident | null>;
+  getLocations(companyId: string, module?: AppModule): Promise<string[]>;
 }

@@ -1,3 +1,4 @@
+import type { StockSettingsApi } from "../inventory/StockSettings.js";
 import type { authApi } from "../../../electron/preload/shared/auth.preload.cjs";
 import type { IncidentApi } from "../incident/Incident";
 import type { employeeApi } from "../../../electron/preload/hr/employees.preload.cjs";
@@ -38,6 +39,7 @@ declare global {
         payrollRun: typeof payrollRunApi;
       };
       inventory: {
+        settings: StockSettingsApi;
         items: typeof inventoryItemApi;
         balances: typeof inventoryBalanceApi;
         movements: typeof inventoryMovementApi;

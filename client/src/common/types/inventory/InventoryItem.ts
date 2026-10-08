@@ -23,12 +23,11 @@ export interface InventoryItem {
 }
 
 export type InventoryItemType =
-  | "STOCK"
   | "RAW_MATERIAL"
   | "COMPONENT"
+  | "SEMI_FINISHED"
   | "FINISHED_GOOD"
-  | "CONSUMABLE"
-  | "ASSET";
+  | "CONSUMABLE";
 
 export type InventoryTrackingMethod = "NONE" | "LOT" | "SERIAL";
 

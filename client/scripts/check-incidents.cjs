@@ -52,7 +52,7 @@ function load(relativePath) {
   await repo.createIncident('company-b', { ...input, location: 'Confidentiel' });
   assert.equal(first.module, 'INVENTORY');
   assert.equal((await repo.getIncidentById('company-a', first._id)).module, 'INVENTORY');
-  assert.match(first.incidentNumber, /^INC-\d{6}-\d{4}-([1-9]\d{0,2}|1000)$/);
+  assert.match(first.incidentNumber, /^INC-INV-\d{6}-\d{4}-([1-9]\d{0,2}|1000)$/);
   assert.equal((await repo.getIncidentById('company-a', first._id)).incidentNumber, first.incidentNumber);
   assert.equal((await repo.getIncidents('company-a', { search: first.incidentNumber }))[0]._id, first._id);
   assert.equal(first.reporterName, 'Alice');
@@ -100,23 +100,42 @@ function load(relativePath) {
   assert.equal((await repo.getIncidentById('company-a', first._id)).notes, 'From server');
   await assert.rejects(() => repo.upsertIncident('company-b', remote));
 
-  const withNote = await repo.addIncidentNote('company-a', first._id, '  Follow-up note  ');
-  assert.equal(withNote.notes, 'From server\n\nFollow-up note');
+  db.exec("CREATE TABLE admin_users (_id TEXT PRIMARY KEY, companyId TEXT, firstName TEXT, lastName TEXT, email TEXT, isDeleted INTEGER DEFAULT 0)");
+  db.exec("INSERT INTO admin_users VALUES ('author-a', 'company-a', 'Alice', 'Martin', 'alice@example.com', 0), ('author-b', 'company-b', 'Bob', 'Martin', 'bob@example.com', 0), ('deleted-author', 'company-a', 'Old', 'User', 'old@example.com', 1)");
+  const withNote = await repo.addIncidentNote('company-a', first._id, '  Follow-up note  ', 'author-a');
+  assert.equal(withNote.notes, `From server\n\nAlice Martin · ${withNote.updatedAt}\nFollow-up note`);
+  assert(Number.isFinite(Date.parse(withNote.updatedAt)));
+  const noteQueue = await sync.getUnsyncedItems('company-a');
+  assert.equal(JSON.parse(noteQueue[noteQueue.length - 1].payload).notes, withNote.notes);
+  await assert.rejects(() => repo.addIncidentNote('company-a', first._id, 'Spoof', 'author-b'));
+  await assert.rejects(() => repo.addIncidentNote('company-a', first._id, 'Deleted', 'deleted-author'));
+  await assert.rejects(() => repo.addIncidentNote('company-a', first._id, 'Unknown', 'missing'));
   assert.equal(withNote.module, 'SALES');
   assert.equal(withNote.reporterName, remote.reporterName);
   assert.equal((await repo.getIncidentById('company-a', first._id)).notes, withNote.notes);
-  await assert.rejects(() => repo.addIncidentNote('company-b', first._id, 'Private'));
-  await assert.rejects(() => repo.addIncidentNote('company-a', first._id, ' '));
-  await assert.rejects(() => repo.addIncidentNote('company-a', first._id, 'a'.repeat(10000)));
+  await assert.rejects(() => repo.addIncidentNote('company-b', first._id, 'Private', 'author-a'));
+  await assert.rejects(() => repo.addIncidentNote('company-a', first._id, ' ', 'author-a'));
+  await assert.rejects(() => repo.addIncidentNote('company-a', first._id, 'a'.repeat(10000), 'author-a'));
 
   // Queue failure rolls back both create and update.
   db.exec("CREATE TRIGGER fail_incident_queue BEFORE INSERT ON sync_queue BEGIN SELECT RAISE(ABORT, 'queue failure'); END");
   await assert.rejects(() => repo.createIncident('company-a', input));
   await assert.rejects(() => repo.updateIncident('company-a', first._id, { ...input, notes: 'Must roll back' }));
   assert.equal((await repo.getIncidents('company-a')).length, 2);
-  await assert.rejects(() => repo.addIncidentNote('company-a', first._id, 'Must roll back'));
+  await assert.rejects(() => repo.addIncidentNote('company-a', first._id, 'Must roll back', 'author-a'));
   assert.equal((await repo.getIncidentById('company-a', first._id)).notes, withNote.notes);
   db.exec('DROP TRIGGER fail_incident_queue');
+
+  const hr = await repo.createIncident('company-a', { ...input, module: 'HR', location: 'Bureau RH' });
+  assert.match(hr.incidentNumber, /^INC-RH-/);
+  assert.equal((await repo.getIncidents('company-a', { module: 'HR' })).length, 1);
+  assert.equal((await repo.getIncidents('company-a', { module: 'INVENTORY' })).length, 1);
+  assert.equal(await repo.getIncidentById('company-a', hr._id, 'INVENTORY'), null);
+  assert.equal((await repo.getIncidentById('company-a', hr._id, 'HR'))._id, hr._id);
+  assert.equal(JSON.stringify(await repo.getIncidentLocations('company-a', 'HR')), JSON.stringify(['Bureau RH']));
+  assert(!(await repo.getIncidentLocations('company-a', 'INVENTORY')).includes('Bureau RH'));
+  await assert.rejects(() => repo.getIncidents('company-a', { module: 'INVALID' }));
+  db.prepare('DELETE FROM incidents WHERE _id = ?').run(hr._id);
 
   // Existing local-only installations gain metadata and one queue item per report.
   db.exec("DELETE FROM sync_queue; UPDATE incidents SET synced = 0, serverVersion = 0");

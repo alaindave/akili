@@ -175,7 +175,7 @@ const PayrollDetailsPage = () => {
           <Box mt="3rem">
             <Flex mb={4} justify="space-between" flexWrap="wrap">
               {/* Filters and download button */}
-              <Flex width="100%" justify="space-between">
+              <Flex width="78vw" justify="space-between">
                 <FormControl maxW="280px">
                   <FormLabel htmlFor="payroll-department" fontSize="sm">
                     Département

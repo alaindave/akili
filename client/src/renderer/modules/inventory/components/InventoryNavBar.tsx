@@ -22,6 +22,7 @@ import {
   FaSignOutAlt,
   FaTasks,
 } from "react-icons/fa";
+import { BiSolidReport } from "react-icons/bi";
 import { CgDanger } from "react-icons/cg";
 import { MdPersonOutline } from "react-icons/md";
 import { NavLink, useNavigate } from "react-router-dom";
@@ -34,9 +35,10 @@ import Logo from "../../../components/common/Logo";
 const navigationItems = [
   { label: "Tableau de bord", to: "/inventory", icon: FaHome, end: true },
   { label: "Articles", to: "/inventory/items", icon: FaBoxOpen },
-  { label: "Stocks", to: "/inventory/stocks", icon: FaBoxes },
-  { label: "Mouvements", to: "/inventory/movements", icon: FaExchangeAlt },
-  { label: "Entrepôts", to: "/inventory/warehouses", icon: FaWarehouse },
+  { label: "Stocks", to: "/inventory", icon: FaBoxes },
+  { label: "Mouvements", to: "/inventory", icon: FaExchangeAlt },
+  { label: "Entrepôts", to: "/inventory", icon: FaWarehouse },
+  { label: "Rapports", to: "/inventory", icon: BiSolidReport },
   { label: "Incidents", to: "/inventory/incidents", icon: CgDanger },
   { label: "Tâches", to: "/inventory/tasks", icon: FaTasks },
 ];

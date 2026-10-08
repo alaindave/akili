@@ -22,21 +22,25 @@ export default function PayrollResultAuditPopover({
     {
       label: "Vérifié",
       date: payroll.verifiedAt,
+      by: payroll.verifiedBy,
       user: payroll.verifiedByName || payroll.verifiedBy,
     },
     {
       label: "Approuvé",
       date: payroll.approvedAt,
+      by: payroll.approvedBy,
       user: payroll.approvedByName || payroll.approvedBy,
     },
     {
       label: "Payé",
       date: payroll.paidAt,
+      by: payroll.paidBy,
       user: payroll.paidByName || payroll.paidBy,
     },
     {
       label: "Annulé",
       date: payroll.cancelledAt,
+      by: payroll.cancelledBy,
       user: payroll.cancelledByName || payroll.cancelledBy,
     },
   ];
@@ -67,19 +71,29 @@ export default function PayrollResultAuditPopover({
           </PopoverHeader>
           <PopoverBody>
             <VStack align="stretch" spacing={3}>
-              {events.map(({ label, date, user }) => (
-                <Box key={label}>
-                  <Text fontSize="sm" fontWeight="600">
-                    {label}
-                  </Text>
-                  <Text fontSize="xs">
-                    {date ? new Date(date).toLocaleString("fr-FR") : "—"}
-                  </Text>
-                  <Text fontSize="xs" color="gray.500">
-                    Par : {user || "—"}
-                  </Text>
-                </Box>
-              ))}
+              {events.map(({ label, date, by, user }) => {
+                if (!date || !by) return null;
+
+                return (
+                  <Box key={label}>
+                    <Text fontSize="sm" fontWeight="600">
+                      {label}
+                    </Text>
+                    <Text fontSize="xs">
+                      {new Date(date).toLocaleString("fr-FR", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </Text>
+                    <Text fontSize="xs" color="gray.500">
+                      Par : {user}
+                    </Text>
+                  </Box>
+                );
+              })}
             </VStack>
           </PopoverBody>
         </PopoverContent>

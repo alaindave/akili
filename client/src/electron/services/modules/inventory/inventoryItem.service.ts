@@ -1,3 +1,6 @@
+import { withGeneratedSku } from "../../../database/repositories/modules/inventory/stockSettings.repository.js";
+import { getInventoryCatalogOptions, createInventoryUnit } from "../../../database/repositories/modules/inventory/inventoryCatalog.repository.js";
+import type { CreateInventoryUnitInput } from "../../../../common/types/inventory/InventoryUnit.js";
 import { randomUUID } from "crypto";
 
 import {
@@ -13,6 +16,7 @@ import type {
 } from "../../../../common/types/inventory/InventoryItem.js";
 
 export interface CreateInventoryItemInput {
+  autoGenerateSku?: boolean;
   sku: string;
   name: string;
   description?: string;
@@ -48,6 +52,16 @@ export class InventoryItemService {
 
   constructor(repository = new InventoryItemRepository()) {
     this.repository = repository;
+  }
+
+  async getCatalogOptions(companyId: string) {
+    this.validateCompanyId(companyId);
+    return getInventoryCatalogOptions(companyId);
+  }
+
+  async createUnit(companyId: string, input: CreateInventoryUnitInput) {
+    this.validateCompanyId(companyId);
+    return createInventoryUnit(companyId, input);
   }
 
   /**
@@ -126,7 +140,7 @@ export class InventoryItemService {
   ): Promise<InventoryItem> {
     this.validateCompanyId(companyId);
 
-    const sku = this.normalizeSku(input.sku);
+    const sku = input.autoGenerateSku === true ? "" : this.normalizeSku(input.sku);
     const name = this.normalizeName(input.name);
 
     this.validateItemType(input.itemType);
@@ -142,10 +156,20 @@ export class InventoryItemService {
       throw new Error("Base unit is required.");
     }
 
+    const options = await this.getCatalogOptions(companyId);
+    if (!options.units.some(unit => unit._id === input.baseUnitId.trim())) {
+      throw new Error("Sélectionnez une unité valide pour cette entreprise.");
+    }
+    if (input.categoryId && !options.categories.some(category => category._id === input.categoryId)) {
+      throw new Error("Sélectionnez une catégorie valide pour cette entreprise.");
+    }
+    if (input.isActive !== undefined && typeof input.isActive !== "boolean") {
+      throw new Error("Le statut de l’article est invalide.");
+    }
     const skuExists = await this.repository.skuExists(companyId, sku);
 
     if (skuExists) {
-      throw new Error(`An inventory item with SKU "${sku}" already exists.`);
+      throw new Error(`Un article avec la référence "${sku}" existe déjà.`);
     }
 
     const now = new Date().toISOString();
@@ -172,7 +196,9 @@ export class InventoryItemService {
       isDeleted: false,
     };
 
-    return this.repository.create(item);
+    return input.autoGenerateSku === true
+      ? withGeneratedSku(companyId, item.categoryId, generated => this.repository.create({ ...item, sku: generated }, true))
+      : this.repository.create(item);
   }
 
   /**
@@ -519,12 +545,11 @@ export class InventoryItemService {
 
   private validateItemType(itemType: InventoryItemType): void {
     const validTypes: InventoryItemType[] = [
-      "STOCK",
       "RAW_MATERIAL",
       "COMPONENT",
+      "SEMI_FINISHED",
       "FINISHED_GOOD",
       "CONSUMABLE",
-      "ASSET",
     ];
 
     if (!validTypes.includes(itemType)) {

@@ -244,5 +244,18 @@ export async function createInventoryItemsTable() {
     ON inventory_units(companyId, serverVersion);
   `);
 
+  /*
+   * =========================================================
+   * INVENTORY SKU SETTINGS
+   * =========================================================
+   */
+  await run(`CREATE TABLE IF NOT EXISTS inventory_sku_settings (
+    companyId TEXT PRIMARY KEY,
+    enabled INTEGER NOT NULL DEFAULT 0 CHECK(enabled IN (0, 1)),
+    prefix TEXT NOT NULL DEFAULT 'ART-',
+    digits INTEGER NOT NULL DEFAULT 5 CHECK(digits BETWEEN 1 AND 12),
+    nextNumber INTEGER NOT NULL DEFAULT 1 CHECK(nextNumber BETWEEN 1 AND 999999999999)
+  )`);
+
   console.log("INVENTORY TABLES INITIALIZED");
 }

@@ -9,6 +9,11 @@ import type {
 } from "../../../../common/types/incident/Incident.js";
 import { all, get, getDirect, run, runDirect, transaction } from "../../db.js";
 
+import type { AppModule } from "../../../../common/types/task/Task.js";
+
+const moduleSchema = z.enum(["HR", "INVENTORY", "PROCUREMENT", "PRODUCTION", "SALES", "ACCOUNTING"]);
+const moduleCode: Record<AppModule, string> = { HR: "RH", INVENTORY: "INV", PROCUREMENT: "APP", PRODUCTION: "PROD", SALES: "VTE", ACCOUNTING: "COM" };
+
 const companySchema = z.string().trim().min(1).max(200);
 const timestamp = z.string().datetime({ offset: true });
 const inputSchema = z.object({
@@ -23,6 +28,7 @@ const inputSchema = z.object({
 });
 const filtersSchema = z
   .object({
+    module: moduleSchema.optional(),
     search: z.string().trim().max(300).optional(),
     location: z.string().trim().max(300).optional(),
     from: timestamp.optional(),
@@ -37,13 +43,13 @@ const filtersSchema = z
   );
 
 // Incident number generator
-function generateIncidentNumber(date = new Date()): string {
+function generateIncidentNumber(module: AppModule, date = new Date()): string {
   const pad = (value: number) => String(value).padStart(2, "0");
   const day = `${pad(date.getDate())}${pad(date.getMonth() + 1)}${pad(
     date.getFullYear() % 100
   )}`;
   const time = `${pad(date.getHours())}${pad(date.getMinutes())}`;
-  return `INC-${day}-${time}-${randomInt(1, 1001)}`;
+  return `INC-${moduleCode[module]}-${day}-${time}-${randomInt(1, 1001)}`;
 }
 
 export async function createIncident(
@@ -58,7 +64,7 @@ export async function createIncident(
     occurredAt: new Date(data.occurredAt).toISOString(),
     companyId: company,
     _id: randomUUID(),
-    incidentNumber: generateIncidentNumber(now),
+    incidentNumber: generateIncidentNumber(data.module, now),
     createdAt: now.toISOString(),
     updatedAt: now.toISOString(),
     serverVersion: 0,
@@ -101,6 +107,10 @@ export async function getIncidents(
   const params: string[] = [companySchema.parse(companyId)];
   const parsed = filtersSchema.parse(filters);
   const conditions = ["companyId = ?", "isDeleted = 0"];
+  if (parsed.module) {
+    conditions.push("module = ?");
+    params.push(parsed.module);
+  }
   if (parsed.search) {
     // instr treats %, _ and quotes as literal search characters.
     conditions.push(
@@ -139,20 +149,22 @@ export async function getIncidents(
 
 export async function getIncidentById(
   companyId: string,
-  id: string
+  id: string,
+  module?: AppModule
 ): Promise<Incident | null> {
   return get<Incident>(
-    "SELECT * FROM incidents WHERE companyId = ? AND _id = ? AND isDeleted = 0",
-    [companySchema.parse(companyId), z.string().uuid().parse(id)]
+    `SELECT * FROM incidents WHERE companyId = ? AND _id = ? AND isDeleted = 0${module === undefined ? "" : " AND module = ?"}`,
+    [companySchema.parse(companyId), z.string().uuid().parse(id), ...(module === undefined ? [] : [moduleSchema.parse(module)])]
   );
 }
 
 export async function getIncidentLocations(
-  companyId: string
+  companyId: string,
+  module?: AppModule
 ): Promise<string[]> {
   const rows = await all<{ location: string }>(
-    "SELECT DISTINCT location FROM incidents WHERE companyId = ? AND isDeleted = 0 ORDER BY location COLLATE NOCASE",
-    [companySchema.parse(companyId)]
+    `SELECT DISTINCT location FROM incidents WHERE companyId = ? AND isDeleted = 0${module === undefined ? "" : " AND module = ?"} ORDER BY location COLLATE NOCASE`,
+    [companySchema.parse(companyId), ...(module === undefined ? [] : [moduleSchema.parse(module)])]
   );
   return rows.map((row) => row.location);
 }
@@ -323,10 +335,12 @@ export async function upsertIncident(
 export async function addIncidentNote(
   companyId: string,
   id: string,
-  note: string
+  note: string,
+  authorId: string
 ): Promise<Incident> {
   const company = companySchema.parse(companyId);
   const incidentId = z.string().uuid().parse(id);
+  const authorKey = z.string().trim().min(1).max(200).parse(authorId);
   const text = z.string().trim().min(1).max(10000).parse(note);
   const result = await transaction(async () => {
     const existing = await getDirect<Incident>(
@@ -334,15 +348,22 @@ export async function addIncidentNote(
       [company, incidentId]
     );
     if (!existing) throw new Error("Incident introuvable.");
-    const notes = `${existing.notes}\n\n${text}`;
+    const author = await getDirect<{ firstName: string; lastName: string; email: string }>(
+      "SELECT firstName, lastName, email FROM admin_users WHERE companyId = ? AND _id = ? AND isDeleted = 0",
+      [company, authorKey]
+    );
+    if (!author) throw new Error("Auteur de la note introuvable pour cette entreprise.");
+    const authorName = `${author.firstName} ${author.lastName}`.replace(/\s+/g, " ").trim() || author.email;
+    const createdAt = new Date(
+      Math.max(Date.now(), Date.parse(existing.updatedAt) + 1)
+    ).toISOString();
+    const notes = `${existing.notes}\n\n${authorName} · ${createdAt}\n${text}`;
     if (notes.length > 10000)
       throw new Error("Les notes ne peuvent pas dépasser 10 000 caractères.");
     const incident: Incident = {
       ...existing,
       notes,
-      updatedAt: new Date(
-        Math.max(Date.now(), Date.parse(existing.updatedAt) + 1)
-      ).toISOString(),
+      updatedAt: createdAt,
       synced: 0,
     };
     await runDirect(

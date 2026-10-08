@@ -1,3 +1,4 @@
+import { splitIncidentContent } from "../../components/incidents/incidentContent";
 import useSyncStore from "../../../store/sync.store";
 import PageSubtitle from "../../components/common/PageSubtitle";
 import { useEffect, useState } from "react";
@@ -32,13 +33,15 @@ import type {
 import useAdminUser from "../../../store/auth.store";
 import { Link, useNavigate } from "react-router-dom";
 import IncidentReportForm from "../../components/incidents/IncidentReportForm";
-import React from "react";
+
+import { useModule, type AppModule } from "../../context/ModuleContext";
 
 export default function IncidentListPage() {
+  const { module } = useModule();
   const companyId = useAdminUser((store) => store.adminUser.companyId);
   // Remount company-specific state when the active company changes.
   return companyId ? (
-    <CompanyIncidents key={companyId} companyId={companyId} />
+    <CompanyIncidents key={`${companyId}:${module}`} companyId={companyId} module={module} />
   ) : (
     <Alert status="warning">
       <AlertIcon />
@@ -47,7 +50,7 @@ export default function IncidentListPage() {
   );
 }
 
-function CompanyIncidents({ companyId }: { companyId: string }) {
+function CompanyIncidents({ companyId, module }: { companyId: string; module: AppModule }) {
   const syncVersion = useSyncStore((store) => store.syncVersion);
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [locations, setLocations] = useState<string[]>([]);
@@ -73,12 +76,12 @@ function CompanyIncidents({ companyId }: { companyId: string }) {
     }
     setLoading(true);
     const timer = setTimeout(() => {
-      const filters: IncidentFilters = { search, location };
+      const filters: IncidentFilters = { module, search, location };
       if (from) filters.from = new Date(`${from}T00:00:00`).toISOString();
       if (to) filters.to = new Date(`${to}T23:59:59.999`).toISOString();
       Promise.all([
         window.electron.incidents.getAll(companyId, filters),
-        window.electron.incidents.getLocations(companyId),
+        window.electron.incidents.getLocations(companyId, module),
       ])
         .then(([reports, places]) => {
           if (active) {
@@ -102,6 +105,7 @@ function CompanyIncidents({ companyId }: { companyId: string }) {
     };
   }, [
     companyId,
+    module,
     search,
     location,
     from,
@@ -135,7 +139,7 @@ function CompanyIncidents({ companyId }: { companyId: string }) {
               bg="white"
               type="search"
               maxLength={300}
-              placeholder="Numéro, nom, contact, notes…"
+              placeholder="Numéro, nom, description, commentaires…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -227,7 +231,7 @@ function CompanyIncidents({ companyId }: { companyId: string }) {
                   <Th>Date et heure</Th>
                   <Th>Déclarant</Th>
                   <Th>Lieu</Th>
-                  <Th>Notes</Th>
+                  <Th>Description</Th>
                   <Th>Rapport</Th>
                 </Tr>
               </Thead>
@@ -255,7 +259,7 @@ function CompanyIncidents({ companyId }: { companyId: string }) {
                       <Text isTruncated>{incident.location}</Text>
                     </Td>
                     <Td maxW="280px">
-                      <Text isTruncated>{incident.notes}</Text>
+                      <Text isTruncated>{splitIncidentContent(incident.notes).description}</Text>
                     </Td>
                     <Td>
                       <Button
@@ -268,7 +272,7 @@ function CompanyIncidents({ companyId }: { companyId: string }) {
                           "fr-FR"
                         )}`}
                         as={Link}
-                        to={`/hr/incidents/${incident._id}`}
+                        to={`/${module.toLowerCase()}/incidents/${incident._id}`}
                       >
                         Consulter
                       </Button>
@@ -282,12 +286,13 @@ function CompanyIncidents({ companyId }: { companyId: string }) {
       </Stack>
       {creating && (
         <IncidentReportForm
+          module={module}
           companyId={companyId}
           onClose={() => setCreating(false)}
           onSaved={(incident) => {
             setCreating(false);
             setRefresh((value) => value + 1);
-            navigate(`/hr/incidents/${incident._id}`);
+            navigate(`/${module.toLowerCase()}/incidents/${incident._id}`);
             toast({
               title: "Rapport d’incident enregistré",
               status: "success",

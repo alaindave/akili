@@ -1,3 +1,6 @@
+type CreateInventoryUnitInput = import("../../../common/types/inventory/InventoryUnit.js", {
+  with: { "resolution-mode": "require" },
+}).CreateInventoryUnitInput;
 type Repository = import("../../services/modules/inventory/inventoryItem.service.js", {
   with: { "resolution-mode": "require" },
 }).InventoryItemService;
@@ -14,6 +17,10 @@ type UpdateInventoryItemRequest = import("../../services/modules/inventory/inven
 import { invoke } from "../../ipc/ipc.cjs";
 
 export const inventoryItemApi = {
+  getCatalogOptions: (companyId: string): ReturnType<Repository["getCatalogOptions"]> =>
+    invoke("inventory:item:getCatalogOptions", companyId),
+  createUnit: (companyId: string, input: CreateInventoryUnitInput): ReturnType<Repository["createUnit"]> =>
+    invoke("inventory:item:createUnit", companyId, input),
   getById: (
     companyId: string,
     id: string

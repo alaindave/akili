@@ -98,6 +98,7 @@ api.hr.attendanceDailyCheck.lock(check);
 assert.deepEqual(invocations.at(-1).args, [check]);
 // Every inventory bridge must forward its arguments to the matching channel.
 const inventoryGroups = {
+  settings: "settings",
   items: "item",
   balances: "balance",
   movements: "movement",

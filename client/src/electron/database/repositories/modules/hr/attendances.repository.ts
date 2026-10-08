@@ -8,7 +8,7 @@ import {
 } from "../../../../../common/types/hr/attendance/Attendance.js";
 import { isAttendanceDateLocked } from "./attendanceDailyCheck.repository.js";
 import { getEmployeeById } from "./employees.repository.js";
-import { all, get, run } from "../../../db.js";
+import { all, get, run, getDirect, runDirect, transaction } from "../../../db.js";
 import { addToSyncQueue } from "../../shared/sync.repository.js";
 import Employee from "../../../../../common/types/hr/employees/Employee.js";
 import { getLeaveByEmployeeId } from "./leaves.repository.js";
@@ -1243,33 +1243,38 @@ function addDays(dateString: string, days: number): string {
 }
 
 export async function upsertAttendance(attendance: Attendance) {
-  /*
-   * ============================================================
-   * 1. FIND EXISTING RECORD
-   * ============================================================
-   *
-   * Sync must search deleted records too.
-   *
-   * A soft-deleted SQLite row still occupies its _id, even though
-   * normal application queries hide it.
-   */
+  return transaction(() => reconcilePulledAttendance(attendance));
+}
 
-  let local = await getAttendanceByIdIncludingDeleted(
+async function reconcilePulledAttendance(attendance: Attendance) {
+  const exact = await getAttendanceByIdIncludingDeleted(
     attendance.companyId,
     attendance._id
   );
+  let local = exact;
 
-  /*
-   * If the exact _id does not exist, look for an existing
-   * attendance for the same company/employee/date.
-   */
-  if (!local) {
-    local = await getAttendanceByEmployeeAndDateIncludingDeleted(
-      attendance.companyId,
-      attendance.employeeId,
-      attendance.date
+  // A live server record may refer to a deleted local duplicate. Prefer the
+  // active employee/date row so restoring the duplicate cannot violate uniqueness.
+  // Tombstones must only affect their own ID, never a replacement attendance.
+  if (Number(attendance.isDeleted ?? 0) === 0) {
+    const active = await getDirect<Attendance>(
+      `SELECT * FROM attendances
+       WHERE companyId = ? AND employeeId = ? AND date = ? AND isDeleted = 0
+       LIMIT 1`,
+      [attendance.companyId, attendance.employeeId, attendance.date]
     );
+    local = active ?? exact;
   }
+
+  // Keep queued edits intact and retry this pull after they have been pushed.
+  const pending = await getDirect<{ _id: number }>(
+    `SELECT _id FROM sync_queue
+     WHERE companyId = ? AND entity = 'attendance' AND synced = 0
+       AND entityId IN (?, ?)
+     LIMIT 1`,
+    [attendance.companyId, attendance._id, local?._id ?? attendance._id]
+  );
+  if (pending) return null;
 
   /*
    * ============================================================
@@ -1314,7 +1319,7 @@ export async function upsertAttendance(attendance: Attendance) {
      * preserve its existing SQLite identity.
      */
 
-    await run(
+    await runDirect(
       `
       UPDATE attendances
       SET
@@ -1387,7 +1392,7 @@ export async function upsertAttendance(attendance: Attendance) {
    * ============================================================
    */
 
-  await run(
+  await runDirect(
     `
     INSERT INTO attendances (
       companyId,
@@ -1476,7 +1481,7 @@ async function getAttendanceByIdIncludingDeleted(
   companyId: string,
   _id: string
 ): Promise<Attendance | null> {
-  return get<Attendance>(
+  return getDirect<Attendance>(
     `
     SELECT *
     FROM attendances
@@ -1485,23 +1490,5 @@ async function getAttendanceByIdIncludingDeleted(
     LIMIT 1
     `,
     [_id, companyId]
-  );
-}
-
-async function getAttendanceByEmployeeAndDateIncludingDeleted(
-  companyId: string,
-  employeeId: string,
-  date: string
-): Promise<Attendance | null> {
-  return get<Attendance>(
-    `
-    SELECT *
-    FROM attendances
-    WHERE companyId = ?
-      AND employeeId = ?
-      AND date = ?
-    LIMIT 1
-    `,
-    [companyId, employeeId, date]
   );
 }

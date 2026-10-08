@@ -1,4 +1,4 @@
-import { run, get, all } from "../../../db.js";
+import { run, runDirect, get, all } from "../../../db.js";
 
 import type {
   InventoryItem,
@@ -18,6 +18,11 @@ export interface InventoryItemListOptions {
   includeDeleted?: boolean;
   limit?: number;
   offset?: number;
+}
+
+function deserializeItem(row: InventoryItem): InventoryItem {
+  return { ...row, isActive: Boolean(row.isActive), synced: Boolean(row.synced), isDeleted: Boolean(row.isDeleted),
+    customFields: typeof row.customFields === "string" ? JSON.parse(row.customFields) : row.customFields ?? undefined };
 }
 
 export class InventoryItemRepository {
@@ -40,7 +45,7 @@ export class InventoryItemRepository {
       [companyId, _id]
     );
 
-    return row ?? null;
+    return row ? deserializeItem(row) : null;
   }
 
   /*
@@ -65,7 +70,7 @@ export class InventoryItemRepository {
       [companyId, _id]
     );
 
-    return row ?? null;
+    return row ? deserializeItem(row) : null;
   }
 
   /*
@@ -90,7 +95,7 @@ export class InventoryItemRepository {
       [companyId, sku]
     );
 
-    return row ?? null;
+    return row ? deserializeItem(row) : null;
   }
 
   /*
@@ -267,14 +272,14 @@ export class InventoryItemRepository {
         SELECT *
         FROM inventory_items
         WHERE ${conditions.join(" AND ")}
-        ORDER BY name COLLATE NOCASE ASC
+        ORDER BY name COLLATE NOCASE ASC, _id ASC
         LIMIT ?
         OFFSET ?
       `,
       params
     );
 
-    return rows;
+    return rows.map(deserializeItem);
   }
 
   /*
@@ -367,8 +372,9 @@ export class InventoryItemRepository {
    * =========================================================
    */
 
-  async create(item: InventoryItem): Promise<InventoryItem> {
-    await run(
+  async create(item: InventoryItem, insideTransaction = false): Promise<InventoryItem> {
+    const execute = insideTransaction ? runDirect : run;
+    await execute(
       `
         INSERT INTO inventory_items (
           _id,
@@ -746,7 +752,7 @@ export class InventoryItemRepository {
           AND categoryId = ?
           AND isDeleted = 0
           ${includeInactive ? "" : "AND isActive = 1"}
-        ORDER BY name COLLATE NOCASE ASC
+        ORDER BY name COLLATE NOCASE ASC, _id ASC
       `,
       [companyId, categoryId]
     );
@@ -766,7 +772,7 @@ export class InventoryItemRepository {
         WHERE companyId = ?
           AND isActive = 1
           AND isDeleted = 0
-        ORDER BY name COLLATE NOCASE ASC
+        ORDER BY name COLLATE NOCASE ASC, _id ASC
       `,
       [companyId]
     );
@@ -787,7 +793,7 @@ export class InventoryItemRepository {
           AND reorderPoint IS NOT NULL
           AND isActive = 1
           AND isDeleted = 0
-        ORDER BY name COLLATE NOCASE ASC
+        ORDER BY name COLLATE NOCASE ASC, _id ASC
       `,
       [companyId]
     );

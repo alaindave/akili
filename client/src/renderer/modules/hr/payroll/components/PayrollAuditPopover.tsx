@@ -145,9 +145,9 @@ export default function PayrollAuditPopover({ payrollRun }: Props) {
 
   const statusColor = {
     BROUILLON: "gray",
-    VERIFICATION: "#e6b800",
-    APPROUVÉ: "#008ae6",
-    PAYÉ: "green",
+    VERIFICATION: "#0080ff",
+    APPROUVÉ: "#0080ff",
+    PAYÉ: "#269900",
     ANNULÉ: "red",
   } as const;
 

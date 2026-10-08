@@ -24,6 +24,11 @@ export default function SettingsPage() {
       <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={6} maxW="1200px">
         {[
           [
+            "Paramètres de stocks",
+            "Catégories d’articles, unités de mesure et numérotation des références SKU.",
+            "/admin/settings/stock",
+          ],
+          [
             "Paramètres de l'entreprise",
             "Identité, coordonnées et logo de l'entreprise.",
             "/admin/company_settings",

@@ -1,3 +1,4 @@
+import { registerStockSettingsIpc } from "./ipc/modules/inventory/stockSettings.ipc.js";
 import { registerAppIPC } from "./ipc/shared/app.ipc.js";
 import { registerIncidentIPC } from "./ipc/shared/incidents.ipc.js";
 import { registerAttendanceIPC } from "./ipc/modules/hr/attendances.ipc.js";
@@ -56,6 +57,7 @@ export function registerIPCHandlers() {
   registerTransportAllowanceIpc();
   registerCompanyIpc();
   registerInventoryItemIpc();
+  registerStockSettingsIpc();
   registerInventoryBalanceIpc();
   registerInventoryMovementIpc();
   registerInventoryDocumentIpc();

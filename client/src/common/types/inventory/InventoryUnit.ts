@@ -14,3 +14,5 @@ export interface InventoryUnitConversion extends InventoryBase {
   toUnitId: string;
   factor: number;
 }
+
+export type CreateInventoryUnitInput = Pick<InventoryUnit, "code" | "name" | "category" | "decimalPlaces">;

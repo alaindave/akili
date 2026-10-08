@@ -48,7 +48,15 @@ const TaskResolutionPopover = ({ onSubmit }: Props) => {
       initialFocusRef={textareaRef}
     >
       <PopoverTrigger>
-        <Button colorScheme="gray" variant="outline" borderColor="#a3a3a3" color="#262626" borderRadius="2px">Résoudre</Button>
+        <Button
+          colorScheme="gray"
+          variant="outline"
+          borderColor="#a3a3a3"
+          color="#262626"
+          borderRadius="2px"
+        >
+          Résoudre
+        </Button>
       </PopoverTrigger>
 
       <PopoverContent

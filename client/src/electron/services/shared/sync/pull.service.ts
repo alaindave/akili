@@ -102,7 +102,6 @@ import {
 } from "../../../storage/directories.js";
 import { downloadCompanyLogo } from "../../../util/downloadCompanyLogo.util.js";
 import {
-  markAttendanceSynced,
   upsertAttendance,
 } from "../../../database/repositories/modules/hr/attendances.repository.js";
 import {
@@ -1039,9 +1038,8 @@ async function syncAttendances(attendances: Attendance[]): Promise<boolean> {
 
   for (const attendance of attendances) {
     try {
-      await upsertAttendance(attendance);
-
-      await markAttendanceSynced(attendance.companyId, attendance._id);
+      const applied = await upsertAttendance(attendance);
+      if (!applied) succeeded = false;
     } catch (error) {
       succeeded = false;
 

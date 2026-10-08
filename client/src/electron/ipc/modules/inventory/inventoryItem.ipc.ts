@@ -1,3 +1,4 @@
+import type { CreateInventoryUnitInput } from "../../../../common/types/inventory/InventoryUnit.js";
 import { ipcMain } from "electron";
 import { getToken } from "../../../auth.js";
 
@@ -9,6 +10,7 @@ import type {
 import { inventoryItemService } from "../../../services/modules/inventory/inventoryItem.service.js";
 
 interface CreateInventoryItemRequest {
+  autoGenerateSku?: boolean;
   sku: string;
   name: string;
   description?: string;
@@ -97,6 +99,12 @@ export async function requireAuthenticatedCompanyId(
 }
 
 export function registerInventoryItemIpc(): void {
+  ipcMain.handle("inventory:item:getCatalogOptions", async (_, companyId: string) => {
+    return inventoryItemService.getCatalogOptions(await requireAuthenticatedCompanyId(companyId));
+  });
+  ipcMain.handle("inventory:item:createUnit", async (_, companyId: string, input: CreateInventoryUnitInput) => {
+    return inventoryItemService.createUnit(await requireAuthenticatedCompanyId(companyId), input);
+  });
   ipcMain.handle(
     "inventory:item:getById",
     async (_, companyId: string, id: string) => {

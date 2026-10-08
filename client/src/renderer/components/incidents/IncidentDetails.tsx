@@ -1,3 +1,5 @@
+import { splitIncidentContent, formatIncidentCommentDate } from "./incidentContent";
+import useAdminUser from "../../../store/auth.store";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import {
   Box,
@@ -14,6 +16,8 @@ import { Link } from "react-router-dom";
 import { FaArrowLeftLong } from "react-icons/fa6";
 import useSyncStore from "../../../store/sync.store";
 import { Incident } from "../../../common/types/incident/Incident";
+
+import { useModule } from "../../context/ModuleContext";
 
 interface Props {
   companyId: string;
@@ -41,6 +45,14 @@ const formatDate = (value: string) => {
 };
 
 export default function IncidentDetails({ companyId, incidentId }: Props) {
+  const { module } = useModule();
+  const user = useAdminUser((store) => store.adminUser);
+  const authorName =
+    `${user.firstName ?? ""} ${user.lastName ?? ""}`
+      .replace(/\s+/g, " ")
+      .trim() ||
+    user.email ||
+    "";
   const syncVersion = useSyncStore((store) => store.syncVersion);
   const [incident, setIncident] = useState<Incident | null>(null);
   const [loading, setLoading] = useState(true);
@@ -51,6 +63,12 @@ export default function IncidentDetails({ companyId, incidentId }: Props) {
   const [saveError, setSaveError] = useState("");
   const [saved, setSaved] = useState(false);
   const requestVersion = useRef(0);
+  const { description, comments } = splitIncidentContent(incident?.notes ?? "");
+  // Reserve space for the author, ISO timestamp, separator and newlines.
+  const noteCapacity = Math.max(
+    0,
+    10000 - (incident?.notes.length ?? 0) - authorName.length - 30
+  );
 
   useEffect(() => {
     let active = true;
@@ -61,7 +79,7 @@ export default function IncidentDetails({ companyId, incidentId }: Props) {
       return;
     }
     window.electron.incidents
-      .getById(companyId, incidentId)
+      .getById(companyId, incidentId, module)
       .then((result) => {
         if (active && version === requestVersion.current) setIncident(result);
       })
@@ -75,10 +93,10 @@ export default function IncidentDetails({ companyId, incidentId }: Props) {
     return () => {
       active = false;
     };
-  }, [companyId, incidentId, retry, syncVersion]);
+  }, [companyId, incidentId, module, retry, syncVersion]);
 
   const addNote = async () => {
-    if (!note.trim() || saving || !incident) return;
+    if (!note.trim() || saving || !incident || !user._id) return;
     setSaving(true);
     setSaveError("");
     setSaved(false);
@@ -86,7 +104,8 @@ export default function IncidentDetails({ companyId, incidentId }: Props) {
       const result = await window.electron.incidents.addNote(
         companyId,
         incidentId,
-        note
+        note,
+        user._id
       );
       ++requestVersion.current;
       setIncident(result);
@@ -99,7 +118,7 @@ export default function IncidentDetails({ companyId, incidentId }: Props) {
         );
     } catch {
       setSaveError(
-        "Impossible d’ajouter la note. Vérifiez que le total ne dépasse pas 10 000 caractères, puis réessayez."
+        "Impossible d’ajouter le commentaire. Vérifiez que le total ne dépasse pas 10 000 caractères, puis réessayez."
       );
     } finally {
       setSaving(false);
@@ -137,7 +156,7 @@ export default function IncidentDetails({ companyId, incidentId }: Props) {
       >
         <Button
           as={Link}
-          to="/hr/incidents"
+          to={`/${module.toLowerCase()}/incidents`}
           leftIcon={<FaArrowLeftLong />}
           variant="ghost"
           color="#404040"
@@ -225,7 +244,7 @@ export default function IncidentDetails({ companyId, incidentId }: Props) {
               <Divider borderColor="#dedede" />
               <Box as="section">
                 <Text as="h2" {...labelStyle} mb={4}>
-                  Notes et description
+                  Description
                 </Text>
                 <Text
                   fontSize="md"
@@ -233,77 +252,104 @@ export default function IncidentDetails({ companyId, incidentId }: Props) {
                   whiteSpace="pre-wrap"
                   overflowWrap="anywhere"
                 >
-                  {incident.notes}
+                  {description}
                 </Text>
               </Box>
-              <Box
-                as="form"
-                pt={2}
-                onSubmit={(event: FormEvent<HTMLFormElement>) => {
-                  event.preventDefault();
-                  void addNote();
-                }}
-              >
-                <Text
-                  as="label"
-                  htmlFor="incident-note"
-                  display="block"
-                  {...labelStyle}
-                  mb={3}
-                >
-                  Ajouter une note
+              <Divider borderColor="#dedede" />
+              <Box as="section" aria-labelledby="incident-comments-title">
+                <Text as="h2" id="incident-comments-title" {...labelStyle} mb={4}>
+                  Commentaires
                 </Text>
-                <Textarea
-                  id="incident-note"
-                  value={note}
-                  onChange={(event) => {
-                    setNote(event.target.value);
-                    setSaved(false);
+                <Stack spacing={4} mb={6}>
+                  {comments.length === 0 ? (
+                    <Text fontSize="sm" color="#737373">Aucun commentaire pour le moment.</Text>
+                  ) : comments.map((entry, index) => (
+                    <Box key={`${entry.createdAt}:${index}`} border="1px solid #e5e5e5" borderRadius="md" p={4}>
+                      <Flex justify="space-between" align="baseline" gap={2} wrap="wrap" mb={2}>
+                        <Text fontSize="sm" fontWeight="600">{entry.author}</Text>
+                        <Text as="time" dateTime={entry.createdAt} fontSize="xs" color="#737373">
+                          {formatIncidentCommentDate(entry.createdAt)}
+                        </Text>
+                      </Flex>
+                      <Text fontSize="sm" lineHeight="1.8" whiteSpace="pre-wrap" overflowWrap="anywhere">
+                        {entry.text}
+                      </Text>
+                    </Box>
+                  ))}
+                </Stack>
+                <Box
+                  as="form"
+                  pt={2}
+                  onSubmit={(event: FormEvent<HTMLFormElement>) => {
+                    event.preventDefault();
+                    void addNote();
                   }}
-                  placeholder="Écrivez votre note…"
-                  isDisabled={saving}
-                  maxLength={Math.max(0, 10000 - incident.notes.length - 2)}
-                  resize="vertical"
-                  minH="110px"
-                  bg="white"
-                  borderColor="#d4d4d4"
-                  borderRadius="2px"
-                  fontSize="sm"
-                  lineHeight="1.8"
-                  _placeholder={{ color: "#737373" }}
-                  _hover={{ borderColor: "#737373" }}
-                  focusBorderColor="#404040"
-                />
-                {incident.notes.length >= 9998 && (
-                  <Text fontSize="sm" color="#737373" mt={3}>
-                    La limite de 10 000 caractères est atteinte.
-                  </Text>
-                )}
-                {saveError && (
-                  <Text role="alert" fontSize="sm" mt={3}>
-                    {saveError}
-                  </Text>
-                )}
-                {saved && (
-                  <Text role="status" fontSize="sm" color="#525252" mt={3}>
-                    Note ajoutée.
-                  </Text>
-                )}
-                <Flex justify="flex-end" mt={3}>
-                  <Button
-                    type="submit"
-                    bg="#262626"
-                    color="white"
-                    borderRadius="2px"
-                    size="sm"
-                    px={5}
-                    _hover={{ bg: "#404040" }}
-                    isLoading={saving}
-                    isDisabled={!note.trim()}
+                >
+                  <Text
+                    as="label"
+                    htmlFor="incident-comment"
+                    display="block"
+                    {...labelStyle}
+                    mb={3}
                   >
-                    Ajouter la note
-                  </Button>
-                </Flex>
+                    Ajouter un commentaire
+                  </Text>
+                  <Textarea
+                    id="incident-comment"
+                    value={note}
+                    onChange={(event) => {
+                      setNote(event.target.value);
+                      setSaved(false);
+                    }}
+                    placeholder="Écrivez votre commentaire…"
+                    isDisabled={saving}
+                    maxLength={noteCapacity}
+                    resize="vertical"
+                    minH="110px"
+                    bg="white"
+                    borderColor="#d4d4d4"
+                    borderRadius="2px"
+                    fontSize="sm"
+                    lineHeight="1.8"
+                    _placeholder={{ color: "#737373" }}
+                    _hover={{ borderColor: "#737373" }}
+                    focusBorderColor="#404040"
+                  />
+                  {noteCapacity === 0 && (
+                    <Text fontSize="sm" color="#737373" mt={3}>
+                      La limite de 10 000 caractères est atteinte.
+                    </Text>
+                  )}
+                  {saveError && (
+                    <Text role="alert" fontSize="sm" mt={3}>
+                      {saveError}
+                    </Text>
+                  )}
+                  {saved && (
+                    <Text role="status" fontSize="sm" color="#525252" mt={3}>
+                      Commentaire ajouté.
+                    </Text>
+                  )}
+                  <Flex justify="flex-end" mt={3}>
+                    <Button
+                      type="submit"
+                      bg="#262626"
+                      color="white"
+                      borderRadius="2px"
+                      size="sm"
+                      px={5}
+                      _hover={{ bg: "#404040" }}
+                      isLoading={saving}
+                      isDisabled={
+                        !note.trim() ||
+                        !user._id ||
+                        note.trim().length > noteCapacity
+                      }
+                    >
+                      Ajouter le commentaire
+                    </Button>
+                  </Flex>
+                </Box>
               </Box>
               <Flex
                 as="footer"

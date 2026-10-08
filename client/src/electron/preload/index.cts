@@ -1,3 +1,4 @@
+import { stockSettingsApi } from "./inventory/stockSettings.preload.cjs";
 import { contextBridge } from "electron";
 import { incidentApi } from "./shared/incidents.preload.cjs";
 // HR MODULE API
@@ -42,6 +43,7 @@ const electronApi = {
     payrollRun: payrollRunApi,
   },
   inventory: {
+    settings: stockSettingsApi,
     items: inventoryItemApi,
     balances: inventoryBalanceApi,
     movements: inventoryMovementApi,

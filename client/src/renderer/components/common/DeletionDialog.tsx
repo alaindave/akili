@@ -9,8 +9,8 @@ import {
   Button,
   Text,
 } from "@chakra-ui/react";
-import Employee from "../../common/types/hr/employees/Employee";
-import { AttendanceWithEmployee } from "../../common/types/hr/attendance/Attendance";
+import Employee from "../../../common/types/hr/employees/Employee";
+import { AttendanceWithEmployee } from "../../../common/types/hr/attendance/Attendance";
 
 interface Props {
   isOpen: boolean;

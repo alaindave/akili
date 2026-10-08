@@ -86,7 +86,7 @@ export default function IncidentReportForm({ companyId, module = "HR", onClose, 
                 </FormControl>
               </SimpleGrid>
               <FormControl isRequired>
-                <FormLabel htmlFor="incident-notes">Notes et description</FormLabel>
+                <FormLabel htmlFor="incident-notes">Description</FormLabel>
                 <Textarea id="incident-notes" rows={4} maxLength={10000} value={input.notes} onChange={(e) => change("notes", e.target.value)} />
               </FormControl>
             </Stack>

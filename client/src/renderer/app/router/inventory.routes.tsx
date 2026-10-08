@@ -1,3 +1,5 @@
+import IncidentListPage from "../../components/incidents/IncidentListPage";
+import IncidentDetailsPage from "../../components/incidents/IncidentDetailsPage";
 import { Box, Flex } from "@chakra-ui/react";
 import InventoryNavBar from "../../modules/inventory/components/InventoryNavBar";
 import TaskPage from "../../components/tasks/TaskPage";
@@ -5,7 +7,7 @@ import TaskDetailsPage from "../../components/tasks/TaskDetailsPage";
 import { Outlet } from "react-router-dom";
 import { ModuleProvider } from "../../context/ModuleContext";
 import InventoryDashboardPage from "../../modules/inventory/pages/InventoryDashboardPage";
-// import InventoryItemsPage from "../modules/inventory/pages/InventoryItemsPage";
+import InventoryItemsPage from "../../modules/inventory/pages/InventoryItemsPage";
 // import InventoryStockPage from "../modules/inventory/pages/InventoryStockPage";
 // import InventoryMovementsPage from "../modules/inventory/pages/InventoryMovementsPage";
 // import InventoryDocumentsPage from "../modules/inventory/pages/InventoryDocumentsPage";
@@ -43,10 +45,29 @@ export const inventoryRoutes = {
       ],
     },
 
-    // {
-    //   path: "items",
-    //   element: <InventoryItemsPage />,
-    // },
+    {
+      path: "incidents",
+      element: (
+        <Flex direction={{ base: "column", md: "row" }} h="100vh" bg="#F8FAFC" overflow="hidden">
+          <InventoryNavBar />
+          <Box flex="1" minW={0} overflowY="auto"><Outlet /></Box>
+        </Flex>
+      ),
+      children: [
+        { index: true, element: <IncidentListPage /> },
+        { path: ":_id", element: <IncidentDetailsPage /> },
+      ],
+    },
+
+    {
+      path: "items",
+      element: (
+        <Flex direction={{ base: "column", md: "row" }} h="100vh" bg="#FAFAFA" overflow="hidden">
+          <InventoryNavBar />
+          <Box flex="1" minW={0} overflowY="auto"><InventoryItemsPage /></Box>
+        </Flex>
+      ),
+    },
 
     // {
     //   path: "stocks",
