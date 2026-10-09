@@ -41,7 +41,11 @@ export default function IncidentListPage() {
   const companyId = useAdminUser((store) => store.adminUser.companyId);
   // Remount company-specific state when the active company changes.
   return companyId ? (
-    <CompanyIncidents key={`${companyId}:${module}`} companyId={companyId} module={module} />
+    <CompanyIncidents
+      key={`${companyId}:${module}`}
+      companyId={companyId}
+      module={module}
+    />
   ) : (
     <Alert status="warning">
       <AlertIcon />
@@ -50,7 +54,13 @@ export default function IncidentListPage() {
   );
 }
 
-function CompanyIncidents({ companyId, module }: { companyId: string; module: AppModule }) {
+function CompanyIncidents({
+  companyId,
+  module,
+}: {
+  companyId: string;
+  module: AppModule;
+}) {
   const syncVersion = useSyncStore((store) => store.syncVersion);
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [locations, setLocations] = useState<string[]>([]);
@@ -127,7 +137,7 @@ function CompanyIncidents({ companyId, module }: { companyId: string; module: Ap
               Déclarez un incident et consultez les rapports précédents.
             </PageSubtitle>
           </Box>
-          <Button colorScheme="blue" onClick={() => setCreating(true)}>
+          <Button colorScheme="yellow" onClick={() => setCreating(true)}>
             Déclarer un incident
           </Button>
         </Flex>
@@ -259,7 +269,9 @@ function CompanyIncidents({ companyId, module }: { companyId: string; module: Ap
                       <Text isTruncated>{incident.location}</Text>
                     </Td>
                     <Td maxW="280px">
-                      <Text isTruncated>{splitIncidentContent(incident.notes).description}</Text>
+                      <Text isTruncated>
+                        {splitIncidentContent(incident.notes).description}
+                      </Text>
                     </Td>
                     <Td>
                       <Button
@@ -272,7 +284,9 @@ function CompanyIncidents({ companyId, module }: { companyId: string; module: Ap
                           "fr-FR"
                         )}`}
                         as={Link}
-                        to={`/${module.toLowerCase()}/incidents/${incident._id}`}
+                        to={`/${module.toLowerCase()}/incidents/${
+                          incident._id
+                        }`}
                       >
                         Consulter
                       </Button>

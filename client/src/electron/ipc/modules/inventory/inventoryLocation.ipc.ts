@@ -15,6 +15,12 @@ function requireId(value: string, label: string): string {
 }
 
 export function registerInventoryLocationIpc(): void {
+  ipcMain.handle("inventory:location:update", async (_, companyId: string, id: string, input: Parameters<InventoryLocationRepository["update"]>[2]) => {
+    return repository.update(await requireAuthenticatedCompanyId(companyId), requireId(id, "Location ID"), input);
+  });
+  ipcMain.handle("inventory:location:create", async (_, companyId: string, input: Parameters<InventoryLocationRepository["create"]>[1]) => {
+    return repository.create(await requireAuthenticatedCompanyId(companyId), input);
+  });
   ipcMain.handle(
     "inventory:location:getById",
     async (_, companyId: string, id: string) => {

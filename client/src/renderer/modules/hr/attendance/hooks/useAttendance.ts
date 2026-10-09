@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import type {
-  Attendance,
   AttendanceWithEmployee,
   CreateAttendanceDto,
 } from "../../../../../common/types/hr/attendance/Attendance";
@@ -369,17 +368,28 @@ export const useMarkAbsent = (companyId: string, date: string) => {
       timestamp: string;
     }> => window.electron.hr.attendance.markAbsent(companyId, date),
 
-    onSuccess: () => {
-      queryClient.invalidateQueries({
+    onSuccess: async (result) => {
+      // Online marking writes to the server; pull those records before reading SQLite.
+      if (result.source === "AUTO_SERVER") {
+        const sync = await window.electron.sync.sync(companyId);
+        if (!sync.success) {
+          throw new Error(sync.message || "Impossible de récupérer les absences enregistrées.");
+        }
+      }
+
+      const queryKey = attendanceKeys.byDate(companyId, date);
+      // Prevent a read started before marking from replacing the refreshed records.
+      await queryClient.cancelQueries({ queryKey, exact: true });
+      await queryClient.invalidateQueries({
         queryKey: attendanceKeys.all,
+        refetchType: "none",
       });
-
-      queryClient.invalidateQueries({
-        queryKey: attendanceKeys.byDate(companyId, date),
-      });
-
-      queryClient.invalidateQueries({
-        queryKey: attendanceKeys.employeesWithoutAttendance(companyId, date),
+      // Keep the mutation pending until the joined employee rows are in the cache.
+      await queryClient.fetchQuery({
+        queryKey,
+        queryFn: (): Promise<AttendanceWithEmployee[]> =>
+          window.electron.hr.attendance.getByDate(companyId, date),
+        staleTime: 0,
       });
     },
   });

@@ -143,10 +143,10 @@ function CompanyItems({ companyId }: { companyId: string }) {
         mb={9}
       >
         <Box position="relative" bottom="0.8rem">
-          <Heading fontSize="28px" fontWeight="650" letterSpacing="-0.8px">
+          <Heading as="h1" fontSize="1.4rem" color="#03143B">
             Articles
           </Heading>
-          <Text fontSize="sm" color="#737373">
+          <Text fontSize="1rem" color="#737373">
             Catalogues des produits de stock
           </Text>
         </Box>

@@ -27,11 +27,20 @@ export interface InventoryLocation extends InventoryBase {
 }
 
 export interface CreateInventoryWarehouseInput {
-  code: string;
+  code?: string;
   name: string;
   description?: string;
   address?: string;
   type: WarehouseType;
   isActive?: boolean;
   customFields?: Record<string, unknown>;
+}
+
+export interface SaveInventoryLocationInput {
+  warehouseId: string;
+  parentId?: string | null;
+  code: string;
+  name: string;
+  locationType: InventoryLocation["locationType"];
+  isActive: boolean;
 }

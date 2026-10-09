@@ -80,11 +80,27 @@ function filters(companyId: string, options: InventoryWarehouseListOptions) {
 }
 
 export class InventoryWarehouseRepository {
+  private async nextCode(companyId: string): Promise<string> {
+    // Include deleted warehouses because their codes remain reserved.
+    const row = await get<{ lastNumber: number }>(
+      `SELECT COALESCE(MAX(CAST(SUBSTR(code, 5) AS INTEGER)), 0) AS lastNumber
+       FROM inventory_warehouses
+       WHERE companyId = ? AND code GLOB 'ENT-[0-9][0-9][0-9]'`,
+      [companyId]
+    );
+    const next = (row?.lastNumber ?? 0) + 1;
+    if (next > 999) throw new Error("La limite des codes ENT-001 à ENT-999 est atteinte.");
+    return `ENT-${String(next).padStart(3, "0")}`;
+  }
+
   async create(
     companyId: string,
     input: CreateInventoryWarehouseInput
   ): Promise<InventoryWarehouse> {
-    const data = createSchema.parse(input);
+    const data = createSchema.parse({
+      ...input,
+      code: input.code?.trim() || "ENT-001",
+    });
     const now = new Date().toISOString();
     const warehouse: InventoryWarehouse = {
       ...data,
@@ -96,7 +112,13 @@ export class InventoryWarehouseRepository {
       synced: false,
       isDeleted: false,
     };
-    try {
+    const automaticCode = !input.code?.trim();
+    for (let attempt = 0; attempt < 5; attempt++) {
+      if (automaticCode) {
+        data.code = await this.nextCode(companyId);
+        warehouse.code = data.code;
+      }
+      try {
       await run(
         `INSERT INTO inventory_warehouses
         (_id, companyId, code, name, description, address, type, isActive, createdAt, updatedAt)
@@ -119,11 +141,25 @@ export class InventoryWarehouseRepository {
         (error as { code?: string }).code === "SQLITE_CONSTRAINT" &&
         (await this.codeExists(companyId, data.code))
       ) {
+        // Another creation may have reserved this number while we were saving.
+        if (automaticCode && attempt < 4) continue;
         throw new Error("Un entrepôt avec ce code existe déjà.");
       }
       throw error;
     }
     return warehouse;
+    }
+    throw new Error("Impossible de générer un code d’entrepôt disponible.");
+  }
+
+  async update(companyId: string, id: string, input: CreateInventoryWarehouseInput): Promise<InventoryWarehouse> {
+    const data = createSchema.parse(input);
+    if (!await this.getById(companyId, id)) throw new Error("Entrepôt introuvable.");
+    if (await this.codeExists(companyId, data.code, id)) throw new Error("Un entrepôt avec ce code existe déjà.");
+    await run(`UPDATE inventory_warehouses SET code = ?, name = ?, description = ?, address = ?, type = ?, isActive = ?, updatedAt = ?, synced = 0
+      WHERE companyId = ? AND _id = ? AND isDeleted = 0`,
+      [data.code, data.name, data.description || null, data.address || null, data.type, data.isActive ? 1 : 0, new Date().toISOString(), companyId, id]);
+    return (await this.getById(companyId, id))!;
   }
 
   async getById(
@@ -171,7 +207,7 @@ export class InventoryWarehouseRepository {
     const { where, params } = filters(companyId, options);
     const rows = await all<WarehouseRow>(
       `SELECT * FROM inventory_warehouses WHERE ${where}
-       ORDER BY name COLLATE NOCASE ASC LIMIT ? OFFSET ?`,
+       ORDER BY code COLLATE NOCASE ASC LIMIT ? OFFSET ?`,
       [...params, options.limit ?? 100, options.offset ?? 0]
     );
     return rows.map(mapRow);

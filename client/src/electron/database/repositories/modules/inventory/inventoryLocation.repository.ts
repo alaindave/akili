@@ -1,5 +1,18 @@
+import { randomUUID } from "node:crypto";
+import { z } from "zod";
+import type { SaveInventoryLocationInput } from "../../../../../common/types/inventory/InventoryWarehouse.js";
+import { InventoryWarehouseRepository } from "./inventoryWarehouse.repository.js";
+
+const locationSchema = z.object({
+  warehouseId: z.string().trim().min(1),
+  parentId: z.string().trim().min(1).nullable().optional(),
+  code: z.string().trim().min(1).max(100).transform(value => value.toUpperCase()),
+  name: z.string().trim().min(1).max(255),
+  locationType: z.enum(["ZONE", "RACK", "BIN", "FLOOR", "OTHER"]),
+  isActive: z.boolean(),
+});
 import type { InventoryLocation } from "../../../../../common/types/inventory/InventoryWarehouse.js";
-import { all, get } from "../../../db.js";
+import { all, get, run } from "../../../db.js";
 
 export interface InventoryLocationListOptions {
   warehouseId?: string;
@@ -68,6 +81,58 @@ function filters(companyId: string, options: InventoryLocationListOptions) {
 }
 
 export class InventoryLocationRepository {
+  private async save(companyId: string, input: SaveInventoryLocationInput, id?: string): Promise<InventoryLocation> {
+    const data = locationSchema.parse(input);
+    const warehouse = await new InventoryWarehouseRepository().getById(companyId, data.warehouseId);
+    if (!warehouse) throw new Error("Entrepôt introuvable.");
+    const existing = id ? await this.getById(companyId, id) : null;
+    if (id && (!existing || existing.warehouseId !== data.warehouseId)) throw new Error("Emplacement introuvable.");
+    if (await this.codeExists(companyId, data.warehouseId, data.code, id)) throw new Error("Un emplacement avec ce code existe déjà.");
+    const rank = { ZONE: 0, RACK: 1, BIN: 2, FLOOR: 2, OTHER: 2 };
+    if (data.parentId) {
+      const parent = await this.getById(companyId, data.parentId);
+      if (!parent || parent.warehouseId !== data.warehouseId || parent._id === id ||
+          !["ZONE", "RACK"].includes(parent.locationType) || rank[parent.locationType] >= rank[data.locationType]) {
+        throw new Error("Parent incompatible avec le type d’emplacement.");
+      }
+      const visited = new Set<string>(id ? [id] : []);
+      let ancestor: InventoryLocation | null = parent;
+      while (ancestor) {
+        if (visited.has(ancestor._id)) throw new Error("La hiérarchie ne peut pas contenir de boucle.");
+        visited.add(ancestor._id);
+        ancestor = ancestor.parentId ? await this.getById(companyId, ancestor.parentId) : null;
+      }
+    }
+    if (id) {
+      const children = await this.getByParent(companyId, data.warehouseId, id);
+      if (children.some(child => !["ZONE", "RACK"].includes(data.locationType) || rank[data.locationType] >= rank[child.locationType])) {
+        throw new Error("Ce type est incompatible avec les emplacements enfants.");
+      }
+    }
+    const now = new Date().toISOString();
+    const locationId = id ?? randomUUID();
+    try {
+      if (id) {
+        await run(`UPDATE inventory_locations SET code = ?, name = ?, locationType = ?, parentId = ?, isActive = ?, updatedAt = ?, synced = 0
+          WHERE companyId = ? AND _id = ? AND warehouseId = ? AND isDeleted = 0`,
+          [data.code, data.name, data.locationType, data.parentId ?? null, data.isActive ? 1 : 0, now, companyId, id, data.warehouseId]);
+      } else {
+        await run(`INSERT INTO inventory_locations (_id, companyId, warehouseId, parentId, code, name, locationType, isActive, createdAt, updatedAt)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [locationId, companyId, data.warehouseId, data.parentId ?? null, data.code, data.name, data.locationType, data.isActive ? 1 : 0, now, now]);
+      }
+    } catch (error) {
+      if ((error as { code?: string }).code === "SQLITE_CONSTRAINT" && await this.codeExists(companyId, data.warehouseId, data.code, id)) {
+        throw new Error("Un emplacement avec ce code existe déjà.");
+      }
+      throw error;
+    }
+    return (await this.getById(companyId, locationId))!;
+  }
+
+  create(companyId: string, input: SaveInventoryLocationInput) { return this.save(companyId, input); }
+  update(companyId: string, id: string, input: SaveInventoryLocationInput) { return this.save(companyId, input, id); }
+
   async getById(companyId: string, id: string): Promise<InventoryLocation | null> {
     const row = await get<LocationRow>(
       "SELECT * FROM inventory_locations WHERE companyId = ? AND _id = ? AND isDeleted = 0 LIMIT 1",

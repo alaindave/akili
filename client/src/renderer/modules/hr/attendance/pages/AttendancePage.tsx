@@ -100,9 +100,11 @@ const EmployeeAttendancePage = () => {
 
   const [filter, setFilter] = useState("");
 
-  const [time, setTime] = useState(today);
+  const [, setTime] = useState(today);
+  const [absenceSuccessDate, setAbsenceSuccessDate] = useState<string | null>(null);
 
   const [checkLoading, setCheckLoading] = useState(false);
+  const [verificationSuccessDate, setVerificationSuccessDate] = useState<string | null>(null);
 
   const [canVerify, setCanVerify] = useState(false);
 
@@ -160,6 +162,22 @@ const EmployeeAttendancePage = () => {
     useMarkAbsent(user.companyId, selectedDate);
 
   const loading = attendanceLoading || attendanceFetching;
+
+  // Effects run after the refreshed employee list has committed to the page.
+  useEffect(() => {
+    if (!absenceSuccessDate || isMarkingAbsent || attendanceFetching) return;
+    setAbsenceSuccessDate(null);
+    if (absenceSuccessDate !== selectedDate) return;
+    toast({
+      title: "Absences enregistrées",
+      description: "Les absences ont été enregistrées avec succès.",
+      status: "success",
+      duration: 3000,
+      isClosable: true,
+      position: "top-left",
+    });
+  }, [absenceSuccessDate, selectedDate, isMarkingAbsent, attendanceFetching, attendances, toast]);
+
 
   /* =========================================================
      ERROR HANDLING
@@ -293,40 +311,10 @@ const EmployeeAttendancePage = () => {
   ========================================================= */
 
   const markAbsent = async () => {
-    console.log("SELECTED DATE", selectedDate);
     try {
-      window.electron.sync.sync(user.companyId).catch((error: Error) => {
-        console.error("IMMEDIATE SYNC FAILED:", error);
-      });
-
-      const result: {
-        companyId: string;
-        absentAttendance: any;
-        source: "AUTO_SERVER" | "LOCAL" | "SKIPPED";
-        completed: boolean;
-        timestamp: string;
-      } = await markAbsentMutation();
-
-      console.log("MARK ABSENT :RESULT", result);
-
-      toast({
-        title: "Absences enregistrées",
-        description: "Les absences ont été enregistrées avec succès.",
-        status: "success",
-        duration: 3000,
-        isClosable: true,
-        position: "top-left",
-      });
-
-      if (result.source !== "AUTO_SERVER") {
-        refetchAttendance();
-        await loadDailyCheck();
-        return;
-      }
-
-      await attendanceDailyCheckSync();
-
-      return;
+      await markAbsentMutation();
+      await loadDailyCheck();
+      setAbsenceSuccessDate(selectedDate);
     } catch (error) {
       showErrorMessage(
         "Échec d'enregistrement d'absences",
@@ -353,16 +341,11 @@ const EmployeeAttendancePage = () => {
 
       console.log("VERIFIED ATTENDANCES", result);
 
-      toast({
-        title: "Présence vérifiée",
-        description: "La liste de présence a été vérifiée avec succès.",
-        status: "success",
-        duration: 3000,
-        isClosable: true,
-        position: "top-left",
-      });
+      setDailyCheck(result);
+      setCanVerify(Boolean(result.markAbsentCompleted && result.markLeaveCompleted));
       await loadDailyCheck();
       await attendanceDailyCheckSync();
+      setVerificationSuccessDate(selectedDate);
     } catch (error) {
       showErrorMessage(
         "Échec de la vérification",
@@ -485,6 +468,27 @@ const EmployeeAttendancePage = () => {
   };
 
   const attendanceAction = getAttendanceAction();
+
+  // Show success only after the confirmation action has rendered without a spinner.
+  useEffect(() => {
+    if (!verificationSuccessDate) return;
+    if (verificationSuccessDate !== selectedDate) {
+      setVerificationSuccessDate(null);
+      return;
+    }
+    if (checkLoading ||
+        (attendanceAction !== "CONFIRM" && attendanceAction !== "NOTIFY_MANAGER")) return;
+    setVerificationSuccessDate(null);
+    toast({
+      title: "Présence vérifiée",
+      description: "La liste de présence a été vérifiée avec succès.",
+      status: "success",
+      duration: 3000,
+      isClosable: true,
+      position: "top-left",
+    });
+  }, [verificationSuccessDate, selectedDate, checkLoading, attendanceAction, toast]);
+
 
   /* =========================================================
      RENDER
@@ -637,7 +641,7 @@ const EmployeeAttendancePage = () => {
             BODY
         ===================================================== */}
         <Box height="56vh" overflowY="auto" overflowX="hidden">
-          {loading ? (
+          {attendanceLoading ? (
             <>
               <Box as="style">{shimmerKeyframes}</Box>
               <VStack spacing={3}>

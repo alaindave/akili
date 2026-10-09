@@ -110,12 +110,7 @@ export default function LateAttendanceReportPage() {
     >
       <Flex justify="space-between" flexShrink={0}>
         <HStack>
-          <Button
-            as={Link}
-            to="/hr/reports"
-            variant="outline"
-            mb={5}
-          >
+          <Button as={Link} to="/hr/reports" variant="outline" mb={5}>
             <FaArrowLeftLong color="black" />
           </Button>
           <Box>
@@ -129,7 +124,7 @@ export default function LateAttendanceReportPage() {
           </Box>
         </HStack>
         <Button
-          colorScheme="yellow"
+          colorScheme="blue"
           onClick={download}
           isLoading={saving}
           isDisabled={

@@ -35,7 +35,7 @@ import Logo from "../../../components/common/Logo";
 const navigationItems = [
   { label: "Tableau de bord", to: "/inventory", icon: FaHome, end: true },
   { label: "Articles", to: "/inventory/items", icon: FaBoxOpen },
-  { label: "Stocks", to: "/inventory", icon: FaBoxes },
+  { label: "Stocks", to: "/inventory/stocks", icon: FaBoxes },
   { label: "Mouvements", to: "/inventory", icon: FaExchangeAlt },
   { label: "Entrepôts", to: "/inventory/warehouses", icon: FaWarehouse },
   { label: "Rapports", to: "/inventory", icon: BiSolidReport },
@@ -134,7 +134,7 @@ const InventoryNavBar = () => {
             justifyContent="space-evenly"
           >
             {navigationItems.map(({ label, to, icon: Icon, end }) => (
-              <ListItem key={to} flex="1" display="flex" alignItems="center">
+              <ListItem key={label} flex="1" display="flex" alignItems="center">
                 <NavLink
                   className="nav-button"
                   to={to}

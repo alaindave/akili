@@ -30,13 +30,20 @@ import useSyncStore from "../../../../../store/sync.store";
 function reportTime(value?: string | null) {
   if (!value) return "—";
   const time = new Date(value);
-  return Number.isNaN(time.getTime()) ? "—" : time.toLocaleTimeString("fr-FR", {
-    hour: "2-digit", minute: "2-digit",
-  });
+  return Number.isNaN(time.getTime())
+    ? "—"
+    : time.toLocaleTimeString("fr-FR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
 }
 
 const statusColors: Record<string, string> = {
-  PONCTUEL: "green", RETARD: "orange", ABSENT: "red", CONGÉ: "blue", CONGE: "blue",
+  PONCTUEL: "green",
+  RETARD: "orange",
+  ABSENT: "red",
+  CONGÉ: "blue",
+  CONGE: "blue",
 };
 
 export default function DailyAttendanceReportPage() {
@@ -45,12 +52,22 @@ export default function DailyAttendanceReportPage() {
   const [date, setDate] = useState<Date | null>(() => new Date());
   const [saving, setSaving] = useState(false);
   const toast = useToast();
-  const selectedDay = date && !Number.isNaN(date.getTime())
-    ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
-    : "";
-  const { data: report, isFetching, isError, refetch } = useQuery({
+  const selectedDay =
+    date && !Number.isNaN(date.getTime())
+      ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
+          2,
+          "0"
+        )}-${String(date.getDate()).padStart(2, "0")}`
+      : "";
+  const {
+    data: report,
+    isFetching,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ["daily-attendance-report", companyId, selectedDay, syncVersion],
-    queryFn: () => window.electron.hr.attendance_reports.getDaily(companyId, selectedDay),
+    queryFn: () =>
+      window.electron.hr.attendance_reports.getDaily(companyId, selectedDay),
     enabled: Boolean(companyId && selectedDay),
   });
 
@@ -75,12 +92,7 @@ export default function DailyAttendanceReportPage() {
     <Box p={{ base: 3, lg: 6 }} pb="80px" bg="#F5F6F8" minH="93vh">
       <Flex width="100%" justify="space-between" gap={3} wrap="wrap">
         <HStack>
-          <Button
-            as={Link}
-            to="/hr/reports"
-            variant="outline"
-            mb={5}
-          >
+          <Button as={Link} to="/hr/reports" variant="outline" mb={5}>
             <FaArrowLeftLong color="black" />
           </Button>
           <Box>
@@ -93,10 +105,12 @@ export default function DailyAttendanceReportPage() {
           </Box>
         </HStack>
         <Button
-          colorScheme="yellow"
+          colorScheme="blue"
           onClick={download}
           isLoading={saving}
-          isDisabled={!selectedDay || !companyId || isFetching || isError || !report}
+          isDisabled={
+            !selectedDay || !companyId || isFetching || isError || !report
+          }
         >
           Télécharger
         </Button>
@@ -125,44 +139,93 @@ export default function DailyAttendanceReportPage() {
         <Text role="status">Chargement du rapport…</Text>
       ) : isError ? (
         <Box>
-          <Text role="alert" color="red.600">Impossible de charger le rapport.</Text>
-          <Button mt={3} variant="outline" onClick={() => { void refetch(); }}>Réessayer</Button>
-        </Box>
-      ) : report && (
-        <>
-          <Text mb={3} fontWeight="600">
-            Présences du {date?.toLocaleDateString("fr-FR")} · {report.employees.length} employé(s)
+          <Text role="alert" color="red.600">
+            Impossible de charger le rapport.
           </Text>
-          {report.employees.length === 0 ? (
-            <Box bg="white" border="1px solid" borderColor="gray.200" borderRadius="lg" p={8}>
-              <Text textAlign="center">Aucun employé dans le rapport pour cette journée.</Text>
-            </Box>
-          ) : (
-            <TableContainer bg="white" borderRadius="lg" border="1px solid" borderColor="gray.200" maxH="60vh" overflowY="auto">
-              <Table size="sm" aria-label="Présences de la journée sélectionnée">
-                <Thead position="sticky" top={0} zIndex={1} bg="gray.50">
-                  <Tr>
-                    <Th>Employé</Th><Th>Matricule</Th><Th>Département</Th><Th>Poste</Th>
-                    <Th>Entrée</Th><Th>Sortie</Th><Th>Statut</Th>
-                  </Tr>
-                </Thead>
-                <Tbody>
-                  {report.employees.map((employee, index) => (
-                    <Tr key={`${employee.employeeId}-${index}`}>
-                      <Td py={4}>{[employee.firstName, employee.lastName].filter(Boolean).join(" ") || employee.employeeId}</Td>
-                      <Td>{employee.matricule || "—"}</Td>
-                      <Td>{employee.department || "—"}</Td>
-                      <Td>{employee.role || "—"}</Td>
-                      <Td>{reportTime(employee.clockIn)}</Td>
-                      <Td>{reportTime(employee.clockOut)}</Td>
-                      <Td><Badge colorScheme={statusColors[employee.status.toUpperCase()] ?? "gray"}>{employee.status}</Badge></Td>
+          <Button
+            mt={3}
+            variant="outline"
+            onClick={() => {
+              void refetch();
+            }}
+          >
+            Réessayer
+          </Button>
+        </Box>
+      ) : (
+        report && (
+          <>
+            <Text mb={3} fontWeight="600">
+              Présences du {date?.toLocaleDateString("fr-FR")} ·{" "}
+              {report.employees.length} employé(s)
+            </Text>
+            {report.employees.length === 0 ? (
+              <Box
+                bg="white"
+                border="1px solid"
+                borderColor="gray.200"
+                borderRadius="lg"
+                p={8}
+              >
+                <Text textAlign="center">
+                  Aucun employé dans le rapport pour cette journée.
+                </Text>
+              </Box>
+            ) : (
+              <TableContainer
+                bg="white"
+                borderRadius="lg"
+                border="1px solid"
+                borderColor="gray.200"
+                maxH="60vh"
+                overflowY="auto"
+              >
+                <Table
+                  size="sm"
+                  aria-label="Présences de la journée sélectionnée"
+                >
+                  <Thead position="sticky" top={0} zIndex={1} bg="gray.50">
+                    <Tr>
+                      <Th>Employé</Th>
+                      <Th>Matricule</Th>
+                      <Th>Département</Th>
+                      <Th>Poste</Th>
+                      <Th>Entrée</Th>
+                      <Th>Sortie</Th>
+                      <Th>Statut</Th>
                     </Tr>
-                  ))}
-                </Tbody>
-              </Table>
-            </TableContainer>
-          )}
-        </>
+                  </Thead>
+                  <Tbody>
+                    {report.employees.map((employee, index) => (
+                      <Tr key={`${employee.employeeId}-${index}`}>
+                        <Td py={4}>
+                          {[employee.firstName, employee.lastName]
+                            .filter(Boolean)
+                            .join(" ") || employee.employeeId}
+                        </Td>
+                        <Td>{employee.matricule || "—"}</Td>
+                        <Td>{employee.department || "—"}</Td>
+                        <Td>{employee.role || "—"}</Td>
+                        <Td>{reportTime(employee.clockIn)}</Td>
+                        <Td>{reportTime(employee.clockOut)}</Td>
+                        <Td>
+                          <Badge
+                            colorScheme={
+                              statusColors[employee.status.toUpperCase()] ??
+                              "gray"
+                            }
+                          >
+                            {employee.status}
+                          </Badge>
+                        </Td>
+                      </Tr>
+                    ))}
+                  </Tbody>
+                </Table>
+              </TableContainer>
+            )}
+          </>
+        )
       )}
     </Box>
   );

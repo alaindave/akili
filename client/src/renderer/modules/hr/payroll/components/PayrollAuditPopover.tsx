@@ -143,13 +143,15 @@ export default function PayrollAuditPopover({ payrollRun }: Props) {
 
   const isPaid = payrollRun.status === "PAYÉ";
 
-  const statusColor = {
-    BROUILLON: "gray",
-    VERIFICATION: "#0080ff",
-    APPROUVÉ: "#0080ff",
-    PAYÉ: "#269900",
-    ANNULÉ: "red",
+  const statusStyles = {
+    BROUILLON: { colorScheme: "gray" },
+    VERIFICATION: { color: "#7C3AED", bg: "#EDE9FE" },
+    APPROUVÉ: { color: "#0F766E", bg: "#CCFBF1" },
+    PAYÉ: { color: "#15803D", bg: "#DCFCE7" },
+    ANNULÉ: { colorScheme: "red" },
   } as const;
+  const statusLabel =
+    payrollRun.status === "VERIFICATION" ? "VERIFIÉ" : payrollRun.status;
 
   return (
     <Popover trigger="hover" placement="bottom-end" closeOnBlur isLazy>
@@ -159,12 +161,11 @@ export default function PayrollAuditPopover({ payrollRun }: Props) {
           position="absolute"
           top="1.5rem"
           right="2rem"
-          bg={payrollRun?.status ? statusColor[payrollRun.status] : undefined}
-          color="gray.200"
+          {...(payrollRun.status ? statusStyles[payrollRun.status] : {})}
           fontSize="1rem"
           _hover={{ cursor: "pointer" }}
         >
-          {payrollRun?.status}
+          {statusLabel}
         </Badge>
       </PopoverTrigger>
 
@@ -191,17 +192,9 @@ export default function PayrollAuditPopover({ payrollRun }: Props) {
               px={2}
               py={1}
               borderRadius="md"
-              colorScheme={
-                isCancelled
-                  ? "red"
-                  : isPaid
-                  ? "green"
-                  : isApproved
-                  ? "blue"
-                  : "orange"
-              }
+              {...(payrollRun.status ? statusStyles[payrollRun.status] : {})}
             >
-              {payrollRun.status}
+              {statusLabel}
             </Badge>
           </HStack>
         </PopoverHeader>

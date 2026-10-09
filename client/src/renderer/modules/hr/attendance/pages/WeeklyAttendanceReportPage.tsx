@@ -85,12 +85,7 @@ export default function WeeklyAttendanceReportPage() {
     <Box p={{ base: 3, lg: 6 }} w="100%" minW={0} bg="#F5F6F8" minH="93vh">
       <Flex width="100%" justify="space-between">
         <HStack>
-          <Button
-            as={Link}
-            to="/hr/reports"
-            variant="outline"
-            mb={5}
-          >
+          <Button as={Link} to="/hr/reports" variant="outline" mb={5}>
             <FaArrowLeftLong color="black" />
           </Button>
           <Box>
@@ -103,7 +98,7 @@ export default function WeeklyAttendanceReportPage() {
           </Box>
         </HStack>
         <Button
-          colorScheme="yellow"
+          colorScheme="blue"
           onClick={download}
           isLoading={saving}
           isDisabled={

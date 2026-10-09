@@ -107,7 +107,7 @@ const TaskPage = () => {
         <Button
           mt="1.2rem"
           mr="4rem"
-          colorScheme="blue"
+          colorScheme="yellow"
           onClick={() => onCreateOpen()}
         >
           Créer une nouvelle tache
@@ -129,7 +129,10 @@ const TaskPage = () => {
       </Grid>
       <Box mt="2.5rem" ml="1rem">
         <TaskTable
-          tasks={tasks.filter((task) => task.module === module && task.companyId === user.companyId)}
+          tasks={tasks.filter(
+            (task) =>
+              task.module === module && task.companyId === user.companyId
+          )}
           searchText={searchText}
           priorityFilter={priorityFilter}
           statusFilter={statusFilter}

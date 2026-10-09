@@ -8,6 +8,10 @@ type InventoryLocationListOptions = import("../../database/repositories/modules/
 import { invoke } from "../../ipc/ipc.cjs";
 
 export const inventoryLocationApi = {
+  update: (companyId: string, id: string, input: Parameters<Repository["update"]>[2]): ReturnType<Repository["update"]> =>
+    invoke("inventory:location:update", companyId, id, input),
+  create: (companyId: string, input: Parameters<Repository["create"]>[1]): ReturnType<Repository["create"]> =>
+    invoke("inventory:location:create", companyId, input),
   getById: (
     companyId: string,
     id: string

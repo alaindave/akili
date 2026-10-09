@@ -364,7 +364,7 @@ const AddEmployee = () => {
     <>
       {/* Open button */}
       <Button
-        colorScheme="blue"
+        colorScheme="yellow"
         px="16px"
         height="40px"
         borderRadius="8px"

@@ -2,9 +2,9 @@ import { useRef, useState, type FormEvent } from "react";
 import {
   Alert, AlertIcon, Button, FormControl, FormLabel, Input, Modal,
   ModalBody, ModalCloseButton, ModalContent, ModalFooter, ModalHeader,
-  ModalOverlay, Select, Stack, Switch, Textarea,
+  ModalOverlay, Select, Stack, Switch, Textarea, Text,
 } from "@chakra-ui/react";
-import type { InventoryWarehouse } from "../../../../common/types/inventory/InventoryWarehouse";
+import type { InventoryWarehouse, InventoryLocation } from "../../../../common/types/inventory/InventoryWarehouse";
 
 export const warehouseTypeLabels: Record<InventoryWarehouse["type"], string> = {
   RAW_MATERIAL: "Matières premières",
@@ -14,17 +14,20 @@ export const warehouseTypeLabels: Record<InventoryWarehouse["type"], string> = {
   OTHER: "Autre",
 };
 
-export default function InventoryWarehouseForm({ companyId, onClose, onSaved }: {
+export default function InventoryWarehouseForm({ companyId, warehouse, locations, onEditLocation, onClose, onSaved }: {
   companyId: string;
+  warehouse?: InventoryWarehouse;
+  locations?: InventoryLocation[];
+  onEditLocation?: (location: InventoryLocation) => void;
   onClose: () => void;
   onSaved: (warehouse: InventoryWarehouse) => void;
 }) {
-  const [code, setCode] = useState("");
-  const [name, setName] = useState("");
-  const [type, setType] = useState<InventoryWarehouse["type"]>("GENERAL");
-  const [address, setAddress] = useState("");
-  const [description, setDescription] = useState("");
-  const [isActive, setIsActive] = useState(true);
+  const [code, setCode] = useState(warehouse?.code ?? "");
+  const [name, setName] = useState(warehouse?.name ?? "");
+  const [type, setType] = useState<InventoryWarehouse["type"]>(warehouse?.type ?? "GENERAL");
+  const [address, setAddress] = useState(warehouse?.address ?? "");
+  const [description, setDescription] = useState(warehouse?.description ?? "");
+  const [isActive, setIsActive] = useState(warehouse?.isActive ?? true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const submitting = useRef(false);
@@ -33,23 +36,26 @@ export default function InventoryWarehouseForm({ companyId, onClose, onSaved }: 
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (submitting.current) return;
-    if (!code.trim() || !name.trim()) {
-      setError("Le code et le nom sont obligatoires.");
+    if (!name.trim() || (warehouse && !code.trim())) {
+      setError(warehouse ? "Le code et le nom sont obligatoires." : "Le nom est obligatoire.");
       return;
     }
     submitting.current = true;
     setSaving(true);
     setError("");
     try {
-      const warehouse = await window.electron.inventory.warehouses.create(companyId, {
+      const input = {
         code: code.trim(), name: name.trim(), type, address: address.trim(),
         description: description.trim(), isActive,
-      });
-      onSaved(warehouse);
+      };
+      const saved = warehouse
+        ? await window.electron.inventory.warehouses.update(companyId, warehouse._id, input)
+        : await window.electron.inventory.warehouses.create(companyId, input);
+      onSaved(saved);
     } catch (cause) {
       setError(cause instanceof Error && cause.message.includes("Un entrepôt avec ce code existe déjà")
         ? "Un entrepôt avec ce code existe déjà. Choisissez un autre code."
-        : "Impossible de créer l’entrepôt. Veuillez réessayer.");
+        : "Impossible d’enregistrer l’entrepôt. Veuillez réessayer.");
     } finally {
       submitting.current = false;
       setSaving(false);
@@ -61,19 +67,27 @@ export default function InventoryWarehouseForm({ companyId, onClose, onSaved }: 
       closeOnOverlayClick={!saving} closeOnEsc={!saving}>
       <ModalOverlay />
       <ModalContent as="form" onSubmit={submit}>
-        <ModalHeader>Nouvel entrepôt</ModalHeader>
+        <ModalHeader>{warehouse ? "Modifier l’entrepôt" : "Nouvel entrepôt"}</ModalHeader>
         <ModalCloseButton isDisabled={saving} />
         <ModalBody>
           <Stack spacing={4}>
+            {locations && onEditLocation && <FormControl isDisabled={saving}>
+              <FormLabel>Élément à modifier</FormLabel>
+              <Select value="" onChange={e => { const entry = locations.find(location => location._id === e.target.value); if (entry) onEditLocation(entry); }}>
+                <option value="">Entrepôt · {warehouse?.name}</option>
+                {locations.map(location => <option key={location._id} value={location._id}>{location.name} ({location.code})</option>)}
+              </Select>
+              <Text fontSize="xs" color="gray.500" mt={1}>Sélectionnez un emplacement pour modifier ses informations.</Text>
+            </FormControl>}
             {error && <Alert status="error"><AlertIcon />{error}</Alert>}
             <FormControl isRequired isDisabled={saving}>
-              <FormLabel>Code</FormLabel>
-              <Input ref={initialFocusRef} value={code} onChange={e => setCode(e.target.value)} maxLength={100} placeholder="ENT-001" />
-            </FormControl>
-            <FormControl isRequired isDisabled={saving}>
               <FormLabel>Nom</FormLabel>
-              <Input value={name} onChange={e => setName(e.target.value)} maxLength={255} placeholder="Entrepôt principal" />
+              <Input ref={initialFocusRef} value={name} onChange={e => setName(e.target.value)} maxLength={255} placeholder="Entrepôt principal" />
             </FormControl>
+            {warehouse && <FormControl isRequired isDisabled={saving}>
+              <FormLabel>Code</FormLabel>
+              <Input value={code} onChange={e => setCode(e.target.value)} maxLength={100} placeholder="ENT-001" />
+            </FormControl>}
             <FormControl isRequired isDisabled={saving}>
               <FormLabel>Type</FormLabel>
               <Select value={type} onChange={e => setType(e.target.value as InventoryWarehouse["type"])}>
@@ -96,7 +110,7 @@ export default function InventoryWarehouseForm({ companyId, onClose, onSaved }: 
         </ModalBody>
         <ModalFooter gap={3}>
           <Button variant="outline" onClick={onClose} isDisabled={saving}>Annuler</Button>
-          <Button type="submit" colorScheme="yellow" isLoading={saving}>Créer l’entrepôt</Button>
+          <Button type="submit" colorScheme="yellow" isLoading={saving}>{warehouse ? "Enregistrer" : "Créer l’entrepôt"}</Button>
         </ModalFooter>
       </ModalContent>
     </Modal>

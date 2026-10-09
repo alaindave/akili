@@ -65,7 +65,7 @@ function load(file, resolve) {
   assert.equal(captured.currency, 'BIF');
   assert.equal(written.subarray(0, 4).toString(), '%PDF');
   assert.equal((written.toString('latin1').match(/\/Type \/Page\b/g) || []).length, 1);
-  assert.equal(destination, 'bulletin-paie-EMP-0042-01-09-2026-au-30-09-2026.pdf');
+  assert.equal(destination, 'bulletin-paie-Élodie-Ndayishimiye-01-09-2026-au-30-09-2026.pdf');
   fs.writeFileSync('/tmp/akili-payslip-preview.pdf', written);
   canceled = true; written = null;
   assert.equal((await service.savePayslipReport('company', 'employee', 'run')).canceled, true);

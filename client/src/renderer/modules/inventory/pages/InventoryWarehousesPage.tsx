@@ -1,3 +1,4 @@
+import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
@@ -77,6 +78,7 @@ export default function InventoryWarehousesPage() {
 }
 
 function CompanyWarehouses({ companyId }: { companyId: string }) {
+  const navigate = useNavigate();
   const [data, setData] = useState<WarehouseData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -220,29 +222,28 @@ function CompanyWarehouses({ companyId }: { companyId: string }) {
 
   return (
     <Box
-      minH="100%"
+      h="100%"
+      minH={0}
+      display="flex"
+      flexDirection="column"
+      overflow="hidden"
       bg="#FAFAFA"
       color="#262626"
       p={{ base: 3, md: 6 }}
-      pb={24}
+      pb={6}
     >
       <Flex
         justify="space-between"
         align={{ base: "start", lg: "center" }}
         gap={5}
         wrap="wrap"
-        mb={9}
+        flexShrink={0}
       >
         <Box>
-          <Heading
-            as="h1"
-            fontSize="28px"
-            fontWeight="650"
-            letterSpacing="-0.8px"
-          >
+          <Heading as="h1" fontSize="1.4rem" color="#03143B">
             Entrepôts
           </Heading>
-          <Text fontSize="sm" color="#737373" mt={1}>
+          <Text fontSize="1rem" color="#737373">
             Gérez vos entrepôts et leurs emplacements de stockage
           </Text>
         </Box>
@@ -259,7 +260,7 @@ function CompanyWarehouses({ companyId }: { companyId: string }) {
         </Button>
       </Flex>
 
-      <SimpleGrid columns={{ base: 1, sm: 2, xl: 4 }} spacing={6} mb={8}>
+      <SimpleGrid columns={{ base: 2, xl: 4 }} spacing={6} mt={10} mb={8} flexShrink={0}>
         {metrics.map(({ label, value, icon: Icon, color, help }) => (
           <Box
             key={label}
@@ -288,7 +289,12 @@ function CompanyWarehouses({ companyId }: { companyId: string }) {
               </Text>
             </HStack>
             <Skeleton isLoaded={!loading} mt={3}>
-              <Text color="black" fontSize="1.5rem" fontWeight="700" textAlign="right">
+              <Text
+                color="black"
+                fontSize="1.5rem"
+                fontWeight="700"
+                textAlign="right"
+              >
                 {data && !error ? value.toLocaleString("fr-FR") : "—"}
               </Text>
             </Skeleton>
@@ -301,9 +307,13 @@ function CompanyWarehouses({ companyId }: { companyId: string }) {
         borderRadius="12px"
         bg="white"
         overflow="hidden"
+        display="flex"
+        flexDirection="column"
+        flex="1"
+        minH={0}
         boxShadow="0 2px 6px rgba(0,0,0,0.02)"
       >
-        <Flex p={5} gap={3} wrap="wrap" borderBottom="1px solid #EAEAEA">
+        <Flex p={5} gap={3} wrap="wrap" borderBottom="1px solid #EAEAEA" flexShrink={0}>
           <InputGroup flex="1" minW="200px">
             <InputLeftElement pointerEvents="none" color="#909090">
               <FiSearch />
@@ -358,6 +368,7 @@ function CompanyWarehouses({ companyId }: { companyId: string }) {
           )}
         </Flex>
 
+        <Box flex="1" minH={0} overflow="auto">
         {error ? (
           <Stack p={8} align="start">
             <Text role="alert">{error}</Text>
@@ -404,10 +415,13 @@ function CompanyWarehouses({ companyId }: { companyId: string }) {
             </Button>
           </Stack>
         ) : (
-          <TableContainer>
+          <TableContainer overflow="visible">
             <Table
               sx={{
                 th: {
+                  position: "sticky",
+                  top: 0,
+                  zIndex: 1,
                   bg: "#FAFAFA",
                   color: "#737373",
                   fontSize: "10px",
@@ -428,10 +442,22 @@ function CompanyWarehouses({ companyId }: { companyId: string }) {
               </Thead>
               <Tbody>
                 {rows.map((warehouse) => (
-                  <Tr key={warehouse._id} _hover={{ bg: "#FCFCFC" }}>
+                  <Tr
+                    key={warehouse._id}
+                    cursor="pointer"
+                    _hover={{ bg: "#F1F5F9" }}
+                    onClick={() =>
+                      navigate(`/inventory/warehouses/${warehouse._id}`)
+                    }
+                  >
                     <Td minW="220px" maxW="340px">
                       <Text fontWeight="600" isTruncated title={warehouse.name}>
-                        {warehouse.name}
+                        <Link
+                          to={`/inventory/warehouses/${warehouse._id}`}
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          {warehouse.name}
+                        </Link>
                       </Text>
                       <Text
                         color="#858585"
@@ -487,7 +513,9 @@ function CompanyWarehouses({ companyId }: { companyId: string }) {
             </Table>
           </TableContainer>
         )}
+        </Box>
         <Flex
+          flexShrink={0}
           px={5}
           py={4}
           borderTop="1px solid #EAEAEA"

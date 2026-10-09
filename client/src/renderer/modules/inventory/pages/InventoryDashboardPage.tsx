@@ -169,7 +169,7 @@ export default function InventoryDashboardPage() {
             <Heading as="h1" fontSize="1.4rem" color="#03143B">
               Tableau de bord
             </Heading>
-            <Text color="gray.600" mt={1}>
+            <Text color="gray.600">
               Vue d’ensemble de votre gestion de stock
             </Text>
           </Box>
@@ -265,13 +265,24 @@ export default function InventoryDashboardPage() {
                 userId={userId}
               />
             </Box>
-            <InventoryDashboardTasks
-              key={`tasks-${companyId}-${userId}`}
-              companyId={companyId}
-              userId={userId}
-              version={`${syncVersion}-${refresh}`}
-              onEmptyChange={setTasksEmpty}
-            />
+            <Box
+              w="100%"
+              maxW={{
+                base: "100%",
+                xl: tasksEmpty ? "calc((100% - 24px) * 6 / 11)" : "100%",
+              }}
+              mx="auto"
+              minW={0}
+              mt="2rem"
+            >
+              <InventoryDashboardTasks
+                key={`tasks-${companyId}-${userId}`}
+                companyId={companyId}
+                userId={userId}
+                version={`${syncVersion}-${refresh}`}
+                onEmptyChange={setTasksEmpty}
+              />
+            </Box>
           </Grid>
         )}
         <Box

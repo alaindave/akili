@@ -260,7 +260,7 @@ const EmployeeLeavePage = () => {
           <Button
             position="absolute"
             right="3rem"
-            colorScheme="blue"
+            colorScheme="yellow"
             size="md"
             onClick={onOpen}
             _hover={{

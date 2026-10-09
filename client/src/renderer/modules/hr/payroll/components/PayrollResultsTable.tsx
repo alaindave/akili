@@ -22,12 +22,12 @@ interface Props {
   payrollResults: PayrollResult[];
 }
 
-const statusColor = {
-  BROUILLON: "gray",
-  VERIFIÉ: "blue",
-  APPROUVÉ: "blue",
-  PAYÉ: "green",
-  ANNULÉ: "red",
+const statusStyles = {
+  BROUILLON: { colorScheme: "gray" },
+  VERIFIÉ: { color: "#7C3AED", bg: "#EDE9FE" },
+  APPROUVÉ: { color: "#0F766E", bg: "#CCFBF1" },
+  PAYÉ: { color: "#15803D", bg: "#DCFCE7" },
+  ANNULÉ: { colorScheme: "red" },
 } as const;
 
 export default function PayrollResultsTable({ payrollResults }: Props) {
@@ -113,7 +113,7 @@ export default function PayrollResultsTable({ payrollResults }: Props) {
               </Td>
 
               <Td>
-                <Badge colorScheme={statusColor[result.status]}>
+                <Badge {...statusStyles[result.status]}>
                   {result.status}
                 </Badge>
               </Td>

@@ -59,10 +59,7 @@ export async function savePayslipReport(
     employeeId,
     payrollRunId
   );
-  const reference = (
-    data.employee.matricule ||
-    `${data.employee.firstName}-${data.employee.lastName}`
-  )
+  const reference = `${data.employee.firstName.trim()}-${data.employee.lastName.trim()}`
     .replace(/[<>:"/\\|?*\x00-\x1f]/g, "-")
     .slice(0, 80);
   const destination = await dialog.showSaveDialog({

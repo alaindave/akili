@@ -8,6 +8,8 @@ type InventoryWarehouseListOptions = import("../../database/repositories/modules
 import { invoke } from "../../ipc/ipc.cjs";
 
 export const inventoryWarehouseApi = {
+  update: (companyId: string, id: string, input: Parameters<Repository["update"]>[2]): ReturnType<Repository["update"]> =>
+    invoke("inventory:warehouse:update", companyId, id, input),
   create: (
     companyId: string,
     input: Parameters<Repository["create"]>[1]
