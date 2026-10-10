@@ -1,10 +1,10 @@
 import { randomUUID } from "crypto";
-import Company from "./models/company.model.js";
-import Employee from "./models/employee.model.js";
-import Attendance from "./models/attendance.model.js";
-import Leave from "./models/leave.model.js";
-import AdminUser from "./models/adminUser.model.js";
-import Task from "./models/task.model.js";
+import Company from "./models/shared/company.model.js";
+import Employee from "./models/modules/hr/employee.model.js";
+import Attendance from "./models/modules/hr/attendance.model.js";
+import Leave from "./models/modules/hr/leave.model.js";
+import AdminUser from "./models/shared/adminUser.model.js";
+import Task from "./models/shared/task.model.js";
 import { getNextSyncVersion } from "./utils/syncVersion.js";
 
 interface EmployeeInput {
@@ -33,7 +33,7 @@ interface AdminUserInput {
 }
 
 interface TaskInput {
-  module: import("./models/task.model.js").Task["module"];
+  module: import("./models/shared/task.model.js").Task["module"];
   companyId: string;
   author: string;
   recipients: string[];

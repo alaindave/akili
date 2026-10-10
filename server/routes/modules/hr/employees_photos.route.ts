@@ -1,7 +1,7 @@
 import express, { Request, Response } from "express";
 
-import supabase from "../services/supabase.service.js";
-import Employee from "../models/employee.model.js";
+import supabase from "../../../services/supabase.service.js";
+import Employee from "../../../models/modules/hr/employee.model.js";
 
 const router = express.Router();
 
@@ -37,12 +37,16 @@ router.get(
       // The upload handler stores photos under this versioned path.
       if (error || !data) {
         const extensions: Record<string, string> = {
-          "image/png": ".png", "image/webp": ".webp", "image/gif": ".gif",
+          "image/png": ".png",
+          "image/webp": ".webp",
+          "image/gif": ".gif",
         };
         const extension = extensions[employee.photo_mime_type ?? ""] ?? ".jpg";
         const cloudPath = `${employee.companyId}/${employee._id}/photo_v${employee.photo_version}${extension}`;
         if (cloudPath !== employee.photo_path) {
-          ({ data, error } = await supabase.storage.from("employees_photos").download(cloudPath));
+          ({ data, error } = await supabase.storage
+            .from("employees_photos")
+            .download(cloudPath));
         }
       }
 

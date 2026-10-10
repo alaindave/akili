@@ -11,7 +11,7 @@ import InventoryDashboardPage from "../../modules/inventory/pages/InventoryDashb
 import InventoryItemsPage from "../../modules/inventory/pages/InventoryItemsPage";
 import InventoryWarehousesPage from "../../modules/inventory/pages/InventoryWarehousesPage";
 import InventoryStocksPage from "../../modules/inventory/pages/InventoryStocksPage";
-// import InventoryMovementsPage from "../modules/inventory/pages/InventoryMovementsPage";
+import InventoryMovementsPage from "../../modules/inventory/pages/InventoryMovementsPage";
 // import InventoryDocumentsPage from "../modules/inventory/pages/InventoryDocumentsPage";
 // import InventoryCountPage from "../modules/inventory/pages/InventoryCountPage";
 
@@ -64,9 +64,11 @@ export const inventoryRoutes = {
     {
       path: "items",
       element: (
-        <Flex direction={{ base: "column", md: "row" }} h="100vh" bg="#FAFAFA" overflow="hidden">
-          <InventoryNavBar />
-          <Box flex="1" minW={0} overflowY="auto"><InventoryItemsPage /></Box>
+        <Flex direction={{ base: "column", md: "row" }} h={{ base: "calc(100dvh - 46px)", md: "calc(100dvh - 52px)" }} bg="#FAFAFA" overflow="hidden">
+          <Box flexShrink={0} h={{ base: "30%", md: "100%" }} sx={{ "& > div:first-of-type": { height: "100%", minHeight: 0 } }}>
+            <InventoryNavBar />
+          </Box>
+          <Box as="main" flex="1" minW={0} minH={0} overflow="hidden"><InventoryItemsPage /></Box>
         </Flex>
       ),
     },
@@ -98,17 +100,26 @@ export const inventoryRoutes = {
     {
       path: "stocks",
       element: (
-        <Flex direction={{ base: "column", md: "row" }} h="100vh" bg="#F8FAFC" overflow={{ base: "auto", md: "hidden" }}>
-          <InventoryNavBar />
-          <Box as="main" flex="1" minW={0} h={{ md: "calc(100vh - 52px)" }} overflowY={{ md: "auto" }}><InventoryStocksPage /></Box>
+        <Flex direction={{ base: "column", md: "row" }} h={{ base: "calc(100dvh - 46px)", md: "calc(100dvh - 52px)" }} bg="#F8FAFC" overflow="hidden">
+          <Box flexShrink={0} h={{ base: "30%", md: "100%" }} sx={{ "& > div:first-of-type": { height: "100%", minHeight: 0 } }}>
+            <InventoryNavBar />
+          </Box>
+          <Box as="main" flex="1" minW={0} minH={0} overflow="hidden"><InventoryStocksPage /></Box>
         </Flex>
       ),
     },
 
-    // {
-    //   path: "movements",
-    //   element: <InventoryMovementsPage />,
-    // },
+    {
+      path: "movements",
+      element: (
+        <Flex direction={{ base: "column", md: "row" }} h={{ base: "calc(100dvh - 46px)", md: "calc(100dvh - 52px)" }} bg="#FAFAFA" overflow="hidden">
+          <Box flexShrink={0} h={{ base: "30%", md: "100%" }} sx={{ "& > div:first-of-type": { height: "100%", minHeight: 0 } }}>
+            <InventoryNavBar />
+          </Box>
+          <Box as="main" flex="1" minW={0} minH={0} overflow="hidden"><InventoryMovementsPage /></Box>
+        </Flex>
+      ),
+    },
 
     // {
     //   path: "documents",

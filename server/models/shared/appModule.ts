@@ -1,4 +1,3 @@
-// Keep these persisted values aligned with client/common/types/task/Task.ts.
 export const APP_MODULES = [
   "HR",
   "INVENTORY",

@@ -1,5 +1,8 @@
 import { withGeneratedSku } from "../../../database/repositories/modules/inventory/stockSettings.repository.js";
-import { getInventoryCatalogOptions, createInventoryUnit } from "../../../database/repositories/modules/inventory/inventoryCatalog.repository.js";
+import {
+  getInventoryCatalogOptions,
+  createInventoryUnit,
+} from "../../../database/repositories/modules/inventory/inventoryCatalog.repository.js";
 import type { CreateInventoryUnitInput } from "../../../../common/types/inventory/InventoryUnit.js";
 import { randomUUID } from "crypto";
 
@@ -140,7 +143,8 @@ export class InventoryItemService {
   ): Promise<InventoryItem> {
     this.validateCompanyId(companyId);
 
-    const sku = input.autoGenerateSku === true ? "" : this.normalizeSku(input.sku);
+    const sku =
+      input.autoGenerateSku === true ? "" : this.normalizeSku(input.sku);
     const name = this.normalizeName(input.name);
 
     this.validateItemType(input.itemType);
@@ -157,11 +161,16 @@ export class InventoryItemService {
     }
 
     const options = await this.getCatalogOptions(companyId);
-    if (!options.units.some(unit => unit._id === input.baseUnitId.trim())) {
+    if (!options.units.some((unit) => unit._id === input.baseUnitId.trim())) {
       throw new Error("Sélectionnez une unité valide pour cette entreprise.");
     }
-    if (input.categoryId && !options.categories.some(category => category._id === input.categoryId)) {
-      throw new Error("Sélectionnez une catégorie valide pour cette entreprise.");
+    if (
+      input.categoryId &&
+      !options.categories.some((category) => category._id === input.categoryId)
+    ) {
+      throw new Error(
+        "Sélectionnez une catégorie valide pour cette entreprise."
+      );
     }
     if (input.isActive !== undefined && typeof input.isActive !== "boolean") {
       throw new Error("Le statut de l’article est invalide.");
@@ -197,7 +206,9 @@ export class InventoryItemService {
     };
 
     return input.autoGenerateSku === true
-      ? withGeneratedSku(companyId, item.categoryId, generated => this.repository.create({ ...item, sku: generated }, true))
+      ? withGeneratedSku(companyId, item.itemType, (generated) =>
+          this.repository.create({ ...item, sku: generated }, true)
+        )
       : this.repository.create(item);
   }
 

@@ -14,16 +14,16 @@ function load(file, overrides = {}) {
   }).outputText;
   const localRequire = (name) => {
     if (name in overrides) return overrides[name];
-    if (name === './appModule.js') return load('models/appModule.ts');
+    if (name === './appModule.js') return load('models/shared/appModule.ts');
     if (name.startsWith('.')) return {};
     return require(name);
   };
   vm.runInNewContext(code, { require: localRequire, module, exports: module.exports, console: { log() {}, warn() {}, error() {} }, Date, process }, { filename });
   return module.exports;
 }
-const { APP_MODULES } = load('models/appModule.ts');
-const Task = load('models/task.model.ts').default;
-const Incident = load('models/incident.model.ts').default;
+const { APP_MODULES } = load('models/shared/appModule.ts');
+const Task = load('models/shared/task.model.ts').default;
+const Incident = load('models/shared/incident.model.ts').default;
 const rows = {
   task: [{ _id: 'old-task', serverVersion: 1 }, { _id: 'stock-task', module: 'INVENTORY', serverVersion: 2 }],
   incident: [{ _id: 'old-incident', module: null, serverVersion: 3 }, { _id: 'sales-incident', module: 'SALES', serverVersion: 4 }],
@@ -40,8 +40,8 @@ const model = entity => ({ collection: {
   },
 } });
 const { migrateTaskIncidentModules } = load('utils/migrateTaskIncidentModules.ts', {
-  '../models/task.model.js': { default: model('task'), __esModule: true },
-  '../models/incident.model.js': { default: model('incident'), __esModule: true },
+  '../models/shared/task.model.js': { default: model('task'), __esModule: true },
+  '../models/shared/incident.model.js': { default: model('incident'), __esModule: true },
   './syncVersion.js': { getNextSyncVersion: async entity => ++versions[entity] },
 });
 (async () => {

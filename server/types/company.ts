@@ -1,6 +1,10 @@
 export interface Company {
   _id: string;
   companyId: string;
+  inventoryInitialized?: boolean;
+  inventoryInitializedAt?: string | null;
+  inventoryInitializationDocumentId?: string | null;
+  inventoryInitializationDocumentNumber?: string | null;
   name: string;
   legalName: string | null;
   registrationNumber: string | null;

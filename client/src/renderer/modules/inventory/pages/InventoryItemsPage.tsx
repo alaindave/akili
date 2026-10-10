@@ -16,7 +16,6 @@ import {
   Skeleton,
   Stack,
   Table,
-  TableContainer,
   Tbody,
   Td,
   Text,
@@ -129,20 +128,25 @@ function CompanyItems({ companyId }: { companyId: string }) {
   };
   return (
     <Box
-      minH="100%"
+      h="100%"
+      minH={0}
+      display="flex"
+      flexDirection="column"
+      overflow="hidden"
       bg="#FAFAFA"
       color="#262626"
-      p={{ base: 5, lg: 9 }}
-      pb={24}
+      p={{ base: 3, md: 6 }}
+      pb={6}
     >
       <Flex
         justify="space-between"
         align={{ base: "start", lg: "center" }}
         gap={5}
         wrap="wrap"
-        mb={9}
+        mb={8}
+        flexShrink={0}
       >
-        <Box position="relative" bottom="0.8rem">
+        <Box>
           <Heading as="h1" fontSize="1.4rem" color="#03143B">
             Articles
           </Heading>
@@ -159,8 +163,6 @@ function CompanyItems({ companyId }: { companyId: string }) {
           borderRadius="8px"
           onClick={() => setCreating(true)}
           isDisabled={!optionsReady}
-          position="relative"
-          bottom="0.8rem"
         >
           Ajouter un article
         </Button>
@@ -170,10 +172,15 @@ function CompanyItems({ companyId }: { companyId: string }) {
         borderRadius="12px"
         bg="white"
         overflow="hidden"
+        display="flex"
+        flexDirection="column"
+        flex="1"
+        minH={0}
         boxShadow="0 2px 6px rgba(0,0,0,0.02)"
       >
         <Flex
           px={6}
+          flexShrink={0}
           py={5}
           align="center"
           justify="space-between"
@@ -197,7 +204,7 @@ function CompanyItems({ companyId }: { companyId: string }) {
             </Badge>
           </HStack>
         </Flex>
-        <Flex p={5} gap={3} wrap="wrap" borderBottom="1px solid #EAEAEA">
+        <Flex p={5} gap={3} wrap="wrap" borderBottom="1px solid #EAEAEA" flexShrink={0}>
           <InputGroup flex="1" minW="200px">
             <InputLeftElement pointerEvents="none" color="#909090">
               <FiSearch />
@@ -252,6 +259,7 @@ function CompanyItems({ companyId }: { companyId: string }) {
             <option value="inactive">Inactifs</option>
           </Select>
         </Flex>
+        <Box flex="1" minH={0} overflow="auto">
         {error ? (
           <Stack p={8} align="start">
             <Text role="alert" fontSize="sm">
@@ -316,12 +324,15 @@ function CompanyItems({ companyId }: { companyId: string }) {
             </Button>
           </Stack>
         ) : (
-          <TableContainer>
+          <Box whiteSpace="nowrap">
             <Table
               variant="simple"
               size="md"
               sx={{
                 th: {
+                  position: "sticky",
+                  top: 0,
+                  zIndex: 1,
                   bg: "#FAFAFA",
                   color: "#737373",
                   fontSize: "10px",
@@ -391,9 +402,11 @@ function CompanyItems({ companyId }: { companyId: string }) {
                 ))}
               </Tbody>
             </Table>
-          </TableContainer>
+          </Box>
         )}
+        </Box>
         <Flex
+          flexShrink={0}
           px={5}
           py={4}
           borderTop="1px solid #EAEAEA"

@@ -1,5 +1,5 @@
 import mongoose, { Schema } from "mongoose";
-import { Permission } from "../types/Permissions.js";
+import { Permission } from "../../types/Permissions.js";
 
 export interface RoleDocument {
   companyId: string;

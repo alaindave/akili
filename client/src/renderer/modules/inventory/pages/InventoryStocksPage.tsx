@@ -15,7 +15,6 @@ import {
   Skeleton,
   Stack,
   Table,
-  TableContainer,
   Tbody,
   Td,
   Text,
@@ -243,18 +242,28 @@ function CompanyStocks({ companyId }: { companyId: string }) {
   };
 
   return (
-    <Box minH="100%" bg="#F8FAFC" p={{ base: 3, md: 6 }} pb={24}>
-      <Heading as="h1" fontSize="1.4rem" color="#03143B">
+    <Box
+      h="100%"
+      minH={0}
+      display="flex"
+      flexDirection="column"
+      overflow="hidden"
+      bg="#F8FAFC"
+      p={{ base: 3, md: 6 }}
+      pb={6}
+    >
+      <Heading as="h1" fontSize="1.4rem" color="#03143B" flexShrink={0}>
         Stocks
       </Heading>
-      <Text color="gray.600" fontSize="1rem">
+      <Text color="gray.600" fontSize="1rem" flexShrink={0}>
         Consultez les quantités disponibles.
       </Text>
       <SimpleGrid
-        columns={{ base: 1, sm: 2, xl: 4 }}
+        columns={{ base: 2, xl: 4 }}
         spacing={6}
         mt={10}
         mb={8}
+        flexShrink={0}
       >
         {metrics.map(({ label, value, icon: Icon, color }) => (
           <Box
@@ -299,8 +308,12 @@ function CompanyStocks({ companyId }: { companyId: string }) {
         border="1px solid #E5E5E5"
         borderRadius="12px"
         overflow="hidden"
+        display="flex"
+        flexDirection="column"
+        flex="1"
+        minH={0}
       >
-        <Flex p={5} gap={3} wrap="wrap" borderBottom="1px solid #EAEAEA">
+        <Flex p={5} gap={3} wrap="wrap" borderBottom="1px solid #EAEAEA" flexShrink={0}>
           <InputGroup flex="1" minW="200px">
             <InputLeftElement pointerEvents="none" color="gray.500">
               <FiSearch />
@@ -376,6 +389,7 @@ function CompanyStocks({ companyId }: { companyId: string }) {
             </Button>
           )}
         </Flex>
+        <Box flex="1" minH={0} overflow="auto">
         {error ? (
           <Stack p={6} align="start">
             <Text role="alert">{error}</Text>
@@ -395,11 +409,14 @@ function CompanyStocks({ companyId }: { companyId: string }) {
             ))}
           </Stack>
         ) : (
-          <TableContainer>
+          <Box whiteSpace="nowrap">
             <Table
               size="md"
               sx={{
                 th: {
+                  position: "sticky",
+                  top: 0,
+                  zIndex: 1,
                   bg: "#FAFAFA",
                   color: "#737373",
                   fontSize: "10px",
@@ -465,9 +482,11 @@ function CompanyStocks({ companyId }: { companyId: string }) {
                 )}
               </Tbody>
             </Table>
-          </TableContainer>
+          </Box>
         )}
+        </Box>
         <Flex
+          flexShrink={0}
           px={5}
           py={4}
           borderTop="1px solid #EAEAEA"

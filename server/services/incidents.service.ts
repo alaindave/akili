@@ -1,4 +1,4 @@
-import Incident from "../models/incident.model.js";
+import Incident from "../models/shared/incident.model.js";
 import { getNextSyncVersion } from "../utils/syncVersion.js";
 import { broadcastEntityChange } from "./socket.service.js";
 import type { SyncOperation } from "../sync.js";

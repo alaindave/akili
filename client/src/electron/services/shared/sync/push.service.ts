@@ -1,4 +1,6 @@
 import axios from "axios";
+import { isInventorySyncEntity } from "../../../../common/types/inventory/InventorySync.js";
+import { acknowledgeInventorySnapshot } from "../../../database/repositories/modules/inventory/inventorySync.repository.js";
 import { app } from "electron";
 import FormData from "form-data";
 import fs from "fs";
@@ -436,6 +438,12 @@ export async function pushPendingChanges(
           entry.entity === item.entity && entry.entityId === item.entityId
       )
     ) {
+      successfullyProcessedQueueIds.push(item._id);
+      continue;
+    }
+
+    if (isInventorySyncEntity(item.entity)) {
+      await acknowledgeInventorySnapshot(companyId, item.entity, data);
       successfullyProcessedQueueIds.push(item._id);
       continue;
     }

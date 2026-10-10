@@ -1,8 +1,8 @@
 import express, { Request, Response } from "express";
 
-import { markAbsentEmployees } from "../services/markEmployeeAbsent.service.js";
+import { markAbsentEmployees } from "../../services/markEmployeeAbsent.service.js";
 
-import SystemJob from "../models/systemJob.model.js";
+import SystemJob from "../../models/shared/systemJob.model.js";
 
 const router = express.Router();
 

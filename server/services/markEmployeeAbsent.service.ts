@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto";
 
-import Employee from "../models/employee.model.js";
-import Attendance from "../models/attendance.model.js";
+import Employee from "../models/modules/hr/employee.model.js";
+import Attendance from "../models/modules/hr/attendance.model.js";
 import { getNextSyncVersion } from "../utils/syncVersion.js";
 
 export async function markAbsentEmployees(

@@ -13,15 +13,16 @@ function load(file, overrides = {}) {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true },
   }).outputText;
   const localRequire = (name) => {
+    if (name.endsWith('/inventorySync.js')) return { isInventorySyncEntity: () => false };
     if (name in overrides) return overrides[name];
-    if (name === './appModule.js') return load('models/appModule.ts');
+    if (name === './appModule.js') return load('models/shared/appModule.ts');
     if (name.startsWith('.')) return {};
     return require(name);
   };
   vm.runInNewContext(code, { require: localRequire, module, exports: module.exports, console: { log() {}, warn() {}, error() {} }, Date, process }, { filename });
   return module.exports;
 }
-const Incident = load('models/incident.model.ts').default;
+const Incident = load('models/shared/incident.model.ts').default;
 const records = new Map();
 const copy = (value) => value ? structuredClone(value) : null;
 const matches = (item, query) => Object.entries(query).every(([key, value]) =>
@@ -53,16 +54,16 @@ Incident.exists = async (query) => [...records.values()].some((item) => matches(
 let version = 0;
 const broadcasts = [];
 const service = load('services/incidents.service.ts', {
-  '../models/incident.model.js': { default: Incident, __esModule: true },
+  '../models/shared/incident.model.js': { default: Incident, __esModule: true },
   '../utils/syncVersion.js': { getNextSyncVersion: async () => ++version },
   './socket.service.js': { broadcastEntityChange: (event) => broadcasts.push(event) },
 });
-const router = load('routes/sync.route.ts', {
-  '../sync.js': load('sync.ts'),
-  '../models/incident.model.js': { default: Incident, __esModule: true },
-  '../services/incidents.service.js': service,
-  '../middlewares/authorize.js': { default: (_req, _res, next) => next(), __esModule: true },
-  '../middlewares/sync_upload.js': { default: { fields: () => (_req, _res, next) => next() }, __esModule: true },
+const router = load('routes/shared/sync.route.ts', {
+  '../../sync.js': load('sync.ts'),
+  '../../models/shared/incident.model.js': { default: Incident, __esModule: true },
+  '../../services/incidents.service.js': service,
+  '../../middlewares/authorize.js': { default: (_req, _res, next) => next(), __esModule: true },
+  '../../middlewares/sync_upload.js': { default: { fields: () => (_req, _res, next) => next() }, __esModule: true },
 }).default;
 async function request(method, routePath, payload, companyId = 'company-a') {
   const route = router.stack.find((layer) => layer.route?.path === routePath && layer.route.methods[method]).route;

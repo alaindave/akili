@@ -36,7 +36,7 @@ const navigationItems = [
   { label: "Tableau de bord", to: "/inventory", icon: FaHome, end: true },
   { label: "Articles", to: "/inventory/items", icon: FaBoxOpen },
   { label: "Stocks", to: "/inventory/stocks", icon: FaBoxes },
-  { label: "Mouvements", to: "/inventory", icon: FaExchangeAlt },
+  { label: "Mouvements", to: "/inventory/movements", icon: FaExchangeAlt },
   { label: "Entrepôts", to: "/inventory/warehouses", icon: FaWarehouse },
   { label: "Rapports", to: "/inventory", icon: BiSolidReport },
   { label: "Incidents", to: "/inventory/incidents", icon: CgDanger },

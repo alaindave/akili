@@ -33,6 +33,9 @@ export async function upsertCompany(company: Company): Promise<void> {
     );
   }
 
+  // Server-owned initialization state must reconcile even with pending profile edits.
+  await reconcileCompanyInventory(company);
+
   /*
    * Do not overwrite a newer local version.
    */
@@ -111,6 +114,17 @@ export async function upsertCompany(company: Company): Promise<void> {
       company.isDeleted ?? 0,
     ]
   );
+  await reconcileCompanyInventory(company);
+}
+
+export async function reconcileCompanyInventory(company: Company): Promise<void> {
+  if (!company.inventoryInitialized) return;
+  await run(`UPDATE companies SET inventoryInitialized = 1,
+    inventoryInitializedAt = ?, inventoryInitializationDocumentId = ?,
+    inventoryInitializationDocumentNumber = ? WHERE companyId = ?`, [
+    company.inventoryInitializedAt ?? null, company.inventoryInitializationDocumentId ?? null,
+    company.inventoryInitializationDocumentNumber ?? null, company.companyId,
+  ]);
 }
 
 /* =========================================================
@@ -328,10 +342,13 @@ export async function upsertCompanyId(company: Company): Promise<void> {
 
     console.log(`COMPANY ASSOCIATED WITH INSTALLATION: ${company.companyId}`);
 
+    await reconcileCompanyInventory(company);
+
     return;
   }
 
   if (existing.companyId === company.companyId) {
+    await reconcileCompanyInventory(company);
     return;
   }
 

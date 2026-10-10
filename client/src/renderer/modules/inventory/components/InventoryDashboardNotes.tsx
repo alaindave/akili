@@ -47,18 +47,18 @@ export default function InventoryDashboardNotes({ companyId, userId }: { company
 
   return (
     <Box border="1px solid rgba(255,255,255,0.12)" boxShadow="0 2px 8px rgba(0,0,0,0.2)"
-      borderRadius="5px" bg="#F8FAFC" p={5} display="flex" flexDir="column" minH="18rem" minW={0}>
-      <Flex align="center" justify="space-between" gap={2} mb={3}>
+      borderRadius="5px" bg="#F8FAFC" p={5} display="flex" flexDir="column" h="100%" maxH="18rem" minH={0} minW={0} overflow="hidden" position="relative">
+      <Flex align="center" gap={2} mb={3} flexShrink={0}>
         <Text as="h2" color="#1F2937" fontSize="1.3rem" fontWeight="600">Notes</Text>
-        <Button colorScheme="blue" leftIcon={<FaBell />} onClick={reminder.onOpen} isDisabled={!notes.trim()}>Rappel</Button>
       </Flex>
+      <Button position="absolute" top="0.5rem" right="1.3rem" w="6rem" h="3rem" colorScheme="blue" leftIcon={<FaBell />} onClick={reminder.onOpen} isDisabled={!notes.trim()}>Rappel</Button>
       <Textarea aria-label="Notes personnelles" placeholder={"Bienvenue sur LeatherWorks.\nÉcrivez vos notes ici..."}
         value={notes} onChange={event => { latest.current = event.target.value; setNotes(event.target.value); }}
         onBlur={() => { void persist.current(); }}
         bg="#091735" border="1px solid rgba(255,255,255,0.1)"
         _hover={{ borderColor: "yellow.300" }}
         _focus={{ borderColor: "yellow.400", boxShadow: "0 0 0 1px #F4C20D" }}
-        flex="1" minH="10rem" resize="none" color="white" fontSize={{ base: "1rem", md: "1.1rem" }}
+        flex="1" minH={0} overflowY="auto" resize="none" color="white" fontSize={{ base: "1rem", md: "1.1rem" }}
         fontWeight="500" fontFamily="body" _placeholder={{ color: "#6B7280" }} />
       {error && <Flex mt={2} gap={2} align="center"><Text role="alert" color="red.600" fontSize="sm">Impossible d’enregistrer les notes.</Text><Button size="xs" onClick={() => { void persist.current(); }}>Réessayer</Button></Flex>}
       <ReminderModal isReminderOpen={reminder.isOpen} onReminderClose={reminder.onClose} notes={notes} />

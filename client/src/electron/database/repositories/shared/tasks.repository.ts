@@ -70,12 +70,6 @@ type TaskRow = {
   serverVersion: number;
 };
 
-/**
- * Create task locally.
- *
- * serverVersion starts at 0 because the task has not yet been
- * assigned a server revision.
- */
 export async function createTask(companyId: string, task: Task) {
   const module = requireModule(task.module);
   console.log("TASK TO CREATE:", {

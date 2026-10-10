@@ -9,7 +9,7 @@ import {
   getPendingLeaves,
   editLeave,
   deleteLeave,
-} from "../db.js";
+} from "../../../db.js";
 
 const router = express.Router();
 

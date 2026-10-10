@@ -4,9 +4,9 @@ import { randomInt, randomUUID } from "crypto";
 import bcrypt from "bcrypt";
 import mongoose from "mongoose";
 
-import Company from "../models/company.model.js";
-import Role from "../models/role.model.js";
-import AdminUser from "../models/adminUser.model.js";
+import Company from "../models/shared/company.model.js";
+import Role from "../models/shared/role.model.js";
+import AdminUser from "../models/shared/adminUser.model.js";
 import { defaultRoles } from "../permissions/defaultRole.js";
 import { createDefaultPayrollComponents } from "../utils/createDefaultPayrollComponent.js";
 import { getNextSyncVersion } from "../utils/syncVersion.js";

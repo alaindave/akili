@@ -1,6 +1,11 @@
 import type { Incident } from "../../../../common/types/incident/Incident.js";
 import { upsertIncident } from "../../../database/repositories/shared/incidents.repository.js";
 import axios from "axios";
+import {
+  INVENTORY_SYNC_TABLES,
+  type InventorySyncEntity,
+} from "../../../../common/types/inventory/InventorySync.js";
+import { applyInventoryBatch } from "../../../database/repositories/modules/inventory/inventorySync.repository.js";
 import { app } from "electron";
 import fs from "fs/promises";
 import path from "path";
@@ -101,9 +106,7 @@ import {
   getEmployeePhotoDir,
 } from "../../../storage/directories.js";
 import { downloadCompanyLogo } from "../../../util/downloadCompanyLogo.util.js";
-import {
-  upsertAttendance,
-} from "../../../database/repositories/modules/hr/attendances.repository.js";
+import { upsertAttendance } from "../../../database/repositories/modules/hr/attendances.repository.js";
 import {
   markAttendanceDailyCheckSynced,
   upsertAttendanceDailyCheck,
@@ -377,6 +380,20 @@ export async function pullLatestChanges(companyId: string) {
     latestServerTime = payrollItemsResult.serverTime ?? latestServerTime;
 
     const payrollItems = payrollItemsResult.items;
+
+    /* =====================================================
+       INVENTORY SYNC
+    ===================================================== */
+    for (const entity of Object.keys(
+      INVENTORY_SYNC_TABLES
+    ) as InventorySyncEntity[]) {
+      const result = await pullEntityByVersion<Record<string, any>>(
+        companyId,
+        entity,
+        (items) => applyInventoryBatch(companyId, entity, items)
+      );
+      latestServerTime = result.serverTime ?? latestServerTime;
+    }
 
     if (photoSyncError) throw photoSyncError;
 
@@ -1408,7 +1425,7 @@ async function syncPayrollItems(payrollItems: PayrollItem[]): Promise<boolean> {
    PULL ENTITY BY VERSION
 ========================================================= */
 
-async function pullEntityByVersion<T>(
+export async function pullEntityByVersion<T>(
   companyId: string,
   entity: string,
   syncBatch: (items: T[]) => Promise<boolean>,

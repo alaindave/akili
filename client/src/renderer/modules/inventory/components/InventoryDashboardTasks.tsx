@@ -70,7 +70,7 @@ export default function InventoryDashboardTasks({
   if (empty) return null;
 
   return (
-    <Box minW={0} display="flex" flexDir="column" maxH="24rem">
+    <Box minW={0} minH={0} h="100%" display="flex" flexDir="column" overflow="hidden">
       {loading ? (
         <HStack role="status" p={4}>
           <Spinner size="sm" />
@@ -88,7 +88,7 @@ export default function InventoryDashboardTasks({
           </Button>
         </Box>
       ) : (
-        <VStack align="stretch" spacing={3} overflowY="auto" p={2}>
+        <VStack align="stretch" spacing={3} flex="1" minH={0} overflowY="auto" p={2}>
           {visibleTasks.map((task) => (
             <Box key={task._id} flexShrink={0}>
               <TaskCard

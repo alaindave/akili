@@ -238,9 +238,10 @@ export default function TaskDetailsPage() {
                     </Text>{" "}
                   </Box>
                   <Badge
-                    bg={task.isResolved ? "#262626" : "white"}
-                    color={task.isResolved ? "white" : "#404040"}
-                    border="1px solid #404040"
+                    bg={task.isResolved ? "green.50" : "orange.50"}
+                    color={task.isResolved ? "green.700" : "orange.700"}
+                    border="1px solid"
+                    borderColor={task.isResolved ? "green.200" : "orange.200"}
                     borderRadius="2px"
                     px={3}
                     py={1}
@@ -412,16 +413,18 @@ export default function TaskDetailsPage() {
                   lineHeight="1.8"
                   _placeholder={{ color: "#737373" }}
                   _hover={{ borderColor: "#737373" }}
-                  focusBorderColor="#404040"
+                  focusBorderColor="blue.600"
                 />
                 <Flex justify="flex-end" mt={3}>
                   <Button
-                    bg="#262626"
+                    colorScheme="blue"
+                    bg="blue.600"
                     color="white"
                     borderRadius="2px"
                     size="sm"
                     px={5}
-                    _hover={{ bg: "#404040" }}
+                    _hover={{ bg: "blue.700" }}
+                    _active={{ bg: "blue.800" }}
                     onClick={handleTaskComment}
                     isDisabled={!comment.trim()}
                   >

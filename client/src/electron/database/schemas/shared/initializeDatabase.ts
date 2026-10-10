@@ -18,6 +18,7 @@ import { createNotificationTable } from "./notification_queue.schema.js";
 import { createInventoryWarehouseTable } from "../modules/inventory/inventory_warehouses.schema.js";
 import { createInventoryItemsTable } from "../modules/inventory/inventory_items.schema.js";
 import { createInventoryMovementsTables } from "../modules/inventory/inventory_movements.schema.js";
+import { initializeInventorySync } from "../modules/inventory/inventory_sync.schema.js";
 
 export async function initializeDatabase() {
   // Shared tables
@@ -43,6 +44,7 @@ export async function initializeDatabase() {
   await createInventoryItemsTable();
   await createInventoryMovementsTables();
   await createInventoryWarehouseTable();
+  await initializeInventorySync();
 
   console.log("DATABASE INITIALIZED");
 }

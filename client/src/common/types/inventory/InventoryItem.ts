@@ -25,9 +25,9 @@ export interface InventoryItem {
 export type InventoryItemType =
   | "RAW_MATERIAL"
   | "COMPONENT"
+  | "CONSUMABLE"
   | "SEMI_FINISHED"
-  | "FINISHED_GOOD"
-  | "CONSUMABLE";
+  | "FINISHED_GOOD";
 
 export type InventoryTrackingMethod = "NONE" | "LOT" | "SERIAL";
 

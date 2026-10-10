@@ -150,30 +150,31 @@ export default function InventoryDashboardPage() {
       direction={{ base: "column", md: "row" }}
       h="100vh"
       bg="#F8FAFC"
-      overflow={{ base: "auto", md: "hidden" }}
+      overflow="hidden"
     >
       <InventoryNavBar />
       <Box
         as="main"
         flex="1"
         minW={0}
+        minH={0}
         display="flex"
         flexDir="column"
-        h={{ md: "calc(100vh - 52px)" }}
-        overflowY={{ md: "auto" }}
+        h={{ base: "calc(100vh - 46px)", md: "calc(100vh - 52px)" }}
+        overflow="hidden"
         p={{ base: 3, md: 6 }}
-        pb={{ base: "64px", md: 3 }}
       >
-        <Flex justify="space-between" align="center" gap={3} wrap="wrap">
+        <Flex justify="space-between" align={{ base: "flex-start", md: "center" }} flexDir={{ base: "column", md: "row" }} gap={3} flexShrink={0}>
           <Box>
             <Heading as="h1" fontSize="1.4rem" color="#03143B">
               Tableau de bord
             </Heading>
-            <Text color="gray.600">
+            <Text color="gray.600" position="relative" bottom="0.3rem">
               Vue d’ensemble de votre gestion de stock
             </Text>
           </Box>
           <Button
+            mb="1rem"
             colorScheme="blue"
             leftIcon={<IoReloadOutline />}
             isLoading={loading}
@@ -186,7 +187,7 @@ export default function InventoryDashboardPage() {
           </Button>
         </Flex>
 
-        <SimpleGrid columns={{ base: 1, sm: 2, xl: 4 }} spacing={6} mt={10}>
+        <SimpleGrid columns={{ base: 2, xl: 4 }} spacing={6} mt="3rem" flexShrink={0}>
           {metrics.map(({ label, value, icon: Icon, color }) => (
             <Box
               key={label}
@@ -245,9 +246,12 @@ export default function InventoryDashboardPage() {
               xl: tasksEmpty ? "1fr" : "1.2fr 1fr",
             }}
             gap={6}
-            mt={{ base: 6, xl: 12 }}
-            mb={8}
-            alignItems="start"
+            mt={4}
+            flex="1"
+            minH={0}
+            overflow="hidden"
+            templateRows={{ base: tasksEmpty ? "minmax(0, 1fr)" : "repeat(2, minmax(0, 1fr))", xl: "minmax(0, 1fr)" }}
+            alignItems="stretch"
           >
             <Box
               w="100%"
@@ -257,7 +261,9 @@ export default function InventoryDashboardPage() {
               }}
               mx="auto"
               minW={0}
-              mt="2rem"
+              minH={0}
+              mt="4rem"
+              maxH="18rem"
             >
               <InventoryDashboardNotes
                 key={`notes-${companyId}-${userId}`}
@@ -273,7 +279,11 @@ export default function InventoryDashboardPage() {
               }}
               mx="auto"
               minW={0}
-              mt="2rem"
+              minH={0}
+              mt="4rem"
+              maxH="42vh"
+              pl={{ base: 0, xl: 8 }}
+              display={tasksEmpty ? "none" : "block"}
             >
               <InventoryDashboardTasks
                 key={`tasks-${companyId}-${userId}`}
@@ -287,8 +297,6 @@ export default function InventoryDashboardPage() {
         )}
         <Box
           mt="auto"
-          pt={4}
-          pb={2}
           position="sticky"
           bottom="0"
           bg="#F8FAFC"

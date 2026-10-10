@@ -14,6 +14,10 @@ export interface CompanyDocument extends Document {
   email: string | null;
   website: string | null;
   attendanceClockIn: string;
+  inventoryInitialized: boolean;
+  inventoryInitializedAt?: string | null;
+  inventoryInitializationDocumentId?: string | null;
+  inventoryInitializationDocumentNumber?: string | null;
   serverVersion: number;
   createdAt: string;
   updatedAt: string;
@@ -22,6 +26,10 @@ export interface CompanyDocument extends Document {
 
 const CompanySchema = new Schema<CompanyDocument>(
   {
+    inventoryInitialized: { type: Boolean, default: false },
+    inventoryInitializedAt: { type: String, default: null },
+    inventoryInitializationDocumentId: { type: String, default: null },
+    inventoryInitializationDocumentNumber: { type: String, default: null },
     _id: {
       type: String,
       required: true,

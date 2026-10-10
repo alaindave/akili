@@ -1,9 +1,17 @@
-import Incident from "../models/incident.model.js";
-import { syncIncident } from "../services/incidents.service.js";
+import Incident from "../../models/shared/incident.model.js";
+import {
+  postOpeningStock,
+  OpeningStockError,
+} from "../../services/openingStock.service.js";
+import {
+  inventorySyncModels,
+  isInventorySyncEntity,
+} from "../../models/modules/inventory/inventorySync.js";
+import { syncInventory } from "../../sync.js";
+import { syncIncident } from "../../services/incidents.service.js";
 import express, { Request, Response } from "express";
-
-import authorize from "../middlewares/authorize.js";
-import upload from "../middlewares/sync_upload.js";
+import authorize from "../../middlewares/authorize.js";
+import upload from "../../middlewares/sync_upload.js";
 
 import {
   SyncConflict,
@@ -24,27 +32,65 @@ import {
   syncPayrollSettings,
   syncCompany,
   syncCompanyLogo,
-} from "../sync.js";
+} from "../../sync.js";
 
-import type { SyncOperation } from "../sync.js";
+import type { SyncOperation } from "../../sync.js";
 
-import Company from "../models/company.model.js";
-import Employee from "../models/employee.model.js";
-import Attendance from "../models/attendance.model.js";
-import Leave from "../models/leave.model.js";
-import Task from "../models/task.model.js";
-import AdminUser from "../models/adminUser.model.js";
-import EmployeeDocuments from "../models/employeesDocuments.model.js";
-import PayrollComponent from "../models/payrollComponent.model.js";
-import PayrollEmployeeProfile from "../models/payrollEmployeeProfile.model.js";
-import PayrollResult from "../models/payrollResult.model.js";
-import PayrollItem from "../models/payrollItem.model.js";
-import PayrollRun from "../models/payrollRun.model.js";
-import PayrollSettings from "../models/payrollSettings.model.js";
-import AttendanceDailyCheck from "../models/attendanceDailyCheck.model.js";
-import supabase from "../services/supabase.service.js";
+import Company from "../../models/shared/company.model.js";
+import Employee from "../../models/modules/hr/employee.model.js";
+import Attendance from "../../models/modules/hr/attendance.model.js";
+import Leave from "../../models/modules/hr/leave.model.js";
+import Task from "../../models/shared/task.model.js";
+import AdminUser from "../../models/shared/adminUser.model.js";
+import EmployeeDocuments from "../../models/modules/hr/employeesDocuments.model.js";
+import PayrollComponent from "../../models/modules/hr/payrollComponent.model.js";
+import PayrollEmployeeProfile from "../../models/modules/hr/payrollEmployeeProfile.model.js";
+import PayrollResult from "../../models/modules/hr/payrollResult.model.js";
+import PayrollItem from "../../models/modules/hr/payrollItem.model.js";
+import PayrollRun from "../../models/modules/hr/payrollRun.model.js";
+import PayrollSettings from "../../models/modules/hr/payrollSettings.model.js";
+import AttendanceDailyCheck from "../../models/modules/hr/attendanceDailyCheck.model.js";
+import supabase from "../../services/supabase.service.js";
 
 const router = express.Router();
+
+router.post(
+  "/opening-stock",
+  authorize,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const companyId = requireAuthenticatedCompanyId(req);
+      validateCompanyHeader(req, companyId);
+      if (req.user?.role !== "MANAGER")
+        return res
+          .status(403)
+          .json({ message: "Accès administrateur requis." });
+      const result = await postOpeningStock(
+        companyId,
+        req.user?._id ?? req.user?.id ?? "",
+        req.body
+      );
+      return res.json(result);
+    } catch (error) {
+      if (error instanceof OpeningStockError) {
+        const conflict = error.code === "INVENTORY_ALREADY_INITIALIZED";
+        const company = conflict
+          ? await Company.findOne({
+              companyId: requireAuthenticatedCompanyId(req),
+            }).lean()
+          : undefined;
+        return res
+          .status(conflict ? 409 : 400)
+          .json({ code: error.code, message: error.message, company });
+      }
+      console.error("Opening stock failed", error);
+      return res.status(500).json({
+        message:
+          "Impossible de valider le stock initial. Réessayez avec le même brouillon.",
+      });
+    }
+  }
+);
 
 /*
  * ============================================================
@@ -133,21 +179,31 @@ function validateSyncItemCompany(
     throw new SyncConflict("INVALID_ITEM", "Sync item must be an object.");
   }
   if (!item.companyId) {
-    throw new SyncConflict("INVALID_COMPANY", `SYNC: companyId is required for entity ${item.entity}`);
+    throw new SyncConflict(
+      "INVALID_COMPANY",
+      `SYNC: companyId is required for entity ${item.entity}`
+    );
   }
 
   if (item.companyId !== authenticatedCompanyId) {
-    throw new SyncConflict("INVALID_COMPANY", `SYNC: companyId mismatch for entity ${item.entity}`);
+    throw new SyncConflict(
+      "INVALID_COMPANY",
+      `SYNC: companyId mismatch for entity ${item.entity}`
+    );
   }
 
   if (!item.data?.companyId) {
-    throw new SyncConflict("INVALID_COMPANY",
+    throw new SyncConflict(
+      "INVALID_COMPANY",
       `SYNC: data.companyId is required for entity ${item.entity}`
     );
   }
 
   if (item.data.companyId !== authenticatedCompanyId) {
-    throw new SyncConflict("INVALID_COMPANY", `SYNC: data.companyId mismatch for entity ${item.entity}`);
+    throw new SyncConflict(
+      "INVALID_COMPANY",
+      `SYNC: data.companyId mismatch for entity ${item.entity}`
+    );
   }
 }
 
@@ -307,7 +363,15 @@ router.post(
        */
 
       const synced: string[] = [];
-      const failed: { queueId: string; entity: string; entityId?: string; code: string; message: string; retryable: boolean; details?: unknown }[] = [];
+      const failed: {
+        queueId: string;
+        entity: string;
+        entityId?: string;
+        code: string;
+        message: string;
+        retryable: boolean;
+        details?: unknown;
+      }[] = [];
       const failedRecords = new Set<string>();
 
       /*
@@ -327,8 +391,19 @@ router.post(
            */
 
           validateSyncItemCompany(item, companyId);
-          if (!["create", "update", "delete"].includes(operation)) throw new SyncConflict("INVALID_OPERATION", "Unknown sync operation.");
-          if (failedRecords.has(`${entity}:${data?._id ?? data?.employeeId ?? data?.companyId}`)) throw new Error("Earlier update for this record failed; retry in order.");
+          if (!["create", "update", "delete"].includes(operation))
+            throw new SyncConflict(
+              "INVALID_OPERATION",
+              "Unknown sync operation."
+            );
+          if (
+            failedRecords.has(
+              `${entity}:${data?._id ?? data?.employeeId ?? data?.companyId}`
+            )
+          )
+            throw new Error(
+              "Earlier update for this record failed; retry in order."
+            );
 
           switch (entity) {
             /*
@@ -659,7 +734,14 @@ router.post(
              */
 
             default: {
-              throw new SyncConflict("UNKNOWN_ENTITY", `Unknown sync entity: ${entity}`);
+              if (isInventorySyncEntity(entity)) {
+                await syncInventory(entity, operation, data);
+                break;
+              }
+              throw new SyncConflict(
+                "UNKNOWN_ENTITY",
+                `Unknown sync entity: ${entity}`
+              );
             }
           }
 
@@ -671,11 +753,28 @@ router.post(
 
           synced.push(queueId);
         } catch (error) {
-          failedRecords.add(`${entity}:${data?._id ?? data?.employeeId ?? data?.companyId}`);
-          const failure = error as { code?: string | number; name?: string; message?: string; details?: unknown };
-          const permanent = error instanceof SyncConflict || failure.code === 11000 || ["ValidationError", "CastError"].includes(failure.name ?? "");
-          failed.push({ queueId, entity, entityId: data?._id, code: String(failure.code ?? "SYNC_FAILED"),
-            message: failure.message ?? "Unable to sync record.", retryable: !permanent, details: failure.details });
+          failedRecords.add(
+            `${entity}:${data?._id ?? data?.employeeId ?? data?.companyId}`
+          );
+          const failure = error as {
+            code?: string | number;
+            name?: string;
+            message?: string;
+            details?: unknown;
+          };
+          const permanent =
+            error instanceof SyncConflict ||
+            failure.code === 11000 ||
+            ["ValidationError", "CastError"].includes(failure.name ?? "");
+          failed.push({
+            queueId,
+            entity,
+            entityId: data?._id,
+            code: String(failure.code ?? "SYNC_FAILED"),
+            message: failure.message ?? "Unable to sync record.",
+            retryable: !permanent,
+            details: failure.details,
+          });
           console.error(`PUSH FAILED FOR ${entity}`, {
             companyId,
             queueId,
@@ -780,6 +879,22 @@ router.get(
        * COMPANY
        * ========================================================
        */
+
+      if (isInventorySyncEntity(entity)) {
+        const result = await pullVersionedCollection(
+          inventorySyncModels[entity],
+          companyId,
+          version,
+          max
+        );
+        return res.json({
+          success: true,
+          companyId,
+          entity,
+          ...result,
+          serverTime: new Date().toISOString(),
+        });
+      }
 
       if (entity === "company") {
         const result = await pullVersionedCollection(

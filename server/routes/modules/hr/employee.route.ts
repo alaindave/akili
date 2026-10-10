@@ -7,7 +7,7 @@ import {
   addEmployee,
   updateEmployee,
   deleteEmployee,
-} from "../db.js";
+} from "../../../db.js";
 
 const router = express.Router();
 

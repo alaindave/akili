@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto";
 import type mongoose from "mongoose";
 
-import PayrollComponent from "../models/payrollComponent.model.js";
+import PayrollComponent from "../models/modules/hr/payrollComponent.model.js";
 import { defaultPayrollComponents } from "../seeds/payroll-component.seed.js";
 import { getNextSyncVersion } from "./syncVersion.js";
 

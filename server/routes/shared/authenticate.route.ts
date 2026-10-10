@@ -1,7 +1,7 @@
 import express, { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import Joi from "joi";
-import { getAdminUserByEmail, getCompanyById } from "../db.js";
+import { getAdminUserByEmail, getCompanyById } from "../../db.js";
 
 const router = express.Router();
 

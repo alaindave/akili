@@ -49,10 +49,11 @@ const TaskResolutionPopover = ({ onSubmit }: Props) => {
     >
       <PopoverTrigger>
         <Button
-          colorScheme="gray"
-          variant="outline"
-          borderColor="#a3a3a3"
-          color="#262626"
+          colorScheme="green"
+          bg="green.600"
+          color="white"
+          _hover={{ bg: "green.700" }}
+          _active={{ bg: "green.800" }}
           borderRadius="2px"
         >
           Résoudre
@@ -79,7 +80,7 @@ const TaskResolutionPopover = ({ onSubmit }: Props) => {
             bg="white"
             color="#262626"
             borderColor="#d4d4d4"
-            focusBorderColor="#404040"
+            focusBorderColor="green.600"
             resize="none"
             minH="100px"
           />
@@ -87,9 +88,11 @@ const TaskResolutionPopover = ({ onSubmit }: Props) => {
           <Button
             mt={3}
             size="sm"
-            bg="#262626"
+            colorScheme="green"
+            bg="green.600"
             color="white"
-            _hover={{ bg: "#404040" }}
+            _hover={{ bg: "green.700" }}
+            _active={{ bg: "green.800" }}
             onClick={handleSave}
             isLoading={isSubmitting}
             loadingText="Patientez..."

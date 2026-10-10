@@ -12,6 +12,10 @@ export default interface Company {
   email?: string | null;
   website?: string | null;
   attendanceClockIn?: string;
+  inventoryInitialized?: boolean;
+  inventoryInitializedAt?: string | null;
+  inventoryInitializationDocumentId?: string | null;
+  inventoryInitializationDocumentNumber?: string | null;
   createdAt: string;
   updatedAt: string;
   serverVersion: number;

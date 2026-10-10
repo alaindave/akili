@@ -50,6 +50,9 @@ function load(file, overrides = {}, expose = '') {
   vm.runInNewContext(code, { module, exports: module.exports, Buffer, Date, Error, process,
     console: { log() {}, warn() {}, error() {} }, require: (name) => {
       if (name in overrides) return overrides[name];
+      const matchingOverride = Object.keys(overrides).find(key => key.split('/').at(-1) === name.split('/').at(-1));
+      if (matchingOverride) return overrides[matchingOverride];
+      if (name.endsWith('/InventorySync.js')) return { isInventorySyncEntity: () => false };
       if (name === 'electron') return { app: { isPackaged: true } };
       if (name === 'axios') return http;
       if (name.endsWith('/db.js')) return db;
@@ -73,11 +76,11 @@ function load(file, overrides = {}, expose = '') {
     dateBirth, role, dateHired, department, telephone, address, emergencyContact, relationship,
     contactPhone, salary, synced) VALUES ('e1','a','A','B','1','ID','1990-01-01','Worker',
     '2026-01-01','Atelier','','','','','',500,1)`);
-  const photoRepo = load('src/electron/database/repositories/modules/hr/employees_photos.repository.ts');
+  const photoRepo = load('src/electron/database/repositories/modules/hr/employeesPhotos.repository.ts');
   const downloader = load('src/electron/util/downloadEmployeePhoto.util.ts');
-  const pull = load('src/electron/services/sync/pull.service.ts', {
+  const pull = load('src/electron/services/shared/sync/pull.service.ts', {
     '../../util/downloadEmployeePhoto.util.js': downloader,
-    '../../database/repositories/modules/hr/employees_photos.repository.js': photoRepo,
+    '../../../database/repositories/modules/hr/employeesPhotos.repository.js': photoRepo,
   }, '\nexport { syncEmployeePhotos, syncEmployeePhotoFiles, pullEntityByVersion };');
   const hash = crypto.createHash('sha256').update(responseBytes).digest('hex');
   remote = [{ ...(await employee()), photo_filename: 'remote.png', photo_version: 1,
@@ -136,10 +139,10 @@ function load(file, overrides = {}, expose = '') {
   }
   let rejectUpload = true;
   let editDuringPush = true;
-  const push = load('src/electron/services/sync/push.service.ts', {
+  const push = load('src/electron/services/shared/sync/push.service.ts', {
     'form-data': Form,
     fs: { existsSync: () => true, createReadStream: (filename) => filename },
-    '../../database/repositories/modules/hr/employees_photos.repository.js': photoRepo,
+    '../../../database/repositories/modules/hr/employeesPhotos.repository.js': photoRepo,
     axios: { post: async (_url, form) => {
       const items = JSON.parse(form.items);
       assert.equal(items.length, 1, 'Superseded photos must not be uploaded');
@@ -165,7 +168,7 @@ function load(file, overrides = {}, expose = '') {
   database.exec(`INSERT INTO payroll_components (companyId, _id, name, displayName, type,
     calculationType, displayOrder, createdAt, updatedAt)
     VALUES ('a', 'c1', 'BASE_SALARY', 'Base', 'EARNING', 'FIXE', 1, '2026-09-01', '2026-09-01')`);
-  const profiles = load('src/electron/database/repositories/modules/hr/payroll_employee_profile.repository.ts');
+  const profiles = load('src/electron/database/repositories/modules/hr/payrollProfile.repository.ts');
   const profile = { companyId: 'a', _id: 'p1', employeeId: 'e1', componentId: 'c1',
     name: 'BASE_SALARY', displayName: 'Base', displayOrder: 1, type: 'EARNING', calculationType: 'FIXE',
     value: 500, taxable: 1, enabled: 1, requiresHRApproval: 0, serverVersion: 1,

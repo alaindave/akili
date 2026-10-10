@@ -1,19 +1,23 @@
-import Employee from "./models/employee.model.js";
+import Employee from "./models/modules/hr/employee.model.js";
+import {
+  inventorySyncModels,
+  type InventorySyncEntity,
+} from "./models/modules/inventory/inventorySync.js";
 import { createHash } from "crypto";
-import Attendance from "./models/attendance.model.js";
-import Leave from "./models/leave.model.js";
-import Task from "./models/task.model.js";
-import EmployeesDocuments from "./models/employeesDocuments.model.js";
-import PayrollComponent from "./models/payrollComponent.model.js";
-import AdminUser from "./models/adminUser.model.js";
-import EmployeePayrollProfile from "./models/payrollEmployeeProfile.model.js";
-import Company from "./models/company.model.js";
+import Attendance from "./models/modules/hr/attendance.model.js";
+import Leave from "./models/modules/hr/leave.model.js";
+import Task from "./models/shared/task.model.js";
+import EmployeesDocuments from "./models/modules/hr/employeesDocuments.model.js";
+import PayrollComponent from "./models/modules/hr/payrollComponent.model.js";
+import AdminUser from "./models/shared/adminUser.model.js";
+import EmployeePayrollProfile from "./models/modules/hr/payrollEmployeeProfile.model.js";
+import Company from "./models/shared/company.model.js";
 import supabase from "./services/supabase.service.js";
-import PayrollRun from "./models/payrollRun.model.js";
-import PayrollResult from "./models/payrollResult.model.js";
-import PayrollItem from "./models/payrollItem.model.js";
-import PayrollSettings from "./models/payrollSettings.model.js";
-import AttendanceDailyCheck from "./models/attendanceDailyCheck.model.js";
+import PayrollRun from "./models/modules/hr/payrollRun.model.js";
+import PayrollResult from "./models/modules/hr/payrollResult.model.js";
+import PayrollItem from "./models/modules/hr/payrollItem.model.js";
+import PayrollSettings from "./models/modules/hr/payrollSettings.model.js";
+import AttendanceDailyCheck from "./models/modules/hr/attendanceDailyCheck.model.js";
 import { Entity, getNextSyncVersion } from "./utils/syncVersion.js";
 
 export type SyncOperation = "create" | "update" | "delete";
@@ -26,7 +30,11 @@ interface SyncData {
 
 export class SyncConflict extends Error {
   readonly retryable = false;
-  constructor(public code: string, message: string, public details?: Record<string, unknown>) {
+  constructor(
+    public code: string,
+    message: string,
+    public details?: Record<string, unknown>
+  ) {
     super(message);
     this.name = "SyncConflict";
   }
@@ -34,39 +42,131 @@ export class SyncConflict extends Error {
 
 function requireId(value: unknown, field = "_id"): asserts value is string {
   if (typeof value !== "string" || !value.trim()) {
-    throw new SyncConflict("INVALID_ID", `SYNC FAILED: ${field} must be a non-empty string.`);
+    throw new SyncConflict(
+      "INVALID_ID",
+      `SYNC FAILED: ${field} must be a non-empty string.`
+    );
   }
 }
 
 // Payroll amounts and identity are snapshots of generation, not fields of a status update.
-function preservePayrollSnapshot(existing: Record<string, any>, fields: Record<string, any>, keys: string[]) {
+function preservePayrollSnapshot(
+  existing: Record<string, any>,
+  fields: Record<string, any>,
+  keys: string[]
+) {
   for (const key of keys) {
     if (existing[key] !== undefined) fields[key] = existing[key];
   }
 }
 
-async function syncRecord(model: any, entity: Entity, operation: SyncOperation, data: SyncData) {
+export async function syncInventory(
+  entity: InventorySyncEntity,
+  operation: SyncOperation,
+  data: SyncData
+) {
+  const companyId = requireCompanyId(data);
+  const incomingDate = requireUpdatedAt(data);
+  const { _id, fields } = cleanSyncFields(data, operation);
+  // Opening stock must go through the atomic company claim; individual snapshots
+  // cannot post a second opening document or leak its lines/movements into stock.
+  const isOpening = (row: any) => row && (row.referenceType === "OPENING_STOCK" || row.type === "OPENING_STOCK" ||
+    String(row._id ?? "").startsWith("opening:") || String(row.documentId ?? "").startsWith("opening:") ||
+    /^INI-\d{4}-\d{4}$/.test(row.documentNumber ?? ""));
+  if (isOpening(data)) throw new SyncConflict("OPENING_STOCK_ATOMIC_REQUIRED", "Le stock initial doit être soumis depuis son formulaire de validation.");
+  if (entity === "inventory_sku_settings" && _id !== companyId) {
+    throw new SyncConflict(
+      "INVALID_ID",
+      "SKU settings ID must match its company."
+    );
+  }
+  if (typeof fields.customFields === "string")
+    fields.customFields = JSON.parse(fields.customFields);
+  const model: any = inventorySyncModels[entity];
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const existing = await model.findOne({ _id, companyId }).lean();
+    if (isOpening(existing)) throw new SyncConflict("OPENING_STOCK_IMMUTABLE", "Le document de stock initial validé ne peut pas être modifié.");
+    if (
+      existing &&
+      new Date(existing.updatedAt).getTime() >= incomingDate.getTime()
+    ) {
+      return { success: true, _id, serverVersion: existing.serverVersion };
+    }
+    if (!existing && operation !== "create") {
+      throw new SyncConflict(
+        "MISSING_RECORD",
+        "Inventory record must be created before updating it."
+      );
+    }
+    // Validate a complete document, including cross-field stock constraints.
+    const document = new model({
+      ...existing,
+      ...fields,
+      _id,
+      companyId,
+      serverVersion: 0,
+    });
+    await document.validate();
+    document.serverVersion = await getServerVersion(entity);
+    const result = await model.replaceOne(
+      existing
+        ? { _id, companyId, serverVersion: existing.serverVersion }
+        : { _id, companyId },
+      document.toObject(),
+      { upsert: !existing }
+    );
+    if (result.matchedCount || result.upsertedCount) {
+      return { success: true, _id, serverVersion: document.serverVersion };
+    }
+  }
+  throw new Error("Inventory record changed during sync; retry required.");
+}
+
+async function syncRecord(
+  model: any,
+  entity: Entity,
+  operation: SyncOperation,
+  data: SyncData
+) {
   const companyId = requireCompanyId(data);
   const incomingDate = requireUpdatedAt(data);
   const { _id, fields } = cleanSyncFields(data, operation);
   fields.companyId = companyId;
   for (let attempt = 0; attempt < 10; attempt++) {
     const existing = await model.findOne({ _id, companyId }).lean();
-    if (existing && new Date(existing.updatedAt).getTime() >= incomingDate.getTime()) {
-      return { success: true, _id, serverVersion: existing.serverVersion, record: existing };
+    if (
+      existing &&
+      new Date(existing.updatedAt).getTime() >= incomingDate.getTime()
+    ) {
+      return {
+        success: true,
+        _id,
+        serverVersion: existing.serverVersion,
+        record: existing,
+      };
     }
     if (!existing && operation !== "create") {
-      throw new SyncConflict("MISSING_RECORD", `${entity} ${_id} must be created before it can be ${operation}d.`);
+      throw new SyncConflict(
+        "MISSING_RECORD",
+        `${entity} ${_id} must be created before it can be ${operation}d.`
+      );
     }
     if (!existing) {
       // Update validators do not check omitted required fields on an upsert.
       await new model({ ...fields, _id, serverVersion: 0 }).validate();
     }
     const serverVersion = await getServerVersion(entity);
-    const filter = existing ? { _id, companyId, serverVersion: existing.serverVersion } : { _id, companyId };
-    const saved = await model.updateOne(filter, {
-      $set: { ...fields, serverVersion }, $setOnInsert: { _id },
-    }, { upsert: !existing, runValidators: true, timestamps: false });
+    const filter = existing
+      ? { _id, companyId, serverVersion: existing.serverVersion }
+      : { _id, companyId };
+    const saved = await model.updateOne(
+      filter,
+      {
+        $set: { ...fields, serverVersion },
+        $setOnInsert: { _id },
+      },
+      { upsert: !existing, runValidators: true, timestamps: false }
+    );
     if (!saved.matchedCount && !saved.upsertedCount) continue;
     const record = await model.findOne({ _id, companyId }).lean();
     return { success: true, _id, serverVersion, record };
@@ -75,8 +175,15 @@ async function syncRecord(model: any, entity: Entity, operation: SyncOperation, 
 }
 
 function requireCompanyId(data: SyncData): string {
-  if (!data || typeof data !== "object" || Array.isArray(data) || typeof data.companyId !== "string" || !data.companyId.trim()) {
-    throw new SyncConflict("INVALID_COMPANY",
+  if (
+    !data ||
+    typeof data !== "object" ||
+    Array.isArray(data) ||
+    typeof data.companyId !== "string" ||
+    !data.companyId.trim()
+  ) {
+    throw new SyncConflict(
+      "INVALID_COMPANY",
       `SYNC FAILED: companyId is required for entity ${data?._id ?? "unknown"}`
     );
   }
@@ -95,7 +202,12 @@ function cleanSyncFields(data: SyncData, operation?: SyncOperation) {
   if (operation && !["create", "update", "delete"].includes(operation)) {
     throw new SyncConflict("INVALID_OPERATION", "Unsupported sync operation.");
   }
-  for (const key of ["employeeId", "payrollRunId", "payrollResultId", "taskId"]) {
+  for (const key of [
+    "employeeId",
+    "payrollRunId",
+    "payrollResultId",
+    "taskId",
+  ]) {
     if (data[key] !== undefined) requireId(data[key], key);
   }
   const {
@@ -113,7 +225,8 @@ function cleanSyncFields(data: SyncData, operation?: SyncOperation) {
   delete fields.lastSyncedAt;
   delete fields.synced;
   for (const key of Object.keys(fields)) {
-    if (key.startsWith("$") || key.includes(".")) throw new SyncConflict("INVALID_FIELD", "Invalid sync field name.");
+    if (key.startsWith("$") || key.includes("."))
+      throw new SyncConflict("INVALID_FIELD", "Invalid sync field name.");
     if (fields[key] === undefined) delete fields[key];
   }
   if (operation === "delete") fields.isDeleted = 1;
@@ -127,7 +240,8 @@ function cleanSyncFields(data: SyncData, operation?: SyncOperation) {
 
 function requireUpdatedAt(data: SyncData): Date {
   if (!data.updatedAt) {
-    throw new SyncConflict("INVALID_DATE",
+    throw new SyncConflict(
+      "INVALID_DATE",
       `SYNC FAILED: updatedAt is required for entity ${data._id}`
     );
   }
@@ -135,7 +249,10 @@ function requireUpdatedAt(data: SyncData): Date {
   const updatedAt = new Date(data.updatedAt);
 
   if (Number.isNaN(updatedAt.getTime())) {
-    throw new SyncConflict("INVALID_DATE", `SYNC FAILED: invalid updatedAt for entity ${data._id}`);
+    throw new SyncConflict(
+      "INVALID_DATE",
+      `SYNC FAILED: invalid updatedAt for entity ${data._id}`
+    );
   }
 
   return updatedAt;
@@ -157,6 +274,11 @@ export async function syncCompany(operation: SyncOperation, data: SyncData) {
   // Storage paths belong to the media upload handler, not the local form.
   delete fields.logoPath;
   delete fields.logoUrl;
+  // These fields are assigned only by the atomic opening-stock transaction.
+  delete fields.inventoryInitialized;
+  delete fields.inventoryInitializedAt;
+  delete fields.inventoryInitializationDocumentId;
+  delete fields.inventoryInitializationDocumentNumber;
 
   const serverVersion = await getServerVersion("company");
 
@@ -409,7 +531,12 @@ export async function syncEmployee(operation: SyncOperation, data: SyncData) {
   for (const key of Object.keys(employeeData)) {
     if (key.startsWith("photo_")) delete employeeData[key];
   }
-  const { record, ...result } = await syncRecord(Employee, "employee", operation, employeeData);
+  const { record, ...result } = await syncRecord(
+    Employee,
+    "employee",
+    operation,
+    employeeData
+  );
   return { ...result, employee: record };
 }
 
@@ -491,14 +618,29 @@ export async function syncEmployeePhoto(data: SyncData, file?: UploadedFile) {
   })();
 
   const objectPath = `${companyId}/${employeeId}/photo_v${photoVersion}${extension}`;
-  const incomingPhotoTime = new Date(data.photo_last_modified ?? data.updatedAt).getTime();
-  if (!Number.isFinite(incomingPhotoTime)) throw new Error("INVALID PHOTO MODIFICATION DATE");
+  const incomingPhotoTime = new Date(
+    data.photo_last_modified ?? data.updatedAt
+  ).getTime();
+  if (!Number.isFinite(incomingPhotoTime))
+    throw new Error("INVALID PHOTO MODIFICATION DATE");
   const existingPhotoTime = employee.photo_last_modified
-    ? new Date(employee.photo_last_modified).getTime() : 0;
-  if (existingPhotoTime > incomingPhotoTime ||
-      (employee.photo_path === objectPath && data.photo_hash && employee.photo_hash === data.photo_hash)) {
-    return { success: true, companyId, employeeId, serverVersion: employee.serverVersion,
-      updatedAt: employee.updatedAt, photoVersion: employee.photo_version, photoPath: employee.photo_path };
+    ? new Date(employee.photo_last_modified).getTime()
+    : 0;
+  if (
+    existingPhotoTime > incomingPhotoTime ||
+    (employee.photo_path === objectPath &&
+      data.photo_hash &&
+      employee.photo_hash === data.photo_hash)
+  ) {
+    return {
+      success: true,
+      companyId,
+      employeeId,
+      serverVersion: employee.serverVersion,
+      updatedAt: employee.updatedAt,
+      photoVersion: employee.photo_version,
+      photoPath: employee.photo_path,
+    };
   }
   const photoHash = createHash("sha256").update(file.buffer).digest("hex");
   if (data.photo_hash && data.photo_hash !== photoHash) {
@@ -595,7 +737,10 @@ export async function syncEmployeePhoto(data: SyncData, file?: UploadedFile) {
       /*
        * The new photo is already committed. Cleanup can be retried separately.
        */
-      console.warn("Could not remove previous employee photo:", deleteError.message);
+      console.warn(
+        "Could not remove previous employee photo:",
+        deleteError.message
+      );
     }
 
     console.log("OLD EMPLOYEE PHOTO DELETED:", {
@@ -1028,7 +1173,12 @@ export async function syncAttendanceDailyCheck(
 // ============================================================
 
 export async function syncLeave(operation: SyncOperation, data: SyncData) {
-  const { record, ...result } = await syncRecord(Leave, "leave", operation, data);
+  const { record, ...result } = await syncRecord(
+    Leave,
+    "leave",
+    operation,
+    data
+  );
   return { ...result, leave: record };
 }
 
@@ -1046,7 +1196,8 @@ export async function syncTask(operation: SyncOperation, data: SyncData) {
   console.log("FIELDS BEFORE", fields);
 
   delete fields.comments;
-  if (fields.module === undefined && operation === "create") fields.module = "HR";
+  if (fields.module === undefined && operation === "create")
+    fields.module = "HR";
 
   console.log("FIELDS AFTER", fields);
 
@@ -1260,7 +1411,9 @@ export async function syncUserNotes(data: SyncData) {
   }
   const existing = await AdminUser.findOne({ _id, companyId }).lean();
   if (!existing) throw new SyncConflict("MISSING_RECORD", "User not found.");
-  if (new Date(existing.updatedAt).getTime() >= new Date(data.updatedAt).getTime()) {
+  if (
+    new Date(existing.updatedAt).getTime() >= new Date(data.updatedAt).getTime()
+  ) {
     return { success: true, _id, serverVersion: existing.serverVersion };
   }
   const serverVersion = await getServerVersion("admin_user");
@@ -1302,8 +1455,16 @@ export async function syncUserNotes(data: SyncData) {
 // PAYROLL SETTINGS
 // ============================================================
 
-export async function syncPayrollSettings(operation: SyncOperation, data: SyncData) {
-  const { record, ...result } = await syncRecord(PayrollSettings, "payroll_settings", operation, data);
+export async function syncPayrollSettings(
+  operation: SyncOperation,
+  data: SyncData
+) {
+  const { record, ...result } = await syncRecord(
+    PayrollSettings,
+    "payroll_settings",
+    operation,
+    data
+  );
   return { ...result, settings: record };
 }
 
@@ -1311,8 +1472,16 @@ export async function syncPayrollSettings(operation: SyncOperation, data: SyncDa
 // PAYROLL COMPONENT
 // ============================================================
 
-export async function syncPayrollComponent(operation: SyncOperation, data: SyncData) {
-  const { record, ...result } = await syncRecord(PayrollComponent, "payroll_component", operation, data);
+export async function syncPayrollComponent(
+  operation: SyncOperation,
+  data: SyncData
+) {
+  const { record, ...result } = await syncRecord(
+    PayrollComponent,
+    "payroll_component",
+    operation,
+    data
+  );
   return { ...result, component: record };
 }
 
@@ -1418,7 +1587,9 @@ export async function refreshPayrollRunStatus(
     }).lean();
     const complete =
       results.length > 0 && results.length >= payrollRun.employeeCount;
-    const allVerified = complete && results.every((r) => ["VERIFIÉ", "APPROUVÉ", "PAYÉ"].includes(r.status));
+    const allVerified =
+      complete &&
+      results.every((r) => ["VERIFIÉ", "APPROUVÉ", "PAYÉ"].includes(r.status));
     const allApproved =
       complete &&
       results.every((r) => r.status === "APPROUVÉ" || r.status === "PAYÉ");
@@ -1430,7 +1601,11 @@ export async function refreshPayrollRunStatus(
       : allVerified
       ? "VERIFICATION"
       : "BROUILLON";
-    const lastVerified = [...results].sort((a, b) => new Date(b.verifiedAt ?? 0).getTime() - new Date(a.verifiedAt ?? 0).getTime())[0];
+    const lastVerified = [...results].sort(
+      (a, b) =>
+        new Date(b.verifiedAt ?? 0).getTime() -
+        new Date(a.verifiedAt ?? 0).getTime()
+    )[0];
     const lastApproved = [...results].sort(
       (a, b) =>
         new Date(b.approvedAt ?? 0).getTime() -
@@ -1448,8 +1623,16 @@ export async function refreshPayrollRunStatus(
           status,
           serverVersion,
           updatedAt: new Date(),
-          submittedForVerificationAt: allVerified ? lastVerified?.verifiedAt ?? payrollRun.submittedForVerificationAt ?? null : null,
-          submittedForVerificationBy: allVerified ? lastVerified?.verifiedBy ?? payrollRun.submittedForVerificationBy ?? null : null,
+          submittedForVerificationAt: allVerified
+            ? lastVerified?.verifiedAt ??
+              payrollRun.submittedForVerificationAt ??
+              null
+            : null,
+          submittedForVerificationBy: allVerified
+            ? lastVerified?.verifiedBy ??
+              payrollRun.submittedForVerificationBy ??
+              null
+            : null,
           approvedAt: allApproved
             ? lastApproved?.approvedAt ?? payrollRun.approvedAt ?? null
             : null,
@@ -1499,7 +1682,12 @@ export async function syncPayrollRun(operation: SyncOperation, data: SyncData) {
   requireUpdatedAt(data);
   const { _id, fields } = cleanSyncFields(data, operation);
   fields.companyId = companyId;
-  if (fields.status !== undefined && !["BROUILLON", "VERIFICATION", "APPROUVÉ", "PAYÉ", "ANNULÉ"].includes(fields.status)) {
+  if (
+    fields.status !== undefined &&
+    !["BROUILLON", "VERIFICATION", "APPROUVÉ", "PAYÉ", "ANNULÉ"].includes(
+      fields.status
+    )
+  ) {
     throw new SyncConflict("INVALID_STATUS", "Unknown payroll status.");
   }
 
@@ -1533,9 +1721,22 @@ export async function syncPayrollRun(operation: SyncOperation, data: SyncData) {
     }
     const update = { ...fields };
     if (existing) {
-      preservePayrollSnapshot(existing, update, ["month", "year", "employeeCount", "totalBasicSalary", "totalEarnings", "totalDeductions", "totalNetSalary", "generatedBy", "createdAt"]);
+      preservePayrollSnapshot(existing, update, [
+        "month",
+        "year",
+        "employeeCount",
+        "totalBasicSalary",
+        "totalEarnings",
+        "totalDeductions",
+        "totalNetSalary",
+        "generatedBy",
+        "createdAt",
+      ]);
     } else if (operation !== "create") {
-      throw new SyncConflict("MISSING_RECORD", `Payroll ${_id} must be created before it can change.`);
+      throw new SyncConflict(
+        "MISSING_RECORD",
+        `Payroll ${_id} must be created before it can change.`
+      );
     }
     const processed = await PayrollResult.exists({
       companyId,
@@ -1551,13 +1752,15 @@ export async function syncPayrollRun(operation: SyncOperation, data: SyncData) {
       hasProcessed &&
       (update.status === "BROUILLON" || update.isDeleted === 1)
     ) {
-      throw new SyncConflict("INVALID_TRANSITION",
+      throw new SyncConflict(
+        "INVALID_TRANSITION",
         "Cannot reset or delete payroll with approved or paid payslips."
       );
     }
     if (update.status === "ANNULÉ") {
       if (hasProcessed && !fromSettings)
-        throw new SyncConflict("INVALID_TRANSITION",
+        throw new SyncConflict(
+          "INVALID_TRANSITION",
           "Use payroll settings to cancel approved or paid payroll."
         );
       if (fromSettings) {
@@ -1567,13 +1770,17 @@ export async function syncPayrollRun(operation: SyncOperation, data: SyncData) {
           isDeleted: 0,
         }).lean();
         if (!actor || !["ADMIN", "MANAGER"].includes(actor.role)) {
-          throw new SyncConflict("FORBIDDEN",
+          throw new SyncConflict(
+            "FORBIDDEN",
             "Only an administrator or manager can cancel approved or paid payroll."
           );
         }
       }
       if (!update.cancelledAt)
-        throw new SyncConflict("INVALID_DATE", "Cancellation date is required.");
+        throw new SyncConflict(
+          "INVALID_DATE",
+          "Cancellation date is required."
+        );
       // Retain the server's approval/payment history when cancellation was made offline.
       for (const field of [
         "submittedForVerificationAt",
@@ -1639,7 +1846,12 @@ export async function syncPayrollResult(
   fields.companyId = companyId;
   // Normalize queued updates from older clients during the rollout.
   if (fields.status === "VERIFICATION") fields.status = "VERIFIÉ";
-  if (fields.status !== undefined && !["BROUILLON", "VERIFIÉ", "APPROUVÉ", "PAYÉ", "ANNULÉ"].includes(fields.status)) {
+  if (
+    fields.status !== undefined &&
+    !["BROUILLON", "VERIFIÉ", "APPROUVÉ", "PAYÉ", "ANNULÉ"].includes(
+      fields.status
+    )
+  ) {
     throw new SyncConflict("INVALID_STATUS", "Unknown payroll status.");
   }
 
@@ -1657,14 +1869,34 @@ export async function syncPayrollResult(
       update.payrollRunId &&
       update.payrollRunId !== existing.payrollRunId
     ) {
-      throw new SyncConflict("PAYROLL_PARENT_CONFLICT", `Payslip ${_id} belongs to payroll ${existing.payrollRunId}, but this update references ${update.payrollRunId}. Reconciliation is required.`, {
-        payslipId: _id, incomingPayrollRunId: update.payrollRunId, storedPayrollRunId: existing.payrollRunId,
-      });
+      throw new SyncConflict(
+        "PAYROLL_PARENT_CONFLICT",
+        `Payslip ${_id} belongs to payroll ${existing.payrollRunId}, but this update references ${update.payrollRunId}. Reconciliation is required.`,
+        {
+          payslipId: _id,
+          incomingPayrollRunId: update.payrollRunId,
+          storedPayrollRunId: existing.payrollRunId,
+        }
+      );
     }
     if (existing) {
-      preservePayrollSnapshot(existing, update, ["employeeId", "month", "year", "baseSalary", "grossSalary", "taxableSalary", "totalEarnings", "totalDeductions", "netSalary", "createdAt"]);
+      preservePayrollSnapshot(existing, update, [
+        "employeeId",
+        "month",
+        "year",
+        "baseSalary",
+        "grossSalary",
+        "taxableSalary",
+        "totalEarnings",
+        "totalDeductions",
+        "netSalary",
+        "createdAt",
+      ]);
     } else if (operation !== "create") {
-      throw new SyncConflict("MISSING_RECORD", `Payslip ${_id} must be created before its status can change.`);
+      throw new SyncConflict(
+        "MISSING_RECORD",
+        `Payslip ${_id} must be created before its status can change.`
+      );
     }
     const payrollRunId = existing?.payrollRunId ?? update.payrollRunId;
     requireId(payrollRunId, "payrollRunId");
@@ -1695,7 +1927,10 @@ export async function syncPayrollResult(
         update.status === "ANNULÉ" ||
         update.status === "BROUILLON"
       ) {
-        throw new SyncConflict("INVALID_TRANSITION", "Cannot reset or delete an approved or paid payslip.");
+        throw new SyncConflict(
+          "INVALID_TRANSITION",
+          "Cannot reset or delete an approved or paid payslip."
+        );
       }
       // Replayed verification/approval snapshots must never undo payment or audit dates.
       if ((rank[update.status] ?? -1) <= rank[existing.status]) {
@@ -1739,27 +1974,64 @@ export async function syncPayrollResult(
 // PAYROLL ITEM
 // ============================================================
 
-export async function syncPayrollItem(operation: SyncOperation, data: SyncData) {
+export async function syncPayrollItem(
+  operation: SyncOperation,
+  data: SyncData
+) {
   const companyId = requireCompanyId(data);
   requireId(data._id);
-  const existing = await PayrollItem.findOne({ _id: data._id, companyId }).lean();
-  if (existing && data.payrollResultId !== undefined && data.payrollResultId !== existing.payrollResultId) {
-    throw new SyncConflict("PAYROLL_PARENT_CONFLICT", `Payroll item ${data._id} cannot move to another payslip.`);
+  const existing = await PayrollItem.findOne({
+    _id: data._id,
+    companyId,
+  }).lean();
+  if (
+    existing &&
+    data.payrollResultId !== undefined &&
+    data.payrollResultId !== existing.payrollResultId
+  ) {
+    throw new SyncConflict(
+      "PAYROLL_PARENT_CONFLICT",
+      `Payroll item ${data._id} cannot move to another payslip.`
+    );
   }
   const payrollResultId = existing?.payrollResultId ?? data.payrollResultId;
   requireId(payrollResultId, "payrollResultId");
-  const result = await PayrollResult.findOne({ _id: payrollResultId, companyId }).lean();
+  const result = await PayrollResult.findOne({
+    _id: payrollResultId,
+    companyId,
+  }).lean();
   if (!result) throw new Error("Parent payslip has not synced yet.");
   if (operation === "delete" && ["APPROUVÉ", "PAYÉ"].includes(result.status)) {
-    throw new SyncConflict("INVALID_TRANSITION", "Cannot delete an item from an approved or paid payslip.");
+    throw new SyncConflict(
+      "INVALID_TRANSITION",
+      "Cannot delete an item from an approved or paid payslip."
+    );
   }
   const snapshot = { ...data };
   if (existing) {
-    preservePayrollSnapshot(existing, snapshot, ["payrollResultId", "employeeId", "componentId", "name", "displayName", "type", "amount", "taxable", "createdAt"]);
+    preservePayrollSnapshot(existing, snapshot, [
+      "payrollResultId",
+      "employeeId",
+      "componentId",
+      "name",
+      "displayName",
+      "type",
+      "amount",
+      "taxable",
+      "createdAt",
+    ]);
     if (existing.isDeleted) snapshot.isDeleted = 1;
   } else if (data.employeeId !== result.employeeId) {
-    throw new SyncConflict("PAYROLL_EMPLOYEE_CONFLICT", "Payroll item employee does not match its payslip.");
+    throw new SyncConflict(
+      "PAYROLL_EMPLOYEE_CONFLICT",
+      "Payroll item employee does not match its payslip."
+    );
   }
-  const { record, ...response } = await syncRecord(PayrollItem, "payroll_item", operation, snapshot);
+  const { record, ...response } = await syncRecord(
+    PayrollItem,
+    "payroll_item",
+    operation,
+    snapshot
+  );
   return { ...response, item: record };
 }

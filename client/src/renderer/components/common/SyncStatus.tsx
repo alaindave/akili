@@ -31,6 +31,8 @@ const SyncStatus = ({ onSync }: SyncStatusProps) => {
   const lastSyncAt = useSyncStore((store) => store.lastSyncAt);
 
   const isSyncing = status === "SYNCING";
+  const isPartialSync =
+    pendingChanges > 0 && (status === "IDLE" || status === "ERROR");
 
   const formatLastSync = () => {
     if (!lastSyncAt) {
@@ -50,6 +52,13 @@ const SyncStatus = ({ onSync }: SyncStatusProps) => {
   };
 
   const getStatus = () => {
+    if (isPartialSync) {
+      return {
+        text: "Synchronisation partielle",
+        color: "yellow.600",
+      };
+    }
+
     switch (status) {
       case "IDLE":
         return {
@@ -123,7 +132,11 @@ const SyncStatus = ({ onSync }: SyncStatusProps) => {
             mr={2}
           />
 
-          <Text fontSize="1rem" fontWeight="500">
+          <Text
+            fontSize="1rem"
+            fontWeight="500"
+            color={isPartialSync ? currentStatus.color : undefined}
+          >
             {currentStatus.text}
           </Text>
         </Button>

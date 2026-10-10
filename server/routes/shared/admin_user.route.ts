@@ -3,16 +3,16 @@ import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 import _ from "lodash";
 
-import { validateAdminUser } from "../models/adminUser.model.js";
+import { validateAdminUser } from "../../models/shared/adminUser.model.js";
 import {
   createAdminUser,
   updateAdminUser,
   getAdminUserByID,
   getAllAdmins,
   getAdminUserByEmail,
-} from "../db.js";
+} from "../../db.js";
 
-import Company from "../models/company.model.js";
+import Company from "../../models/shared/company.model.js";
 
 const router = express.Router();
 

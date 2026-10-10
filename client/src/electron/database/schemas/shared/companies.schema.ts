@@ -25,6 +25,22 @@ CREATE TABLE IF NOT EXISTS companies (
   `);
 
   const columns = await all<{ name: string }>("PRAGMA table_info(companies)");
+  for (const [name, definition] of Object.entries({
+    inventoryInitialized: "INTEGER NOT NULL DEFAULT 0 CHECK (inventoryInitialized IN (0, 1))",
+    inventoryInitializedAt: "TEXT",
+    inventoryInitializationDocumentId: "TEXT",
+    inventoryInitializationDocumentNumber: "TEXT",
+  })) {
+    if (!columns.some((column) => column.name === name)) {
+      await run(`ALTER TABLE companies ADD COLUMN ${name} ${definition}`);
+    }
+  }
+  // Local drafts have no stock effect; only the server can post an opening document.
+  await run(`CREATE TABLE IF NOT EXISTS inventory_opening_drafts (
+    companyId TEXT PRIMARY KEY,
+    payload TEXT NOT NULL,
+    updatedAt TEXT NOT NULL
+  )`);
   if (!columns.some((column) => column.name === "attendanceClockIn")) {
     await run(
       "ALTER TABLE companies ADD COLUMN attendanceClockIn TEXT NOT NULL DEFAULT '08:00'"

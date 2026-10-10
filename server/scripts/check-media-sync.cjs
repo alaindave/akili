@@ -45,7 +45,7 @@ function load(file, overrides = {}, expose = '') {
     remove: async () => { events.push('remove'); return {}; },
   }) } };
   const sync = load('sync.ts', {
-    './models/employee.model.js': model,
+    './models/modules/hr/employee.model.js': model,
     './services/supabase.service.js': storage,
     './utils/syncVersion.js': { getNextSyncVersion: async () => ++version },
   });
@@ -72,9 +72,9 @@ function load(file, overrides = {}, expose = '') {
   assert.deepEqual(events, [], 'An older photo must not replace the newer server photo');
   await assert.rejects(() => sync.syncEmployeePhoto({ ...photo, photo_version: 3, photo_hash: 'wrong' }, file), /QUEUED HASH/);
 
-  const route = load('routes/sync.route.ts', {
-    '../middlewares/authorize.js': (_req, _res, next) => next(),
-    '../middlewares/sync_upload.js': { fields: () => (_req, _res, next) => next() },
+  const route = load('routes/shared/sync.route.ts', {
+    '../../middlewares/authorize.js': (_req, _res, next) => next(),
+    '../../middlewares/sync_upload.js': { fields: () => (_req, _res, next) => next() },
   }, '\nexport { pullVersionedCollection };');
   const records = [{ serverVersion: 1, isDeleted: 0 }, { serverVersion: 2, isDeleted: 1 }, { serverVersion: 3, isDeleted: 1 }];
   const collection = {
@@ -97,9 +97,9 @@ function load(file, overrides = {}, expose = '') {
   assert.equal(third.hasMore, false);
 
   const requested = [];
-  const photos = load('routes/employees_photos.route.ts', {
-    '../models/employee.model.js': { findById: async () => ({ ...stored, photo_path: 'local.png' }) },
-    '../services/supabase.service.js': { storage: { from: () => ({ download: async (name) => {
+  const photos = load('routes/modules/hr/employees_photos.route.ts', {
+    '../../../models/modules/hr/employee.model.js': { findById: async () => ({ ...stored, photo_path: 'local.png' }) },
+    '../../../services/supabase.service.js': { storage: { from: () => ({ download: async (name) => {
       requested.push(name);
       return name === 'local.png' ? { error: new Error('missing') } : {
         data: { type: 'image/png', arrayBuffer: async () => Buffer.from('recovered') },

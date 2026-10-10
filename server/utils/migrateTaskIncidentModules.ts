@@ -1,5 +1,5 @@
-import Task from "../models/task.model.js";
-import Incident from "../models/incident.model.js";
+import Task from "../models/shared/task.model.js";
+import Incident from "../models/shared/incident.model.js";
 import { getNextSyncVersion } from "./syncVersion.js";
 
 // Mongoose defaults do not backfill persisted documents or lean query results.

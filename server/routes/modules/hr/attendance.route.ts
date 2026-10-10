@@ -9,8 +9,8 @@ import {
   getAttendanceByEmployeeID,
   editAttendance,
   deleteAttendance,
-} from "../db.js";
-import { markAbsentEmployeesHandler } from "../controllers/attendance.controller.js";
+} from "../../../db.js";
+import { markAbsentEmployeesHandler } from "../../../controllers/attendance.controller.js";
 
 const router = express.Router();
 

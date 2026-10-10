@@ -16,7 +16,6 @@ import {
   Skeleton,
   Stack,
   Table,
-  TableContainer,
   Tbody,
   Td,
   Text,
@@ -415,7 +414,7 @@ function CompanyWarehouses({ companyId }: { companyId: string }) {
             </Button>
           </Stack>
         ) : (
-          <TableContainer overflow="visible">
+          <Box whiteSpace="nowrap">
             <Table
               sx={{
                 th: {
@@ -511,7 +510,7 @@ function CompanyWarehouses({ companyId }: { companyId: string }) {
                 ))}
               </Tbody>
             </Table>
-          </TableContainer>
+          </Box>
         )}
         </Box>
         <Flex

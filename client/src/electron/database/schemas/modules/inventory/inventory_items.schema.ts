@@ -122,7 +122,6 @@ export async function createInventoryItemsTable() {
     CREATE TABLE IF NOT EXISTS inventory_categories (
       _id TEXT PRIMARY KEY,
       companyId TEXT NOT NULL,
-      code TEXT,
       name TEXT NOT NULL,
       parentId TEXT,
       isActive INTEGER NOT NULL DEFAULT 1
@@ -254,7 +253,12 @@ export async function createInventoryItemsTable() {
     enabled INTEGER NOT NULL DEFAULT 0 CHECK(enabled IN (0, 1)),
     prefix TEXT NOT NULL DEFAULT 'ART-',
     digits INTEGER NOT NULL DEFAULT 5 CHECK(digits BETWEEN 1 AND 12),
-    nextNumber INTEGER NOT NULL DEFAULT 1 CHECK(nextNumber BETWEEN 1 AND 999999999999)
+    nextNumber INTEGER NOT NULL DEFAULT 1 CHECK(nextNumber BETWEEN 1 AND 999999999999),
+    createdAt TEXT NOT NULL DEFAULT '',
+    updatedAt TEXT NOT NULL DEFAULT '',
+    serverVersion INTEGER NOT NULL DEFAULT 0,
+    synced INTEGER NOT NULL DEFAULT 0 CHECK(synced IN (0, 1)),
+    isDeleted INTEGER NOT NULL DEFAULT 0 CHECK(isDeleted IN (0, 1))
   )`);
 
   console.log("INVENTORY TABLES INITIALIZED");

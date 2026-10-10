@@ -19,7 +19,8 @@ function load(file, resolve, expose = "") {
   let calls = 0;
   const acknowledged = [];
   class Form { append(key, value) { this[key] = value; } getHeaders() { return {}; } }
-  const push = load('../src/electron/services/sync/push.service.ts', (name) => {
+  const push = load('../src/electron/services/shared/sync/push.service.ts', (name) => {
+    if (name.endsWith('/InventorySync.js')) return { isInventorySyncEntity: () => false };
     if (name === 'electron') return { app: { isPackaged: false } };
     if (name === 'form-data') return { default: Form };
     if (name.endsWith('/auth.js')) return { getToken: async () => 'token' };
@@ -27,7 +28,7 @@ function load(file, resolve, expose = "") {
       getUnsyncedItems: async () => pending.map((entry) => ({ ...entry })),
       markManySynced: async (_company, ids) => { pending = pending.filter((entry) => !ids.includes(entry._id)); },
     };
-    if (name.endsWith('/payroll_run.repository.js')) return {
+    if (name.endsWith('/payrollRun.repository.js')) return {
       markPayrollResultSynced: async (_company, id) => {
         assert(!pending.some((entry) => entry.entityId === id));
         acknowledged.push(id);
@@ -61,7 +62,7 @@ function load(file, resolve, expose = "") {
   // Pending payroll edits must keep the cursor unchanged until a later pull can apply them.
   let pendingEdit = true;
   const cursors = new Map();
-  const pull = load('../src/electron/services/sync/pull.service.ts', (name) => {
+  const pull = load('../src/electron/services/shared/sync/pull.service.ts', (name) => {
     if (name.endsWith('/sync.repository.js')) return { getUnsyncedItems: async () => [] };
     if (name === 'electron') return { app: { isPackaged: false } };
     if (name.endsWith('/auth.js')) return { getToken: async () => 'token' };
@@ -70,7 +71,7 @@ function load(file, resolve, expose = "") {
       getSyncState: async (_company, entity) => ({ lastPulledVersion: cursors.get(entity) ?? 0 }),
       updateLastPulledVersion: async (_company, entity, version) => cursors.set(entity, version),
     };
-    if (name.endsWith('/payroll_run.repository.js')) return {
+    if (name.endsWith('/payrollRun.repository.js')) return {
       upsertPayrollRun: async () => !pendingEdit,
       upsertPayrollResult: async () => !pendingEdit,
       upsertPayrollItem: async () => !pendingEdit,

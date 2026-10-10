@@ -31,9 +31,7 @@ import type {
   InventoryTrackingMethod,
   InventoryCostingMethod,
 } from "../../../../common/types/inventory/InventoryItem";
-import type {
-  InventoryUnit,
-} from "../../../../common/types/inventory/InventoryUnit";
+import type { InventoryUnit } from "../../../../common/types/inventory/InventoryUnit";
 import type { InventoryCategory } from "../../../../common/types/inventory/InventoryCategory";
 
 export const itemTypeLabels: Record<InventoryItemType, string> = {
@@ -100,8 +98,12 @@ export default function InventoryItemForm({
   const initialFocusRef = useRef<HTMLInputElement>(null);
   const submitting = useRef(false);
   const busy = saving;
-  const selectedCategory = categories.find(category => category._id === categoryId);
-  const skuPreview = selectedCategory ? `${categorySkuPrefix(selectedCategory.name)}-12345` : "Sélectionnez une catégorie";
+  const selectedCategory = categories.find(
+    (category) => category._id === categoryId
+  );
+  const skuPreview = selectedCategory
+    ? `${categorySkuPrefix(selectedCategory.name)}-12345`
+    : "Sélectionnez le type d'article";
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -220,7 +222,16 @@ export default function InventoryItemForm({
                 >
                   INFORMATIONS GÉNÉRALES
                 </Text>
-                {numbering.enabled && <Checkbox size="sm" colorScheme="blackAlpha" isChecked={autoGenerateSku} onChange={e => setAutoGenerateSku(e.target.checked)}>Générer automatiquement la référence SKU</Checkbox>}
+                {numbering.enabled && (
+                  <Checkbox
+                    size="sm"
+                    colorScheme="blackAlpha"
+                    isChecked={autoGenerateSku}
+                    onChange={(e) => setAutoGenerateSku(e.target.checked)}
+                  >
+                    Générer automatiquement la référence SKU
+                  </Checkbox>
+                )}
                 <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={4}>
                   <FormControl isRequired={!autoGenerateSku}>
                     <FormLabel htmlFor="item-sku">Référence / SKU</FormLabel>
@@ -233,9 +244,6 @@ export default function InventoryItemForm({
                       placeholder="Ex. MAT-001"
                       onChange={(e) => setSku(e.target.value)}
                     />
-                    <FormHelperText fontSize="xs">
-                      {autoGenerateSku ? "Exemple de format. Cinq chiffres aléatoires seront attribués à l’enregistrement." : "Une référence unique par article."}
-                    </FormHelperText>
                   </FormControl>
                   <FormControl isRequired>
                     <FormLabel htmlFor="item-name">Nom de l’article</FormLabel>

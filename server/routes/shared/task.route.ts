@@ -1,12 +1,12 @@
 import express, { Request, Response } from "express";
 
-import { saveTask, getTasks } from "../db.js";
+import { saveTask, getTasks } from "../../db.js";
 
 const router = express.Router();
 
 interface CreateTaskBody {
   companyId: string;
-  module: import("../models/task.model.js").Task["module"];
+  module: import("../../models/shared/task.model.js").Task["module"];
   author: string;
   recipients: string[];
   message: string;

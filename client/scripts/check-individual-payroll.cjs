@@ -279,7 +279,7 @@ const countQueue = () => database.prepare('SELECT COUNT(*) AS n FROM sync_queue'
   assert.equal(migrationVersion, 5);
 
   // Exercise the real Mongoose schema so strict casting cannot silently drop audit fields.
-  const PayrollResultModel = load(path.resolve(__dirname, '../../server/models/payrollResult.model.ts'),
+  const PayrollResultModel = load(path.resolve(__dirname, '../../server/models/modules/hr/payrollResult.model.ts'),
     (name) => require(require.resolve(name, { paths: [path.resolve(__dirname, '../../server')] }))).default;
   const mongoSlip = new PayrollResultModel({
     _id: 'schema-slip', companyId: 'a', payrollRunId: 'schema-run', employeeId: 'e1',

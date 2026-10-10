@@ -12,7 +12,7 @@ function load(file, resolve) {
   vm.runInNewContext(code, { module, exports: module.exports, console: { log() {}, warn() {} }, process: { env: { VITE_API_URL: "http://test" } }, require: resolve });
   return module.exports;
 }
-const Model = load('../../server/models/payrollEmployeeProfile.model.ts', () => mongoose).default;
+const Model = load('../../server/models/modules/hr/payrollEmployeeProfile.model.ts', () => mongoose).default;
 const stored = new Map();
 let version = 0;
 const key = ({ companyId, _id }) => `${companyId}:${_id}`;

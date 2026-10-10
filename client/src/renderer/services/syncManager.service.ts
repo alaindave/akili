@@ -1,10 +1,29 @@
 import { SyncStatusEvent } from "../../common/types/shared/Sync";
 import useSyncStore from "../../store/sync.store";
+import useAdminUser from "../../store/auth.store";
 
 let initialized = false;
 
 let unsubscribeSyncStatus: (() => void) | null = null;
 let unsubscribePendingChanges: (() => void) | null = null;
+let unsubscribeCompany: (() => void) | null = null;
+let pendingRevision = 0;
+
+async function refreshPendingChanges(companyId: string) {
+  const revision = ++pendingRevision;
+  if (!companyId) {
+    useSyncStore.getState().setPendingChanges(0);
+    return;
+  }
+  try {
+    const count = await window.electron.sync.getPendingCount(companyId);
+    if (initialized && revision === pendingRevision) {
+      useSyncStore.getState().setPendingChanges(count);
+    }
+  } catch (error) {
+    console.error("FAILED TO LOAD PENDING CHANGES:", error);
+  }
+}
 
 /* =========================================================
    INITIALIZE RENDERER SYNC
@@ -24,8 +43,12 @@ export function initializeRendererSync() {
   ======================================================= */
 
   unsubscribeSyncStatus = window.electron.sync.onSyncStatus(
-    ({ status, timestamp, pulledChanges }: SyncStatusEvent) => {
+    ({ status, timestamp, pulledChanges, pendingChanges }: SyncStatusEvent) => {
       const syncStore = useSyncStore.getState();
+      if (typeof pendingChanges === "number") {
+        pendingRevision++;
+        syncStore.setPendingChanges(pendingChanges);
+      }
 
       console.log("RENDERER RECEIVED SYNC STATUS:", status, timestamp ?? "");
 
@@ -92,10 +115,14 @@ export function initializeRendererSync() {
     ({
       pendingChanges,
       timestamp,
+      companyId,
     }: {
+      companyId: string;
       pendingChanges: number;
       timestamp: string | null;
     }) => {
+      if (companyId !== useAdminUser.getState().adminUser.companyId) return;
+      pendingRevision++;
       const syncStore = useSyncStore.getState();
 
       console.log(
@@ -107,6 +134,14 @@ export function initializeRendererSync() {
       syncStore.setPendingChanges(pendingChanges);
     }
   );
+
+  unsubscribeCompany = useAdminUser.subscribe((state, previous) => {
+    if (state.adminUser.companyId !== previous.adminUser.companyId) {
+      useSyncStore.getState().setPendingChanges(0);
+      void refreshPendingChanges(state.adminUser.companyId);
+    }
+  });
+  void refreshPendingChanges(useAdminUser.getState().adminUser.companyId);
 
   console.log("RENDERER SYNC MANAGER INITIALIZED.");
 }
@@ -122,9 +157,12 @@ export function destroyRendererSync() {
 
   unsubscribeSyncStatus?.();
   unsubscribePendingChanges?.();
+  unsubscribeCompany?.();
+  pendingRevision++;
 
   unsubscribeSyncStatus = null;
   unsubscribePendingChanges = null;
+  unsubscribeCompany = null;
 
   initialized = false;
 

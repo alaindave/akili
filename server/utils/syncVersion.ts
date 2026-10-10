@@ -1,6 +1,9 @@
-import SyncCounter from "../models/syncCounter.model.js";
+import SyncCounter from "../models/shared/syncCounter.model.js";
+import type { ClientSession } from "mongoose";
+import type { InventorySyncEntity } from "../models/modules/inventory/inventorySync.js";
 
 export type Entity =
+  | InventorySyncEntity
   | "company"
   | "company_logo"
   | "admin_user"
@@ -19,7 +22,7 @@ export type Entity =
   | "payroll_result"
   | "payroll_item";
 
-export async function getNextSyncVersion(entity: Entity): Promise<number> {
+export async function getNextSyncVersion(entity: Entity, session?: ClientSession): Promise<number> {
   const counter = await SyncCounter.findOneAndUpdate(
     { _id: entity },
     {
@@ -31,6 +34,7 @@ export async function getNextSyncVersion(entity: Entity): Promise<number> {
       new: true,
       upsert: true,
       setDefaultsOnInsert: true,
+      session,
     }
   ).lean();
 

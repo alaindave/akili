@@ -18,6 +18,13 @@ import {
   Heading,
   HStack,
   Input,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  ModalOverlay,
   Select,
   SimpleGrid,
   Spinner,
@@ -38,6 +45,7 @@ import {
   useToast,
 } from "@chakra-ui/react";
 import { Link } from "react-router-dom";
+import { StockInitializationSettings } from "./StockInitializationPage";
 import { FiArrowLeft, FiCheck, FiEdit2, FiPlus } from "react-icons/fi";
 import useAdminUser from "../../../../store/auth.store";
 import type {
@@ -92,7 +100,9 @@ function CompanyStockSettings({ companyId }: { companyId: string }) {
     enabled: false,
   });
   const [category, setCategory] = useState<StockCategoryInput>(emptyCategory);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [unit, setUnit] = useState<StockUnitInput>(emptyUnit);
+  const [isUnitModalOpen, setIsUnitModalOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [loadError, setLoadError] = useState("");
@@ -156,6 +166,7 @@ function CompanyStockSettings({ companyId }: { companyId: string }) {
     void mutate(async () => {
       await api.saveCategory(companyId, category);
       setCategory(emptyCategory);
+      setIsCategoryModalOpen(false);
     }, "Catégorie enregistrée");
   }
   function saveUnit(event: FormEvent) {
@@ -167,6 +178,7 @@ function CompanyStockSettings({ companyId }: { companyId: string }) {
     void mutate(async () => {
       await api.saveUnit(companyId, unit);
       setUnit(emptyUnit);
+      setIsUnitModalOpen(false);
     }, "Unité enregistrée");
   }
   function saveNumbering(event: FormEvent) {
@@ -253,6 +265,7 @@ function CompanyStockSettings({ companyId }: { companyId: string }) {
             )}
             <Tabs colorScheme="gray" isLazy onChange={() => setError("")}>
               <TabList borderColor="#E5E5E5" mb={6} overflowX="auto">
+                <Tab isDisabled={busy}>Stock</Tab>
                 <Tab isDisabled={busy}>
                   Catégories{" "}
                   <Badge ml={2} borderRadius="full">
@@ -269,364 +282,446 @@ function CompanyStockSettings({ companyId }: { companyId: string }) {
               </TabList>
               <TabPanels>
                 <TabPanel p={0}>
-                  <SimpleGrid
-                    columns={{ base: 1, lg: 2 }}
-                    spacing={6}
-                    alignItems="start"
-                  >
-                    <Box {...card}>
-                      <Heading size="sm" mb={2}>
-                        Catégories d’articles
-                      </Heading>
-                      <Text color="#737373" fontSize="sm" mb={5}>
-                        Classez vos matières et produits. Seules les catégories
-                        actives sont proposées lors de la création d’un article.
+                  <StockInitializationSettings companyId={companyId} />
+                </TabPanel>
+                <TabPanel p={0}>
+                  <Box {...card}>
+                    <Flex
+                      align={{ base: "flex-start", sm: "center" }}
+                      justify="space-between"
+                      gap={4}
+                      mb={2}
+                    >
+                      <Heading size="sm">Catégories d’articles</Heading>
+                      <Button
+                        {...primaryButton}
+                        size="sm"
+                        w="36px"
+                        h="36px"
+                        minW="36px"
+                        p={0}
+                        variant="outline"
+                        aria-label="Ajouter une catégorie"
+                        title="Ajouter une catégorie"
+                        isDisabled={busy}
+                        flexShrink={0}
+                        onClick={() => {
+                          setCategory(emptyCategory);
+                          setError("");
+                          setIsCategoryModalOpen(true);
+                        }}
+                      >
+                        <FiPlus size={18} />
+                      </Button>
+                    </Flex>
+                    <Text color="#737373" fontSize="sm" mb={5}>
+                      Classez vos matières et produits. Seules les catégories
+                      actives sont proposées lors de la création d’un article.
+                    </Text>
+                    {data.categories.length === 0 ? (
+                      <Text py={8} color="#858585" textAlign="center">
+                        Aucune catégorie. Cliquez sur « Nouvelle catégorie »
+                        pour créer votre première catégorie.
                       </Text>
-                      {data.categories.length === 0 ? (
-                        <Text py={8} color="#858585" textAlign="center">
-                          Aucune catégorie. Créez votre première catégorie.
-                        </Text>
-                      ) : (
-                        <TableContainer>
-                          <Table size="sm">
-                            <Thead>
-                              <Tr>
-                                <Th>Catégorie</Th>
-                                <Th>Statut</Th>
-                                <Th textAlign="right">Actions</Th>
+                    ) : (
+                      <TableContainer>
+                        <Table size="sm">
+                          <Thead>
+                            <Tr>
+                              <Th>Catégorie</Th>
+                              <Th>Statut</Th>
+                              <Th textAlign="right">Actions</Th>
+                            </Tr>
+                          </Thead>
+                          <Tbody>
+                            {data.categories.map((row) => (
+                              <Tr key={row._id}>
+                                <Td py={4}>
+                                  <Text fontWeight="600">{row.name}</Text>
+                                  <Text fontSize="xs" color="#858585" mt={1}>
+                                    {row.code || "Sans code"}
+                                  </Text>
+                                </Td>
+                                <Td>
+                                  <Badge textTransform="none" bg="#F1F1F1">
+                                    {row.isActive ? "Active" : "Inactive"}
+                                  </Badge>
+                                </Td>
+                                <Td>
+                                  <HStack justify="end">
+                                    <Button
+                                      size="xs"
+                                      variant="ghost"
+                                      aria-label={`Modifier ${row.name}`}
+                                      isDisabled={busy}
+                                      onClick={() => {
+                                        setCategory({
+                                          id: row._id,
+                                          code: row.code ?? "",
+                                          name: row.name,
+                                          isActive: row.isActive,
+                                        });
+                                        setError("");
+                                        setIsCategoryModalOpen(true);
+                                      }}
+                                    >
+                                      <FiEdit2 />
+                                    </Button>
+                                    <Button
+                                      size="xs"
+                                      variant="ghost"
+                                      isDisabled={busy}
+                                      onClick={() =>
+                                        setArchive({
+                                          kind: "category",
+                                          id: row._id,
+                                          name: row.name,
+                                        })
+                                      }
+                                    >
+                                      Archiver
+                                    </Button>
+                                  </HStack>
+                                </Td>
                               </Tr>
-                            </Thead>
-                            <Tbody>
-                              {data.categories.map((row) => (
-                                <Tr key={row._id}>
-                                  <Td py={4}>
-                                    <Text fontWeight="600">{row.name}</Text>
-                                    <Text fontSize="xs" color="#858585" mt={1}>
-                                      {row.code || "Sans code"}
-                                    </Text>
-                                  </Td>
-                                  <Td>
-                                    <Badge textTransform="none" bg="#F1F1F1">
-                                      {row.isActive ? "Active" : "Inactive"}
-                                    </Badge>
-                                  </Td>
-                                  <Td>
-                                    <HStack justify="end">
-                                      <Button
-                                        size="xs"
-                                        variant="ghost"
-                                        aria-label={`Modifier ${row.name}`}
-                                        isDisabled={busy}
-                                        onClick={() =>
-                                          setCategory({
-                                            id: row._id,
-                                            code: row.code ?? "",
-                                            name: row.name,
-                                            isActive: row.isActive,
-                                          })
-                                        }
-                                      >
-                                        <FiEdit2 />
-                                      </Button>
-                                      <Button
-                                        size="xs"
-                                        variant="ghost"
-                                        isDisabled={busy}
-                                        onClick={() =>
-                                          setArchive({
-                                            kind: "category",
-                                            id: row._id,
-                                            name: row.name,
-                                          })
-                                        }
-                                      >
-                                        Archiver
-                                      </Button>
-                                    </HStack>
-                                  </Td>
-                                </Tr>
-                              ))}
-                            </Tbody>
-                          </Table>
-                        </TableContainer>
-                      )}
-                    </Box>
-                    <Box {...card} as="form" onSubmit={saveCategory}>
-                      <Heading size="sm" mb={5}>
+                            ))}
+                          </Tbody>
+                        </Table>
+                      </TableContainer>
+                    )}
+                  </Box>
+
+                  <Modal
+                    isOpen={isCategoryModalOpen}
+                    onClose={() => {
+                      if (busy) return;
+                      setIsCategoryModalOpen(false);
+                      setCategory(emptyCategory);
+                      setError("");
+                    }}
+                    isCentered
+                    size="md"
+                  >
+                    <ModalOverlay />
+                    <ModalContent as="form" onSubmit={saveCategory}>
+                      <ModalHeader>
                         {category.id
                           ? "Modifier la catégorie"
                           : "Nouvelle catégorie"}
-                      </Heading>
-                      <Stack
-                        spacing={4}
-                        as="fieldset"
-                        disabled={busy}
-                        border={0}
-                        p={0}
-                        minW={0}
-                      >
-                        <FormControl isRequired>
-                          <FormLabel htmlFor="category-name">Nom</FormLabel>
-                          <Input
-                            id="category-name"
-                            maxLength={100}
-                            value={category.name}
-                            placeholder="Ex. Cuir"
-                            onChange={(e) =>
-                              setCategory({ ...category, name: e.target.value })
-                            }
-                          />
-                        </FormControl>
-                        <FormControl>
-                          <FormLabel htmlFor="category-code">Code </FormLabel>
-                          <Input
-                            id="category-code"
-                            maxLength={30}
-                            value={category.code ?? ""}
-                            placeholder="Ex. MAT"
-                            onChange={(e) =>
-                              setCategory({ ...category, code: e.target.value })
-                            }
-                          />
-                        </FormControl>
-                        <Checkbox
-                          colorScheme="blackAlpha"
-                          isChecked={category.isActive}
-                          onChange={(e) =>
-                            setCategory({
-                              ...category,
-                              isActive: e.target.checked,
-                            })
-                          }
+                      </ModalHeader>
+                      <ModalCloseButton isDisabled={busy} />
+                      <ModalBody>
+                        <Stack
+                          spacing={4}
+                          as="fieldset"
+                          disabled={busy}
+                          border={0}
+                          p={0}
+                          minW={0}
                         >
-                          Catégorie active
-                        </Checkbox>
-                        <HStack pt={2}>
-                          <Button
-                            type="submit"
-                            {...primaryButton}
-                            size="sm"
-                            isLoading={busy}
-                            leftIcon={category.id ? <FiCheck /> : <FiPlus />}
+                          <FormControl isRequired>
+                            <FormLabel htmlFor="category-name">Nom</FormLabel>
+                            <Input
+                              id="category-name"
+                              maxLength={100}
+                              value={category.name}
+                              placeholder="Ex. Cuir"
+                              onChange={(e) =>
+                                setCategory({
+                                  ...category,
+                                  name: e.target.value,
+                                })
+                              }
+                            />
+                          </FormControl>
+                          <Checkbox
+                            colorScheme="blackAlpha"
+                            isChecked={category.isActive}
+                            onChange={(e) =>
+                              setCategory({
+                                ...category,
+                                isActive: e.target.checked,
+                              })
+                            }
                           >
-                            Enregistrer
-                          </Button>
-                          {category.id && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setCategory(emptyCategory)}
-                            >
-                              Annuler
-                            </Button>
-                          )}
-                        </HStack>
-                      </Stack>
-                    </Box>
-                  </SimpleGrid>
+                            Catégorie active
+                          </Checkbox>
+                        </Stack>
+                      </ModalBody>
+                      <ModalFooter gap={3}>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          isDisabled={busy}
+                          onClick={() => {
+                            setIsCategoryModalOpen(false);
+                            setCategory(emptyCategory);
+                            setError("");
+                          }}
+                        >
+                          Annuler
+                        </Button>
+                        <Button
+                          type="submit"
+                          {...primaryButton}
+                          size="sm"
+                          isLoading={busy}
+                          leftIcon={category.id ? <FiCheck /> : <FiPlus />}
+                        >
+                          Enregistrer
+                        </Button>
+                      </ModalFooter>
+                    </ModalContent>
+                  </Modal>
                 </TabPanel>
                 <TabPanel p={0}>
-                  <SimpleGrid
-                    columns={{ base: 1, lg: 2 }}
-                    spacing={6}
-                    alignItems="start"
-                  >
-                    <Box {...card}>
-                      <Heading size="sm" mb={2}>
-                        Unités de mesure
-                      </Heading>
-                      <Text color="#737373" fontSize="sm" mb={5}>
-                        Définissez les unités utilisées pour mesurer les
-                        quantités de vos articles.
-                      </Text>
-                      {data.units.length === 0 ? (
-                        <Text py={8} color="#858585" textAlign="center">
-                          Aucune unité de mesure configurée.
-                        </Text>
-                      ) : (
-                        <TableContainer>
-                          <Table size="sm">
-                            <Thead>
-                              <Tr>
-                                <Th>Unité</Th>
-                                <Th>Mesure</Th>
-                                <Th textAlign="right">Actions</Th>
-                              </Tr>
-                            </Thead>
-                            <Tbody>
-                              {data.units.map((row) => (
-                                <Tr key={row._id}>
-                                  <Td py={4}>
-                                    <Text fontWeight="600">
-                                      {row.name}{" "}
-                                      <Text
-                                        as="span"
-                                        color="#858585"
-                                        fontWeight="normal"
-                                      >
-                                        ({row.code})
-                                      </Text>
-                                    </Text>
-                                    <Text fontSize="xs" color="#858585" mt={1}>
-                                      {row.decimalPlaces} décimale(s)
-                                    </Text>
-                                  </Td>
-                                  <Td>{measures[row.category]}</Td>
-                                  <Td>
-                                    <HStack justify="end">
-                                      <Button
-                                        size="xs"
-                                        variant="ghost"
-                                        aria-label={`Modifier ${row.name}`}
-                                        isDisabled={busy}
-                                        onClick={() =>
-                                          setUnit({
-                                            id: row._id,
-                                            code: row.code,
-                                            name: row.name,
-                                            category: row.category,
-                                            decimalPlaces: row.decimalPlaces,
-                                          })
-                                        }
-                                      >
-                                        <FiEdit2 />
-                                      </Button>
-                                      <Button
-                                        size="xs"
-                                        variant="ghost"
-                                        isDisabled={busy}
-                                        onClick={() =>
-                                          setArchive({
-                                            kind: "unit",
-                                            id: row._id,
-                                            name: row.name,
-                                          })
-                                        }
-                                      >
-                                        Archiver
-                                      </Button>
-                                    </HStack>
-                                  </Td>
-                                </Tr>
-                              ))}
-                            </Tbody>
-                          </Table>
-                        </TableContainer>
-                      )}
-                    </Box>
-                    <Box {...card} as="form" onSubmit={saveUnit}>
-                      <Heading size="sm" mb={5}>
-                        {unit.id ? "Modifier l’unité" : "Nouvelle unité"}
-                      </Heading>
-                      <Stack
-                        spacing={4}
-                        as="fieldset"
-                        disabled={busy}
-                        border={0}
+                  <Box {...card}>
+                    <Flex
+                      align={{ base: "flex-start", sm: "center" }}
+                      justify="space-between"
+                      gap={4}
+                      mb={2}
+                    >
+                      <Heading size="sm">Unités de mesure</Heading>
+                      <Button
+                        {...primaryButton}
+                        size="sm"
+                        w="36px"
+                        h="36px"
+                        minW="36px"
                         p={0}
-                        minW={0}
+                        variant="outline"
+                        aria-label="Ajouter une unité de mesure"
+                        title="Ajouter une unité de mesure"
+                        isDisabled={busy}
+                        flexShrink={0}
+                        onClick={() => {
+                          setUnit(emptyUnit);
+                          setError("");
+                          setIsUnitModalOpen(true);
+                        }}
                       >
-                        <SimpleGrid columns={2} spacing={4}>
+                        <FiPlus size={18} />
+                      </Button>
+                    </Flex>
+                    <Text color="#737373" fontSize="sm" mb={5}>
+                      Définissez les unités utilisées pour mesurer les quantités
+                      de vos articles.
+                    </Text>
+                    {data.units.length === 0 ? (
+                      <Text py={8} color="#858585" textAlign="center">
+                        Aucune unité de mesure. Cliquez sur le bouton « + » pour
+                        créer votre première unité.
+                      </Text>
+                    ) : (
+                      <TableContainer>
+                        <Table size="sm">
+                          <Thead>
+                            <Tr>
+                              <Th>Unité</Th>
+                              <Th>Mesure</Th>
+                              <Th textAlign="right">Actions</Th>
+                            </Tr>
+                          </Thead>
+                          <Tbody>
+                            {data.units.map((row) => (
+                              <Tr key={row._id}>
+                                <Td py={4}>
+                                  <Text fontWeight="600">
+                                    {row.name}{" "}
+                                    <Text
+                                      as="span"
+                                      color="#858585"
+                                      fontWeight="normal"
+                                    >
+                                      ({row.code})
+                                    </Text>
+                                  </Text>
+                                  <Text fontSize="xs" color="#858585" mt={1}>
+                                    {row.decimalPlaces} décimale(s)
+                                  </Text>
+                                </Td>
+                                <Td>{measures[row.category]}</Td>
+                                <Td>
+                                  <HStack justify="end">
+                                    <Button
+                                      size="xs"
+                                      variant="ghost"
+                                      aria-label={`Modifier ${row.name}`}
+                                      isDisabled={busy}
+                                      onClick={() => {
+                                        setUnit({
+                                          id: row._id,
+                                          code: row.code,
+                                          name: row.name,
+                                          category: row.category,
+                                          decimalPlaces: row.decimalPlaces,
+                                        });
+                                        setError("");
+                                        setIsUnitModalOpen(true);
+                                      }}
+                                    >
+                                      <FiEdit2 />
+                                    </Button>
+                                    <Button
+                                      size="xs"
+                                      variant="ghost"
+                                      isDisabled={busy}
+                                      onClick={() =>
+                                        setArchive({
+                                          kind: "unit",
+                                          id: row._id,
+                                          name: row.name,
+                                        })
+                                      }
+                                    >
+                                      Archiver
+                                    </Button>
+                                  </HStack>
+                                </Td>
+                              </Tr>
+                            ))}
+                          </Tbody>
+                        </Table>
+                      </TableContainer>
+                    )}
+                  </Box>
+
+                  <Modal
+                    isOpen={isUnitModalOpen}
+                    onClose={() => {
+                      if (busy) return;
+                      setIsUnitModalOpen(false);
+                      setUnit(emptyUnit);
+                      setError("");
+                    }}
+                    isCentered
+                    size="lg"
+                  >
+                    <ModalOverlay />
+                    <ModalContent as="form" onSubmit={saveUnit}>
+                      <ModalHeader>
+                        {unit.id ? "Modifier l’unité" : "Nouvelle unité"}
+                      </ModalHeader>
+                      <ModalCloseButton isDisabled={busy} />
+                      <ModalBody>
+                        <Stack
+                          spacing={4}
+                          as="fieldset"
+                          disabled={busy}
+                          border={0}
+                          p={0}
+                          minW={0}
+                        >
+                          <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={4}>
+                            <FormControl isRequired>
+                              <FormLabel htmlFor="stock-unit-code">
+                                Code
+                              </FormLabel>
+                              <Input
+                                id="stock-unit-code"
+                                maxLength={30}
+                                value={unit.code}
+                                placeholder="Ex. KG"
+                                onChange={(e) =>
+                                  setUnit({ ...unit, code: e.target.value })
+                                }
+                              />
+                            </FormControl>
+                            <FormControl isRequired>
+                              <FormLabel htmlFor="stock-unit-name">
+                                Nom
+                              </FormLabel>
+                              <Input
+                                id="stock-unit-name"
+                                maxLength={100}
+                                value={unit.name}
+                                placeholder="Ex. Kilogramme"
+                                onChange={(e) =>
+                                  setUnit({ ...unit, name: e.target.value })
+                                }
+                              />
+                            </FormControl>
+                          </SimpleGrid>
                           <FormControl isRequired>
-                            <FormLabel htmlFor="stock-unit-code">
-                              Code
+                            <FormLabel htmlFor="stock-unit-measure">
+                              Type de mesure
+                            </FormLabel>
+                            <Select
+                              id="stock-unit-measure"
+                              value={unit.category}
+                              onChange={(e) =>
+                                setUnit({
+                                  ...unit,
+                                  category: e.target
+                                    .value as StockUnitInput["category"],
+                                })
+                              }
+                            >
+                              {Object.entries(measures).map(
+                                ([value, label]) => (
+                                  <option key={value} value={value}>
+                                    {label}
+                                  </option>
+                                )
+                              )}
+                            </Select>
+                          </FormControl>
+                          <FormControl isRequired>
+                            <FormLabel htmlFor="stock-unit-decimals">
+                              Nombre de décimales
                             </FormLabel>
                             <Input
-                              id="stock-unit-code"
-                              maxLength={30}
-                              value={unit.code}
-                              placeholder="Ex. KG"
+                              id="stock-unit-decimals"
+                              type="number"
+                              min={0}
+                              max={10}
+                              step={1}
+                              value={
+                                Number.isNaN(unit.decimalPlaces)
+                                  ? ""
+                                  : unit.decimalPlaces
+                              }
                               onChange={(e) =>
-                                setUnit({ ...unit, code: e.target.value })
+                                setUnit({
+                                  ...unit,
+                                  decimalPlaces: e.target.valueAsNumber,
+                                })
                               }
                             />
+                            <FormHelperText>
+                              De 0 à 10 décimales pour exprimer les quantités.
+                            </FormHelperText>
                           </FormControl>
-                          <FormControl isRequired>
-                            <FormLabel htmlFor="stock-unit-name">Nom</FormLabel>
-                            <Input
-                              id="stock-unit-name"
-                              maxLength={100}
-                              value={unit.name}
-                              placeholder="Ex. Kilogramme"
-                              onChange={(e) =>
-                                setUnit({ ...unit, name: e.target.value })
-                              }
-                            />
-                          </FormControl>
-                        </SimpleGrid>
-                        <FormControl isRequired>
-                          <FormLabel htmlFor="stock-unit-measure">
-                            Type de mesure
-                          </FormLabel>
-                          <Select
-                            id="stock-unit-measure"
-                            value={unit.category}
-                            onChange={(e) =>
-                              setUnit({
-                                ...unit,
-                                category: e.target
-                                  .value as StockUnitInput["category"],
-                              })
-                            }
-                          >
-                            {Object.entries(measures).map(([value, label]) => (
-                              <option key={value} value={value}>
-                                {label}
-                              </option>
-                            ))}
-                          </Select>
-                        </FormControl>
-                        <FormControl isRequired>
-                          <FormLabel htmlFor="stock-unit-decimals">
-                            Nombre de décimales
-                          </FormLabel>
-                          <Input
-                            id="stock-unit-decimals"
-                            type="number"
-                            min={0}
-                            max={10}
-                            step={1}
-                            value={
-                              Number.isNaN(unit.decimalPlaces)
-                                ? ""
-                                : unit.decimalPlaces
-                            }
-                            onChange={(e) =>
-                              setUnit({
-                                ...unit,
-                                decimalPlaces: e.target.valueAsNumber,
-                              })
-                            }
-                          />
-                          <FormHelperText>
-                            De 0 à 10 décimales pour exprimer les quantités.
-                          </FormHelperText>
-                        </FormControl>
-                        <HStack pt={2}>
-                          <Button
-                            type="submit"
-                            {...primaryButton}
-                            size="sm"
-                            isLoading={busy}
-                            leftIcon={unit.id ? <FiCheck /> : <FiPlus />}
-                          >
-                            Enregistrer
-                          </Button>
-                          {unit.id && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setUnit(emptyUnit)}
-                            >
-                              Annuler
-                            </Button>
-                          )}
-                        </HStack>
-                      </Stack>
-                    </Box>
-                  </SimpleGrid>
+                        </Stack>
+                      </ModalBody>
+                      <ModalFooter gap={3}>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          isDisabled={busy}
+                          onClick={() => {
+                            setIsUnitModalOpen(false);
+                            setUnit(emptyUnit);
+                            setError("");
+                          }}
+                        >
+                          Annuler
+                        </Button>
+                        <Button
+                          type="submit"
+                          {...primaryButton}
+                          size="sm"
+                          isLoading={busy}
+                          leftIcon={unit.id ? <FiCheck /> : <FiPlus />}
+                        >
+                          Enregistrer
+                        </Button>
+                      </ModalFooter>
+                    </ModalContent>
+                  </Modal>
                 </TabPanel>
                 <TabPanel p={0}>
                   <Box
@@ -663,9 +758,10 @@ function CompanyStockSettings({ companyId }: { companyId: string }) {
                         Activer la numérotation automatique
                       </Checkbox>
                       <Text fontSize="sm" color="#737373">
-                        Les trois premières lettres du nom de la catégorie, en majuscules,
-                        suivies d’un tiret et de cinq chiffres aléatoires.
-                        Une catégorie est obligatoire pour générer une référence.
+                        Les trois premières lettres du nom de la catégorie, en
+                        majuscules, suivies d’un tiret et de cinq chiffres
+                        aléatoires. Une catégorie est obligatoire pour générer
+                        une référence.
                       </Text>
                       <Box
                         border="1px dashed #D4D4D4"
@@ -680,8 +776,9 @@ function CompanyStockSettings({ companyId }: { companyId: string }) {
                           CUI-08342
                         </Text>
                         <Text mt={2} fontSize="xs" color="#737373">
-                          Exemple pour la catégorie « Cuir ». La référence est générée à
-                          l’enregistrement et vérifiée pour éviter les doublons.
+                          Exemple pour la catégorie « Cuir ». La référence est
+                          générée à l’enregistrement et vérifiée pour éviter les
+                          doublons.
                         </Text>
                       </Box>
                       <Button

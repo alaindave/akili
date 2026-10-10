@@ -1,6 +1,6 @@
 import express, { Request, Response } from "express";
-import supabase from "../services/supabase.service.js";
-import Company from "../models/company.model.js";
+import supabase from "../../services/supabase.service.js";
+import Company from "../../models/shared/company.model.js";
 
 const router = express.Router();
 
