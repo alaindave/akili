@@ -61,12 +61,16 @@ function load(file, resolve, expose = "") {
 
   // Pending payroll edits must keep the cursor unchanged until a later pull can apply them.
   let pendingEdit = true;
+  let pullError;
   const cursors = new Map();
   const pull = load('../src/electron/services/shared/sync/pull.service.ts', (name) => {
     if (name.endsWith('/sync.repository.js')) return { getUnsyncedItems: async () => [] };
     if (name === 'electron') return { app: { isPackaged: false } };
     if (name.endsWith('/auth.js')) return { getToken: async () => 'token' };
-    if (name.endsWith('/db.js')) return { get: async () => ({ _id: 'run' }) };
+    if (name.endsWith('/db.js')) return {
+      get: async () => ({ _id: 'run' }),
+      transaction: async callback => callback(),
+    };
     if (name.endsWith('/syncState.repository.js')) return {
       getSyncState: async (_company, entity) => ({ lastPulledVersion: cursors.get(entity) ?? 0 }),
       updateLastPulledVersion: async (_company, entity, version) => cursors.set(entity, version),
@@ -76,9 +80,13 @@ function load(file, resolve, expose = "") {
       upsertPayrollResult: async () => !pendingEdit,
       upsertPayrollItem: async () => !pendingEdit,
     };
-    if (name === 'axios') return { default: { get: async () => ({ data: {
+    if (name === 'axios') return { default: {
+      isAxiosError: error => error?.isAxiosError === true,
+      get: async () => {
+        if (pullError) throw pullError;
+        return { data: {
       items: [{ _id: 'record', companyId: 'a', payrollRunId: 'run' }], nextVersion: 5, hasMore: false,
-    } }) } };
+    } }; } } };
     return {};
   }, '\nexport { pullEntityByVersion, syncPayrollRuns, syncPayrollResults, syncPayrollItems };');
   for (const [entity, apply] of [['payroll_run', pull.syncPayrollRuns],
@@ -89,6 +97,23 @@ function load(file, resolve, expose = "") {
     pendingEdit = false;
     await pull.pullEntityByVersion('a', entity, apply);
     assert.equal(cursors.get(entity), 5);
+  }
+
+  for (const [status, message, expected] of [
+    [400, 'Unknown sync entity: inventory_item', /backend does not support inventory sync/],
+    [400, 'Invalid limit. Must be between 1 and 1000.', /Invalid limit/],
+    [401, 'Invalid token', /Invalid token/],
+  ]) {
+    pullError = { isAxiosError: true, message: 'Request failed', response: { status, data: { message } } };
+    await assert.rejects(() => pull.pullEntityByVersion('a', 'inventory_item', async () => {
+      assert.fail('Failed HTTP pulls must not apply rows');
+    }), error => {
+      assert.match(error.message, /PULL inventory_item FROM http:\/\/test\/sync\/pull FAILED/);
+      assert.match(error.message, expected);
+      assert.equal(error.message.includes('backend does not support inventory sync'), message.startsWith('Unknown sync entity:'));
+      return true;
+    });
+    assert.equal(cursors.get('inventory_item'), undefined);
   }
 
   const operations = [];

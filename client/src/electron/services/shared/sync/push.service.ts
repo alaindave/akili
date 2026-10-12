@@ -24,7 +24,7 @@ import { markEmployeePhotoSynced } from "../../../database/repositories/modules/
 import { markEmployeeDocumentSynced } from "../../../database/repositories/modules/hr/employeesDocuments.repository.js";
 
 import { markPayrollComponentSynced } from "../../../database/repositories/modules/hr/payrollComponents.repository.js";
-import { markPayrollEmployeeProfileSynced } from "../../../database/repositories/modules/hr/payrollProfile.repository.js";
+import { acknowledgePayrollProfile, recoverPayrollProfileRevision } from "../../../database/repositories/modules/hr/payrollProfile.repository.js";
 
 import {
   markPayrollItemSynced,
@@ -145,6 +145,7 @@ export async function pushPendingChanges(
   const validPending = [];
   let legacyStockSnapshots = 0;
   const inventoryRecords = new Set<string>();
+  const payrollProfiles = new Set<string>();
   const latestPhotos = new Map<string, string>();
   const supersededPhotos = new Map<string, string[]>();
   for (const item of pending) {
@@ -154,6 +155,11 @@ export async function pushPendingChanges(
 
   for (const item of pending) {
     const snapshot = JSON.parse(item.payload);
+    // Later edits need the server revision acknowledged by this snapshot.
+    if (item.entity === "payroll_profile") {
+      if (payrollProfiles.has(item.entityId)) continue;
+      payrollProfiles.add(item.entityId);
+    }
     if (["inventory_balance", "inventory_movement", "inventory_document_line"].includes(item.entity) ||
         (item.entity === "inventory_document" && snapshot.status === "POSTED")) {
       // Complete operations have been recovered above. Keep incomplete legacy
@@ -259,7 +265,12 @@ export async function pushPendingChanges(
       queueId: item._id,
       companyId: item.companyId,
       entity: item.entity,
-      operation: item.operation,
+      // Older clients queued first-time document uploads as updates. Repair
+      // those snapshots on send without dropping the durable queue entry.
+      operation: item.entity === "employee_document" &&
+        item.operation === "update" && (data.serverVersion ?? 0) === 0
+        ? "create"
+        : item.operation,
       data,
     };
   });
@@ -431,6 +442,25 @@ export async function pushPendingChanges(
 
   const syncedIds: string[] = response.data.synced ?? [];
   for (const item of validPending) {
+    if (item.entity !== "payroll_profile") continue;
+    const failure = (response.data.failed ?? []).find(
+      (entry: { queueId: string; code: string }) => entry.queueId === item._id && entry.code === "REVISION_CONFLICT"
+    );
+    if (failure?.details?.remote) {
+      await recoverPayrollProfileRevision(companyId, JSON.parse(item.payload), failure.details.remote);
+    }
+  }
+  for (const failure of response.data.failed ?? []) {
+    if (failure.entity === "payroll_profile") {
+      console.error("PAYROLL PROFILE PUSH REJECTED:", {
+        queueId: failure.queueId,
+        entityId: failure.entityId,
+        code: failure.code,
+        message: failure.message,
+      });
+    }
+  }
+  for (const item of validPending) {
     if (!isInventorySyncEntity(item.entity)) continue;
     const failure = (response.data.failed ?? []).find((entry: { queueId: string; code: string }) =>
       entry.queueId === item._id && entry.code === "REVISION_CONFLICT");
@@ -463,6 +493,11 @@ export async function pushPendingChanges(
 
     // An acknowledgement applies to the sent queue entry, not edits made
     // while the network request was in flight.
+    if (item.entity === "payroll_profile") {
+      await acknowledgePayrollProfile(companyId, data, item._id, response.data.versions?.[item._id]);
+      successfullyProcessedQueueIds.push(item._id);
+      continue;
+    }
     if (item.entity === "inventory_transaction") {
       await acknowledgeStockOperation(companyId, data, item._id);
       successfullyProcessedQueueIds.push(item._id);
@@ -591,14 +626,6 @@ export async function pushPendingChanges(
 
       case "payroll_component":
         await markPayrollComponentSynced(companyId, data._id);
-        break;
-
-      case "payroll_profile":
-        await markPayrollEmployeeProfileSynced(
-          companyId,
-          data._id,
-          data.updatedAt
-        );
         break;
 
       case "payroll_run": {

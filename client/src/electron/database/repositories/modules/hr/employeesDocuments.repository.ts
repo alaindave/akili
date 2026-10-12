@@ -138,7 +138,7 @@ export async function uploadEmployeeDocument(
     mimeType: file.mimeType || "application/octet-stream",
     fileSize: file.buffer.length,
     hash,
-    serverVersion: file.serverVersion ?? 0,
+    serverVersion: existing?.serverVersion ?? file.serverVersion ?? 0,
     needsUpload: 1,
     isDeleted: 0,
     createdAt,
@@ -279,7 +279,9 @@ export async function upsertEmployeeDocument(
         companyId,
         entity: "employee_document",
         entityId: document._id,
-        operation: document.isDeleted ? "delete" : "update",
+        operation: document.isDeleted
+          ? "delete"
+          : incomingServerVersion === 0 ? "create" : "update",
         payload: JSON.stringify({
           ...document,
           localPath: normalizedLocalPath,
@@ -442,7 +444,7 @@ export async function updateEmployeeDocument(
       companyId,
       entity: "employee_document",
       entityId: document._id,
-      operation: "update",
+      operation: (document.serverVersion ?? 0) === 0 ? "create" : "update",
       payload: JSON.stringify({
         ...document,
         companyId,

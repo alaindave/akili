@@ -170,7 +170,10 @@ async function syncRecord(
       };
     }
     if (existing) requireBaseVersion(existing, data);
-    if (!existing && operation !== "create") {
+    // A profile may be deleted locally before its create reaches this server.
+    // Persist the validated tombstone so retries and other devices see deletion.
+    const missingProfileDeletion = entity === "payroll_profile" && operation === "delete";
+    if (!existing && operation !== "create" && !missingProfileDeletion) {
       throw new SyncConflict(
         "MISSING_RECORD",
         `${entity} ${_id} must be created before it can be ${operation}d.`

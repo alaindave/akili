@@ -79,6 +79,7 @@ export default function AddPayrollEmployeeProfileModal({
         type,
         calculationType,
         value: defaultValue,
+        taxable: 1,
       };
       await window.electron.hr.payrollProfile.create(
         user.companyId,

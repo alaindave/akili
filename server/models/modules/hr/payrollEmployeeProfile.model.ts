@@ -59,7 +59,6 @@ const PayrollEmployeeProfileSchema = new Schema<PayrollEmployeeProfileDocument>(
 
     componentId: {
       type: String,
-      required: true,
       index: true,
     },
 
@@ -161,8 +160,11 @@ const PayrollEmployeeProfileSchema = new Schema<PayrollEmployeeProfileDocument>(
 
 // One payroll profile per employee/component pair
 PayrollEmployeeProfileSchema.index(
-  { employeeId: 1, componentId: 1 },
-  { unique: true }
+  { companyId: 1, employeeId: 1, componentId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { isDeleted: 0 },
+  }
 );
 
 // Useful for payroll generation

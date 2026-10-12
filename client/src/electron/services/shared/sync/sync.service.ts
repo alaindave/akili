@@ -7,6 +7,7 @@ import {
   notifyPendingChanges,
 } from "../../../database/repositories/shared/sync.repository.js";
 import { SyncStatusEvent } from "../../../../common/types/shared/Sync.js";
+import { recoverPayrollProfileQueue } from "../../../database/repositories/modules/hr/payrollProfile.repository.js";
 
 const API_URL = app.isPackaged
   ? "https://leather-works.onrender.com"
@@ -75,6 +76,7 @@ export default async function sync(companyId: string) {
      */
 
     let pushSuccessful = false;
+    await recoverPayrollProfileQueue(companyId);
     let lastPushError: unknown = null;
 
     for (let attempt = 1; attempt <= MAX_SYNC_RETRIES; attempt++) {

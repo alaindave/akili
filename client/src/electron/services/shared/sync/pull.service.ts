@@ -1478,6 +1478,27 @@ export async function pullEntityByVersion<T>(
       },
 
       timeout: 90000,
+    }).catch((error: unknown) => {
+      if (!axios.isAxiosError(error)) throw error;
+
+      const body: unknown = error.response?.data;
+      const message = typeof body === "object" && body !== null &&
+        "message" in body && typeof body.message === "string"
+        ? body.message
+        : error.message;
+      const unsupportedInventory = error.response?.status === 400 &&
+        entity.startsWith("inventory_") &&
+        message === `Unknown sync entity: ${entity}`;
+
+      throw new Error(
+        `PULL ${entity} FROM ${API_URL}/sync/pull FAILED ` +
+        `(${error.response?.status ?? "network error"}): ${message}` +
+        (unsupportedInventory
+          ? ". This backend does not support inventory sync. Rebuild and restart " +
+            "the backend with the current server code. If VITE_API_URL changed, " +
+            "restart Electron to use the new backend."
+          : "")
+      );
     });
 
     const {

@@ -2,6 +2,7 @@ import { migratePayrollResultStatus } from "./utils/migratePayrollResultStatus.j
 import "dotenv/config";
 import { migrateTaskIncidentModules } from "./utils/migrateTaskIncidentModules.js";
 import { migratePayrollIndex } from "./utils/migratePayrollIndex.js";
+import { migratePayrollProfileIndex } from "./utils/migratePayrollProfileIndex.js";
 
 import express, { Request, Response } from "express";
 import http from "http";
@@ -163,6 +164,7 @@ async function startServer() {
 
     await mongoose.connect(mongoUri);
     await migratePayrollIndex();
+    await migratePayrollProfileIndex();
     await migrateTaskIncidentModules();
     await migratePayrollResultStatus();
 
