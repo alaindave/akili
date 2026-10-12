@@ -1,4 +1,5 @@
 import { InventoryBase } from "./InventoryBase.js";
+import type { InventoryReferenceType } from "./InventoryDocument.js";
 
 export interface InventoryMovement extends InventoryBase {
   movementId: string;
@@ -25,6 +26,6 @@ export interface InventoryMovement extends InventoryBase {
     | "PRODUCTION_CONSUMPTION"
     | "PRODUCTION_OUTPUT";
   occurredAt: string;
-  referenceType?: string;
+  referenceType?: InventoryReferenceType;
   referenceId?: string;
 }

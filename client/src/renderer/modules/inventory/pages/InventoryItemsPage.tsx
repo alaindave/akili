@@ -1,5 +1,6 @@
 import type { SkuNumberingSettings } from "../../../../common/types/inventory/StockSettings";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Alert,
   Badge,
@@ -58,6 +59,7 @@ export default function InventoryItemsPage() {
 }
 
 function CompanyItems({ companyId }: { companyId: string }) {
+  const navigate = useNavigate();
   const [numbering, setNumbering] = useState<SkuNumberingSettings>({
     enabled: false,
   });
@@ -150,7 +152,7 @@ function CompanyItems({ companyId }: { companyId: string }) {
           <Heading as="h1" fontSize="1.4rem" color="#03143B">
             Articles
           </Heading>
-          <Text fontSize="1rem" color="#737373">
+          <Text fontSize="1rem" color="gray.600">
             Catalogues des produits de stock
           </Text>
         </Box>
@@ -204,7 +206,13 @@ function CompanyItems({ companyId }: { companyId: string }) {
             </Badge>
           </HStack>
         </Flex>
-        <Flex p={5} gap={3} wrap="wrap" borderBottom="1px solid #EAEAEA" flexShrink={0}>
+        <Flex
+          p={5}
+          gap={3}
+          wrap="wrap"
+          borderBottom="1px solid #EAEAEA"
+          flexShrink={0}
+        >
           <InputGroup flex="1" minW="200px">
             <InputLeftElement pointerEvents="none" color="#909090">
               <FiSearch />
@@ -260,150 +268,174 @@ function CompanyItems({ companyId }: { companyId: string }) {
           </Select>
         </Flex>
         <Box flex="1" minH={0} overflow="auto">
-        {error ? (
-          <Stack p={8} align="start">
-            <Text role="alert" fontSize="sm">
-              {error}
-            </Text>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setRefresh((value) => value + 1)}
+          {error ? (
+            <Stack p={8} align="start">
+              <Text role="alert" fontSize="sm">
+                {error}
+              </Text>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setRefresh((value) => value + 1)}
+              >
+                Réessayer
+              </Button>
+            </Stack>
+          ) : loading ? (
+            <Stack
+              p={6}
+              spacing={5}
+              aria-label="Chargement des articles"
+              role="status"
             >
-              Réessayer
-            </Button>
-          </Stack>
-        ) : loading ? (
-          <Stack
-            p={6}
-            spacing={5}
-            aria-label="Chargement des articles"
-            role="status"
-          >
-            {[0, 1, 2, 3, 4].map((value) => (
-              <Skeleton
-                key={value}
-                height="36px"
-                startColor="#F5F5F5"
-                endColor="#E5E5E5"
-              />
-            ))}
-          </Stack>
-        ) : items.length === 0 ? (
-          <Stack align="center" spacing={3} py={20} px={6} textAlign="center">
-            <Flex
-              bg="#F5F5F5"
-              w={14}
-              h={14}
-              borderRadius="14px"
-              align="center"
-              justify="center"
-              mb={2}
-            >
-              <FiBox size={25} color="#737373" />
-            </Flex>
-            <Text fontWeight="600">
-              {filtered
-                ? "Aucun article trouvé"
-                : "Votre catalogue commence ici"}
-            </Text>
-            <Text fontSize="sm" color="#737373" maxW="350px">
-              {filtered
-                ? "Essayez une autre recherche ou modifiez vos filtres."
-                : "Ajoutez vos matières et produits pour organiser votre inventaire."}
-            </Text>
-            <Button
-              mt={2}
-              variant="outline"
-              size="sm"
-              onClick={filtered ? reset : () => setCreating(true)}
-            >
-              {filtered
-                ? "Réinitialiser les filtres"
-                : "Ajouter votre premier article"}
-            </Button>
-          </Stack>
-        ) : (
-          <Box whiteSpace="nowrap">
-            <Table
-              variant="simple"
-              size="md"
-              sx={{
-                th: {
-                  position: "sticky",
-                  top: 0,
-                  zIndex: 1,
-                  bg: "#FAFAFA",
-                  color: "#737373",
-                  fontSize: "10px",
-                  letterSpacing: "0.08em",
-                  fontWeight: 600,
-                  py: 3.5,
-                  borderColor: "#EAEAEA",
-                },
-                td: { borderColor: "#F0F0F0", py: 4, fontSize: "sm" },
-              }}
-            >
-              <Thead>
-                <Tr>
-                  <Th>Article</Th>
-                  <Th>Type</Th>
-                  <Th>Unité</Th>
-                  <Th>Suivi</Th>
-                  <Th isNumeric>Seuil de réappro.</Th>
-                  <Th>Statut</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {items.map((item) => (
-                  <Tr key={item._id} _hover={{ bg: "#FCFCFC" }}>
-                    <Td minW="230px" maxW="340px">
-                      <Text fontWeight="600" isTruncated title={item.name}>
-                        {item.name}
-                      </Text>
-                      <Text
-                        color="#858585"
-                        fontFamily="mono"
-                        fontSize="xs"
-                        mt={1}
-                      >
-                        {item.sku}
-                      </Text>
-                    </Td>
-                    <Td color="#525252">{itemTypeLabels[item.itemType]}</Td>
-                    <Td color="#525252">
-                      {units.find((unit) => unit._id === item.baseUnitId)
-                        ?.code ?? "—"}
-                    </Td>
-                    <Td color="#737373">
-                      {trackingLabels[item.trackingMethod]}
-                    </Td>
-                    <Td isNumeric color="#525252">
-                      {item.reorderPoint == null
-                        ? "—"
-                        : item.reorderPoint.toLocaleString("fr-FR")}
-                    </Td>
-                    <Td>
-                      <Badge
-                        textTransform="none"
-                        fontSize="xs"
-                        fontWeight="500"
-                        bg={item.isActive ? "#EEEEEE" : "white"}
-                        color={item.isActive ? "#333333" : "#858585"}
-                        border="1px solid #E5E5E5"
-                        borderRadius="full"
-                        px={2.5}
-                        py={0.5}
-                      >
-                        {item.isActive ? "Actif" : "Inactif"}
-                      </Badge>
-                    </Td>
+              {[0, 1, 2, 3, 4].map((value) => (
+                <Skeleton
+                  key={value}
+                  height="36px"
+                  startColor="#F5F5F5"
+                  endColor="#E5E5E5"
+                />
+              ))}
+            </Stack>
+          ) : items.length === 0 ? (
+            <Stack align="center" spacing={3} py={20} px={6} textAlign="center">
+              <Flex
+                bg="#F5F5F5"
+                w={14}
+                h={14}
+                borderRadius="14px"
+                align="center"
+                justify="center"
+                mb={2}
+              >
+                <FiBox size={25} color="#737373" />
+              </Flex>
+              <Text fontWeight="600">
+                {filtered
+                  ? "Aucun article trouvé"
+                  : "Votre catalogue commence ici"}
+              </Text>
+              <Text fontSize="sm" color="#737373" maxW="350px">
+                {filtered
+                  ? "Essayez une autre recherche ou modifiez vos filtres."
+                  : "Ajoutez vos matières et produits pour organiser votre inventaire."}
+              </Text>
+              <Button
+                mt={2}
+                variant="outline"
+                size="sm"
+                onClick={filtered ? reset : () => setCreating(true)}
+              >
+                {filtered
+                  ? "Réinitialiser les filtres"
+                  : "Ajouter votre premier article"}
+              </Button>
+            </Stack>
+          ) : (
+            <Box whiteSpace="nowrap">
+              <Table
+                variant="simple"
+                size="md"
+                sx={{
+                  th: {
+                    position: "sticky",
+                    top: 0,
+                    zIndex: 1,
+                    bg: "#FAFAFA",
+                    color: "#737373",
+                    fontSize: "10px",
+                    letterSpacing: "0.08em",
+                    fontWeight: 600,
+                    py: 3.5,
+                    borderColor: "#EAEAEA",
+                  },
+                  td: { borderColor: "#F0F0F0", py: 4, fontSize: "sm" },
+                }}
+              >
+                <Thead>
+                  <Tr>
+                    <Th>Article</Th>
+                    <Th>Type</Th>
+                    <Th>Unité</Th>
+                    <Th>Suivi</Th>
+                    <Th isNumeric>Seuil de réappro.</Th>
+                    <Th>Statut</Th>
                   </Tr>
-                ))}
-              </Tbody>
-            </Table>
-          </Box>
-        )}
+                </Thead>
+                <Tbody>
+                  {items.map((item) => (
+                    <Tr
+                      key={item._id}
+                      tabIndex={0}
+                      role="link"
+                      aria-label={`Voir l’article ${item.name}`}
+                      cursor="pointer"
+                      _hover={{ bg: "#F5F5F5" }}
+                      _focusVisible={{
+                        outline: "2px solid #525252",
+                        outlineOffset: "-2px",
+                      }}
+                      onClick={() =>
+                        navigate(
+                          `/inventory/items/${encodeURIComponent(item._id)}`
+                        )
+                      }
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          navigate(
+                            `/inventory/items/${encodeURIComponent(item._id)}`
+                          );
+                        }
+                      }}
+                    >
+                      <Td minW="230px" maxW="340px">
+                        <Text fontWeight="600" isTruncated title={item.name}>
+                          {item.name}
+                        </Text>
+                        <Text
+                          color="#858585"
+                          fontFamily="mono"
+                          fontSize="xs"
+                          mt={1}
+                        >
+                          {item.sku}
+                        </Text>
+                      </Td>
+                      <Td color="#525252">{itemTypeLabels[item.itemType]}</Td>
+                      <Td color="#525252">
+                        {units.find((unit) => unit._id === item.baseUnitId)
+                          ?.code ?? "—"}
+                      </Td>
+                      <Td color="#737373">
+                        {trackingLabels[item.trackingMethod]}
+                      </Td>
+                      <Td isNumeric color="#525252">
+                        {item.reorderPoint == null
+                          ? "—"
+                          : item.reorderPoint.toLocaleString("fr-FR")}
+                      </Td>
+                      <Td>
+                        <Badge
+                          textTransform="none"
+                          fontSize="xs"
+                          fontWeight="500"
+                          bg={item.isActive ? "#EEEEEE" : "white"}
+                          color={item.isActive ? "#333333" : "#858585"}
+                          border="1px solid #E5E5E5"
+                          borderRadius="full"
+                          px={2.5}
+                          py={0.5}
+                        >
+                          {item.isActive ? "Actif" : "Inactif"}
+                        </Badge>
+                      </Td>
+                    </Tr>
+                  ))}
+                </Tbody>
+              </Table>
+            </Box>
+          )}
         </Box>
         <Flex
           flexShrink={0}

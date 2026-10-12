@@ -1,3 +1,4 @@
+import { transaction } from "../../../db.js";
 import { all, get, run } from "../../../db.js";
 import fs from "fs/promises";
 import path from "path";
@@ -13,7 +14,6 @@ import {
 } from "../../../../../common/types/hr/employees/EmployeeDocuments.js";
 
 import { addToSyncQueue } from "../../shared/sync.repository.js";
-import { getEmployeeById } from "./employees.repository.js";
 
 // ============================================================
 // Helpers
@@ -83,8 +83,6 @@ export async function uploadEmployeeDocument(
 
   const hash = crypto.createHash("sha256").update(file.buffer).digest("hex");
 
-  const employee = await getEmployeeById(companyId, file.employeeId);
-
   // Installation-specific root directory.
   // This is NEVER stored in the database.
   const employeeDocumentsDir = getEmployeeDocumentsDir();
@@ -109,22 +107,10 @@ export async function uploadEmployeeDocument(
     _id = existing._id;
     createdAt = existing.createdAt;
 
-    // Resolve the stored relative path to the actual
-    // installation-specific file location.
-    try {
-      const existingAbsolutePath = resolveLocalDocumentPath(existing.localPath);
-
-      await fs.unlink(existingAbsolutePath);
-    } catch {
-      // Old file doesn't exist. Ignore.
-    }
+    // Keep the old immutable file until the replacement is durable.
   }
 
-  const fileName = `${sanitizeFilePart(
-    employee?.firstName ?? "employee"
-  )}_${sanitizeFilePart(employee?.lastName ?? "")}_${sanitizeFilePart(
-    file.documentType
-  )}${extension}`;
+  const fileName = `${_id}-${hash}${extension}`;
 
   // Actual filesystem path.
   const absolutePath = path.join(employeeFolder, fileName);
@@ -170,27 +156,28 @@ export async function uploadEmployeeDocument(
 export async function upsertEmployeeDocument(
   document: EmployeeDocument
 ): Promise<void> {
-  const companyId = document.companyId;
+  return transaction(async () => {
+    const companyId = document.companyId;
 
-  if (!companyId) {
-    throw new Error("Cannot upsert employee document without companyId");
-  }
+    if (!companyId) {
+      throw new Error("Cannot upsert employee document without companyId");
+    }
 
-  if (!document.employeeId) {
-    throw new Error("Cannot upsert employee document without employeeId");
-  }
+    if (!document.employeeId) {
+      throw new Error("Cannot upsert employee document without employeeId");
+    }
 
-  if (!document.fileName) {
-    throw new Error("Cannot upsert employee document without fileName");
-  }
+    if (!document.fileName) {
+      throw new Error("Cannot upsert employee document without fileName");
+    }
 
-  const incomingServerVersion = document.serverVersion ?? 0;
+    const incomingServerVersion = document.serverVersion ?? 0;
 
-  const existing = await get<{
-    serverVersion: number;
-    needsUpload: number;
-  }>(
-    `
+    const existing = await get<{
+      serverVersion: number;
+      needsUpload: number;
+    }>(
+      `
       SELECT
         serverVersion,
         needsUpload
@@ -198,33 +185,33 @@ export async function upsertEmployeeDocument(
       WHERE companyId = ?
         AND _id = ?
     `,
-    [companyId, document._id]
-  );
+      [companyId, document._id]
+    );
 
-  // ----------------------------------------------------------
-  // Do not overwrite a newer local/server version
-  // ----------------------------------------------------------
+    // ----------------------------------------------------------
+    // Do not overwrite a newer local/server version
+    // ----------------------------------------------------------
 
-  if (existing && existing.serverVersion > incomingServerVersion) {
-    return;
-  }
+    if (existing && existing.serverVersion > incomingServerVersion) {
+      return;
+    }
 
-  // ----------------------------------------------------------
-  // Do not overwrite local changes that haven't been synced
-  // ----------------------------------------------------------
+    // ----------------------------------------------------------
+    // Do not overwrite local changes that haven't been synced
+    // ----------------------------------------------------------
 
-  if (existing && existing.needsUpload === 1) {
-    return;
-  }
+    if (existing && existing.needsUpload === 1) {
+      return;
+    }
 
-  const normalizedLocalPath = buildRelativeDocumentPath(
-    companyId,
-    document.employeeId,
-    sanitizeFilePart(path.basename(document.fileName))
-  );
+    const normalizedLocalPath = buildRelativeDocumentPath(
+      companyId,
+      document.employeeId,
+      sanitizeFilePart(path.basename(document.fileName))
+    );
 
-  await run(
-    `
+    await run(
+      `
       INSERT INTO employees_documents (
         companyId,
         _id,
@@ -263,42 +250,43 @@ export async function upsertEmployeeDocument(
         createdAt = excluded.createdAt,
         updatedAt = excluded.updatedAt
     `,
-    [
-      companyId,
-      document._id,
-      document.employeeId,
-      document.uploadedBy,
-      document.documentType,
-      document.originalName,
-      document.fileName,
-      normalizedLocalPath,
-      document.mimeType,
-      document.fileSize,
-      document.hash,
-      incomingServerVersion,
-      document.needsUpload ? 1 : 0,
-      document.isDeleted ? 1 : 0,
-      document.createdAt,
-      document.updatedAt,
-    ]
-  );
+      [
+        companyId,
+        document._id,
+        document.employeeId,
+        document.uploadedBy,
+        document.documentType,
+        document.originalName,
+        document.fileName,
+        normalizedLocalPath,
+        document.mimeType,
+        document.fileSize,
+        document.hash,
+        incomingServerVersion,
+        document.needsUpload ? 1 : 0,
+        document.isDeleted ? 1 : 0,
+        document.createdAt,
+        document.updatedAt,
+      ]
+    );
 
-  // ----------------------------------------------------------
-  // Add local modifications to sync queue
-  // ----------------------------------------------------------
+    // ----------------------------------------------------------
+    // Add local modifications to sync queue
+    // ----------------------------------------------------------
 
-  if (document.needsUpload === 1) {
-    await addToSyncQueue({
-      companyId,
-      entity: "employee_document",
-      entityId: document._id,
-      operation: document.isDeleted ? "delete" : "update",
-      payload: JSON.stringify({
-        ...document,
-        localPath: normalizedLocalPath,
-      }),
-    });
-  }
+    if (document.needsUpload === 1) {
+      await addToSyncQueue({
+        companyId,
+        entity: "employee_document",
+        entityId: document._id,
+        operation: document.isDeleted ? "delete" : "update",
+        payload: JSON.stringify({
+          ...document,
+          localPath: normalizedLocalPath,
+        }),
+      });
+    }
+  });
 }
 
 // ============================================================
@@ -407,14 +395,15 @@ export async function updateEmployeeDocument(
   companyId: string,
   document: EmployeeDocument
 ) {
-  if (!companyId) {
-    throw new Error("Cannot update employee document without companyId");
-  }
+  return transaction(async () => {
+    if (!companyId) {
+      throw new Error("Cannot update employee document without companyId");
+    }
 
-  const now = new Date().toISOString();
+    const now = new Date().toISOString();
 
-  await run(
-    `
+    await run(
+      `
       UPDATE employees_documents
       SET
         uploadedBy = ?,
@@ -432,33 +421,34 @@ export async function updateEmployeeDocument(
         AND _id = ?
         AND isDeleted = 0
     `,
-    [
-      document.uploadedBy,
-      document.documentType,
-      document.originalName,
-      document.fileName,
-      document.localPath,
-      document.mimeType,
-      document.fileSize,
-      document.hash,
-      document.serverVersion,
-      document.needsUpload ? 1 : 0,
-      now,
-      companyId,
-      document._id,
-    ]
-  );
+      [
+        document.uploadedBy,
+        document.documentType,
+        document.originalName,
+        document.fileName,
+        document.localPath,
+        document.mimeType,
+        document.fileSize,
+        document.hash,
+        document.serverVersion,
+        document.needsUpload ? 1 : 0,
+        now,
+        companyId,
+        document._id,
+      ]
+    );
 
-  await addToSyncQueue({
-    companyId,
-    entity: "employee_document",
-    entityId: document._id,
-    operation: "update",
-    payload: JSON.stringify({
-      ...document,
+    await addToSyncQueue({
       companyId,
-      updatedAt: now,
-    }),
+      entity: "employee_document",
+      entityId: document._id,
+      operation: "update",
+      payload: JSON.stringify({
+        ...document,
+        companyId,
+        updatedAt: now,
+      }),
+    });
   });
 }
 
@@ -467,25 +457,26 @@ export async function updateEmployeeDocument(
 // ============================================================
 
 export async function deleteEmployeeDocument(companyId: string, _id: string) {
-  const now = new Date().toISOString();
+  return transaction(async () => {
+    const now = new Date().toISOString();
 
-  const document = await getEmployeeDocumentById(companyId, _id);
+    const document = await getEmployeeDocumentById(companyId, _id);
 
-  if (!document) {
-    return false;
-  }
+    if (!document) {
+      return false;
+    }
 
-  // Delete the physical file using the relative path.
-  try {
-    const absolutePath = resolveLocalDocumentPath(document.localPath);
+    // Delete the physical file using the relative path.
+    try {
+      const absolutePath = resolveLocalDocumentPath(document.localPath);
 
-    await fs.unlink(absolutePath);
-  } catch {
-    // File doesn't exist. Continue with soft delete.
-  }
+      await fs.unlink(absolutePath);
+    } catch {
+      // File doesn't exist. Continue with soft delete.
+    }
 
-  await run(
-    `
+    await run(
+      `
       UPDATE employees_documents
       SET
         isDeleted = 1,
@@ -494,23 +485,24 @@ export async function deleteEmployeeDocument(companyId: string, _id: string) {
       WHERE companyId = ?
         AND _id = ?
     `,
-    [now, companyId, _id]
-  );
+      [now, companyId, _id]
+    );
 
-  await addToSyncQueue({
-    companyId,
-    entity: "employee_document",
-    entityId: _id,
-    operation: "delete",
-    payload: JSON.stringify({
-      ...document,
+    await addToSyncQueue({
       companyId,
-      isDeleted: 1,
-      updatedAt: now,
-    }),
-  });
+      entity: "employee_document",
+      entityId: _id,
+      operation: "delete",
+      payload: JSON.stringify({
+        ...document,
+        companyId,
+        isDeleted: 1,
+        updatedAt: now,
+      }),
+    });
 
-  return true;
+    return true;
+  });
 }
 
 // ============================================================
@@ -538,8 +530,9 @@ export async function markEmployeeDocumentUploaded(
   companyId: string,
   id: string
 ) {
-  await run(
-    `
+  return transaction(async () => {
+    await run(
+      `
       UPDATE employees_documents
       SET
         needsUpload = 0,
@@ -547,10 +540,11 @@ export async function markEmployeeDocumentUploaded(
       WHERE companyId = ?
         AND _id = ?
     `,
-    [companyId, id]
-  );
+      [companyId, id]
+    );
 
-  return true;
+    return true;
+  });
 }
 
 // ============================================================
@@ -561,18 +555,20 @@ export async function markEmployeeDocumentNeedsUpload(
   companyId: string,
   id: string
 ) {
-  await run(
-    `
+  return transaction(async () => {
+    await run(
+      `
       UPDATE employees_documents
       SET
         needsUpload = 1
       WHERE companyId = ?
         AND _id = ?
     `,
-    [companyId, id]
-  );
+      [companyId, id]
+    );
 
-  return true;
+    return true;
+  });
 }
 
 // ============================================================
@@ -583,8 +579,9 @@ export async function markEmployeeDocumentSynced(
   companyId: string,
   _id: string
 ) {
-  await run(
-    `
+  return transaction(async () => {
+    await run(
+      `
       UPDATE employees_documents
       SET
         needsUpload = 0,
@@ -592,8 +589,9 @@ export async function markEmployeeDocumentSynced(
       WHERE companyId = ?
         AND _id = ?
     `,
-    [companyId, _id]
-  );
+      [companyId, _id]
+    );
 
-  return true;
+    return true;
+  });
 }

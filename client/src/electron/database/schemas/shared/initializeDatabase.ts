@@ -19,6 +19,7 @@ import { createInventoryWarehouseTable } from "../modules/inventory/inventory_wa
 import { createInventoryItemsTable } from "../modules/inventory/inventory_items.schema.js";
 import { createInventoryMovementsTables } from "../modules/inventory/inventory_movements.schema.js";
 import { initializeInventorySync } from "../modules/inventory/inventory_sync.schema.js";
+import { recoverUnqueuedHRChanges } from "../../repositories/shared/syncRecovery.repository.js";
 
 export async function initializeDatabase() {
   // Shared tables
@@ -45,6 +46,7 @@ export async function initializeDatabase() {
   await createInventoryMovementsTables();
   await createInventoryWarehouseTable();
   await initializeInventorySync();
+  await recoverUnqueuedHRChanges();
 
   console.log("DATABASE INITIALIZED");
 }

@@ -14,6 +14,7 @@ export class OpeningStockError extends Error {
 interface OpeningLine {
   itemId: string;
   warehouseId: string;
+  locationId?: string;
   quantity: number;
   unitCost: number;
   lotId?: string;
@@ -54,6 +55,7 @@ export function validateOpeningStock(input: OpeningStockInput) {
       !Number.isFinite(line.unitCost) ||
       line.unitCost < 0 ||
       !Number.isFinite(line.quantity * line.unitCost) ||
+      (line.locationId !== undefined && (typeof line.locationId !== "string" || !line.locationId.trim() || line.locationId.trim().length > 255)) ||
       (line.lotId != null && typeof line.lotId !== "string") ||
       (line.serialNumber != null && typeof line.serialNumber !== "string")
     ) {
@@ -66,6 +68,7 @@ export function validateOpeningStock(input: OpeningStockInput) {
     const key = JSON.stringify([
       line.itemId,
       line.warehouseId,
+      line.locationId?.trim() ?? "",
       line.lotId ?? "",
       line.serialNumber ?? "",
     ]);
@@ -243,6 +246,15 @@ export async function postOpeningStock(
           );
         }
 
+        if (line.locationId) {
+          const location = await models.inventory_location.findOne({
+            _id: line.locationId.trim(), companyId, warehouseId: warehouse._id, isDeleted: 0, isActive: 1,
+          }).session(session).lean();
+          if (!location) {
+            throw new OpeningStockError("INVALID_LOCATION", "L’emplacement est inactif, introuvable ou n’appartient pas à cet entrepôt.");
+          }
+        }
+
         const unit = await models.inventory_unit
           .findOne({
             _id: item.baseUnitId,
@@ -310,6 +322,7 @@ export async function postOpeningStock(
         const fields = {
           itemId: item._id,
           warehouseId: warehouse._id,
+          locationId: line.locationId?.trim() ?? "",
           quantity: line.quantity,
           unitId: item.baseUnitId,
           unitCost: line.unitCost,
@@ -362,7 +375,7 @@ export async function postOpeningStock(
           companyId,
           itemId: item._id,
           warehouseId: warehouse._id,
-          locationId: "",
+          locationId: fields.locationId,
           lotId: fields.lotId,
           serialNumber: fields.serialNumber,
         };

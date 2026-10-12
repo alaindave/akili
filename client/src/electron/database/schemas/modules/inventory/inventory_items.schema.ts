@@ -1,4 +1,4 @@
-import { run } from "../../../db.js";
+import { all, run } from "../../../db.js";
 
 export async function createInventoryItemsTable() {
   /*
@@ -122,6 +122,7 @@ export async function createInventoryItemsTable() {
     CREATE TABLE IF NOT EXISTS inventory_categories (
       _id TEXT PRIMARY KEY,
       companyId TEXT NOT NULL,
+      code TEXT,
       name TEXT NOT NULL,
       parentId TEXT,
       isActive INTEGER NOT NULL DEFAULT 1
@@ -138,6 +139,13 @@ export async function createInventoryItemsTable() {
       UNIQUE(companyId, code)
     );
   `);
+
+  const categoryColumns = await all<{ name: string }>("PRAGMA table_info(inventory_categories)");
+  if (!categoryColumns.some(column => column.name === "code")) {
+    await run("ALTER TABLE inventory_categories ADD COLUMN code TEXT");
+  }
+  // NULL legacy codes remain valid; never invent or discard business identifiers.
+  await run("CREATE UNIQUE INDEX IF NOT EXISTS idx_inventory_categories_code ON inventory_categories(companyId, code)");
 
   /*
    * =========================================================

@@ -31,6 +31,8 @@ import {
 import { FiArrowLeft, FiTrash2 } from "react-icons/fi";
 import useAdminUser from "../../../../store/auth.store";
 import useSyncStore from "../../../../store/sync.store";
+import type { InventoryLocation } from "../../../../common/types/inventory/InventoryWarehouse";
+import { locationTypeLabels } from "../../inventory/components/InventoryLocationForm";
 import type {
   OpeningStockDraft,
   OpeningStockLine,
@@ -105,16 +107,19 @@ export function StockInitializationSettings({
       ) : state.inventoryInitialized ? (
         <InitializedStock state={state} />
       ) : (
-        <Stack spacing={4} align="start">
+        <Stack
+          spacing={4}
+          align="center
+        "
+        >
           <Heading size="sm">Stock initial</Heading>
           <Text color="gray.600">
-            Entrez les quantités et les prix de vos articles par entrepôt. Vous
-            pouvez enregistrer un brouillon avant validation.
+            Entrez les quantités et les prix de vos articles par entrepôt.
           </Text>
           <Button
+            colorScheme="yellow"
             as={Link}
             to="/admin/settings/stock/initialization"
-            {...primaryButton}
           >
             Initialiser stock initial
           </Button>
@@ -145,6 +150,7 @@ function CompanyInitialization({ companyId }: { companyId: string }) {
     lines: [],
   });
   const [warehouseId, setWarehouseId] = useState("");
+  const [locationPath, setLocationPath] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
@@ -162,6 +168,7 @@ function CompanyInitialization({ companyId }: { companyId: string }) {
         setState(result);
         if (result.draft) setDraft(result.draft);
         setWarehouseId(result.warehouses[0]?._id ?? "");
+        setLocationPath([]);
         setError("");
       })
       .catch((err) => {
@@ -244,6 +251,34 @@ function CompanyInitialization({ companyId }: { companyId: string }) {
     Number.isFinite(value)
       ? value.toLocaleString("fr-FR", { maximumFractionDigits: 4 })
       : "—";
+  const locations = (state?.locations ?? []).filter((location) => location.warehouseId === warehouseId && location.isActive && !location.isDeleted);
+  const locationLevels: { options: InventoryLocation[]; selected?: InventoryLocation; parent?: InventoryLocation }[] = [];
+  let parent: InventoryLocation | undefined;
+  const visited = new Set<string>();
+  for (let depth = 0; ; depth++) {
+    const options = locations.filter((location) => (location.parentId || "") === (parent?._id ?? "") && !visited.has(location._id));
+    if (!options.length) break;
+    const selected = options.find((location) => location._id === locationPath[depth]);
+    locationLevels.push({ options, selected, parent });
+    if (!selected) break;
+    visited.add(selected._id);
+    parent = selected;
+  }
+  const locationId = parent?._id;
+  const locationLabel = (id?: string) => {
+    if (!id) return "Sans emplacement précis";
+    const names: string[] = [];
+    const seen = new Set<string>();
+    let current: string | undefined = id;
+    while (current && !seen.has(current)) {
+      seen.add(current);
+      const location = state?.locations.find((entry) => entry._id === current && entry.warehouseId === warehouseId);
+      if (!location) { names.unshift("Emplacement indisponible"); break; }
+      names.unshift(location.name);
+      current = location.parentId;
+    }
+    return names.join(" › ");
+  };
   return (
     <Box bg="#FAFAFA" minH="100vh" color="#262626" p={{ base: 5, md: 9 }}>
       <Box maxW="1200px" mx="auto">
@@ -272,7 +307,7 @@ function CompanyInitialization({ companyId }: { companyId: string }) {
           Initialisation du stock
         </Heading>
         <Text color="gray.600" mb={6}>
-          Saisissez votre stock initial par type d’article et par entrepôt.
+          Saisissez votre stock initial par type d’article, entrepôt et emplacement.
         </Text>
         {error && (
           <Alert status="error" mb={4}>
@@ -298,21 +333,41 @@ function CompanyInitialization({ companyId }: { companyId: string }) {
           </Box>
         ) : (
           <>
-            <FormControl maxW="420px" mb={6} isRequired>
-              <FormLabel>Entrepôt</FormLabel>
-              <Select
-                value={warehouseId}
-                onChange={(event) => setWarehouseId(event.target.value)}
-                isDisabled={busy}
-                placeholder="Sélectionner un entrepôt"
-              >
-                {state.warehouses.map((warehouse) => (
-                  <option key={warehouse._id} value={warehouse._id}>
-                    {warehouse.name}
-                  </option>
-                ))}
-              </Select>
-            </FormControl>
+            <Flex gap={4} wrap="wrap" mb={4} align="end">
+              <FormControl flex="1" minW="220px" maxW="420px" isRequired>
+                <FormLabel htmlFor="opening-warehouse">Entrepôt</FormLabel>
+                <Select
+                  id="opening-warehouse"
+                  value={warehouseId}
+                  onChange={(event) => { setWarehouseId(event.target.value); setLocationPath([]); }}
+                  isDisabled={busy}
+                  placeholder="Sélectionner un entrepôt"
+                >
+                  {state.warehouses.map((warehouse) => (
+                    <option key={warehouse._id} value={warehouse._id}>
+                      {warehouse.name}
+                    </option>
+                  ))}
+                </Select>
+              </FormControl>
+              {locationLevels.map(({ options, selected, parent: ancestor }, depth) => (
+                <FormControl key={ancestor?._id ?? "root"} flex="1" minW="220px" maxW="420px">
+                  <FormLabel htmlFor={`opening-location-${depth}`}>
+                    {ancestor ? `Sous-emplacement de ${ancestor.name}` : "Zone / emplacement"}
+                  </FormLabel>
+                  <Select id={`opening-location-${depth}`} value={selected?._id ?? ""} isDisabled={busy}
+                    onChange={(event) => setLocationPath((path) => [...path.slice(0, depth), ...(event.target.value ? [event.target.value] : [])])}>
+                    <option value="">{ancestor ? `Stocker dans ${ancestor.name}` : "Sans emplacement précis"}</option>
+                    {options.map((location) => <option key={location._id} value={location._id}>
+                      {locationTypeLabels[location.locationType]} · {location.name} ({location.code})
+                    </option>)}
+                  </Select>
+                </FormControl>
+              ))}
+            </Flex>
+            {warehouseId && <Text fontSize="sm" color="gray.600" mb={6}>
+              Emplacement des nouveaux articles : {locationLabel(locationId)}.
+            </Text>}
             {!state.warehouses.length && (
               <Alert status="warning" mb={4}>
                 Créez un entrepôt actif avant d’ajouter du stock.
@@ -369,6 +424,7 @@ function CompanyInitialization({ companyId }: { companyId: string }) {
                                   {
                                     itemId,
                                     warehouseId,
+                                    locationId,
                                     quantity: 1,
                                     unitCost: 0,
                                   },
@@ -386,7 +442,8 @@ function CompanyInitialization({ companyId }: { companyId: string }) {
                                   draft.lines.some(
                                     (line) =>
                                       line.itemId === item._id &&
-                                      line.warehouseId === warehouseId
+                                      line.warehouseId === warehouseId &&
+                                      (line.locationId ?? "") === (locationId ?? "")
                                   )
                                 }
                               >
@@ -400,6 +457,7 @@ function CompanyInitialization({ companyId }: { companyId: string }) {
                             <Thead>
                               <Tr>
                                 <Th>Article</Th>
+                                <Th>Emplacement</Th>
                                 <Th>Unité</Th>
                                 <Th>Quantité</Th>
                                 <Th>Prix unitaire</Th>
@@ -447,6 +505,9 @@ function CompanyInitialization({ companyId }: { companyId: string }) {
                                         }
                                       />
                                     )}
+                                  </Td>
+                                  <Td whiteSpace="normal" minW="140px" maxW="240px">
+                                    {locationLabel(line.locationId)}
                                   </Td>
                                   <Td>
                                     {state.units.find(
@@ -537,7 +598,7 @@ function CompanyInitialization({ companyId }: { companyId: string }) {
                               {!rows.length && (
                                 <Tr>
                                   <Td
-                                    colSpan={6}
+                                    colSpan={7}
                                     py={8}
                                     textAlign="center"
                                     color="gray.500"
@@ -592,9 +653,7 @@ function CompanyInitialization({ companyId }: { companyId: string }) {
               </HStack>
             </Flex>
             <Text mt={3} color="gray.600" fontSize="sm">
-              Le brouillon est enregistré sur cette machine. Une connexion est
-              nécessaire pour soumettre. La référence INI-AAAA-0001 est
-              attribuée à la validation.
+              Une connexion est nécessaire pour soumettre.
             </Text>
             {!valid && (
               <Alert status="warning" mt={3}>

@@ -1,3 +1,4 @@
+import { transaction } from "../../../db.js";
 import { randomUUID } from "crypto";
 import { all, get, run } from "../../../db.js";
 import { addToSyncQueue } from "../../shared/sync.repository.js";
@@ -91,6 +92,7 @@ export async function createPayrollSettings(
     | "isDeleted"
   >
 ): Promise<PayrollSettings> {
+  return transaction(async () => {
   const existing = await getPayrollSettings(companyId);
 
   if (existing) {
@@ -158,6 +160,7 @@ export async function createPayrollSettings(
   });
 
   return settings;
+  });
 }
 
 /**
@@ -169,6 +172,7 @@ export async function createPayrollSettings(
 export async function upsertPayrollSettings(
   settings: PayrollSettings
 ): Promise<PayrollSettings | null> {
+  return transaction(async () => {
   if (!settings) return null;
 
   console.log("SETTINGS TO UPSERT", settings);
@@ -247,6 +251,7 @@ export async function upsertPayrollSettings(
   );
 
   return settings;
+  });
 }
 
 /**
@@ -256,6 +261,7 @@ export async function updatePayrollSettings(
   companyId: string,
   settings: PayrollSettings
 ): Promise<PayrollSettings> {
+  return transaction(async () => {
   /*
    * Always verify both companyId and _id.
    */
@@ -324,6 +330,7 @@ export async function updatePayrollSettings(
   });
 
   return updatedSettings;
+  });
 }
 
 /**
@@ -339,6 +346,7 @@ export async function updatePayrollSettingsFields(
     >
   >
 ): Promise<PayrollSettings> {
+  return transaction(async () => {
   const existing = await getPayrollSettingsById(companyId, _id);
 
   if (!existing) {
@@ -402,6 +410,7 @@ export async function updatePayrollSettingsFields(
   });
 
   return updatedSettings;
+  });
 }
 
 /**
@@ -411,6 +420,7 @@ export async function deletePayrollSettings(
   companyId: string,
   _id: string
 ): Promise<void> {
+  return transaction(async () => {
   const existing = await getPayrollSettingsById(companyId, _id);
 
   if (!existing) {
@@ -448,6 +458,7 @@ export async function deletePayrollSettings(
     operation: "delete",
     payload: JSON.stringify(deletedSettings),
   });
+  });
 }
 
 /**
@@ -457,6 +468,7 @@ export async function restorePayrollSettings(
   companyId: string,
   _id: string
 ): Promise<PayrollSettings> {
+  return transaction(async () => {
   const existing = await getPayrollSettingsById(companyId, _id);
 
   if (!existing) {
@@ -496,6 +508,7 @@ export async function restorePayrollSettings(
   });
 
   return restoredSettings;
+  });
 }
 
 /**
@@ -505,6 +518,7 @@ export async function markPayrollSettingsSynced(
   companyId: string,
   _id: string
 ): Promise<void> {
+  return transaction(async () => {
   const now = new Date().toISOString();
 
   await run(
@@ -518,6 +532,7 @@ export async function markPayrollSettingsSynced(
     `,
     [now, _id, companyId]
   );
+  });
 }
 
 /**

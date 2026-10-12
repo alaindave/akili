@@ -11,7 +11,7 @@ export interface InventoryMovementListOptions {
   documentLineId?: string;
   movementType?: InventoryMovement["movementType"];
   direction?: InventoryMovement["direction"];
-  referenceType?: string;
+  referenceType?: InventoryMovement["referenceType"];
   referenceId?: string;
   fromDate?: string;
   toDate?: string;

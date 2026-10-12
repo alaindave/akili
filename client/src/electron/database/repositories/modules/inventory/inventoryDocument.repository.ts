@@ -11,7 +11,7 @@ export interface InventoryDocumentListOptions {
   warehouseId?: string;
   sourceWarehouseId?: string;
   destinationWarehouseId?: string;
-  referenceType?: string;
+  referenceType?: InventoryDocument["referenceType"];
   referenceId?: string;
   fromDate?: string;
   toDate?: string;

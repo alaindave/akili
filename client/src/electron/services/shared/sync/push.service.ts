@@ -1,6 +1,7 @@
 import axios from "axios";
+import { recoverStockOperations, acknowledgeStockOperation } from "../../../database/repositories/modules/inventory/inventoryPostingSync.repository.js";
 import { isInventorySyncEntity } from "../../../../common/types/inventory/InventorySync.js";
-import { acknowledgeInventorySnapshot } from "../../../database/repositories/modules/inventory/inventorySync.repository.js";
+import { acknowledgeInventorySnapshot, recoverInventoryAcknowledgement } from "../../../database/repositories/modules/inventory/inventorySync.repository.js";
 import { app } from "electron";
 import FormData from "form-data";
 import fs from "fs";
@@ -89,7 +90,11 @@ export async function pushPendingChanges(
    * ---------------------------------------------------------
    */
 
-  const pending = await getUnsyncedItems(companyId);
+  let pending = await getUnsyncedItems(companyId);
+  if (pending.some(item => ["inventory_transaction", "inventory_document", "inventory_document_line", "inventory_movement", "inventory_balance"].includes(item.entity))) {
+    await recoverStockOperations(companyId);
+    pending = await getUnsyncedItems(companyId);
+  }
 
   if (!pending.length) {
     console.log("NO PENDING CHANGES TO PUSH.", {
@@ -138,6 +143,8 @@ export async function pushPendingChanges(
   const obsoleteQueueIds: string[] = [];
 
   const validPending = [];
+  let legacyStockSnapshots = 0;
+  const inventoryRecords = new Set<string>();
   const latestPhotos = new Map<string, string>();
   const supersededPhotos = new Map<string, string[]>();
   for (const item of pending) {
@@ -146,6 +153,19 @@ export async function pushPendingChanges(
   }
 
   for (const item of pending) {
+    const snapshot = JSON.parse(item.payload);
+    if (["inventory_balance", "inventory_movement", "inventory_document_line"].includes(item.entity) ||
+        (item.entity === "inventory_document" && snapshot.status === "POSTED")) {
+      // Complete operations have been recovered above. Keep incomplete legacy
+      // snapshots locally for reconciliation; the server cannot accept them.
+      legacyStockSnapshots++;
+      continue;
+    }
+    if (isInventorySyncEntity(item.entity)) {
+      const recordKey = `${item.entity}:${item.entityId}`;
+      if (inventoryRecords.has(recordKey)) continue;
+      inventoryRecords.add(recordKey);
+    }
     if (
       item.entity === "employee_photo" &&
       latestPhotos.get(item.entityId) !== item._id
@@ -207,6 +227,9 @@ export async function pushPendingChanges(
    */
 
   if (!validPending.length) {
+    if (legacyStockSnapshots > 0) {
+      throw new Error(`${legacyStockSnapshots} enregistrement(s) de stock incomplet(s) nécessitent une réconciliation. Les données locales sont conservées.`);
+    }
     const remainingPending = await getUnsyncedItems(companyId);
 
     console.log("PUSH COMPLETE - ONLY OBSOLETE ITEMS WERE FOUND:", {
@@ -407,6 +430,14 @@ export async function pushPendingChanges(
    */
 
   const syncedIds: string[] = response.data.synced ?? [];
+  for (const item of validPending) {
+    if (!isInventorySyncEntity(item.entity)) continue;
+    const failure = (response.data.failed ?? []).find((entry: { queueId: string; code: string }) =>
+      entry.queueId === item._id && entry.code === "REVISION_CONFLICT");
+    if (failure?.details?.remote) {
+      await recoverInventoryAcknowledgement(companyId, item.entity, JSON.parse(item.payload), failure.details.remote);
+    }
+  }
   // Retire older photo snapshots only when the replacement was accepted.
   const supersededIds = syncedIds.flatMap(
     (id) => supersededPhotos.get(id) ?? []
@@ -432,18 +463,23 @@ export async function pushPendingChanges(
 
     // An acknowledgement applies to the sent queue entry, not edits made
     // while the network request was in flight.
+    if (item.entity === "inventory_transaction") {
+      await acknowledgeStockOperation(companyId, data, item._id);
+      successfullyProcessedQueueIds.push(item._id);
+      continue;
+    }
+    if (isInventorySyncEntity(item.entity)) {
+      await acknowledgeInventorySnapshot(companyId, item.entity, data, item._id, response.data.versions?.[item._id]);
+      successfullyProcessedQueueIds.push(item._id);
+      continue;
+    }
+
     if (
       stillPending.some(
         (entry) =>
           entry.entity === item.entity && entry.entityId === item.entityId
       )
     ) {
-      successfullyProcessedQueueIds.push(item._id);
-      continue;
-    }
-
-    if (isInventorySyncEntity(item.entity)) {
-      await acknowledgeInventorySnapshot(companyId, item.entity, data);
       successfullyProcessedQueueIds.push(item._id);
       continue;
     }

@@ -24,7 +24,7 @@ export async function markEmployeesAbsent(
    * ---------------------------------------------------------
    */
 
-  let dailyCheck = await getAttendanceDailyCheckByDate(companyId, date);
+  const dailyCheck = await getAttendanceDailyCheckByDate(companyId, date);
 
   if (!dailyCheck?.markLeaveCompleted) {
     console.log(

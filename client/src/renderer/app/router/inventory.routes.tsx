@@ -9,9 +9,11 @@ import { Outlet } from "react-router-dom";
 import { ModuleProvider } from "../../context/ModuleContext";
 import InventoryDashboardPage from "../../modules/inventory/pages/InventoryDashboardPage";
 import InventoryItemsPage from "../../modules/inventory/pages/InventoryItemsPage";
+import InventoryItemDetailsPage from "../../modules/inventory/pages/InventoryItemDetailsPage";
 import InventoryWarehousesPage from "../../modules/inventory/pages/InventoryWarehousesPage";
 import InventoryStocksPage from "../../modules/inventory/pages/InventoryStocksPage";
 import InventoryMovementsPage from "../../modules/inventory/pages/InventoryMovementsPage";
+import InventoryMovementDetailsPage from "../../modules/inventory/pages/InventoryMovementDetailsPage";
 // import InventoryDocumentsPage from "../modules/inventory/pages/InventoryDocumentsPage";
 // import InventoryCountPage from "../modules/inventory/pages/InventoryCountPage";
 
@@ -68,9 +70,13 @@ export const inventoryRoutes = {
           <Box flexShrink={0} h={{ base: "30%", md: "100%" }} sx={{ "& > div:first-of-type": { height: "100%", minHeight: 0 } }}>
             <InventoryNavBar />
           </Box>
-          <Box as="main" flex="1" minW={0} minH={0} overflow="hidden"><InventoryItemsPage /></Box>
+          <Box as="main" flex="1" minW={0} minH={0} overflow="hidden"><Outlet /></Box>
         </Flex>
       ),
+      children: [
+        { index: true, element: <InventoryItemsPage /> },
+        { path: ":itemId", element: <InventoryItemDetailsPage /> },
+      ],
     },
 
     {
@@ -116,9 +122,13 @@ export const inventoryRoutes = {
           <Box flexShrink={0} h={{ base: "30%", md: "100%" }} sx={{ "& > div:first-of-type": { height: "100%", minHeight: 0 } }}>
             <InventoryNavBar />
           </Box>
-          <Box as="main" flex="1" minW={0} minH={0} overflow="hidden"><InventoryMovementsPage /></Box>
+          <Box as="main" flex="1" minW={0} minH={0} overflow="hidden"><Outlet /></Box>
         </Flex>
       ),
+      children: [
+        { index: true, element: <InventoryMovementsPage /> },
+        { path: ":documentId", element: <InventoryMovementDetailsPage /> },
+      ],
     },
 
     // {

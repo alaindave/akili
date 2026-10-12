@@ -314,14 +314,10 @@ function CompanyStockSettings({ companyId }: { companyId: string }) {
                         <FiPlus size={18} />
                       </Button>
                     </Flex>
-                    <Text color="#737373" fontSize="sm" mb={5}>
-                      Classez vos matières et produits. Seules les catégories
-                      actives sont proposées lors de la création d’un article.
-                    </Text>
                     {data.categories.length === 0 ? (
                       <Text py={8} color="#858585" textAlign="center">
-                        Aucune catégorie. Cliquez sur « Nouvelle catégorie »
-                        pour créer votre première catégorie.
+                        Aucune catégorie. Cliquez sur le bouton « + » pour créer
+                        une catégorie.
                       </Text>
                     ) : (
                       <TableContainer>
@@ -338,9 +334,6 @@ function CompanyStockSettings({ companyId }: { companyId: string }) {
                               <Tr key={row._id}>
                                 <Td py={4}>
                                   <Text fontWeight="600">{row.name}</Text>
-                                  <Text fontSize="xs" color="#858585" mt={1}>
-                                    {row.code || "Sans code"}
-                                  </Text>
                                 </Td>
                                 <Td>
                                   <Badge textTransform="none" bg="#F1F1F1">
@@ -505,14 +498,10 @@ function CompanyStockSettings({ companyId }: { companyId: string }) {
                         <FiPlus size={18} />
                       </Button>
                     </Flex>
-                    <Text color="#737373" fontSize="sm" mb={5}>
-                      Définissez les unités utilisées pour mesurer les quantités
-                      de vos articles.
-                    </Text>
                     {data.units.length === 0 ? (
                       <Text py={8} color="#858585" textAlign="center">
                         Aucune unité de mesure. Cliquez sur le bouton « + » pour
-                        créer votre première unité.
+                        créer une unité.
                       </Text>
                     ) : (
                       <TableContainer>
@@ -733,10 +722,6 @@ function CompanyStockSettings({ companyId }: { companyId: string }) {
                     <Heading size="sm" mb={2}>
                       Numérotation des articles (SKU)
                     </Heading>
-                    <Text color="#737373" fontSize="sm" mb={6}>
-                      Attribuez une référence unique à chaque nouvel article.
-                      Les références existantes restent inchangées.
-                    </Text>
                     <Stack
                       spacing={5}
                       as="fieldset"
@@ -757,12 +742,6 @@ function CompanyStockSettings({ companyId }: { companyId: string }) {
                       >
                         Activer la numérotation automatique
                       </Checkbox>
-                      <Text fontSize="sm" color="#737373">
-                        Les trois premières lettres du nom de la catégorie, en
-                        majuscules, suivies d’un tiret et de cinq chiffres
-                        aléatoires. Une catégorie est obligatoire pour générer
-                        une référence.
-                      </Text>
                       <Box
                         border="1px dashed #D4D4D4"
                         bg="#FAFAFA"
@@ -773,12 +752,7 @@ function CompanyStockSettings({ companyId }: { companyId: string }) {
                           APERÇU DE LA RÉFÉRENCE
                         </Text>
                         <Text fontFamily="mono" fontSize="2xl" fontWeight="600">
-                          CUI-08342
-                        </Text>
-                        <Text mt={2} fontSize="xs" color="#737373">
-                          Exemple pour la catégorie « Cuir ». La référence est
-                          générée à l’enregistrement et vérifiée pour éviter les
-                          doublons.
+                          RAW-08342
                         </Text>
                       </Box>
                       <Button

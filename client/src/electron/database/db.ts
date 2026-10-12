@@ -1,6 +1,7 @@
 import sqlite3 from "sqlite3";
 import path from "path";
 import { app } from "electron";
+import { AsyncLocalStorage } from "node:async_hooks";
 
 // =====================
 // TYPES
@@ -44,8 +45,18 @@ export const db = new sqlite3.Database(dbPath, (err: Error | null) => {
 //  UNIFIED QUEUE (READ + WRITE)
 // =====================
 let queue: Promise<any> = Promise.resolve();
+const transactionContext = new AsyncLocalStorage<{ afterCommit: Array<() => void> }>();
+
+export function afterCommit(callback: () => void): void {
+  const current = transactionContext.getStore();
+  if (current) current.afterCommit.push(callback);
+  else callback();
+}
 
 function enqueue<T>(task: () => Promise<T>): Promise<T> {
+  // Nested repository calls share the transaction that already owns the queue.
+  // Other asynchronous callers still queue behind it.
+  if (transactionContext.getStore()) return task();
   const next = queue
     .catch(() => {}) // prevent chain break
     .then(task);
@@ -162,7 +173,9 @@ export const all = <T = unknown,>(
 //  TRANSACTIONS
 // =====================
 export async function transaction<T>(callback: () => Promise<T>): Promise<T> {
-  return enqueue(
+  if (transactionContext.getStore()) return callback();
+  const context = { afterCommit: [] as Array<() => void> };
+  const result = await enqueue(
     () =>
       new Promise<T>((resolve, reject) => {
         db.serialize(() => {
@@ -172,11 +185,11 @@ export async function transaction<T>(callback: () => Promise<T>): Promise<T> {
               return;
             }
 
-            callback()
+            transactionContext.run(context, callback)
               .then((result) => {
                 db.run("COMMIT", (commitErr) => {
                   if (commitErr) {
-                    reject(commitErr);
+                    db.run("ROLLBACK", () => reject(commitErr));
                     return;
                   }
 
@@ -192,6 +205,8 @@ export async function transaction<T>(callback: () => Promise<T>): Promise<T> {
         });
       })
   );
+  for (const notify of context.afterCommit) notify();
+  return result as T;
 }
 
 // =====================

@@ -313,7 +313,13 @@ function CompanyStocks({ companyId }: { companyId: string }) {
         flex="1"
         minH={0}
       >
-        <Flex p={5} gap={3} wrap="wrap" borderBottom="1px solid #EAEAEA" flexShrink={0}>
+        <Flex
+          p={5}
+          gap={3}
+          wrap="wrap"
+          borderBottom="1px solid #EAEAEA"
+          flexShrink={0}
+        >
           <InputGroup flex="1" minW="200px">
             <InputLeftElement pointerEvents="none" color="gray.500">
               <FiSearch />
@@ -390,100 +396,103 @@ function CompanyStocks({ companyId }: { companyId: string }) {
           )}
         </Flex>
         <Box flex="1" minH={0} overflow="auto">
-        {error ? (
-          <Stack p={6} align="start">
-            <Text role="alert">{error}</Text>
-            <Button onClick={() => setRefresh((value) => value + 1)}>
-              Réessayer
-            </Button>
-          </Stack>
-        ) : loading ? (
-          <Stack
-            p={6}
-            spacing={5}
-            role="status"
-            aria-label="Chargement des stocks"
-          >
-            {[0, 1, 2, 3, 4].map((value) => (
-              <Skeleton key={value} h="36px" />
-            ))}
-          </Stack>
-        ) : (
-          <Box whiteSpace="nowrap">
-            <Table
-              size="md"
-              sx={{
-                th: {
-                  position: "sticky",
-                  top: 0,
-                  zIndex: 1,
-                  bg: "#FAFAFA",
-                  color: "#737373",
-                  fontSize: "10px",
-                  letterSpacing: "0.08em",
-                  py: 3.5,
-                },
-                td: { py: 4, fontSize: "sm", borderColor: "#F0F0F0" },
-              }}
+          {error ? (
+            <Stack p={6} align="start">
+              <Text role="alert">{error}</Text>
+              <Button onClick={() => setRefresh((value) => value + 1)}>
+                Réessayer
+              </Button>
+            </Stack>
+          ) : loading ? (
+            <Stack
+              p={6}
+              spacing={5}
+              role="status"
+              aria-label="Chargement des stocks"
             >
-              <Thead>
-                <Tr>
-                  <Th>Article</Th>
-                  <Th>Entrepôt</Th>
-                  <Th>Emplacement</Th>
-                  <Th isNumeric>Disponible</Th>
-                  <Th isNumeric>Réservé</Th>
-                  <Th>Statut</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {filteredRows
-                  .slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
-                  .map((row) => {
-                    const state =
-                      statuses[stockStatus(row.available, row.item)];
-                    return (
-                      <Tr key={row.key} _hover={{ bg: "#FCFCFC" }}>
-                        <Td>
-                          <Text fontWeight="600">{row.item.name}</Text>
-                          <Text
-                            color="gray.500"
-                            fontSize="xs"
-                            fontFamily="mono"
-                            mt={1}
-                          >
-                            {row.item.sku}
-                          </Text>
-                        </Td>
-                        <Td>{warehouses.get(row.warehouseId) ?? "—"}</Td>
-                        <Td>{locations.get(row.locationId) ?? "—"}</Td>
-                        <Td isNumeric>{formatNumber(row.available)}</Td>
-                        <Td isNumeric>{formatNumber(row.reserved)}</Td>
-                        <Td>
-                          <Badge
-                            colorScheme={state.color}
-                            textTransform="none"
-                            borderRadius="full"
-                            px={2.5}
-                            py={0.5}
-                          >
-                            {state.label}
-                          </Badge>
-                        </Td>
-                      </Tr>
-                    );
-                  })}
-                {!filteredRows.length && (
+              {[0, 1, 2, 3, 4].map((value) => (
+                <Skeleton key={value} h="36px" />
+              ))}
+            </Stack>
+          ) : (
+            <Box whiteSpace="nowrap">
+              <Table
+                size="md"
+                sx={{
+                  th: {
+                    position: "sticky",
+                    top: 0,
+                    zIndex: 1,
+                    bg: "#FAFAFA",
+                    color: "#737373",
+                    fontSize: "10px",
+                    letterSpacing: "0.08em",
+                    py: 3.5,
+                  },
+                  td: { py: 4, fontSize: "sm", borderColor: "#F0F0F0" },
+                }}
+              >
+                <Thead>
                   <Tr>
-                    <Td colSpan={6} textAlign="center">
-                      <Text py={8}>Aucun stock à afficher.</Text>
-                    </Td>
+                    <Th>Article</Th>
+                    <Th>Entrepôt</Th>
+                    <Th>Emplacement</Th>
+                    <Th isNumeric>Disponible</Th>
+                    <Th isNumeric>Réservé</Th>
+                    <Th>Statut</Th>
                   </Tr>
-                )}
-              </Tbody>
-            </Table>
-          </Box>
-        )}
+                </Thead>
+                <Tbody>
+                  {filteredRows
+                    .slice(
+                      currentPage * PAGE_SIZE,
+                      (currentPage + 1) * PAGE_SIZE
+                    )
+                    .map((row) => {
+                      const state =
+                        statuses[stockStatus(row.available, row.item)];
+                      return (
+                        <Tr key={row.key} _hover={{ bg: "#FCFCFC" }}>
+                          <Td>
+                            <Text fontWeight="600">{row.item.name}</Text>
+                            <Text
+                              color="gray.500"
+                              fontSize="xs"
+                              fontFamily="mono"
+                              mt={1}
+                            >
+                              {row.item.sku}
+                            </Text>
+                          </Td>
+                          <Td>{warehouses.get(row.warehouseId) ?? "—"}</Td>
+                          <Td>{locations.get(row.locationId) ?? "—"}</Td>
+                          <Td isNumeric>{formatNumber(row.available)}</Td>
+                          <Td isNumeric>{formatNumber(row.reserved)}</Td>
+                          <Td>
+                            <Badge
+                              colorScheme={state.color}
+                              textTransform="none"
+                              borderRadius="full"
+                              px={2.5}
+                              py={0.5}
+                            >
+                              {state.label}
+                            </Badge>
+                          </Td>
+                        </Tr>
+                      );
+                    })}
+                  {!filteredRows.length && (
+                    <Tr>
+                      <Td colSpan={6} textAlign="center">
+                        <Text py={8}>Aucun stock à afficher.</Text>
+                      </Td>
+                    </Tr>
+                  )}
+                </Tbody>
+              </Table>
+            </Box>
+          )}
         </Box>
         <Flex
           flexShrink={0}

@@ -20,6 +20,7 @@ export async function createAttendance(
   companyId: string,
   input: CreateAttendanceDto
 ) {
+  return transaction(async () => {
   let { employeeId, date, clockIn, clockOut, status } = input;
 
   let lateMinutes = 0;
@@ -139,6 +140,7 @@ export async function createAttendance(
   });
 
   return getAttendanceById(companyId, _id);
+  });
 }
 
 /**
@@ -150,6 +152,7 @@ export async function createAbsenceLeaveAttendance(
   status: "CONGÉ" | "ABSENT",
   date: string = new Date().toISOString().split("T")[0]
 ) {
+  return transaction(async () => {
   const locked = await isAttendanceDateLocked(date);
 
   if (locked) {
@@ -245,6 +248,7 @@ export async function createAbsenceLeaveAttendance(
   }
 
   return createdAttendance;
+  });
 }
 
 /**
@@ -392,6 +396,7 @@ export async function getEmployeesWhoDidNotClockIn(
 export async function createAbsentAttendance(
   attendance: Attendance
 ): Promise<Attendance> {
+  return transaction(async () => {
   const locked = await isAttendanceDateLocked(attendance.date);
 
   if (locked) {
@@ -472,6 +477,7 @@ export async function createAbsentAttendance(
   });
 
   return absentAttendance;
+  });
 }
 
 /**
@@ -711,6 +717,7 @@ export async function updateAttendance(
   date: string,
   updates: Partial<AttendanceWithEmployee>
 ) {
+  return transaction(async () => {
   const locked = await isAttendanceDateLocked(date);
 
   if (locked) {
@@ -881,6 +888,7 @@ export async function updateAttendance(
   });
 
   return getAttendanceById(companyId, _id);
+  });
 }
 
 /**
@@ -890,6 +898,7 @@ export async function updateAttendance(
  * leave day is removed.
  */
 export async function deleteAttendance(companyId: string, _id: string) {
+  return transaction(async () => {
   const existing = await getAttendanceById(companyId, _id);
 
   if (!existing) {
@@ -1176,6 +1185,7 @@ export async function deleteAttendance(companyId: string, _id: string) {
   });
 
   return getAttendanceById(companyId, _id);
+  });
 }
 
 /**
@@ -1464,6 +1474,7 @@ async function reconcilePulledAttendance(attendance: Attendance) {
  * Mark attendance as synced.
  */
 export async function markAttendanceSynced(companyId: string, _id: string) {
+  return transaction(async () => {
   await run(
     `
     UPDATE attendances
@@ -1475,6 +1486,7 @@ export async function markAttendanceSynced(companyId: string, _id: string) {
     `,
     [_id, companyId]
   );
+  });
 }
 
 async function getAttendanceByIdIncludingDeleted(

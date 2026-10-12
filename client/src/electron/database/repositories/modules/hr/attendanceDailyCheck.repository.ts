@@ -1,3 +1,4 @@
+import { transaction } from "../../../db.js";
 import { requireAttendanceAdmin } from "./attendanceSettings.repository.js";
 import { randomUUID } from "crypto";
 import {
@@ -18,6 +19,7 @@ const now = () => new Date().toISOString();
 export async function createAttendanceDailyCheck(
   input: AttendanceDailyCheckPreparationInput
 ): Promise<AttendanceDailyCheck> {
+  return transaction(async () => {
   if (!input.markLeaveCompleted.completed) {
     throw new Error(
       "ATTENDANCE DAILY CHECK CANNOT BE CREATED BEFORE EMPLOYEES ON LEAVE HAVE BEEN PROCESSED."
@@ -116,11 +118,13 @@ export async function createAttendanceDailyCheck(
   });
 
   return record;
+  });
 }
 
 export async function upsertAttendanceDailyCheck(
   dailyCheck: AttendanceDailyCheck
 ): Promise<AttendanceDailyCheck> {
+  return transaction(async () => {
   // First try to find the record by its ID
   let local = await get<AttendanceDailyCheck>(
     `
@@ -319,6 +323,7 @@ export async function upsertAttendanceDailyCheck(
   }
 
   return created;
+  });
 }
 
 export async function completeMarkAbsent(
@@ -326,6 +331,7 @@ export async function completeMarkAbsent(
   completedAt: string,
   date: string = new Date().toISOString().split("T")[0]
 ): Promise<AttendanceDailyCheck> {
+  return transaction(async () => {
   const existing = await get<AttendanceDailyCheck>(
     `
       SELECT *
@@ -379,9 +385,11 @@ export async function completeMarkAbsent(
   });
 
   return record;
+  });
 }
 
 export async function prepareDailyAttendance(companyId: string, date: string) {
+  return transaction(async () => {
   const markAbsentResult = await markEmployeesAbsent(companyId, date);
   const markLeaveResult = await markEmployeesOnLeave(companyId);
 
@@ -400,6 +408,7 @@ export async function prepareDailyAttendance(companyId: string, date: string) {
     });
   }
   return;
+  });
 }
 
 export async function getAttendanceDailyCheckById(
@@ -463,6 +472,7 @@ export async function getAllAttendanceDailyChecks(): Promise<
 export async function verifyAttendanceDailyCheck(
   input: VerifyAttendanceDailyCheckInput
 ): Promise<AttendanceDailyCheck> {
+  return transaction(async () => {
   const existing = await getAttendanceDailyCheckByDate(
     input.companyId,
     input.date
@@ -512,11 +522,13 @@ export async function verifyAttendanceDailyCheck(
   });
 
   return updated;
+  });
 }
 
 export async function markAttendanceManagerNotified(
   input: MarkManagerNotifiedInput
 ): Promise<AttendanceDailyCheck> {
+  return transaction(async () => {
   console.log("NOTIFY MANAGER INPUT", input);
   const existing = await getAttendanceDailyCheckByDate(
     input.companyId,
@@ -569,11 +581,13 @@ export async function markAttendanceManagerNotified(
   });
 
   return updated;
+  });
 }
 
 export async function lockAttendanceDailyCheck(
   input: LockAttendanceDailyCheckInput
 ): Promise<AttendanceDailyCheck> {
+  return transaction(async () => {
   const existing = await getAttendanceDailyCheckByDate(
     input.companyId,
     input.date
@@ -639,6 +653,7 @@ export async function lockAttendanceDailyCheck(
   });
 
   return updated;
+  });
 }
 
 export async function isAttendanceDateLocked(date: string): Promise<boolean> {
@@ -661,6 +676,7 @@ export async function markAttendanceDailyCheckSynced(
   companyId: string,
   _id: string
 ) {
+  return transaction(async () => {
   await run(
     `
     UPDATE attendance_daily_checks
@@ -672,6 +688,7 @@ export async function markAttendanceDailyCheckSynced(
     `,
     [_id, companyId]
   );
+  });
 }
 
 export async function reopenAttendanceDailyCheck(
@@ -679,6 +696,7 @@ export async function reopenAttendanceDailyCheck(
   date: string,
   userId: string
 ) {
+  return transaction(async () => {
   await requireAttendanceAdmin(companyId, userId);
   const existing = await getAttendanceDailyCheckByDate(companyId, date);
   if (!existing) throw new Error("Aucun contrôle de présence pour cette date.");
@@ -702,4 +720,5 @@ export async function reopenAttendanceDailyCheck(
     payload: JSON.stringify(updated),
   });
   return updated;
+  });
 }

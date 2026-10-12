@@ -62,6 +62,7 @@ export async function createPayrollRun(
   input: PayrollBatchResult,
   payrollRunDto: PayrollRunDto
 ) {
+  return transaction(async () => {
   if (!payrollRunDto.companyId) {
     throw new Error("Company ID is required.");
   }
@@ -203,6 +204,7 @@ export async function createPayrollRun(
   });
 
   return payrollRun;
+  });
 }
 
 // ============================================================
@@ -844,6 +846,7 @@ export async function updatePayrollStatus(
   payrollRunId: string,
   status: PayrollStatus
 ) {
+  return transaction(async () => {
   if (!companyId) throw new Error("Company ID is required.");
   if (status !== "BROUILLON")
     throw new Error("Utilisez les actions individuelles des bulletins.");
@@ -897,6 +900,7 @@ export async function updatePayrollStatus(
   });
   await notifyPendingChanges(companyId);
   return true;
+  });
 }
 
 // ============================================================
@@ -1040,6 +1044,7 @@ export async function verifyPayrollRun(
   payrollRunId: string,
   admin: AdminUser
 ) {
+  return transaction(async () => {
   if (!companyId) {
     throw new Error("Company ID is required.");
   }
@@ -1173,6 +1178,7 @@ export async function verifyPayrollRun(
   await notifyPendingChanges(companyId);
 
   return true;
+  });
 }
 
 // Run status is derived from all active payslips, including those outside UI filters.
@@ -1372,6 +1378,7 @@ export async function savePayrollResult(
   payrollRunId: string,
   result: PayrollResult
 ) {
+  return transaction(async () => {
   if (!companyId) {
     throw new Error("Company ID is required.");
   }
@@ -1570,6 +1577,7 @@ export async function savePayrollResult(
   await notifyPendingChanges(companyId);
 
   return payrollResultId;
+  });
 }
 
 // ============================================================
@@ -1581,9 +1589,11 @@ export async function savePayrollResults(
   payrollRunId: string,
   results: PayrollResult[]
 ) {
+  return transaction(async () => {
   for (const result of results) {
     await savePayrollResult(companyId, payrollRunId, result);
   }
+  });
 }
 
 // ============================================================
@@ -1728,6 +1738,7 @@ export async function markPayrollRunSynced(
   _id: string,
   updatedAt?: string
 ) {
+  return transaction(async () => {
   return await run(
     `
     UPDATE payroll_runs
@@ -1748,6 +1759,7 @@ export async function markPayrollRunSynced(
       updatedAt ?? null,
     ]
   );
+  });
 }
 
 // ============================================================
@@ -1759,6 +1771,7 @@ export async function markPayrollResultSynced(
   _id: string,
   updatedAt?: string
 ) {
+  return transaction(async () => {
   return await run(
     `
     UPDATE payroll_results
@@ -1779,6 +1792,7 @@ export async function markPayrollResultSynced(
       updatedAt ?? null,
     ]
   );
+  });
 }
 
 // ============================================================
@@ -1786,6 +1800,7 @@ export async function markPayrollResultSynced(
 // ============================================================
 
 export async function markPayrollItemSynced(companyId: string, _id: string) {
+  return transaction(async () => {
   return await run(
     `
     UPDATE payroll_items
@@ -1799,6 +1814,7 @@ export async function markPayrollItemSynced(companyId: string, _id: string) {
     `,
     [new Date().toISOString(), companyId, _id]
   );
+  });
 }
 
 // ============================================================
@@ -1809,6 +1825,7 @@ export async function deletePayrollRun(
   companyId: string,
   payrollRunId: string
 ) {
+  return transaction(async () => {
   if (!companyId) {
     throw new Error("Company ID is required.");
   }
@@ -1972,4 +1989,5 @@ export async function deletePayrollRun(
   });
 
   return true;
+  });
 }

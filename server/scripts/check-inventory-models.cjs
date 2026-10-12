@@ -4,15 +4,16 @@ const path = require('node:path');
 const vm = require('node:vm');
 const ts = require('typescript');
 
-function load(name) {
-  const file = path.resolve(__dirname, `../models/modules/inventory/inventory${name}.model.ts`);
+function loadFile(file) {
   const module = { exports: {} };
   const code = ts.transpileModule(fs.readFileSync(file, 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true },
   }).outputText;
-  vm.runInThisContext(`(function (module, exports, require) { ${code}\n})`, { filename: file })(module, module.exports, require);
-  return module.exports.default;
+  vm.runInThisContext(`(function (module, exports, require) { ${code}\n})`, { filename: file })(module, module.exports,
+    name => name.startsWith('.') ? loadFile(path.resolve(path.dirname(file), name.replace(/\.js$/, '.ts'))) : require(name));
+  return module.exports;
 }
+const load = name => loadFile(path.resolve(__dirname, `../models/modules/inventory/inventory${name}.model.ts`)).default;
 
 const names = ['Item', 'Category', 'Unit', 'Movement', 'Balance', 'Document', 'DocumentLine', 'Warehouse', 'Location', 'SkuSettings'];
 const models = Object.fromEntries(names.map((name) => [name, load(name)]));
@@ -45,6 +46,12 @@ assert.equal(balance.locationId, '');
 assert.equal(balance.lotId, '');
 invalid('Balance', { quantityOnHand: 1, quantityReserved: 2 }, 'quantityReserved');
 valid('Document', { documentNumber: 'DOC', type: 'RECEIPT', status: 'DRAFT', documentDate: new Date() });
+const referenceTypes = loadFile(path.resolve(__dirname, '../models/modules/inventory/inventoryReferenceType.ts')).INVENTORY_REFERENCE_TYPES;
+for (const name of ['Document', 'Movement']) {
+  const fields = name === 'Document' ? { documentNumber: 'DOC', type: 'RECEIPT', status: 'DRAFT', documentDate: new Date() } : movement;
+  for (const referenceType of [...referenceTypes, null, undefined]) valid(name, { ...fields, referenceType });
+  for (const referenceType of ['INVALID', '', 'manual']) invalid(name, { ...fields, referenceType }, 'referenceType');
+}
 valid('DocumentLine', { documentId: 'doc', lineNumber: 1, itemId: 'item', quantity: 1, unitId: 'unit' });
 invalid('DocumentLine', { lineNumber: 1.5 }, 'lineNumber');
 valid('Warehouse', { code: 'WH', name: 'Warehouse' });

@@ -54,7 +54,7 @@ const SyncStatus = ({ onSync }: SyncStatusProps) => {
   const getStatus = () => {
     if (isPartialSync) {
       return {
-        text: "Synchronisation partielle",
+        text: "Modifications en attente",
         color: "yellow.600",
       };
     }

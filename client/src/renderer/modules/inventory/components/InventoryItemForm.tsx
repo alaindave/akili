@@ -1,4 +1,4 @@
-import { categorySkuPrefix } from "../../../../common/types/inventory/sku";
+import { itemTypeSkuPrefix } from "../../../../common/types/inventory/sku";
 import type { SkuNumberingSettings } from "../../../../common/types/inventory/StockSettings";
 import { useRef, useState, type FormEvent } from "react";
 import {
@@ -98,23 +98,14 @@ export default function InventoryItemForm({
   const initialFocusRef = useRef<HTMLInputElement>(null);
   const submitting = useRef(false);
   const busy = saving;
-  const selectedCategory = categories.find(
-    (category) => category._id === categoryId
-  );
-  const skuPreview = selectedCategory
-    ? `${categorySkuPrefix(selectedCategory.name)}-12345`
-    : "Sélectionnez le type d'article";
+  const skuPreview = `${itemTypeSkuPrefix(itemType)}-12345`;
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (submitting.current) return;
     setError("");
     if ((!autoGenerateSku && !sku.trim()) || !name.trim() || !baseUnitId) {
-      setError("Renseignez la référence, le nom et l’unité de base.");
-      return;
-    }
-    if (autoGenerateSku && !categoryId) {
-      setError("Sélectionnez une catégorie pour générer la référence SKU.");
+      setError("Entrez la référence, le nom et l’unité de base.");
       return;
     }
     if (
@@ -272,7 +263,7 @@ export default function InventoryItemForm({
                       ))}
                     </Select>
                   </FormControl>
-                  <FormControl isRequired={autoGenerateSku}>
+                  <FormControl>
                     <FormLabel htmlFor="item-category">Catégorie</FormLabel>
                     <Select
                       id="item-category"

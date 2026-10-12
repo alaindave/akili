@@ -1,6 +1,6 @@
 import { BrowserWindow } from "electron";
 import { SyncQueueItem } from "../../../../common/types/shared/Sync.js";
-import { all, run, runDirect } from "../../db.js";
+import { all, run, runDirect, afterCommit } from "../../db.js";
 
 export async function notifyPendingChanges(companyId: string): Promise<void> {
   try {
@@ -49,7 +49,7 @@ export async function addToSyncQueue(
     [item.companyId, item.entity, item.entityId, item.operation, item.payload]
   );
 
-  if (!withinTransaction) await notifyPendingChanges(item.companyId);
+  if (!withinTransaction) afterCommit(() => { void notifyPendingChanges(item.companyId); });
 
   return result.lastID;
 }

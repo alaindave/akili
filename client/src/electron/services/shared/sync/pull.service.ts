@@ -84,7 +84,7 @@ import {
 
 import { AttendanceDailyCheck } from "../../../../common/types/hr/attendance/AttendanceDailyCheck.js";
 
-import { all, get } from "../../../database/db.js";
+import { all, get, transaction } from "../../../database/db.js";
 
 import {
   getSyncState,
@@ -142,6 +142,11 @@ interface CompanyLogo {
 export async function pullLatestChanges(companyId: string) {
   console.log("PULL SERVICE API URL:", API_URL);
 
+  const errors: string[] = [];
+  async function pullIndependently<T>(...args: Parameters<typeof pullEntityByVersion<T>>): Promise<VersionPullResult<T>> {
+    try { return await pullEntityByVersion<T>(...args); }
+    catch (error) { errors.push(String(error)); return { items: [] }; }
+  }
   try {
     if (!companyId) {
       throw new Error("CANNOT PULL CHANGES: NO LOCAL COMPANY ID FOUND.");
@@ -153,7 +158,7 @@ export async function pullLatestChanges(companyId: string) {
        COMPANIES
     ===================================================== */
 
-    const companiesResult = await pullEntityByVersion<Company>(
+    const companiesResult = await pullIndependently<Company>(
       companyId,
       "company",
       syncCompanies
@@ -167,7 +172,7 @@ export async function pullLatestChanges(companyId: string) {
        COMPANY LOGO
     ===================================================== */
 
-    const companyLogosResult = await pullEntityByVersion<CompanyLogo>(
+    const companyLogosResult = await pullIndependently<CompanyLogo>(
       companyId,
       "company_logo",
       syncCompanyLogos
@@ -181,7 +186,7 @@ export async function pullLatestChanges(companyId: string) {
        ADMIN USERS
     ===================================================== */
 
-    const adminUsersResult = await pullEntityByVersion<AdminUser>(
+    const adminUsersResult = await pullIndependently<AdminUser>(
       companyId,
       "admin_user",
       syncAdminUsers
@@ -195,7 +200,7 @@ export async function pullLatestChanges(companyId: string) {
        EMPLOYEES
     ===================================================== */
 
-    const employeesResult = await pullEntityByVersion<Employee>(
+    const employeesResult = await pullIndependently<Employee>(
       companyId,
       "employee",
       syncEmployees
@@ -217,7 +222,7 @@ export async function pullLatestChanges(companyId: string) {
        EMPLOYEE DOCUMENTS
     ===================================================== */
 
-    const employeeDocumentsResult = await pullEntityByVersion<EmployeeDocument>(
+    const employeeDocumentsResult = await pullIndependently<EmployeeDocument>(
       companyId,
       "employee_document",
       syncEmployeeDocuments
@@ -231,7 +236,7 @@ export async function pullLatestChanges(companyId: string) {
        ATTENDANCES
     ===================================================== */
 
-    const attendancesResult = await pullEntityByVersion<Attendance>(
+    const attendancesResult = await pullIndependently<Attendance>(
       companyId,
       "attendance",
       syncAttendances
@@ -246,7 +251,7 @@ export async function pullLatestChanges(companyId: string) {
     ===================================================== */
 
     const attendanceDailyChecksResult =
-      await pullEntityByVersion<AttendanceDailyCheck>(
+      await pullIndependently<AttendanceDailyCheck>(
         companyId,
         "attendance_daily_check",
         syncAttendanceDailyChecks
@@ -261,7 +266,7 @@ export async function pullLatestChanges(companyId: string) {
        LEAVES
     ===================================================== */
 
-    const leavesResult = await pullEntityByVersion<Leave>(
+    const leavesResult = await pullIndependently<Leave>(
       companyId,
       "leave",
       syncLeaves
@@ -275,7 +280,7 @@ export async function pullLatestChanges(companyId: string) {
        TASKS
     ===================================================== */
 
-    const tasksResult = await pullEntityByVersion<Task>(
+    const tasksResult = await pullIndependently<Task>(
       companyId,
       "task",
       syncTasks
@@ -284,7 +289,7 @@ export async function pullLatestChanges(companyId: string) {
     latestServerTime = tasksResult.serverTime ?? latestServerTime;
 
     const tasks = tasksResult.items;
-    const incidentsResult = await pullEntityByVersion<Incident>(
+    const incidentsResult = await pullIndependently<Incident>(
       companyId,
       "incident",
       async (items) => {
@@ -298,7 +303,7 @@ export async function pullLatestChanges(companyId: string) {
        PAYROLL SETTINGS
     ===================================================== */
 
-    const payrollSettingsResult = await pullEntityByVersion<PayrollSettings>(
+    const payrollSettingsResult = await pullIndependently<PayrollSettings>(
       companyId,
       "payroll_settings",
       syncPayrollSettings
@@ -312,7 +317,7 @@ export async function pullLatestChanges(companyId: string) {
        PAYROLL COMPONENTS
     ===================================================== */
 
-    const payrollComponentsResult = await pullEntityByVersion<PayrollComponent>(
+    const payrollComponentsResult = await pullIndependently<PayrollComponent>(
       companyId,
       "payroll_component",
       syncPayrollComponents
@@ -327,7 +332,7 @@ export async function pullLatestChanges(companyId: string) {
     ===================================================== */
 
     const payrollEmployeeProfilesResult =
-      await pullEntityByVersion<PayrollEmployeeProfile>(
+      await pullIndependently<PayrollEmployeeProfile>(
         companyId,
         "payroll_profile",
         syncPayrollEmployeeProfiles
@@ -342,7 +347,7 @@ export async function pullLatestChanges(companyId: string) {
        PAYROLL RUNS
     ===================================================== */
 
-    const payrollRunsResult = await pullEntityByVersion<PayrollRun>(
+    const payrollRunsResult = await pullIndependently<PayrollRun>(
       companyId,
       "payroll_run",
       syncPayrollRuns
@@ -356,7 +361,7 @@ export async function pullLatestChanges(companyId: string) {
        PAYROLL RESULTS
     ===================================================== */
 
-    const payrollResultsResult = await pullEntityByVersion<PayrollResult>(
+    const payrollResultsResult = await pullIndependently<PayrollResult>(
       companyId,
       "payroll_result",
       syncPayrollResults
@@ -371,7 +376,7 @@ export async function pullLatestChanges(companyId: string) {
        PAYROLL ITEMS
     ===================================================== */
 
-    const payrollItemsResult = await pullEntityByVersion<PayrollItem>(
+    const payrollItemsResult = await pullIndependently<PayrollItem>(
       companyId,
       "payroll_item",
       syncPayrollItems
@@ -387,7 +392,7 @@ export async function pullLatestChanges(companyId: string) {
     for (const entity of Object.keys(
       INVENTORY_SYNC_TABLES
     ) as InventorySyncEntity[]) {
-      const result = await pullEntityByVersion<Record<string, any>>(
+      const result = await pullIndependently<Record<string, any>>(
         companyId,
         entity,
         (items) => applyInventoryBatch(companyId, entity, items)
@@ -395,7 +400,8 @@ export async function pullLatestChanges(companyId: string) {
       latestServerTime = result.serverTime ?? latestServerTime;
     }
 
-    if (photoSyncError) throw photoSyncError;
+    if (photoSyncError) errors.push(String(photoSyncError));
+    if (errors.length) throw new Error(errors.join("\n"));
 
     /* =====================================================
        SYNC METADATA
@@ -1432,11 +1438,14 @@ export async function pullEntityByVersion<T>(
   limit = 500,
   cursorEntity = entity
 ): Promise<VersionPullResult<T>> {
-  const syncState = await getSyncState(companyId, cursorEntity);
+  await getSyncState(companyId, cursorEntity);
 
   const token = await getToken();
 
-  let afterVersion = syncState.lastPulledVersion ?? 0;
+  // Reconcile from zero on each cycle. Counters allocated before a remote write
+  // commits are not safe durable watermarks; this also repairs legacy skipped rows.
+  let afterVersion = 0;
+  let deferred = false;
 
   const allItems: T[] = [];
 
@@ -1502,21 +1511,18 @@ export async function pullEntityByVersion<T>(
 
     // A failed push must not let a pull overwrite the remaining local edits or
     // mark them synced. Retain this page until those edits are acknowledged.
-    const pending = await getUnsyncedItems(companyId);
-    const hasPendingChanges = pending.some(
-      (item) =>
-        item.entity === cursorEntity ||
-        (entity === "task" && item.entity === "task_comment") ||
-        (entity === "admin_user" && item.entity === "user_notes") ||
-        (entity === "company" && item.entity === "company_logo")
-    );
-    const succeeded = !hasPendingChanges && (await syncBatch(batch));
-
-    if (!succeeded) {
-      throw new Error(
-        `${cursorEntity.toUpperCase()} SYNC FAILED AFTER VERSION ` +
-          `${afterVersion}. SYNC CURSOR WAS NOT ADVANCED.`
-      );
+    for (const row of batch as Array<T & { _id?: string }>) {
+      const succeeded = await transaction(async () => {
+        const pending = await getUnsyncedItems(companyId);
+        const blocked = pending.some(item =>
+          (item.entity === cursorEntity && item.entityId === row._id) ||
+          (entity === "task" && item.entity === "task_comment" && JSON.parse(item.payload).taskId === row._id) ||
+          (entity === "admin_user" && item.entity === "user_notes" && item.entityId === row._id) ||
+          (entity === "company" && item.entity === "company_logo") ||
+          (entity.startsWith("inventory_") && item.entity === "inventory_transaction"));
+        return !blocked && await syncBatch([row]);
+      });
+      if (!succeeded) deferred = true;
     }
 
     const newVersion = Number(nextVersion ?? afterVersion);
@@ -1536,7 +1542,7 @@ export async function pullEntityByVersion<T>(
       );
     }
 
-    await updateLastPulledVersion(companyId, cursorEntity, newVersion);
+    if (!deferred) await updateLastPulledVersion(companyId, cursorEntity, newVersion);
 
     afterVersion = newVersion;
 
@@ -1544,6 +1550,8 @@ export async function pullEntityByVersion<T>(
 
     hasMore = Boolean(serverHasMore);
   }
+
+  if (deferred) throw new Error(`${cursorEntity.toUpperCase()} has deferred records. SYNC CURSOR WAS NOT ADVANCED past the conflict.`);
 
   console.log(`${entity.toUpperCase()} VERSION SYNC COMPLETE:`, {
     companyId,

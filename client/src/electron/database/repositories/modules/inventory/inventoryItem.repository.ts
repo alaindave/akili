@@ -1,4 +1,5 @@
-import { run, runDirect, get, all } from "../../../db.js";
+import { run, runDirect, get, all, afterCommit } from "../../../db.js";
+import { notifyPendingChanges } from "../../shared/sync.repository.js";
 
 import type {
   InventoryItem,
@@ -425,6 +426,7 @@ export class InventoryItemRepository {
       ]
     );
 
+    if (!item.synced) afterCommit(() => { void notifyPendingChanges(item.companyId); });
     return item;
   }
 
@@ -480,6 +482,7 @@ export class InventoryItemRepository {
       ]
     );
 
+    if (!item.synced) afterCommit(() => { void notifyPendingChanges(item.companyId); });
     return item;
   }
 
@@ -549,6 +552,7 @@ export class InventoryItemRepository {
       ]
     );
 
+    afterCommit(() => { void notifyPendingChanges(companyId); });
     return this.getById(companyId, id);
   }
 
@@ -577,6 +581,7 @@ export class InventoryItemRepository {
       `,
       [updatedAt, companyId, id]
     );
+    afterCommit(() => { void notifyPendingChanges(companyId); });
   }
 
   /*
@@ -604,6 +609,7 @@ export class InventoryItemRepository {
       `,
       [updatedAt, companyId, id]
     );
+    afterCommit(() => { void notifyPendingChanges(companyId); });
   }
 
   /*
@@ -630,6 +636,7 @@ export class InventoryItemRepository {
       `,
       [updatedAt, companyId, id]
     );
+    afterCommit(() => { void notifyPendingChanges(companyId); });
   }
 
   /*
@@ -656,6 +663,7 @@ export class InventoryItemRepository {
       `,
       [updatedAt, companyId, id]
     );
+    afterCommit(() => { void notifyPendingChanges(companyId); });
   }
 
   /*

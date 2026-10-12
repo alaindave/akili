@@ -6,8 +6,16 @@ type InventoryMovementListOptions = import("../../database/repositories/modules/
 }).InventoryMovementListOptions;
 
 import { invoke } from "../../ipc/ipc.cjs";
+type TransactionInput = import("../../../common/types/inventory/InventoryTransaction.js", {
+  with: { "resolution-mode": "require" },
+}).InventoryTransactionInput;
+type TransactionResult = import("../../../common/types/inventory/InventoryTransaction.js", {
+  with: { "resolution-mode": "require" },
+}).InventoryTransactionResult;
 
 export const inventoryMovementApi = {
+  postTransaction: (companyId: string, input: TransactionInput): Promise<TransactionResult> =>
+    invoke("inventory:movement:postTransaction", companyId, input),
   getById: (
     companyId: string,
     id: string

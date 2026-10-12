@@ -1,4 +1,5 @@
 import mongoose, { Schema, Model } from "mongoose";
+import { INVENTORY_REFERENCE_TYPES, type InventoryReferenceType } from "./inventoryReferenceType.js";
 
 export interface InventoryMovementDocument {
   _id: string;
@@ -18,7 +19,7 @@ export interface InventoryMovementDocument {
   totalCost?: number | null;
   movementType: string;
   occurredAt: Date;
-  referenceType?: string | null;
+  referenceType?: InventoryReferenceType | null;
   referenceId?: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -45,7 +46,7 @@ const schema = new Schema<InventoryMovementDocument>(
     totalCost: { type: Number, min: 0 },
     movementType: { type: String, required: true },
     occurredAt: { type: Date, required: true },
-    referenceType: { type: String },
+    referenceType: { type: String, enum: [...INVENTORY_REFERENCE_TYPES, null] },
     referenceId: { type: String },
     createdAt: { type: Date, required: true },
     updatedAt: { type: Date, required: true },

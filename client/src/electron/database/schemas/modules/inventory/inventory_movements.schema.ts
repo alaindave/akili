@@ -1,4 +1,7 @@
 import { run } from "../../../db.js";
+import { INVENTORY_REFERENCE_TYPES } from "../../../../../common/types/inventory/InventoryDocument.js";
+
+const referenceTypesSql = INVENTORY_REFERENCE_TYPES.map((value) => `'${value}'`).join(", ");
 
 export async function createInventoryMovementsTables() {
   /*
@@ -28,7 +31,7 @@ export async function createInventoryMovementsTables() {
       totalCost REAL,
       movementType TEXT NOT NULL,
       occurredAt TEXT NOT NULL,
-      referenceType TEXT,
+      referenceType TEXT CHECK (referenceType IS NULL OR referenceType IN (${referenceTypesSql})),
       referenceId TEXT,
       createdAt TEXT NOT NULL,
       updatedAt TEXT NOT NULL,
@@ -113,7 +116,7 @@ export async function createInventoryMovementsTables() {
       warehouseId TEXT,
       sourceWarehouseId TEXT,
       destinationWarehouseId TEXT,
-      referenceType TEXT,
+      referenceType TEXT CHECK (referenceType IS NULL OR referenceType IN (${referenceTypesSql})),
       referenceId TEXT,
       reason TEXT,
       documentDate TEXT NOT NULL,
@@ -606,6 +609,21 @@ export async function createInventoryMovementsTables() {
       serverVersion
     );
   `);
+
+  // CREATE TABLE IF NOT EXISTS does not add CHECK constraints to existing tables.
+  // These idempotent guards upgrade them without rebuilding tables or touching
+  // historical rows, foreign keys, indexes, or synchronization triggers.
+  for (const table of ["inventory_documents", "inventory_movements"]) {
+    await run(`CREATE TRIGGER IF NOT EXISTS ${table}_reference_type_insert
+      BEFORE INSERT ON ${table}
+      WHEN NEW.referenceType IS NOT NULL AND NEW.referenceType NOT IN (${referenceTypesSql})
+      BEGIN SELECT RAISE(ABORT, 'Invalid inventory referenceType'); END`);
+    await run(`CREATE TRIGGER IF NOT EXISTS ${table}_reference_type_update
+      BEFORE UPDATE OF referenceType ON ${table}
+      WHEN NEW.referenceType IS NOT OLD.referenceType
+        AND NEW.referenceType IS NOT NULL AND NEW.referenceType NOT IN (${referenceTypesSql})
+      BEGIN SELECT RAISE(ABORT, 'Invalid inventory referenceType'); END`);
+  }
 
   console.log(
     "INVENTORY MOVEMENTS, BALANCES, DOCUMENTS AND DOCUMENT LINES TABLES INITIALIZED"

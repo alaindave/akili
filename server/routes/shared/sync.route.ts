@@ -52,6 +52,7 @@ import PayrollSettings from "../../models/modules/hr/payrollSettings.model.js";
 import AttendanceDailyCheck from "../../models/modules/hr/attendanceDailyCheck.model.js";
 import supabase from "../../services/supabase.service.js";
 
+import { postSyncedInventory, StockSyncConflict } from "../../services/inventoryPosting.service.js";
 const router = express.Router();
 
 router.post(
@@ -363,6 +364,7 @@ router.post(
        */
 
       const synced: string[] = [];
+      const versions: Record<string, number> = {};
       const failed: {
         queueId: string;
         entity: string;
@@ -383,6 +385,7 @@ router.post(
       for (const item of items) {
         const { queueId, entity, operation, data } = item ?? {};
 
+        let result: { serverVersion?: number } | undefined;
         try {
           /*
            * ------------------------------------------------------
@@ -406,6 +409,10 @@ router.post(
             );
 
           switch (entity) {
+            case "inventory_transaction": {
+              result = await postSyncedInventory(companyId, data);
+              break;
+            }
             /*
              * ====================================================
              * COMPANY
@@ -413,7 +420,7 @@ router.post(
              */
 
             case "company": {
-              const result = await syncCompany(operation, data);
+              result = await syncCompany(operation, data);
 
               console.log(
                 `COMPANY ${data.companyId} SERVER VERSION:`,
@@ -446,7 +453,7 @@ router.post(
                 size: file?.size,
               });
 
-              const result = await syncCompanyLogo(data, file);
+              result = await syncCompanyLogo(data, file);
 
               console.log(
                 `COMPANY LOGO ${data.companyId} SERVER VERSION:`,
@@ -463,7 +470,7 @@ router.post(
              */
 
             case "employee": {
-              const result = await syncEmployee(operation, data);
+              result = await syncEmployee(operation, data);
 
               console.log(
                 `EMPLOYEE ${data._id} COMPANY ${companyId} SERVER VERSION:`,
@@ -480,7 +487,7 @@ router.post(
              */
 
             case "attendance": {
-              const result = await syncAttendance(operation, data);
+              result = await syncAttendance(operation, data);
 
               console.log(
                 `ATTENDANCE ${data._id} COMPANY ${companyId} SERVER VERSION:`,
@@ -497,7 +504,7 @@ router.post(
              */
 
             case "attendance_daily_check": {
-              const result = await syncAttendanceDailyCheck(operation, data);
+              result = await syncAttendanceDailyCheck(operation, data);
 
               console.log(
                 `ATTENDANCE DAILY CHECK ${data._id} COMPANY ${companyId} SERVER VERSION:`,
@@ -514,7 +521,7 @@ router.post(
              */
 
             case "leave": {
-              const result = await syncLeave(operation, data);
+              result = await syncLeave(operation, data);
 
               console.log(
                 `LEAVE ${data._id} COMPANY ${companyId} SERVER VERSION:`,
@@ -536,7 +543,7 @@ router.post(
             }
 
             case "task": {
-              const result = await syncTask(operation, data);
+              result = await syncTask(operation, data);
 
               console.log(
                 `TASK ${data._id} COMPANY ${companyId} SERVER VERSION:`,
@@ -553,7 +560,7 @@ router.post(
              */
 
             case "task_comment": {
-              const result = await syncTaskComment(operation, data);
+              result = await syncTaskComment(operation, data);
 
               console.log(
                 `TASK COMMENT ${data._id} COMPANY ${companyId} SERVER VERSION:`,
@@ -570,7 +577,7 @@ router.post(
              */
 
             case "user_notes": {
-              const result = await syncUserNotes(data);
+              result = await syncUserNotes(data);
 
               console.log(
                 `USER NOTES ${data._id} COMPANY ${companyId} SERVER VERSION:`,
@@ -593,7 +600,7 @@ router.post(
 
               console.log("EMPLOYEE PHOTO TO UPDATE:", file);
 
-              const result = await syncEmployeePhoto(data, file);
+              result = await syncEmployeePhoto(data, file);
 
               console.log(
                 `EMPLOYEE PHOTO ${data._id} COMPANY ${companyId} SERVER VERSION:`,
@@ -610,13 +617,15 @@ router.post(
              */
 
             case "employee_document": {
+              if (operation !== "delete" && documentFiles.filter(f => f.originalname === (data.attachmentKey || data.fileName)).length !== 1)
+                throw new SyncConflict("AMBIGUOUS_ATTACHMENT", "Document requires exactly one uniquely identified attachment.");
               const file = documentFiles.find(
-                (f) => f.originalname === data.fileName
+                (f) => f.originalname === (data.attachmentKey || data.fileName)
               );
 
               console.log("file name", data.fileName);
 
-              const result = await syncEmployeeDocument(operation, data, file);
+              result = await syncEmployeeDocument(operation, data, file);
 
               console.log(
                 `EMPLOYEE DOCUMENT ${data._id} COMPANY ${companyId} SERVER VERSION:`,
@@ -632,7 +641,7 @@ router.post(
              */
 
             case "payroll_settings": {
-              const result = await syncPayrollSettings(operation, data);
+              result = await syncPayrollSettings(operation, data);
 
               console.log(
                 `PAYROLL SETTINGS ${data._id} COMPANY ${companyId} SERVER VERSION:`,
@@ -649,7 +658,7 @@ router.post(
              */
 
             case "payroll_component": {
-              const result = await syncPayrollComponent(operation, data);
+              result = await syncPayrollComponent(operation, data);
 
               console.log(
                 `PAYROLL COMPONENT ${data._id} COMPANY ${companyId} SERVER VERSION:`,
@@ -666,7 +675,7 @@ router.post(
              */
 
             case "payroll_profile": {
-              const result = await syncPayrollProfile(operation, data);
+              result = await syncPayrollProfile(operation, data);
 
               console.log(
                 `PAYROLL PROFILE ${data._id} COMPANY ${companyId} SERVER VERSION:`,
@@ -683,7 +692,7 @@ router.post(
              */
 
             case "payroll_run": {
-              const result = await syncPayrollRun(operation, data);
+              result = await syncPayrollRun(operation, data);
 
               console.log(
                 `PAYROLL RUN ${data._id} COMPANY ${companyId} SERVER VERSION:`,
@@ -700,7 +709,7 @@ router.post(
              */
 
             case "payroll_result": {
-              const result = await syncPayrollResult(operation, data);
+              result = await syncPayrollResult(operation, data);
 
               console.log(
                 `PAYROLL RESULT ${data._id} COMPANY ${companyId} SERVER VERSION:`,
@@ -717,7 +726,7 @@ router.post(
              */
 
             case "payroll_item": {
-              const result = await syncPayrollItem(operation, data);
+              result = await syncPayrollItem(operation, data);
 
               console.log(
                 `PAYROLL ITEM ${data._id} COMPANY ${companyId} SERVER VERSION:`,
@@ -735,7 +744,7 @@ router.post(
 
             default: {
               if (isInventorySyncEntity(entity)) {
-                await syncInventory(entity, operation, data);
+                result = await syncInventory(entity, operation, data);
                 break;
               }
               throw new SyncConflict(
@@ -752,6 +761,7 @@ router.post(
            */
 
           synced.push(queueId);
+          if (result?.serverVersion !== undefined) versions[queueId] = result.serverVersion;
         } catch (error) {
           failedRecords.add(
             `${entity}:${data?._id ?? data?.employeeId ?? data?.companyId}`
@@ -763,7 +773,7 @@ router.post(
             details?: unknown;
           };
           const permanent =
-            error instanceof SyncConflict ||
+            error instanceof SyncConflict || error instanceof StockSyncConflict ||
             failure.code === 11000 ||
             ["ValidationError", "CastError"].includes(failure.name ?? "");
           failed.push({
@@ -798,6 +808,7 @@ router.post(
         success: true,
         companyId,
         synced,
+        versions,
         failed,
       });
     } catch (error) {

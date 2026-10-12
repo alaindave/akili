@@ -41,18 +41,14 @@ const schema = new Schema<InventoryBalanceDocument>(
       set: (value: string | null | undefined) => value ?? "",
     },
     quantityOnHand: { type: Number, required: true, default: 0, min: 0 },
+
     quantityReserved: {
       type: Number,
       required: true,
       default: 0,
       min: 0,
-      validate: {
-        validator: function (this: InventoryBalanceDocument, value: number) {
-          return value <= this.quantityOnHand;
-        },
-        message: "Reserved quantity cannot exceed quantity on hand",
-      },
     },
+
     quantityAvailable: { type: Number, required: true, default: 0, min: 0 },
     averageCost: { type: Number, min: 0 },
     totalValue: { type: Number, min: 0 },

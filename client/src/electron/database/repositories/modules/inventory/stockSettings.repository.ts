@@ -1,7 +1,8 @@
-import { categorySkuPrefix } from "../../../../../common/types/inventory/sku.js";
+import { itemTypeSkuPrefix } from "../../../../../common/types/inventory/sku.js";
 import { randomInt, randomUUID } from "node:crypto";
 import { z } from "zod";
-import { all, get, getDirect, runDirect, transaction } from "../../../db.js";
+import { all, get, getDirect, runDirect, transaction, afterCommit } from "../../../db.js";
+import { notifyPendingChanges } from "../../shared/sync.repository.js";
 import type { InventoryCategory } from "../../../../../common/types/inventory/InventoryCategory.js";
 import type { InventoryUnit } from "../../../../../common/types/inventory/InventoryUnit.js";
 import type {
@@ -95,6 +96,7 @@ export async function saveSkuNumbering(
         updatedAt = excluded.updatedAt, synced = 0`,
       [company, Number(value.enabled), now, now]
     );
+    afterCommit(() => { void notifyPendingChanges(company); });
     return value;
   });
 }
@@ -123,7 +125,7 @@ export async function withGeneratedSku<T>(
       );
     }
 
-    const prefix = categorySkuPrefix(itemType);
+    const prefix = itemTypeSkuPrefix(itemType);
 
     if (Array.from(prefix).length < 3) {
       throw new Error(
@@ -197,6 +199,7 @@ export async function saveStockCategory(
           now,
         ]
       );
+    afterCommit(() => { void notifyPendingChanges(company); });
   });
 }
 export async function saveStockUnit(
@@ -259,6 +262,7 @@ export async function saveStockUnit(
           now,
         ]
       );
+    afterCommit(() => { void notifyPendingChanges(company); });
   });
 }
 async function archive(
@@ -300,6 +304,7 @@ async function archive(
       `UPDATE ${table} SET isDeleted = 1, synced = 0, updatedAt = ? WHERE companyId = ? AND _id = ?`,
       [new Date().toISOString(), company, id]
     );
+    afterCommit(() => { void notifyPendingChanges(company); });
   });
 }
 export const archiveStockCategory = (companyId: string, id: string) =>

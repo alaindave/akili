@@ -1,7 +1,11 @@
-import { all, run } from "../../../db.js";
+import { allDirect as all, runDirect as run, transaction } from "../../../db.js";
 import { INVENTORY_SYNC_TABLES } from "../../../../../common/types/inventory/InventorySync.js";
 
 export async function initializeInventorySync() {
+  await transaction(initializeInventorySyncTables);
+}
+
+async function initializeInventorySyncTables() {
   const settingsColumns = await all<{ name: string }>("PRAGMA table_info(inventory_sku_settings)");
   for (const [name, definition] of Object.entries({
     createdAt: "TEXT NOT NULL DEFAULT ''",
@@ -25,8 +29,13 @@ export async function initializeInventorySync() {
       ...columns.filter(column => column !== "synced").map(column => `'${column}', ${alias}.${column}`),
     ].join(", ")})`;
     for (const event of ["INSERT", "UPDATE"] as const) {
+      // Refresh existing triggers too: acknowledgements change revision metadata,
+      // not the business snapshot, and must not enqueue another local edit.
+      const changed = columns.filter(column => !["synced", "serverVersion"].includes(column))
+        .map(column => `NEW.${column} IS NOT OLD.${column}`).join(" OR ");
+      await run(`DROP TRIGGER IF EXISTS ${table}_sync_${event.toLowerCase()}`);
       await run(`CREATE TRIGGER IF NOT EXISTS ${table}_sync_${event.toLowerCase()}
-        AFTER ${event} ON ${table} WHEN NEW.synced = 0
+        AFTER ${event} ON ${table} WHEN NEW.synced = 0${event === "UPDATE" ? ` AND (${changed})` : ""}
         BEGIN
           INSERT INTO sync_queue (companyId, entity, entityId, operation, payload)
           VALUES (NEW.companyId, '${entity}', NEW.${key}, 'create', ${payload("NEW")});

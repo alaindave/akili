@@ -2,7 +2,8 @@ import type {
   CreateInventoryWarehouseInput,
   InventoryWarehouse,
 } from "../../../../../common/types/inventory/InventoryWarehouse.js";
-import { all, get, run } from "../../../db.js";
+import { all, get, run, afterCommit } from "../../../db.js";
+import { notifyPendingChanges } from "../../shared/sync.repository.js";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 
@@ -147,6 +148,7 @@ export class InventoryWarehouseRepository {
       }
       throw error;
     }
+    afterCommit(() => { void notifyPendingChanges(companyId); });
     return warehouse;
     }
     throw new Error("Impossible de générer un code d’entrepôt disponible.");
@@ -159,6 +161,7 @@ export class InventoryWarehouseRepository {
     await run(`UPDATE inventory_warehouses SET code = ?, name = ?, description = ?, address = ?, type = ?, isActive = ?, updatedAt = ?, synced = 0
       WHERE companyId = ? AND _id = ? AND isDeleted = 0`,
       [data.code, data.name, data.description || null, data.address || null, data.type, data.isActive ? 1 : 0, new Date().toISOString(), companyId, id]);
+    afterCommit(() => { void notifyPendingChanges(companyId); });
     return (await this.getById(companyId, id))!;
   }
 

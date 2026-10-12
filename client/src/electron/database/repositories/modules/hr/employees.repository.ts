@@ -34,6 +34,7 @@ export async function createEmployee(
     | "serverVersion"
   >
 ) {
+  return transaction(async () => {
   const _id = randomUUID();
   const time = new Date().toISOString();
 
@@ -124,6 +125,7 @@ export async function createEmployee(
   });
 
   return getEmployeeById(companyId, _id);
+  });
 }
 
 /*
@@ -215,6 +217,7 @@ export async function updateEmployee(
   _id: string,
   data: Partial<Omit<Employee, "companyId">>
 ) {
+  return transaction(async () => {
   const result = await transaction(async () => {
     const existing = await getDirect<Employee>(
       "SELECT * FROM employees WHERE companyId = ? AND _id = ?",
@@ -322,6 +325,7 @@ export async function updateEmployee(
   });
   await notifyPendingChanges(companyId);
   return result;
+  });
 }
 
 /*
@@ -330,6 +334,7 @@ export async function updateEmployee(
  * ============================================================
  */
 export async function deleteEmployee(companyId: string, _id: string) {
+  return transaction(async () => {
   const existing = await getEmployeeByIdIncludingDeleted(companyId, _id);
 
   if (!existing) {
@@ -418,6 +423,7 @@ export async function deleteEmployee(companyId: string, _id: string) {
     updatedAt,
     serverVersion: existing.serverVersion ?? 0,
   });
+  });
 }
 
 /*
@@ -444,6 +450,7 @@ export function getUnsyncedEmployees(companyId: string) {
  * ============================================================
  */
 export async function upsertEmployee(employee: Employee) {
+  return transaction(async () => {
   if (!employee.companyId) {
     throw new Error(
       `Cannot upsert employee ${employee._id}: companyId is missing`
@@ -541,17 +548,7 @@ export async function upsertEmployee(employee: Employee) {
    * ==========================================================
    */
   if (local.synced === 0) {
-    console.warn(
-      `SKIPPING SERVER EMPLOYEE ${employee._id}: ` +
-        `LOCAL CHANGES ARE UNSYNCED`,
-      {
-        companyId,
-        localVersion,
-        incomingVersion,
-      }
-    );
-
-    return;
+    throw new Error("Employee has unsynced local changes; pull deferred.");
   }
 
   /*
@@ -638,6 +635,7 @@ export async function upsertEmployee(employee: Employee) {
     `UPDATED EMPLOYEE FROM SERVER: ${employee._id} ` +
       `(company ${companyId}, v${localVersion} → v${incomingVersion})`
   );
+  });
 }
 
 /*
@@ -646,6 +644,7 @@ export async function upsertEmployee(employee: Employee) {
  * ============================================================
  */
 export async function markEmployeeSynced(companyId: string, _id: string) {
+  return transaction(async () => {
   await run(
     `
     UPDATE employees
@@ -657,6 +656,7 @@ export async function markEmployeeSynced(companyId: string, _id: string) {
     `,
     [companyId, _id]
   );
+  });
 }
 
 /*

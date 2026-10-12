@@ -1,7 +1,8 @@
 import { getSkuNumbering } from "./stockSettings.repository.js";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { all, run } from "../../../db.js";
+import { all, run, afterCommit } from "../../../db.js";
+import { notifyPendingChanges } from "../../shared/sync.repository.js";
 import type { InventoryUnit, CreateInventoryUnitInput } from "../../../../../common/types/inventory/InventoryUnit.js";
 import type { InventoryCategory } from "../../../../../common/types/inventory/InventoryCategory.js";
 
@@ -39,5 +40,6 @@ export async function createInventoryUnit(companyId: string, input: CreateInvent
     if ((error as { code?: string }).code?.startsWith("SQLITE_CONSTRAINT")) throw new Error("Une unité avec ce code existe déjà.");
     throw error;
   }
+  afterCommit(() => { void notifyPendingChanges(company); });
   return unit;
 }

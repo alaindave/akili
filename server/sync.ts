@@ -40,6 +40,25 @@ export class SyncConflict extends Error {
   }
 }
 
+function canonical(value: any): string {
+  if (value instanceof Date) return JSON.stringify(value.toISOString());
+  if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
+  if (value && typeof value === "object") return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${canonical(value[key])}`).join(",")}}`;
+  return JSON.stringify(value ?? null);
+}
+
+function sameSnapshot(model: any, existing: any, fields: Record<string, any>): boolean {
+  const normalized = new model({ ...existing, ...fields }).toObject();
+  return Object.keys(fields).filter(key => model.schema.path(key) && !["updatedAt", "createdAt", "serverVersion"].includes(key))
+    .every(key => canonical(existing[key]) === canonical(normalized[key]));
+}
+
+function requireBaseVersion(existing: any, data: SyncData) {
+  if (Number(data.serverVersion ?? 0) !== Number(existing.serverVersion ?? 0)) {
+    throw new SyncConflict("REVISION_CONFLICT", "This record changed on another device. Both versions have been retained for review.", { serverVersion: existing.serverVersion, remote: existing });
+  }
+}
+
 function requireId(value: unknown, field = "_id"): asserts value is string {
   if (typeof value !== "string" || !value.trim()) {
     throw new SyncConflict(
@@ -68,6 +87,10 @@ export async function syncInventory(
   const companyId = requireCompanyId(data);
   const incomingDate = requireUpdatedAt(data);
   const { _id, fields } = cleanSyncFields(data, operation);
+  if (entity === "inventory_balance" || entity === "inventory_movement" || entity === "inventory_document_line" ||
+      (entity === "inventory_document" && data.status === "POSTED")) {
+    throw new SyncConflict("ATOMIC_STOCK_REQUIRED", "Stock must sync as a complete operation. Update the client and reconcile legacy snapshots.");
+  }
   // Opening stock must go through the atomic company claim; individual snapshots
   // cannot post a second opening document or leak its lines/movements into stock.
   const isOpening = (row: any) => row && (row.referenceType === "OPENING_STOCK" || row.type === "OPENING_STOCK" ||
@@ -88,10 +111,11 @@ export async function syncInventory(
     if (isOpening(existing)) throw new SyncConflict("OPENING_STOCK_IMMUTABLE", "Le document de stock initial validé ne peut pas être modifié.");
     if (
       existing &&
-      new Date(existing.updatedAt).getTime() >= incomingDate.getTime()
+      sameSnapshot(model, existing, fields)
     ) {
       return { success: true, _id, serverVersion: existing.serverVersion };
     }
+    if (existing) requireBaseVersion(existing, data);
     if (!existing && operation !== "create") {
       throw new SyncConflict(
         "MISSING_RECORD",
@@ -136,7 +160,7 @@ async function syncRecord(
     const existing = await model.findOne({ _id, companyId }).lean();
     if (
       existing &&
-      new Date(existing.updatedAt).getTime() >= incomingDate.getTime()
+      sameSnapshot(model, existing, fields)
     ) {
       return {
         success: true,
@@ -145,6 +169,7 @@ async function syncRecord(
         record: existing,
       };
     }
+    if (existing) requireBaseVersion(existing, data);
     if (!existing && operation !== "create") {
       throw new SyncConflict(
         "MISSING_RECORD",
@@ -777,188 +802,30 @@ export async function syncEmployeePhoto(data: SyncData, file?: UploadedFile) {
 // EMPLOYEE DOCUMENTS
 // ============================================================
 
-export async function syncEmployeeDocument(
-  operation: SyncOperation,
-  data: SyncData,
-  file?: UploadedFile
-) {
+export async function syncEmployeeDocument(operation: SyncOperation, data: SyncData, file?: UploadedFile) {
   const companyId = requireCompanyId(data);
   requireUpdatedAt(data);
-
-  const employee = await Employee.findOne({
-    _id: data.employeeId,
-    companyId,
+  const employee = await Employee.findOne({ _id: data.employeeId, companyId });
+  if (!employee) throw new SyncConflict("MISSING_PARENT", "Employee has not synced yet.");
+  const existing = await EmployeesDocuments.findOne({ _id: data._id, companyId }).lean();
+  if (operation === "delete") {
+    // Tombstone metadata first. Immutable objects remain recoverable; garbage
+    // collection must never run before all references and retries are safe.
+    return syncRecord(EmployeesDocuments, "employee_document", operation, data);
+  }
+  if (!file) throw new SyncConflict("MISSING_ATTACHMENT", "Document attachment is missing locally.");
+  const hash = createHash("sha256").update(file.buffer).digest("hex");
+  if (data.hash && hash !== data.hash) throw new SyncConflict("ATTACHMENT_HASH_MISMATCH", "Attachment does not match the queued document.");
+  if (existing && existing.hash !== hash) requireBaseVersion(existing, data);
+  const objectPath = [companyId, String(data.employeeId), String(data._id), hash].map(encodeURIComponent).join("/");
+  const { error } = await supabase.storage.from("employees_documents").upload(objectPath, file.buffer, {
+    contentType: data.mimeType || file.mimetype, upsert: true, cacheControl: "31536000",
   });
-
-  if (!employee) {
-    throw new Error(
-      `EMPLOYEE ${data.employeeId} NOT FOUND IN COMPANY ${companyId}`
-    );
-  }
-
-  const serverVersion = await getServerVersion("employee_document");
-
-  console.log(
-    `STARTING SYNC FOR EMPLOYEE DOCUMENT. COMPANY ${companyId} EMPLOYEE:
-   ${employee}.Server version:${serverVersion}.Operation:${operation}`
-  );
-
-  console.log("EMPLOYEE DOCUMENTS DATA:", data);
-
-  switch (operation) {
-    case "create":
-    case "update": {
-      if (!file) {
-        throw new Error("DOCUMENT FILE MISSING");
-      }
-
-      const employeeId = employee._id.toString();
-
-      const sanitizePathPart = (value: string) =>
-        value
-          .replace(/[<>:"/\\|?*\x00-\x1F]/g, "")
-          .replace(/\s+/g, "_")
-          .trim();
-
-      const documentName = sanitizePathPart(
-        String(data.documentType || file.originalname)
-      );
-
-      const objectPath = `${companyId}/${employeeId}/${documentName}`;
-
-      console.log("UPLOADING EMPLOYEE DOCUMENT:", {
-        companyId,
-        employeeId,
-        documentName,
-        objectPath,
-      });
-
-      /*
-       * --------------------------------------------------------
-       * UPLOAD
-       * --------------------------------------------------------
-       */
-
-      const { error } = await supabase.storage
-        .from("employees_documents")
-        .upload(objectPath, file.buffer, {
-          contentType: data.mimeType || file.mimetype,
-          upsert: true,
-          cacheControl: "0",
-        });
-
-      if (error) {
-        throw new Error(`FAILED TO UPLOAD EMPLOYEE DOCUMENT: ${error.message}`);
-      }
-
-      /*
-       * --------------------------------------------------------
-       * SAVE DOCUMENT METADATA
-       * --------------------------------------------------------
-       */
-
-      const { _id, fields } = cleanSyncFields(data, operation);
-
-      await EmployeesDocuments.updateOne(
-        {
-          _id,
-          companyId,
-        },
-        {
-          $set: {
-            ...fields,
-            storagePath: objectPath,
-            updatedAt: new Date(data.updatedAt as string),
-            serverVersion,
-          },
-
-          $setOnInsert: {
-            _id,
-            companyId,
-          },
-        },
-        {
-          upsert: true,
-        }
-      );
-
-      console.log("EMPLOYEE DOCUMENT SYNCED:", {
-        _id,
-        companyId,
-        employeeId,
-        storagePath: objectPath,
-        serverVersion,
-      });
-
-      return {
-        success: true,
-        _id,
-        companyId,
-        employeeId,
-        serverVersion,
-        updatedAt: data.updatedAt,
-        storagePath: objectPath,
-      };
-    }
-
-    case "delete": {
-      /*
-       * --------------------------------------------------------
-       * DELETE DOCUMENT
-       * --------------------------------------------------------
-       */
-
-      const document = await EmployeesDocuments.findOne({
-        _id: data._id,
-        companyId,
-      });
-
-      if (document?.storagePath) {
-        const { error: deleteError } = await supabase.storage
-          .from("employees_documents")
-          .remove([document.storagePath]);
-
-        if (deleteError) {
-          throw new Error(
-            `FAILED TO DELETE EMPLOYEE DOCUMENT: ${deleteError.message}`
-          );
-        }
-      }
-
-      await EmployeesDocuments.updateOne(
-        {
-          _id: data._id,
-          companyId,
-        },
-        {
-          $set: {
-            isDeleted: 1,
-            updatedAt: new Date(data.updatedAt as string),
-            serverVersion,
-          },
-        }
-      );
-
-      console.log("EMPLOYEE DOCUMENT DELETED:", {
-        _id: data._id,
-        companyId,
-        serverVersion,
-      });
-
-      return {
-        success: true,
-        _id: data._id,
-        companyId,
-        serverVersion,
-        updatedAt: data.updatedAt,
-      };
-    }
-  }
+  if (error) throw new Error("Document upload failed: " + error.message);
+  return syncRecord(EmployeesDocuments, "employee_document", operation, {
+    ...data, hash, storagePath: objectPath,
+  });
 }
-
-// ============================================================
-// ATTENDANCE
-// ============================================================
 
 export async function syncAttendance(operation: SyncOperation, data: SyncData) {
   const companyId = requireCompanyId(data);
@@ -1519,48 +1386,7 @@ export async function syncPayrollProfile(
   }
   fields.accountNumber = String(fields.accountNumber ?? "").trim() || "cash";
 
-  const serverVersion = await getServerVersion("payroll_profile");
-
-  await EmployeePayrollProfile.updateOne(
-    {
-      _id,
-      companyId,
-    },
-    {
-      $set: {
-        ...fields,
-        serverVersion,
-      },
-      $setOnInsert: {
-        _id,
-      },
-    },
-    {
-      upsert: true,
-    }
-  );
-
-  const profile = await EmployeePayrollProfile.findOne({
-    _id,
-    companyId,
-  });
-
-  if (!profile) {
-    throw new Error(`PAYROLL PROFILE WAS NOT FOUND AFTER UPSERT: ${_id}`);
-  }
-
-  console.log(`SYNCED ${operation.toUpperCase()} PAYROLL PROFILE:`, {
-    _id,
-    updatedAt: data.updatedAt,
-    serverVersion,
-  });
-
-  return {
-    success: true,
-    _id,
-    serverVersion,
-    profile,
-  };
+  return syncRecord(EmployeePayrollProfile, "payroll_profile", operation, { ...data, ...fields, _id });
 }
 
 // ============================================================

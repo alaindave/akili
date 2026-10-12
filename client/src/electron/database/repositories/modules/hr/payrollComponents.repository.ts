@@ -1,3 +1,4 @@
+import { transaction } from "../../../db.js";
 import { all, get, run } from "../../../db.js";
 import PayrollComponent, {
   CreatePayrollComponentDto,
@@ -18,6 +19,7 @@ export async function createPayrollComponent(
   companyId: string,
   component: CreatePayrollComponentDto
 ): Promise<PayrollComponent | null> {
+  return transaction(async () => {
   if (!component.companyId) {
     throw new Error("Cannot create payroll component without companyId");
   }
@@ -105,6 +107,7 @@ export async function createPayrollComponent(
   }
 
   return newComponent;
+  });
 }
 
 // ============================================================
@@ -112,6 +115,7 @@ export async function createPayrollComponent(
 // ============================================================
 
 export async function upsertPayrollComponent(component: PayrollComponent) {
+  return transaction(async () => {
   const companyId = component.companyId;
 
   if (!companyId) {
@@ -222,6 +226,7 @@ export async function upsertPayrollComponent(component: PayrollComponent) {
   );
 
   return await getPayrollComponentById(companyId, component._id);
+  });
 }
 
 // ============================================================
@@ -321,6 +326,7 @@ export async function updatePayrollComponents(
   companyId: string,
   components: PayrollComponent[]
 ) {
+  return transaction(async () => {
   if (!companyId) {
     throw new Error("Cannot update payroll components without companyId");
   }
@@ -391,6 +397,7 @@ export async function updatePayrollComponents(
   }
 
   return components;
+  });
 }
 
 // ============================================================
@@ -398,6 +405,7 @@ export async function updatePayrollComponents(
 // ============================================================
 
 export async function deletePayrollComponent(companyId: string, _id: string) {
+  return transaction(async () => {
   if (!companyId) {
     throw new Error("Cannot delete payroll component without companyId");
   }
@@ -452,6 +460,7 @@ export async function deletePayrollComponent(companyId: string, _id: string) {
   });
 
   return true;
+  });
 }
 
 // ============================================================
@@ -459,6 +468,7 @@ export async function deletePayrollComponent(companyId: string, _id: string) {
 // ============================================================
 
 export async function enablePayrollComponent(companyId: string, id: string) {
+  return transaction(async () => {
   const updatedAt = new Date().toISOString();
 
   const component = await getPayrollComponentById(companyId, id);
@@ -498,6 +508,7 @@ export async function enablePayrollComponent(companyId: string, id: string) {
   });
 
   return getPayrollComponentById(companyId, id);
+  });
 }
 
 // ============================================================
@@ -505,6 +516,7 @@ export async function enablePayrollComponent(companyId: string, id: string) {
 // ============================================================
 
 export async function disablePayrollComponent(companyId: string, id: string) {
+  return transaction(async () => {
   const updatedAt = new Date().toISOString();
 
   const component = await getPayrollComponentById(companyId, id);
@@ -544,6 +556,7 @@ export async function disablePayrollComponent(companyId: string, id: string) {
   });
 
   return getPayrollComponentById(companyId, id);
+  });
 }
 
 // ============================================================
@@ -555,6 +568,7 @@ export async function markPayrollComponentSynced(
   _id: string,
   serverVersion?: number
 ) {
+  return transaction(async () => {
   await run(
     `
     UPDATE payroll_components
@@ -572,6 +586,7 @@ export async function markPayrollComponentSynced(
   );
 
   return true;
+  });
 }
 
 // ============================================================

@@ -1,3 +1,4 @@
+import { transaction } from "../../../db.js";
 import fs from "fs/promises";
 import path from "path";
 import crypto from "crypto";
@@ -246,6 +247,7 @@ export async function updateEmployeePhotoMetadata(
     photo_last_modified?: string | null;
   }
 ) {
+  return transaction(async () => {
   if (!companyId) {
     throw new Error("Cannot update employee photo without companyId");
   }
@@ -303,6 +305,7 @@ export async function updateEmployeePhotoMetadata(
       `Employee ${employeeId} photo changed during download; retry required`
     );
   }
+  });
 }
 
 // ============================================================
@@ -314,6 +317,7 @@ export async function markEmployeePhotoSynced(
   employeeId: string,
   photoHash?: string
 ) {
+  return transaction(async () => {
   if (!companyId) {
     throw new Error("Cannot mark employee photo synced without companyId");
   }
@@ -331,4 +335,5 @@ export async function markEmployeePhotoSynced(
   );
 
   return true;
+  });
 }

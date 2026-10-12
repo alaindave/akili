@@ -11,16 +11,19 @@ import { INVENTORY_SYNC_TABLES } from "../../../../common/types/inventory/Invent
 import type { InventorySyncEntity } from "../../../../common/types/inventory/InventorySync.js";
 import type { OpeningStockDraft, OpeningStockState } from "../../../../common/types/inventory/StockSettings.js";
 import type Company from "../../../../common/types/shared/Company.js";
+import { InventoryLocationRepository } from "../../../database/repositories/modules/inventory/inventoryLocation.repository.js";
 
 const draftSchema = z.object({
   _id: z.string().regex(/^opening:[a-f0-9-]{36}$/i),
   lines: z.array(z.object({
     itemId: z.string().min(1), warehouseId: z.string().min(1),
+    locationId: z.string().trim().min(1).max(255).optional(),
     quantity: z.number().finite().positive(), unitCost: z.number().finite().nonnegative(),
     lotId: z.string().trim().max(255).optional(), serialNumber: z.string().trim().max(255).optional(),
   })).max(1000),
 });
 const submitting = new Set<string>();
+const locationRepository = new InventoryLocationRepository();
 
 export async function getOpeningStockState(companyId: string): Promise<OpeningStockState> {
   const company = await getCompanyById(companyId);
@@ -31,10 +34,11 @@ export async function getOpeningStockState(companyId: string): Promise<OpeningSt
     all<OpeningStockState["warehouses"][number]>("SELECT * FROM inventory_warehouses WHERE companyId = ? AND isDeleted = 0 AND isActive = 1 ORDER BY name", [companyId]),
     all<OpeningStockState["units"][number]>("SELECT * FROM inventory_units WHERE companyId = ? AND isDeleted = 0 ORDER BY name", [companyId]),
   ]);
+  const locations = (await Promise.all(warehouses.map((warehouse) => locationRepository.getActive(companyId, warehouse._id)))).flat();
   return { inventoryInitialized: Boolean(company.inventoryInitialized),
     inventoryInitializedAt: company.inventoryInitializedAt ?? null,
     inventoryInitializationDocumentNumber: company.inventoryInitializationDocumentNumber ?? null,
-    draft: draft ? JSON.parse(draft.payload) : null, items, warehouses, units };
+    draft: draft ? JSON.parse(draft.payload) : null, items, warehouses, locations, units };
 }
 
 export async function saveOpeningStockDraft(companyId: string, input: OpeningStockDraft): Promise<OpeningStockDraft> {
@@ -51,6 +55,9 @@ async function persistDraft(companyId: string, input: OpeningStockDraft): Promis
       const item = await getDirect("SELECT 1 FROM inventory_items WHERE companyId = ? AND _id = ? AND isDeleted = 0 AND isActive = 1", [companyId, line.itemId]);
       const warehouse = await getDirect("SELECT 1 FROM inventory_warehouses WHERE companyId = ? AND _id = ? AND isDeleted = 0 AND isActive = 1", [companyId, line.warehouseId]);
       if (!item || !warehouse || !Number.isFinite(line.quantity * line.unitCost)) throw new Error("Article, entrepôt ou valeur de stock invalide.");
+      if (line.locationId && !await locationRepository.getActiveInTransaction(companyId, line.warehouseId, line.locationId)) {
+        throw new Error("L’emplacement est inactif, introuvable ou n’appartient pas à cet entrepôt.");
+      }
     }
     await runDirect(`INSERT INTO inventory_opening_drafts (companyId, payload, updatedAt) VALUES (?, ?, ?)
       ON CONFLICT(companyId) DO UPDATE SET payload = excluded.payload, updatedAt = excluded.updatedAt`,

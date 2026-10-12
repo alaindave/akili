@@ -1,3 +1,4 @@
+import { transaction } from "../../../db.js";
 import { all, get, run } from "../../../db.js";
 import PayrollEmployeeProfile, {
   CreatePayrollProfileDto,
@@ -16,6 +17,7 @@ export async function createEmployeePayrollProfile(
   employeeId: string,
   profile: CreatePayrollProfileDto
 ) {
+  return transaction(async () => {
   if (!companyId) {
     throw new Error("Cannot create employee payroll profile without companyId");
   }
@@ -105,6 +107,7 @@ export async function createEmployeePayrollProfile(
   });
 
   return payrollProfile;
+  });
 }
 
 // ============================================================
@@ -116,9 +119,11 @@ export async function createManyEmployeePayrollProfiles(
   employeeId: string,
   profiles: CreatePayrollProfileDto[]
 ) {
+  return transaction(async () => {
   for (const profile of profiles) {
     await createEmployeePayrollProfile(companyId, employeeId, profile);
   }
+  });
 }
 
 // ============================================================
@@ -129,6 +134,7 @@ export async function updateEmployeePayrollProfile(
   companyId: string,
   profile: PayrollEmployeeProfile
 ) {
+  return transaction(async () => {
   if (!profile._id) return;
 
   if (!companyId) {
@@ -304,6 +310,7 @@ export async function updateEmployeePayrollProfile(
   }
 
   return updatedProfile;
+  });
 }
 
 // ============================================================
@@ -314,9 +321,11 @@ export async function updateManyEmployeePayrollProfiles(
   companyId: string,
   profiles: PayrollEmployeeProfile[]
 ) {
+  return transaction(async () => {
   for (const profile of profiles) {
     await updateEmployeePayrollProfile(companyId, profile);
   }
+  });
 }
 
 /*
@@ -381,6 +390,7 @@ export async function getEmployeePayrollProfileByEmployeeAndComponent(
 export async function upsertEmployeePayrollProfile(
   profile: PayrollEmployeeProfile
 ) {
+  return transaction(async () => {
   if (!profile._id) return;
 
   const companyId = profile.companyId;
@@ -560,6 +570,7 @@ export async function upsertEmployeePayrollProfile(
   );
 
   return await getEmployeePayrollProfileById(companyId, profile._id);
+  });
 }
 
 // ============================================================
@@ -569,9 +580,11 @@ export async function upsertEmployeePayrollProfile(
 export async function upsertManyEmployeePayrollProfiles(
   profiles: PayrollEmployeeProfile[]
 ) {
+  return transaction(async () => {
   for (const profile of profiles) {
     await upsertEmployeePayrollProfile(profile);
   }
+  });
 }
 
 // ============================================================
@@ -776,6 +789,7 @@ export async function markPayrollEmployeeProfileSynced(
   _id: string,
   updatedAt?: string
 ) {
+  return transaction(async () => {
   await run(
     `
     UPDATE payroll_employee_profiles
@@ -790,6 +804,7 @@ export async function markPayrollEmployeeProfileSynced(
   );
 
   return true;
+  });
 }
 
 // ============================================================
@@ -800,9 +815,11 @@ export async function markManyPayrollEmployeeProfileSynced(
   companyId: string,
   ids: string[]
 ) {
+  return transaction(async () => {
   for (const id of ids) {
     await markPayrollEmployeeProfileSynced(companyId, id);
   }
+  });
 }
 
 // ============================================================
@@ -813,6 +830,7 @@ export async function deleteEmployeePayrollProfile(
   companyId: string,
   _id: string
 ) {
+  return transaction(async () => {
   const now = new Date().toISOString();
 
   const existingProfile = await getEmployeePayrollProfileById(companyId, _id);
@@ -854,6 +872,7 @@ export async function deleteEmployeePayrollProfile(
   });
 
   return true;
+  });
 }
 
 // ============================================================
@@ -864,6 +883,7 @@ export async function restoreEmployeePayrollProfile(
   companyId: string,
   _id: string
 ) {
+  return transaction(async () => {
   const now = new Date().toISOString();
 
   const existingProfile = await getEmployeePayrollProfileById(companyId, _id);
@@ -903,6 +923,7 @@ export async function restoreEmployeePayrollProfile(
   }
 
   return true;
+  });
 }
 
 // ============================================================
@@ -913,6 +934,7 @@ export async function permanentlyDeleteEmployeePayrollProfile(
   companyId: string,
   _id: string
 ) {
+  return transaction(async () => {
   await run(
     `
     DELETE FROM payroll_employee_profiles
@@ -923,6 +945,7 @@ export async function permanentlyDeleteEmployeePayrollProfile(
   );
 
   return true;
+  });
 }
 
 // ============================================================

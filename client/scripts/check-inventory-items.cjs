@@ -15,11 +15,19 @@ const adapter = {
 adapter.getDirect = adapter.get;
 adapter.runDirect = adapter.run;
 let transactions = Promise.resolve();
+let commitCallbacks = null;
+adapter.afterCommit = callback => commitCallbacks ? commitCallbacks.push(callback) : callback();
 adapter.transaction = callback => {
   const result = transactions.then(async () => {
     db.exec('BEGIN');
-    try { const value = await callback(); db.exec('COMMIT'); return value; }
-    catch (error) { db.exec('ROLLBACK'); throw error; }
+    commitCallbacks = [];
+    try {
+      const value = await callback(); db.exec('COMMIT');
+      const notifications = commitCallbacks; commitCallbacks = null;
+      notifications.forEach(notify => notify());
+      return value;
+    }
+    catch (error) { commitCallbacks = null; db.exec('ROLLBACK'); throw error; }
   });
   transactions = result.catch(() => {});
   return result;
@@ -39,6 +47,9 @@ function load(relative) {
   const localRequire = name => {
     if (name === 'node:crypto') return { ...require(name), randomInt: (...args) => randomDigits.length ? randomDigits.shift() : require(name).randomInt(...args) };
     if (name.endsWith('/db.js')) return adapter;
+    if (name.endsWith('/sync.repository.js')) return { notifyPendingChanges: async () => {} };
+    // Opening-stock handlers are registered by stock settings but are outside this catalog test.
+    if (name.endsWith('/openingStock.service.js')) return {};
     if (name.endsWith('/auth.js')) return { getToken: async () => authenticatedCompany ? `header.${Buffer.from(JSON.stringify({ companyId: authenticatedCompany })).toString('base64url')}.signature` : null };
     if (name === 'electron') return {
       ipcMain: { handle: (channel, handler) => handlers.set(channel, handler) },
@@ -93,6 +104,41 @@ function load(relative) {
   await assert.rejects(() => api.create('company-b', input), /unité valide/);
   assert.equal(await api.getById('company-b', item._id), null);
   authenticatedCompany = 'company-a';
+  // The details editor updates only these six fields through the existing API.
+  authenticatedCompany = 'company-a';
+  const edited = await api.update('company-a', {
+    id: item._id, name: ' Cuir modifié ', sku: ' mat-edited ',
+    trackingMethod: 'SERIAL', costingMethod: 'FIFO', reorderPoint: 2.5, reorderQuantity: 10,
+  });
+  const reloaded = await api.getById('company-a', item._id);
+  assert.equal(reloaded.name, 'Cuir modifié');
+  assert.equal(reloaded.sku, 'MAT-EDITED');
+  assert.equal(reloaded.trackingMethod, 'SERIAL');
+  assert.equal(reloaded.costingMethod, 'FIFO');
+  assert.equal(reloaded.reorderPoint, 2.5);
+  assert.equal(reloaded.reorderQuantity, 10);
+  assert.equal(reloaded.updatedAt, edited.updatedAt);
+  assert.equal(reloaded.synced, false);
+  assert.equal(reloaded.baseUnitId, item.baseUnitId);
+  assert.equal(reloaded.customFields.finish, 'mat');
+  for (const change of [{ sku: 'STOCK-002' }, { name: ' ' }, { trackingMethod: 'INVALID' }, { costingMethod: 'INVALID' }, { reorderPoint: -1 }, { reorderQuantity: 0 }]) {
+    await assert.rejects(() => api.update('company-a', { id: item._id, ...change }));
+  }
+  await api.update('company-a', { id: item._id, costingMethod: null, reorderPoint: null, reorderQuantity: null });
+  const cleared = await api.getById('company-a', item._id);
+  assert.equal(cleared.costingMethod ?? null, null);
+  assert.equal(cleared.reorderPoint ?? null, null);
+  assert.equal(cleared.reorderQuantity ?? null, null);
+  await assert.rejects(() => api.update('company-b', { id: item._id, name: 'Hijack' }), /Access denied/);
+  authenticatedCompany = 'company-b';
+  await assert.rejects(() => api.update('company-b', { id: item._id, name: 'Hijack' }), /not found/);
+  authenticatedCompany = 'company-a';
+  assert.equal((await api.getById('company-a', item._id)).name, 'Cuir modifié');
+  if (process.argv.includes('--item-details-only')) {
+    console.log('Passed: item details edits, persistence, optional-field clearing, validation, duplicate SKU rejection and company isolation.');
+    return;
+  }
+  await api.update('company-a', { id: item._id, name: item.name, sku: item.sku, trackingMethod: item.trackingMethod, reorderPoint: item.reorderPoint, reorderQuantity: item.reorderQuantity });
   load('ipc/modules/inventory/stockSettings.ipc.ts').registerStockSettingsIpc();
   const settings = load('preload/inventory/stockSettings.preload.cts').stockSettingsApi;
   assert.equal((await settings.get('company-a')).numbering.enabled, false);

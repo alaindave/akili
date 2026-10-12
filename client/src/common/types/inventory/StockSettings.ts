@@ -1,11 +1,12 @@
 import type { InventoryCategory } from "./InventoryCategory.js";
 import type { InventoryUnit, CreateInventoryUnitInput } from "./InventoryUnit.js";
 import type { InventoryItem } from "./InventoryItem.js";
-import type { InventoryWarehouse } from "./InventoryWarehouse.js";
+import type { InventoryWarehouse, InventoryLocation } from "./InventoryWarehouse.js";
 
 export interface OpeningStockLine {
   itemId: string;
   warehouseId: string;
+  locationId?: string;
   quantity: number;
   unitCost: number;
   lotId?: string;
@@ -22,6 +23,7 @@ export interface OpeningStockState {
   draft: OpeningStockDraft | null;
   items: InventoryItem[];
   warehouses: InventoryWarehouse[];
+  locations: InventoryLocation[];
   units: InventoryUnit[];
 }
 

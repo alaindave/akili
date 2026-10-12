@@ -242,7 +242,7 @@ function CompanyWarehouses({ companyId }: { companyId: string }) {
           <Heading as="h1" fontSize="1.4rem" color="#03143B">
             Entrepôts
           </Heading>
-          <Text fontSize="1rem" color="#737373">
+          <Text fontSize="1rem" color="gray.600">
             Gérez vos entrepôts et leurs emplacements de stockage
           </Text>
         </Box>
@@ -259,7 +259,13 @@ function CompanyWarehouses({ companyId }: { companyId: string }) {
         </Button>
       </Flex>
 
-      <SimpleGrid columns={{ base: 2, xl: 4 }} spacing={6} mt={10} mb={8} flexShrink={0}>
+      <SimpleGrid
+        columns={{ base: 2, xl: 4 }}
+        spacing={6}
+        mt={10}
+        mb={8}
+        flexShrink={0}
+      >
         {metrics.map(({ label, value, icon: Icon, color, help }) => (
           <Box
             key={label}
@@ -312,7 +318,13 @@ function CompanyWarehouses({ companyId }: { companyId: string }) {
         minH={0}
         boxShadow="0 2px 6px rgba(0,0,0,0.02)"
       >
-        <Flex p={5} gap={3} wrap="wrap" borderBottom="1px solid #EAEAEA" flexShrink={0}>
+        <Flex
+          p={5}
+          gap={3}
+          wrap="wrap"
+          borderBottom="1px solid #EAEAEA"
+          flexShrink={0}
+        >
           <InputGroup flex="1" minW="200px">
             <InputLeftElement pointerEvents="none" color="#909090">
               <FiSearch />
@@ -368,150 +380,154 @@ function CompanyWarehouses({ companyId }: { companyId: string }) {
         </Flex>
 
         <Box flex="1" minH={0} overflow="auto">
-        {error ? (
-          <Stack p={8} align="start">
-            <Text role="alert">{error}</Text>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setRefresh((value) => value + 1)}
+          {error ? (
+            <Stack p={8} align="start">
+              <Text role="alert">{error}</Text>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setRefresh((value) => value + 1)}
+              >
+                Réessayer
+              </Button>
+            </Stack>
+          ) : loading ? (
+            <Stack
+              p={6}
+              spacing={5}
+              role="status"
+              aria-label="Chargement des entrepôts"
             >
-              Réessayer
-            </Button>
-          </Stack>
-        ) : loading ? (
-          <Stack
-            p={6}
-            spacing={5}
-            role="status"
-            aria-label="Chargement des entrepôts"
-          >
-            {[0, 1, 2, 3, 4].map((value) => (
-              <Skeleton key={value} height="36px" />
-            ))}
-          </Stack>
-        ) : rows.length === 0 ? (
-          <Stack align="center" spacing={3} py={16} px={6} textAlign="center">
-            <Box bg="#F5F5F5" p={4} borderRadius="14px" color="#737373">
-              <FaWarehouse size={25} />
-            </Box>
-            <Text fontWeight="600">
-              {hasFilters
-                ? "Aucun entrepôt trouvé"
-                : "Aucun entrepôt enregistré"}
-            </Text>
-            <Text fontSize="sm" color="#737373">
-              {hasFilters
-                ? "Modifiez votre recherche ou vos filtres."
-                : "Créez votre premier entrepôt pour organiser votre stockage."}
-            </Text>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={hasFilters ? reset : () => setCreating(true)}
-            >
-              {hasFilters ? "Réinitialiser les filtres" : "Créer un entrepôt"}
-            </Button>
-          </Stack>
-        ) : (
-          <Box whiteSpace="nowrap">
-            <Table
-              sx={{
-                th: {
-                  position: "sticky",
-                  top: 0,
-                  zIndex: 1,
-                  bg: "#FAFAFA",
-                  color: "#737373",
-                  fontSize: "10px",
-                  letterSpacing: "0.08em",
-                  py: 3.5,
-                },
-                td: { borderColor: "#F0F0F0", py: 4, fontSize: "sm" },
-              }}
-            >
-              <Thead>
-                <Tr>
-                  <Th>Entrepôt</Th>
-                  <Th>Type</Th>
-                  <Th>Adresse</Th>
-                  <Th isNumeric>Emplacements</Th>
-                  <Th>Statut</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {rows.map((warehouse) => (
-                  <Tr
-                    key={warehouse._id}
-                    cursor="pointer"
-                    _hover={{ bg: "#F1F5F9" }}
-                    onClick={() =>
-                      navigate(`/inventory/warehouses/${warehouse._id}`)
-                    }
-                  >
-                    <Td minW="220px" maxW="340px">
-                      <Text fontWeight="600" isTruncated title={warehouse.name}>
-                        <Link
-                          to={`/inventory/warehouses/${warehouse._id}`}
-                          onClick={(event) => event.stopPropagation()}
-                        >
-                          {warehouse.name}
-                        </Link>
-                      </Text>
-                      <Text
-                        color="#858585"
-                        fontFamily="mono"
-                        fontSize="xs"
-                        mt={1}
-                      >
-                        {warehouse.code}
-                      </Text>
-                      {warehouse.description && (
+              {[0, 1, 2, 3, 4].map((value) => (
+                <Skeleton key={value} height="36px" />
+              ))}
+            </Stack>
+          ) : rows.length === 0 ? (
+            <Stack align="center" spacing={3} py={16} px={6} textAlign="center">
+              <Box bg="#F5F5F5" p={4} borderRadius="14px" color="#737373">
+                <FaWarehouse size={25} />
+              </Box>
+              <Text fontWeight="600">
+                {hasFilters
+                  ? "Aucun entrepôt trouvé"
+                  : "Aucun entrepôt enregistré"}
+              </Text>
+              <Text fontSize="sm" color="#737373">
+                {hasFilters
+                  ? "Modifiez votre recherche ou vos filtres."
+                  : "Créez votre premier entrepôt pour organiser votre stockage."}
+              </Text>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={hasFilters ? reset : () => setCreating(true)}
+              >
+                {hasFilters ? "Réinitialiser les filtres" : "Créer un entrepôt"}
+              </Button>
+            </Stack>
+          ) : (
+            <Box whiteSpace="nowrap">
+              <Table
+                sx={{
+                  th: {
+                    position: "sticky",
+                    top: 0,
+                    zIndex: 1,
+                    bg: "#FAFAFA",
+                    color: "#737373",
+                    fontSize: "10px",
+                    letterSpacing: "0.08em",
+                    py: 3.5,
+                  },
+                  td: { borderColor: "#F0F0F0", py: 4, fontSize: "sm" },
+                }}
+              >
+                <Thead>
+                  <Tr>
+                    <Th>Entrepôt</Th>
+                    <Th>Type</Th>
+                    <Th>Adresse</Th>
+                    <Th isNumeric>Emplacements</Th>
+                    <Th>Statut</Th>
+                  </Tr>
+                </Thead>
+                <Tbody>
+                  {rows.map((warehouse) => (
+                    <Tr
+                      key={warehouse._id}
+                      cursor="pointer"
+                      _hover={{ bg: "#F1F5F9" }}
+                      onClick={() =>
+                        navigate(`/inventory/warehouses/${warehouse._id}`)
+                      }
+                    >
+                      <Td minW="220px" maxW="340px">
                         <Text
-                          color="#737373"
+                          fontWeight="600"
+                          isTruncated
+                          title={warehouse.name}
+                        >
+                          <Link
+                            to={`/inventory/warehouses/${warehouse._id}`}
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            {warehouse.name}
+                          </Link>
+                        </Text>
+                        <Text
+                          color="#858585"
+                          fontFamily="mono"
                           fontSize="xs"
                           mt={1}
-                          isTruncated
-                          title={warehouse.description}
                         >
-                          {warehouse.description}
+                          {warehouse.code}
                         </Text>
-                      )}
-                    </Td>
-                    <Td color="#525252">
-                      {warehouseTypeLabels[warehouse.type] ?? "—"}
-                    </Td>
-                    <Td maxW="300px">
-                      <Text
-                        color="#737373"
-                        isTruncated
-                        title={warehouse.address}
-                      >
-                        {warehouse.address || "—"}
-                      </Text>
-                    </Td>
-                    <Td isNumeric>
-                      {(
-                        summary.locationCounts.get(warehouse._id) ?? 0
-                      ).toLocaleString("fr-FR")}
-                    </Td>
-                    <Td>
-                      <Badge
-                        colorScheme={warehouse.isActive ? "green" : "gray"}
-                        textTransform="none"
-                        borderRadius="full"
-                        px={2.5}
-                        py={0.5}
-                      >
-                        {warehouse.isActive ? "Actif" : "Inactif"}
-                      </Badge>
-                    </Td>
-                  </Tr>
-                ))}
-              </Tbody>
-            </Table>
-          </Box>
-        )}
+                        {warehouse.description && (
+                          <Text
+                            color="#737373"
+                            fontSize="xs"
+                            mt={1}
+                            isTruncated
+                            title={warehouse.description}
+                          >
+                            {warehouse.description}
+                          </Text>
+                        )}
+                      </Td>
+                      <Td color="#525252">
+                        {warehouseTypeLabels[warehouse.type] ?? "—"}
+                      </Td>
+                      <Td maxW="300px">
+                        <Text
+                          color="#737373"
+                          isTruncated
+                          title={warehouse.address}
+                        >
+                          {warehouse.address || "—"}
+                        </Text>
+                      </Td>
+                      <Td isNumeric>
+                        {(
+                          summary.locationCounts.get(warehouse._id) ?? 0
+                        ).toLocaleString("fr-FR")}
+                      </Td>
+                      <Td>
+                        <Badge
+                          colorScheme={warehouse.isActive ? "green" : "gray"}
+                          textTransform="none"
+                          borderRadius="full"
+                          px={2.5}
+                          py={0.5}
+                        >
+                          {warehouse.isActive ? "Actif" : "Inactif"}
+                        </Badge>
+                      </Td>
+                    </Tr>
+                  ))}
+                </Tbody>
+              </Table>
+            </Box>
+          )}
         </Box>
         <Flex
           flexShrink={0}

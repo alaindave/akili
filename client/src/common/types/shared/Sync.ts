@@ -32,6 +32,7 @@ export interface SyncQueueItem {
   _id: string;
   entity:
     | InventorySyncEntity
+    | "inventory_transaction"
     | "company"
     | "company_logo"
     | "employee"

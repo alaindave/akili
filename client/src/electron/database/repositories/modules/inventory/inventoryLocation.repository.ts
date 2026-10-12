@@ -12,7 +12,8 @@ const locationSchema = z.object({
   isActive: z.boolean(),
 });
 import type { InventoryLocation } from "../../../../../common/types/inventory/InventoryWarehouse.js";
-import { all, get, run } from "../../../db.js";
+import { all, get, getDirect, run, afterCommit } from "../../../db.js";
+import { notifyPendingChanges } from "../../shared/sync.repository.js";
 
 export interface InventoryLocationListOptions {
   warehouseId?: string;
@@ -127,6 +128,7 @@ export class InventoryLocationRepository {
       }
       throw error;
     }
+    afterCommit(() => { void notifyPendingChanges(companyId); });
     return (await this.getById(companyId, locationId))!;
   }
 
@@ -137,6 +139,15 @@ export class InventoryLocationRepository {
     const row = await get<LocationRow>(
       "SELECT * FROM inventory_locations WHERE companyId = ? AND _id = ? AND isDeleted = 0 LIMIT 1",
       [companyId, id]
+    );
+    return row ? mapRow(row) : null;
+  }
+
+  // Call only inside a transaction that already owns the database queue.
+  async getActiveInTransaction(companyId: string, warehouseId: string, id: string): Promise<InventoryLocation | null> {
+    const row = await getDirect<LocationRow>(
+      "SELECT * FROM inventory_locations WHERE companyId = ? AND warehouseId = ? AND _id = ? AND isDeleted = 0 AND isActive = 1",
+      [companyId, warehouseId, id]
     );
     return row ? mapRow(row) : null;
   }

@@ -1,3 +1,4 @@
+import { transaction } from "../../../db.js";
 import type Leave from "../../../../../common/types/hr/leave/Leave.js";
 import { randomUUID } from "crypto";
 import { all, get, run } from "../../../db.js";
@@ -19,6 +20,7 @@ export async function createLeave(
     | "status"
   >
 ) {
+  return transaction(async () => {
   if (!companyId) {
     throw new Error("COMPANY ID IS REQUIRED");
   }
@@ -118,6 +120,7 @@ export async function createLeave(
   });
 
   return getLeaveById(companyId, _id);
+  });
 }
 
 export async function getLeaveById(
@@ -261,6 +264,7 @@ export async function getLeaveRecord(companyId: string, employeeId: string) {
 }
 
 export async function cancelLeave(companyId: string, _id: string) {
+  return transaction(async () => {
   const leave = await getLeaveById(companyId, _id);
 
   if (!leave) {
@@ -415,6 +419,7 @@ export async function cancelLeave(companyId: string, _id: string) {
   }
 
   return getLeaveById(companyId, _id);
+  });
 }
 
 export async function updateLeave(
@@ -429,6 +434,7 @@ export async function updateLeave(
     status?: string;
   }
 ) {
+  return transaction(async () => {
   const existing = await getLeaveById(companyId, _id);
 
   if (!existing) {
@@ -518,9 +524,11 @@ export async function updateLeave(
   });
 
   return getLeaveById(companyId, _id);
+  });
 }
 
 export async function deleteLeave(companyId: string, _id: string) {
+  return transaction(async () => {
   const existing = await getLeaveById(companyId, _id);
 
   if (!existing) {
@@ -567,9 +575,11 @@ export async function deleteLeave(companyId: string, _id: string) {
    * intentionally won't return it.
    */
   return deletedLeave;
+  });
 }
 
 export async function upsertLeave(leave: Leave) {
+  return transaction(async () => {
   if (!leave.companyId) {
     throw new Error("COMPANY ID IS REQUIRED");
   }
@@ -672,9 +682,11 @@ export async function upsertLeave(leave: Leave) {
   );
 
   return getLeaveByIdIncludingDeleted(leave.companyId, leave._id);
+  });
 }
 
 export async function markLeaveSynced(companyId: string, _id: string) {
+  return transaction(async () => {
   await run(
     `
     UPDATE leaves
@@ -687,6 +699,7 @@ export async function markLeaveSynced(companyId: string, _id: string) {
   );
 
   return true;
+  });
 }
 
 /**

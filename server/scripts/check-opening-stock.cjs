@@ -37,12 +37,27 @@ for (const [name, Model] of Object.entries({ company: Company, ...registry.inven
   state[name] = [];
   Model.findOne = filter => {
     let sort;
-    const query = { session: () => query, sort: value => { sort = value; return query; }, lean: async () => {
+    const find = () => {
       let rows = state[name].filter(row => matches(row, filter));
       if (sort) rows.sort((a, b) => b.documentNumber.localeCompare(a.documentNumber));
-      return rows[0] ? structuredClone(rows[0]) : null;
-    } };
+      return rows[0];
+    };
+    const query = { session: () => query, sort: value => { sort = value; return query; }, lean: async () => {
+      const row = find();
+      return row ? structuredClone(row) : null;
+    }, then: (resolve, reject) => Promise.resolve().then(() => {
+      const row = find();
+      return row ? new Model(row) : null;
+    }).then(resolve, reject) };
     return query;
+  };
+  Model.prototype.save = async function () {
+    await this.validate();
+    const row = this.toObject();
+    const index = state[name].findIndex(entry => entry._id === row._id && entry.companyId === row.companyId);
+    if (index < 0) state[name].push(row);
+    else state[name][index] = row;
+    return this;
   };
   Model.exists = filter => ({ session: async () => state[name].some(row => matches(row, filter)) });
   Model.create = async rows => {
@@ -128,6 +143,38 @@ const input = company => ({ _id: `opening:${randomUUID()}`, lines: [{ itemId: `$
     const bad = input('c'); Object.assign(bad.lines[0], patch);
     await assert.rejects(service.postOpeningStock('c', 'admin', bad));
   }
+  seed('locations');
+  for (const location of [
+    { _id: 'zone', parentId: undefined },
+    { _id: 'rack', parentId: 'zone' },
+    { _id: 'bin', parentId: 'rack' },
+    { _id: 'inactive', isActive: 0 },
+    { _id: 'deleted', isDeleted: 1 },
+    { _id: 'other-warehouse', warehouseId: 'elsewhere' },
+    { _id: 'foreign-location', companyId: 'b' },
+  ]) state.inventory_location.push({ companyId: 'locations', warehouseId: 'locations-warehouse', isActive: 1, isDeleted: 0, ...location });
+  for (const locationId of ['missing', 'inactive', 'deleted', 'other-warehouse', 'foreign-location', '', ' ', 42]) {
+    const bad = input('locations');
+    bad.lines.push({ ...bad.lines[0], locationId });
+    const before = JSON.stringify(state);
+    await assert.rejects(service.postOpeningStock('locations', 'admin', bad));
+    assert.equal(JSON.stringify(state), before, 'Invalid locations roll back all stock effects and the company flag');
+  }
+  const sameLocation = input('locations');
+  sameLocation.lines[0].locationId = 'bin';
+  sameLocation.lines.push({ ...sameLocation.lines[0], locationId: ' bin ' });
+  await assert.rejects(service.postOpeningStock('locations', 'admin', sameLocation), /deux fois/);
+  const located = input('locations');
+  located.lines.push(...['zone', 'rack', 'bin'].map(locationId => ({ ...located.lines[0], locationId })));
+  await service.postOpeningStock('locations', 'admin', located);
+  const locationIds = rows => rows.filter(row => row.companyId === 'locations').map(row => row.locationId).sort();
+  assert.deepEqual(locationIds(state.inventory_document_line), ['', 'bin', 'rack', 'zone']);
+  assert.deepEqual(locationIds(state.inventory_movement), ['', 'bin', 'rack', 'zone']);
+  assert.deepEqual(locationIds(state.inventory_balance), ['', 'bin', 'rack', 'zone']);
+  assert(state.inventory_balance.filter(row => row.companyId === 'locations').every(row => row.quantityOnHand === 4 && row.totalValue === 10));
+  const afterLocations = JSON.stringify(state);
+  await service.postOpeningStock('locations', 'admin', located);
+  assert.equal(JSON.stringify(state), afterLocations, 'Location-aware posting remains idempotent');
   for (const [entity, record] of [
     ['inventory_document', { ...state.inventory_document[0], _id: randomUUID() }],
     ['inventory_movement', { ...state.inventory_movement[0], _id: randomUUID() }],
@@ -160,5 +207,5 @@ const input = company => ({ _id: `opening:${randomUUID()}`, lines: [{ itemId: `$
   await companies.upsertCompany({ ...company, inventoryInitialized: false });
   assert.equal((await companies.getCompanyById('a')).inventoryInitialized, 1, 'Older pulls do not reset initialization');
   sql.close();
-  console.log('Passed: competing submissions, idempotent retries, rollback, tenant isolation, validation, sync bypass protection, SQLite migration, and company-state reconciliation.');
+  console.log('Passed: competing submissions, idempotent retries, nested location balances, location validation, rollback, tenant isolation, sync bypass protection, SQLite migration, and company-state reconciliation.');
 })().catch(error => { console.error(error); process.exitCode = 1; });
