@@ -1,4 +1,4 @@
-export type EmployeeDocumentType = "EMPLOYMENT_CONTRACT" | "NATIONAL_ID";
+export type EmployeeDocumentType = string;
 
 export interface EmployeeDocument {
   companyId: string;

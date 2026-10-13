@@ -66,7 +66,9 @@ export default function EmployeeDocumentsList({
                 <Text fontWeight="600">
                   {document.documentType === "EMPLOYMENT_CONTRACT"
                     ? "Contrat de travail"
-                    : "Carte d'identite"}
+                    : document.documentType === "NATIONAL_ID"
+                      ? "Carte d'identité"
+                      : document.documentType}
                 </Text>
 
                 <Text fontSize="sm" color="gray.400">

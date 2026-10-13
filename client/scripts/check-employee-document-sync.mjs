@@ -40,7 +40,7 @@ function load(file, overrides = {}) {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true },
   }).outputText;
   vm.runInNewContext(code, {
-    module, exports: module.exports, Buffer, Date, Error,
+    module, exports: module.exports, Buffer, Uint8Array, Date, Error,
     process: { env: { VITE_API_URL: "http://test" } },
     console: { log() {}, warn() {}, error() {} },
     require: name => {
@@ -141,6 +141,22 @@ try {
   await inspectPush.pushPendingChanges("a");
   assert.deepEqual(operations, ["delete"], "Deletes must never be converted to creates");
   await assert.rejects(() => server.syncEmployeeDocument("create", { ...document, originalName: "conflicting.pdf" }, attachment), error => error.code === "REVISION_CONFLICT");
+  const custom = await documents.uploadEmployeeDocument({ ...file,
+    documentType: "Augmentation de salaire", name: "salary.xlsx", buffer: Buffer.from("salary revision") });
+  assert.equal((await documents.getEmployeeDocumentById("a", custom._id)).documentType, "Augmentation de salaire");
+  assert.equal(custom.fileName, `${custom._id}-${custom.hash}.xlsx`, "Custom types preserve immutable filenames");
+  assert.equal(custom.originalName, "salary.xlsx");
+  assert.equal(await documents.getEmployeeDocumentById("another-company", custom._id), undefined);
+  await new Model(custom).validate();
+  await assert.rejects(() => new Model({ ...custom, documentType: "   " }).validate());
+  const uploadService = load(prefix + "services/modules/hr/employeeDocuments.service.ts", {
+    "employeesDocuments.repository.js": { uploadEmployeeDocument: async value => value },
+  });
+  assert.equal((await uploadService.uploadValidatedEmployeeDocument({ ...file, documentType: " Salary increase " })).documentType, "Salary increase");
+  await assert.rejects(() => uploadService.uploadValidatedEmployeeDocument({ ...file, buffer: Buffer.alloc(10 * 1024 * 1024 + 1) }));
+  await assert.rejects(() => uploadService.uploadValidatedEmployeeDocument({ ...file, documentType: "  " }));
+  await assert.rejects(() => uploadService.uploadValidatedEmployeeDocument({ ...file, employeeId: "../outside" }));
+  console.log("Passed: custom document persistence, server validation, filename preservation, tenant isolation, and invalid upload rejection.");
   console.log("Passed: document creation, legacy queue recovery, idempotent retry, versioned replacement, deletion, and conflict protection.");
 } finally {
   sql.close();

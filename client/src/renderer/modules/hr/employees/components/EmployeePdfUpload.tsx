@@ -1,236 +1,104 @@
 import {
-  Box,
-  Flex,
-  Icon,
-  Input,
-  Text,
-  VStack,
-  SimpleGrid,
+  Box, Button, FormControl, FormLabel, Input, Text, VStack, useColorModeValue,
 } from "@chakra-ui/react";
-import {
-  FiFileText,
-  FiUpload,
-  FiCreditCard,
-  FiCheckCircle,
-} from "react-icons/fi";
-import { useRef, useState } from "react";
-import { EmployeeDocumentType } from "../../../../../common/types/hr/employees/EmployeeDocuments";
+import { FiUpload } from "react-icons/fi";
+import { type FormEvent, useRef, useState } from "react";
 import useAdminUser from "../../../../../store/auth.store";
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 interface PdfUploadProps {
   employeeId: string;
   uploadedBy?: string;
   onUploaded?: (uploaded: boolean) => void;
+  onUploadingChange?: (uploading: boolean) => void;
 }
 
-export default function PdfUpload({
-  employeeId,
-  uploadedBy,
-  onUploaded,
-}: PdfUploadProps) {
+export default function PdfUpload({ employeeId, uploadedBy, onUploaded, onUploadingChange }: PdfUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-
-  const [documentType, setDocumentType] = useState<EmployeeDocumentType>(
-    "EMPLOYMENT_CONTRACT"
-  );
-
+  const [documentType, setDocumentType] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
+  const [uploaded, setUploaded] = useState(false);
   const user = useAdminUser((store) => store.adminUser);
+  const buttonBackground = useColorModeValue("gray.900", "gray.100");
+  const buttonForeground = useColorModeValue("white", "gray.900");
 
-  const uploadDocument = async (selectedFile: File) => {
+  const handleFile = (selected: File | null) => {
+    setUploaded(false);
+    setError("");
+    setFile(null);
+    if (!selected) return;
+    if (selected.size > MAX_FILE_SIZE) {
+      setError("Taille maximale : 10 MB.");
+      return;
+    }
+    setFile(selected);
+  };
+
+  const uploadDocument = async () => {
+    if (uploading || uploaded) return;
+    if (!documentType.trim() || !file) {
+      setError("Saisissez le type de document et sélectionnez un fichier.");
+      return;
+    }
+    setUploading(true);
+    onUploadingChange?.(true);
+    setError("");
     try {
-      setUploading(true);
-
-      const arrayBuffer = await selectedFile.arrayBuffer();
-
       await window.electron.hr.employees_documents.upload({
         companyId: user.companyId,
         employeeId,
         uploadedBy: uploadedBy ?? user._id,
-        documentType,
-        name: selectedFile.name,
-        mimeType: selectedFile.type || "application/octet-stream",
-        buffer: new Uint8Array(arrayBuffer),
+        documentType: documentType.trim(),
+        name: file.name,
+        mimeType: file.type || "application/octet-stream",
+        buffer: new Uint8Array(await file.arrayBuffer()),
       });
-
-      setFile(selectedFile);
+      setUploaded(true);
       onUploaded?.(true);
     } catch (error) {
       console.error("DOCUMENT UPLOAD FAILED:", error);
+      setError("Le téléversement a échoué. Veuillez réessayer.");
     } finally {
       setUploading(false);
+      onUploadingChange?.(false);
     }
-  };
-
-  const handleFile = async (selected: File | null) => {
-    if (!selected) return;
-
-    const allowedTypes = ["application/pdf", "image/jpeg", "image/png"];
-
-    if (
-      documentType === "NATIONAL_ID" &&
-      !allowedTypes.includes(selected.type)
-    ) {
-      alert(
-        "Veuillez sélectionner un fichier PDF ou une image JPG/JPEG ou PNG."
-      );
-      return;
-    }
-
-    if (selected.size > MAX_FILE_SIZE) {
-      alert("Taille maximale : 10 MB.");
-      return;
-    }
-
-    await uploadDocument(selected);
   };
 
   return (
-    <>
-      <SimpleGrid columns={2} gap={4} mb={6}>
-        <Box
-          p={5}
-          borderWidth="2px"
-          borderRadius="xl"
-          cursor="pointer"
-          transition="all .2s"
-          borderColor={
-            documentType === "EMPLOYMENT_CONTRACT" ? "yellow.400" : "gray.600"
-          }
-          bg={
-            documentType === "EMPLOYMENT_CONTRACT" ? "yellow.400" : "gray.800"
-          }
-          color={documentType === "EMPLOYMENT_CONTRACT" ? "black" : "white"}
-          onClick={() => setDocumentType("EMPLOYMENT_CONTRACT")}
-          _hover={{
-            borderColor: "yellow.300",
-            transform: "translateY(-2px)",
-          }}
-        >
-          <VStack gap={2}>
-            <Icon as={FiFileText} boxSize={8} />
-
-            <Text fontWeight="bold">Contrat de travail</Text>
-
-            {documentType === "EMPLOYMENT_CONTRACT" && (
-              <Flex align="center" gap={1} mt={2}>
-                <Icon as={FiCheckCircle} />
-                <Text fontSize="sm" fontWeight="bold">
-                  Sélectionné
-                </Text>
-              </Flex>
-            )}
-          </VStack>
+    <Box as="form" onSubmit={(event: FormEvent<HTMLFormElement>) => { event.preventDefault(); void uploadDocument(); }}>
+      <VStack spacing={6} align="stretch">
+        <FormControl isRequired isDisabled={uploading || uploaded}>
+          <FormLabel htmlFor="employee-document-type">Type de document</FormLabel>
+          <Input id="employee-document-type" value={documentType} focusBorderColor="gray.500"
+            placeholder="Ex. : Augmentation de salaire" onChange={(event) => setDocumentType(event.target.value)} />
+        </FormControl>
+        <Box borderWidth="1px" borderStyle="dashed" borderRadius="lg" p={8} textAlign="center">
+          <Text fontWeight="semibold" mb={2}>Fichier à joindre</Text>
+          <Text fontSize="sm" opacity={0.7} mb={4}>Tous les formats sont acceptés · 10 MB maximum</Text>
+          <Input ref={inputRef} type="file" display="none" isDisabled={uploading || uploaded}
+            onChange={(event) => { handleFile(event.target.files?.[0] ?? null); event.target.value = ""; }} />
+          <Button type="button" variant="outline" colorScheme="gray" leftIcon={<FiUpload />}
+            isDisabled={uploading || uploaded} onClick={() => inputRef.current?.click()}>
+            {file ? "Changer de fichier" : "Choisir un fichier"}
+          </Button>
+          {file && <Text mt={4} fontSize="sm" overflowWrap="anywhere">{file.name} · {(file.size / 1024 / 1024).toFixed(2)} MB</Text>}
         </Box>
-
-        <Box
-          p={5}
-          borderWidth="2px"
-          borderRadius="xl"
-          cursor="pointer"
-          transition="all .2s"
-          borderColor={
-            documentType === "NATIONAL_ID" ? "yellow.400" : "gray.600"
-          }
-          bg={documentType === "NATIONAL_ID" ? "yellow.400" : "gray.800"}
-          color={documentType === "NATIONAL_ID" ? "black" : "white"}
-          onClick={() => setDocumentType("NATIONAL_ID")}
-          _hover={{
-            borderColor: "yellow.300",
-            transform: "translateY(-2px)",
-          }}
-        >
-          <VStack gap={2}>
-            <Icon as={FiCreditCard} boxSize={8} />
-            <Text fontWeight="bold">Carte d'identité</Text>
-
-            {documentType === "NATIONAL_ID" && (
-              <Flex align="center" gap={1} mt={2}>
-                <Icon as={FiCheckCircle} />
-                <Text fontSize="sm" fontWeight="bold">
-                  Sélectionné
-                </Text>
-              </Flex>
-            )}
-          </VStack>
-        </Box>
-      </SimpleGrid>
-
-      <Input
-        ref={inputRef}
-        type="file"
-        accept={
-          documentType === "EMPLOYMENT_CONTRACT"
-            ? undefined
-            : "application/pdf,image/jpeg,image/jpg,image/png"
-        }
-        display="none"
-        onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
-      />
-
-      {!file ? (
-        <Box
-          border="2px dashed"
-          borderColor="gray.500"
-          borderRadius="xl"
-          p={10}
-          cursor={uploading ? "default" : "pointer"}
-          textAlign="center"
-          onClick={() => !uploading && inputRef.current?.click()}
-          _hover={{
-            borderColor: "yellow.400",
-            bg: "whiteAlpha.50",
-          }}
-        >
-          <VStack gap={4}>
-            <Icon as={FiUpload} boxSize={12} color="yellow.400" />
-
-            <Text fontWeight="bold" fontSize="lg">
-              {documentType === "EMPLOYMENT_CONTRACT"
-                ? "Ajouter un contrat de travail"
-                : "Ajouter une carte d'identité"}
-            </Text>
-
-            <Text color="gray.400" fontSize="sm">
-              {documentType === "EMPLOYMENT_CONTRACT"
-                ? "Cliquez ici pour sélectionner un fichier — tous les formats sont acceptés"
-                : "Cliquez ici pour sélectionner un document PDF, JPG ou PNG"}
-            </Text>
-
-            <Text fontSize="xs" color="gray.500">
-              Taille maximale : 10 MB
-            </Text>
-          </VStack>
-        </Box>
-      ) : (
-        <Flex
-          borderWidth="1px"
-          borderRadius="xl"
-          p={5}
-          bg="gray.800"
-          align="center"
-          gap={4}
-        >
-          <Icon as={FiFileText} color="yellow.400" boxSize={8} />
-
-          <Box flex={1}>
-            <Text fontWeight="bold" color="white">
-              {file.name}
-            </Text>
-
-            <Text fontSize="sm" color="gray.400">
-              {(file.size / 1024 / 1024).toFixed(2)} MB
-            </Text>
-          </Box>
-
-          <Text color="green.400" fontWeight="bold">
-            Téléversé ✓
-          </Text>
-        </Flex>
-      )}
-    </>
+        {error && <Text role="alert" fontWeight="medium">{error}</Text>}
+        {uploaded && <Text role="status">Document enregistré. Il sera synchronisé dès que possible.</Text>}
+        {uploaded ? (
+          <Button type="button" colorScheme="gray" variant="outline" onClick={() => {
+            setUploaded(false); setFile(null); setDocumentType(""); setError("");
+          }}>Ajouter un autre document</Button>
+        ) : (
+          <Button type="submit" bg={buttonBackground} color={buttonForeground} _hover={{ opacity: 0.85 }}
+            isLoading={uploading} loadingText="Téléversement…" isDisabled={!documentType.trim() || !file}>
+            Téléverser le document
+          </Button>
+        )}
+      </VStack>
+    </Box>
   );
 }

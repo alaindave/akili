@@ -5,7 +5,7 @@ export interface EmployeeDocumentRecord {
   _id: string;
   employeeId: string;
   uploadedBy: string | null;
-  documentType: "EMPLOYMENT_CONTRACT" | "NATIONAL_ID";
+  documentType: string;
   originalName: string;
   fileName: string;
   storagePath: string | null;
@@ -43,7 +43,7 @@ const employeeDocumentSchema = new Schema<EmployeeDocumentRecord>({
 
   documentType: {
     type: String,
-    enum: ["EMPLOYMENT_CONTRACT", "NATIONAL_ID"],
+    trim: true,
     required: true,
   },
 

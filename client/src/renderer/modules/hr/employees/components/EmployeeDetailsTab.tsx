@@ -32,7 +32,7 @@ import { useState, useRef, useEffect } from "react";
 import { useDeleteEmployee, useEmployee } from "../hooks/useEmployees";
 import { EmployeeDocument } from "../../../../../common/types/hr/employees/EmployeeDocuments";
 import EmployeeDocumentsList from "./EmployeeDocumentsList";
-import UploadDocumentModal from "./EmployeeDocumentUpload.tsx";
+import UploadDocumentPage from "./EmployeeDocumentUpload.tsx";
 import NotAuthorized from "../../../../components/common/NotAuthorized";
 import { ErrorBoundary } from "react-error-boundary";
 import UpdateEmployee from "./EmployeeUpdate";
@@ -399,14 +399,12 @@ const EmployeeDetailsTab = ({ employee }: Props) => {
           {/* ==================== DOCUMENTS ==================== */}
 
           <TabPanel p={0}>
-            <UploadDocumentModal
-              isOpen={isOpen}
+            {isOpen ? <UploadDocumentPage
               onClose={onClose}
               employeeId={displayedEmployee._id}
               uploadedBy={user._id}
-              documentType="EMPLOYMENT_CONTRACT"
               onRefresh={loadEmployeeDocuments}
-            />
+            /> : <>
 
             <EmployeeDocumentsList
               documents={documents}
@@ -416,6 +414,7 @@ const EmployeeDetailsTab = ({ employee }: Props) => {
             />
             {user.role === "MANAGER" ? (
               <Button
+                aria-label="Ajouter un document"
                 position="absolute"
                 top="3rem"
                 right="0.01rem"
@@ -429,6 +428,7 @@ const EmployeeDetailsTab = ({ employee }: Props) => {
                 <LuPaperclip />
               </Button>
             ) : null}
+          </>}
           </TabPanel>
         </TabPanels>
 

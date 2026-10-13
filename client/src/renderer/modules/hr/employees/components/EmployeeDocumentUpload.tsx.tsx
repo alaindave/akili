@@ -1,69 +1,37 @@
-import {
-  Button,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  ModalCloseButton,
-} from "@chakra-ui/react";
-import PdfUpload from "./EmployeePdfUpload";
-import { EmployeeDocumentType } from "../../../../../common/types/hr/employees/EmployeeDocuments";
+import { Box, Button, Heading, Text, useColorModeValue } from "@chakra-ui/react";
+import { FiArrowLeft } from "react-icons/fi";
 import { useState } from "react";
+import PdfUpload from "./EmployeePdfUpload";
 
-interface UploadDocumentModalProps {
-  isOpen: boolean;
+interface UploadDocumentPageProps {
   onClose: () => void;
   employeeId: string;
   uploadedBy?: string;
-  documentType: EmployeeDocumentType;
   onRefresh?: () => void;
 }
 
-export default function UploadDocumentModal({
-  isOpen,
-  onClose,
-  employeeId,
-  uploadedBy,
-  documentType,
-  onRefresh,
-}: UploadDocumentModalProps) {
-  const [uploaded, setUploaded] = useState<boolean>(false);
-  const handleClose = () => {
-    if (!uploaded) onClose();
-    onRefresh?.();
-    onClose();
-  };
+export default function UploadDocumentPage({
+  onClose, employeeId, uploadedBy, onRefresh,
+}: UploadDocumentPageProps) {
+  const [uploading, setUploading] = useState(false);
+  const background = useColorModeValue("white", "gray.900");
+  const foreground = useColorModeValue("gray.900", "gray.100");
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="2xl" isCentered>
-      <ModalOverlay backdropFilter="blur(0.5rem)">
-        <ModalContent>
-          <ModalHeader>Type de documents</ModalHeader>
-
-          <ModalCloseButton />
-
-          <ModalBody pb={6}>
-            <PdfUpload
-              employeeId={employeeId}
-              uploadedBy={uploadedBy}
-              onUploaded={(uploaded) => setUploaded(uploaded)}
-            />
-          </ModalBody>
-
-          <ModalFooter>
-            <Button
-              color="#ffffff"
-              bg="red.500"
-              onClick={handleClose}
-              _hover={{ bg: "red.500" }}
-            >
-              Fermer
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </ModalOverlay>
-    </Modal>
+    <Box as="section" bg={background} color={foreground} p={{ base: 5, md: 8 }} borderWidth="1px" borderRadius="lg">
+      <Button leftIcon={<FiArrowLeft />} variant="ghost" colorScheme="gray" onClick={onClose} isDisabled={uploading} mb={6}>
+        Retour aux documents
+      </Button>
+      <Box maxW="680px" mx="auto">
+        <Heading size="lg" mb={2}>Ajouter un document</Heading>
+        <Text opacity={0.7} mb={8}>Classez un document dans le dossier de cet employé.</Text>
+        <PdfUpload
+          employeeId={employeeId}
+          uploadedBy={uploadedBy}
+          onUploadingChange={setUploading}
+          onUploaded={() => onRefresh?.()}
+        />
+      </Box>
+    </Box>
   );
 }

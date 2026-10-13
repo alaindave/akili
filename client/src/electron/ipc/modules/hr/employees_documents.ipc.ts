@@ -1,3 +1,4 @@
+import { uploadValidatedEmployeeDocument } from "../../../services/modules/hr/employeeDocuments.service.js";
 import { ipcMain, shell, dialog, app } from "electron";
 import fs from "fs";
 import fsPromises from "fs/promises";
@@ -12,7 +13,6 @@ import {
   getAllEmployeeDocuments,
   getUnsyncedEmployeeDocuments,
   markEmployeeDocumentUploaded,
-  uploadEmployeeDocument,
 } from "../../../database/repositories/modules/hr/employeesDocuments.repository.js";
 
 import {
@@ -194,7 +194,7 @@ export function registerEmployeeDocumentIPC() {
         throw new Error("COMPANY ID IS REQUIRED FOR EMPLOYEE DOCUMENT UPLOAD");
       }
 
-      return await uploadEmployeeDocument(document);
+      return await uploadValidatedEmployeeDocument(document);
     }
   );
 
