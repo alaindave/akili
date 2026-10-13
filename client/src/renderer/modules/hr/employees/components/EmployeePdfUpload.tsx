@@ -1,5 +1,12 @@
 import {
-  Box, Button, FormControl, FormLabel, Input, Text, VStack, useColorModeValue,
+  Box,
+  Button,
+  FormControl,
+  FormLabel,
+  Input,
+  Text,
+  VStack,
+  useColorModeValue,
 } from "@chakra-ui/react";
 import { FiUpload } from "react-icons/fi";
 import { type FormEvent, useRef, useState } from "react";
@@ -14,7 +21,12 @@ interface PdfUploadProps {
   onUploadingChange?: (uploading: boolean) => void;
 }
 
-export default function PdfUpload({ employeeId, uploadedBy, onUploaded, onUploadingChange }: PdfUploadProps) {
+export default function PdfUpload({
+  employeeId,
+  uploadedBy,
+  onUploaded,
+  onUploadingChange,
+}: PdfUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [documentType, setDocumentType] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -68,33 +80,99 @@ export default function PdfUpload({ employeeId, uploadedBy, onUploaded, onUpload
   };
 
   return (
-    <Box as="form" onSubmit={(event: FormEvent<HTMLFormElement>) => { event.preventDefault(); void uploadDocument(); }}>
+    <Box
+      as="form"
+      onSubmit={(event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        void uploadDocument();
+      }}
+    >
       <VStack spacing={6} align="stretch">
         <FormControl isRequired isDisabled={uploading || uploaded}>
-          <FormLabel htmlFor="employee-document-type">Type de document</FormLabel>
-          <Input id="employee-document-type" value={documentType} focusBorderColor="gray.500"
-            placeholder="Ex. : Augmentation de salaire" onChange={(event) => setDocumentType(event.target.value)} />
+          <FormLabel htmlFor="employee-document-type">
+            Type de document
+          </FormLabel>
+          <Input
+            id="employee-document-type"
+            value={documentType}
+            focusBorderColor="gray.500"
+            placeholder="Ex. : Augmentation de salaire"
+            onChange={(event) => setDocumentType(event.target.value)}
+          />
         </FormControl>
-        <Box borderWidth="1px" borderStyle="dashed" borderRadius="lg" p={8} textAlign="center">
-          <Text fontWeight="semibold" mb={2}>Fichier à joindre</Text>
-          <Text fontSize="sm" opacity={0.7} mb={4}>Tous les formats sont acceptés · 10 MB maximum</Text>
-          <Input ref={inputRef} type="file" display="none" isDisabled={uploading || uploaded}
-            onChange={(event) => { handleFile(event.target.files?.[0] ?? null); event.target.value = ""; }} />
-          <Button type="button" variant="outline" colorScheme="gray" leftIcon={<FiUpload />}
-            isDisabled={uploading || uploaded} onClick={() => inputRef.current?.click()}>
+        <Box
+          borderWidth="1px"
+          borderStyle="dashed"
+          borderRadius="lg"
+          p={8}
+          textAlign="center"
+        >
+          <Text fontWeight="semibold" mb={2}>
+            Fichier à joindre
+          </Text>
+          <Text fontSize="sm" opacity={0.7} mb={4}>
+            Tous les formats sont acceptés · 10 MB maximum
+          </Text>
+          <Input
+            ref={inputRef}
+            type="file"
+            display="none"
+            isDisabled={uploading || uploaded}
+            onChange={(event) => {
+              handleFile(event.target.files?.[0] ?? null);
+              event.target.value = "";
+            }}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            colorScheme="gray"
+            leftIcon={<FiUpload />}
+            isDisabled={uploading || uploaded}
+            onClick={() => inputRef.current?.click()}
+          >
             {file ? "Changer de fichier" : "Choisir un fichier"}
           </Button>
-          {file && <Text mt={4} fontSize="sm" overflowWrap="anywhere">{file.name} · {(file.size / 1024 / 1024).toFixed(2)} MB</Text>}
+          {file && (
+            <Text mt={4} fontSize="sm" overflowWrap="anywhere">
+              {file.name} · {(file.size / 1024 / 1024).toFixed(2)} MB
+            </Text>
+          )}
         </Box>
-        {error && <Text role="alert" fontWeight="medium">{error}</Text>}
-        {uploaded && <Text role="status">Document enregistré. Il sera synchronisé dès que possible.</Text>}
+        {error && (
+          <Text role="alert" fontWeight="medium">
+            {error}
+          </Text>
+        )}
+        {uploaded && (
+          <Text role="status">
+            Document enregistré. Il sera synchronisé dès que possible.
+          </Text>
+        )}
         {uploaded ? (
-          <Button type="button" colorScheme="gray" variant="outline" onClick={() => {
-            setUploaded(false); setFile(null); setDocumentType(""); setError("");
-          }}>Ajouter un autre document</Button>
+          <Button
+            type="button"
+            colorScheme="gray"
+            variant="outline"
+            onClick={() => {
+              setUploaded(false);
+              setFile(null);
+              setDocumentType("");
+              setError("");
+            }}
+          >
+            Ajouter un autre document
+          </Button>
         ) : (
-          <Button type="submit" bg={buttonBackground} color={buttonForeground} _hover={{ opacity: 0.85 }}
-            isLoading={uploading} loadingText="Téléversement…" isDisabled={!documentType.trim() || !file}>
+          <Button
+            type="submit"
+            bg={buttonBackground}
+            color={buttonForeground}
+            _hover={{ opacity: 0.85 }}
+            isLoading={uploading}
+            loadingText="Téléversement…"
+            isDisabled={!documentType.trim() || !file}
+          >
             Téléverser le document
           </Button>
         )}

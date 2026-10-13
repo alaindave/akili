@@ -157,7 +157,7 @@ const attendanceDailyCheckSchema = new Schema<AttendanceDailyCheck>({
 });
 
 attendanceDailyCheckSchema.index(
-  { date: 1 },
+  { companyId: 1, date: 1 },
   {
     unique: true,
     partialFilterExpression: { isDeleted: 0 },

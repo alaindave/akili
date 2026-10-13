@@ -101,10 +101,14 @@ const EmployeeAttendancePage = () => {
   const [filter, setFilter] = useState("");
 
   const [, setTime] = useState(today);
-  const [absenceSuccessDate, setAbsenceSuccessDate] = useState<string | null>(null);
+  const [absenceSuccessDate, setAbsenceSuccessDate] = useState<string | null>(
+    null
+  );
 
   const [checkLoading, setCheckLoading] = useState(false);
-  const [verificationSuccessDate, setVerificationSuccessDate] = useState<string | null>(null);
+  const [verificationSuccessDate, setVerificationSuccessDate] = useState<
+    string | null
+  >(null);
 
   const [canVerify, setCanVerify] = useState(false);
 
@@ -176,8 +180,14 @@ const EmployeeAttendancePage = () => {
       isClosable: true,
       position: "top-left",
     });
-  }, [absenceSuccessDate, selectedDate, isMarkingAbsent, attendanceFetching, attendances, toast]);
-
+  }, [
+    absenceSuccessDate,
+    selectedDate,
+    isMarkingAbsent,
+    attendanceFetching,
+    attendances,
+    toast,
+  ]);
 
   /* =========================================================
      ERROR HANDLING
@@ -342,7 +352,9 @@ const EmployeeAttendancePage = () => {
       console.log("VERIFIED ATTENDANCES", result);
 
       setDailyCheck(result);
-      setCanVerify(Boolean(result.markAbsentCompleted && result.markLeaveCompleted));
+      setCanVerify(
+        Boolean(result.markAbsentCompleted && result.markLeaveCompleted)
+      );
       await loadDailyCheck();
       await attendanceDailyCheckSync();
       setVerificationSuccessDate(selectedDate);
@@ -476,8 +488,11 @@ const EmployeeAttendancePage = () => {
       setVerificationSuccessDate(null);
       return;
     }
-    if (checkLoading ||
-        (attendanceAction !== "CONFIRM" && attendanceAction !== "NOTIFY_MANAGER")) return;
+    if (
+      checkLoading ||
+      (attendanceAction !== "CONFIRM" && attendanceAction !== "NOTIFY_MANAGER")
+    )
+      return;
     setVerificationSuccessDate(null);
     toast({
       title: "Présence vérifiée",
@@ -487,8 +502,13 @@ const EmployeeAttendancePage = () => {
       isClosable: true,
       position: "top-left",
     });
-  }, [verificationSuccessDate, selectedDate, checkLoading, attendanceAction, toast]);
-
+  }, [
+    verificationSuccessDate,
+    selectedDate,
+    checkLoading,
+    attendanceAction,
+    toast,
+  ]);
 
   /* =========================================================
      RENDER
@@ -640,7 +660,7 @@ const EmployeeAttendancePage = () => {
         {/* =====================================================
             BODY
         ===================================================== */}
-        <Box height="56vh" overflowY="auto" overflowX="hidden">
+        <Box height="62vh" overflowY="auto" overflowX="hidden">
           {attendanceLoading ? (
             <>
               <Box as="style">{shimmerKeyframes}</Box>
@@ -656,8 +676,8 @@ const EmployeeAttendancePage = () => {
               mt="3rem"
               width="78vw"
               minHeight={{
-                base: "180px",
-                md: "200px",
+                base: "200px",
+                md: "300px",
               }}
               align="center"
               justify="center"

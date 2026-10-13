@@ -24,7 +24,7 @@ import { IoPerson } from "react-icons/io5";
 import { FaRegTrashCan } from "react-icons/fa6";
 import { FaUserEdit } from "react-icons/fa";
 import { MdAttachMoney, MdWork } from "react-icons/md";
-import { LuPaperclip } from "react-icons/lu";
+import { BsPaperclip } from "react-icons/bs";
 import useAdminUser from "../../../../../store/auth.store";
 import type Employee from "../../../../../common/types/hr/employees/Employee";
 import EmployeeDetailsCard from "./EmployeeDetailsCard";
@@ -58,6 +58,7 @@ const EmployeeDetailsTab = ({ employee }: Props) => {
   const { mutateAsync: deleteEmployee, isPending: isDeleting } =
     useDeleteEmployee();
   const displayedEmployee = currentEmployee ?? employee;
+  const [activeTabIndex, setActiveTabIndex] = useState(0);
   const [documents, setDocuments] = useState<EmployeeDocument[]>([]);
   const syncVersion = useSyncStore((store) => store.syncVersion);
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -175,8 +176,16 @@ const EmployeeDetailsTab = ({ employee }: Props) => {
   }
 
   return (
-    <Box w="47vw" maxH="90vh" h="90vh" display="flex" flexDirection="column">
+    <Box
+      w="47vw"
+      maxH={activeTabIndex === 3 ? "100%" : "90vh"}
+      h={activeTabIndex === 3 ? "100%" : "90vh"}
+      display="flex"
+      flexDirection="column"
+    >
       <Tabs
+        index={activeTabIndex}
+        onChange={setActiveTabIndex}
         variant="enclosed"
         flex="1"
         minH={0}
@@ -275,7 +284,7 @@ const EmployeeDetailsTab = ({ employee }: Props) => {
         <TabPanels
           flex="1"
           minH={0}
-          overflowY="auto"
+          overflowY={activeTabIndex === 3 ? "scroll" : "auto"}
           overflowX="hidden"
           px={{ base: 2, md: 4 }}
           py={4}
@@ -399,97 +408,102 @@ const EmployeeDetailsTab = ({ employee }: Props) => {
           {/* ==================== DOCUMENTS ==================== */}
 
           <TabPanel p={0}>
-            {isOpen ? <UploadDocumentPage
-              onClose={onClose}
-              employeeId={displayedEmployee._id}
-              uploadedBy={user._id}
-              onRefresh={loadEmployeeDocuments}
-            /> : <>
-
-            <EmployeeDocumentsList
-              documents={documents}
-              onView={handleView}
-              onDownload={handleDownload}
-              onDelete={handleDocumentDelete}
-            />
-            {user.role === "MANAGER" ? (
-              <Button
-                aria-label="Ajouter un document"
-                position="absolute"
-                top="3rem"
-                right="0.01rem"
-                onClick={onOpen}
-                bg="transparent"
-                fontSize="1.4rem"
-                _hover={{
-                  bg: "transparent",
-                }}
-              >
-                <LuPaperclip />
-              </Button>
-            ) : null}
-          </>}
+            {isOpen ? (
+              <UploadDocumentPage
+                onClose={onClose}
+                employeeId={displayedEmployee._id}
+                uploadedBy={user._id}
+                onRefresh={loadEmployeeDocuments}
+              />
+            ) : (
+              <>
+                {user.role === "MANAGER" ? (
+                  <Button
+                    aria-label="Ajouter un document"
+                    position="absolute"
+                    top="3rem"
+                    left="0.01rem"
+                    onClick={onOpen}
+                    bg="transparent"
+                    fontSize="1.9rem"
+                    _hover={{
+                      bg: "transparent",
+                    }}
+                  >
+                    <BsPaperclip />
+                  </Button>
+                ) : null}
+                <EmployeeDocumentsList
+                  documents={documents}
+                  onView={handleView}
+                  onDownload={handleDownload}
+                  onDelete={handleDocumentDelete}
+                />
+              </>
+            )}
           </TabPanel>
         </TabPanels>
 
         {/* ==================== FIXED BOTTOM ACTION BAR ==================== */}
 
-        <HStack
-          flexShrink={0}
-          w="100%"
-          px={{ base: 2, md: 4 }}
-          py={3}
-          spacing={3}
-          bg="white"
-          borderTop="1px solid"
-          borderColor="gray.200"
-          justifyContent="flex-start"
-        >
-          {user?.role === "MANAGER" ? (
-            <ErrorBoundary FallbackComponent={ComponentErrorFallback}>
+        {activeTabIndex !== 3 && (
+          <HStack
+            flexShrink={0}
+            w="100%"
+            px={{ base: 2, md: 4 }}
+            py={3}
+            spacing={3}
+            bg="white"
+            borderTop="1px solid"
+            borderColor="gray.200"
+            justifyContent="flex-start"
+          >
+            {user?.role === "MANAGER" ? (
+              <ErrorBoundary FallbackComponent={ComponentErrorFallback}>
+                <Box>
+                  <UpdateEmployee
+                    _id={displayedEmployee._id}
+                    employee={displayedEmployee}
+                  />
+                </Box>
+              </ErrorBoundary>
+            ) : (
               <Box>
-                <UpdateEmployee
-                  _id={displayedEmployee._id}
-                  employee={displayedEmployee}
+                <NotAuthorized
+                  buttonText="Modifier"
+                  icon={FaUserEdit}
+                  placement="left"
+                  width="13rem"
+                  color="#4F46E5"
                 />
               </Box>
-            </ErrorBoundary>
-          ) : (
-            <Box>
-              <NotAuthorized
-                buttonText="Modifier"
-                icon={FaUserEdit}
-                placement="left"
-                width="13rem"
-                color="#4F46E5"
-              />
-            </Box>
-          )}
+            )}
 
-          {user?.role === "MANAGER" ? (
-            <Button
-              bg="red.100"
-              color="red.600"
-              width="9rem"
-              height="2.3rem"
-              fontSize="1rem"
-              leftIcon={<FaRegTrashCan fontSize="1.1rem" />}
-              onClick={onEmployeeDeletionOpen}
-            >
-              Supprimer
-            </Button>
-          ) : (
-            <Box>
-              <NotAuthorized
-                buttonText="Supprimer"
-                icon={FaRegTrashCan}
-                placement="bottom"
-                width="13rem"
-                color="red"
-              />
-            </Box>
-          )}
-        </HStack>
+            {user?.role === "MANAGER" ? (
+              <Button
+                bg="red.100"
+                color="red.600"
+                width="9rem"
+                height="2.3rem"
+                fontSize="1rem"
+                leftIcon={<FaRegTrashCan fontSize="1.1rem" />}
+                onClick={onEmployeeDeletionOpen}
+              >
+                Supprimer
+              </Button>
+            ) : (
+              <Box>
+                <NotAuthorized
+                  buttonText="Supprimer"
+                  icon={FaRegTrashCan}
+                  placement="bottom"
+                  width="13rem"
+                  color="red"
+                />
+              </Box>
+            )}
+          </HStack>
+        )}
       </Tabs>
 
       {/* ==================== DELETE DOCUMENT DIALOG ==================== */}

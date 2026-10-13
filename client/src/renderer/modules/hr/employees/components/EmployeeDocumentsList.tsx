@@ -1,6 +1,7 @@
 import {
   Badge,
   Box,
+  Button,
   Flex,
   HStack,
   Icon,
@@ -12,6 +13,7 @@ import {
   VStack,
 } from "@chakra-ui/react";
 import { FiDownload, FiEye, FiFileText, FiTrash2 } from "react-icons/fi";
+import { BsPaperclip } from "react-icons/bs";
 import { EmployeeDocument } from "../../../../../common/types/hr/employees/EmployeeDocuments";
 import useAdminUser from "../../../../../store/auth.store";
 
@@ -67,8 +69,8 @@ export default function EmployeeDocumentsList({
                   {document.documentType === "EMPLOYMENT_CONTRACT"
                     ? "Contrat de travail"
                     : document.documentType === "NATIONAL_ID"
-                      ? "Carte d'identité"
-                      : document.documentType}
+                    ? "Carte d'identité"
+                    : document.documentType}
                 </Text>
 
                 <Text fontSize="sm" color="gray.400">

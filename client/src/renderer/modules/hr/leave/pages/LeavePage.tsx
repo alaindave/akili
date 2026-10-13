@@ -374,7 +374,7 @@ const EmployeeLeavePage = () => {
                 LEAVE ROWS
             ================================================= */}
 
-          <Box height="57vh" overflowX="hidden" overflowY="auto">
+          <Box height="61vh" overflowX="hidden" overflowY="auto">
             {leaves
               .filter((l) =>
                 `${l.firstName} ${l.lastName}`
