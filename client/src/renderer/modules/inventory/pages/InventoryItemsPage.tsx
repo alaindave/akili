@@ -52,9 +52,7 @@ export default function InventoryItemsPage() {
   return companyId ? (
     <CompanyItems key={companyId} companyId={companyId} />
   ) : (
-    <Alert bg="#F5F5F5">
-      Connectez-vous à une entreprise pour consulter les articles.
-    </Alert>
+    <Alert>Connectez-vous à une entreprise pour consulter les articles.</Alert>
   );
 }
 

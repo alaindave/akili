@@ -3,17 +3,21 @@ import bcrypt from "bcrypt";
 import Joi from "joi";
 import { getAdminUserByEmail, getCompanyById } from "../../db.js";
 
+import Company from "../../models/shared/company.model.js";
+
 const router = express.Router();
 
 interface LoginRequest {
   email: string;
   password: string;
   companyId?: string;
+  signUpCode?: string;
 }
 
 // Authenticate user
-router.post("/", async (req: Request<{}, {}, LoginRequest>, res: Response) => {
-  const { error } = validate(req.body);
+router.post(["/", "/setup"], async (req: Request<{}, {}, LoginRequest>, res: Response) => {
+  const setup = /^\/setup\/?$/i.test(req.path);
+  const { error } = validate(req.body, setup);
 
   if (error) {
     console.error("Validation error:", error);
@@ -22,7 +26,17 @@ router.post("/", async (req: Request<{}, {}, LoginRequest>, res: Response) => {
   }
 
   try {
-    const adminUser = await getAdminUserByEmail(req.body.email, req.body.companyId);
+    const setupCompany = setup ? await Company.findOne({
+      signUpCode: req.body.signUpCode?.trim(),
+      isDeleted: { $ne: 1 },
+    }) : null;
+    if (setup && !setupCompany) {
+      return res.status(400).send("Invalid company code or admin credentials.");
+    }
+    const adminUser = await getAdminUserByEmail(req.body.email, setupCompany?.companyId ?? req.body.companyId);
+    if (setup && (!adminUser || adminUser.isDeleted || adminUser.role !== "ADMIN")) {
+      return res.status(400).send("Invalid company code or admin credentials.");
+    }
 
     if (!adminUser) {
       return res.status(400).send("Invalid email or password.");
@@ -101,11 +115,12 @@ router.post("/", async (req: Request<{}, {}, LoginRequest>, res: Response) => {
   }
 });
 
-function validate(body: LoginRequest) {
+function validate(body: LoginRequest, setup = false) {
   const schema = Joi.object({
     email: Joi.string().min(5).max(255).required().email(),
-    password: Joi.string().min(6).max(255).required(),
-    companyId: Joi.string().trim().max(255).optional(),
+    password: Joi.string().min(setup ? 1 : 6).max(255).required(),
+    companyId: setup ? Joi.forbidden() : Joi.string().trim().max(255).optional(),
+    signUpCode: setup ? Joi.string().trim().min(1).max(255).required() : Joi.forbidden(),
   });
 
   return schema.validate(body);

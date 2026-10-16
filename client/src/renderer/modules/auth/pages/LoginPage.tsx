@@ -219,6 +219,7 @@ const LoginPage = ({
                 showCompanyName={false}
                 width="8rem"
                 height="8rem"
+                isDisabled
               />
             </Box>
 

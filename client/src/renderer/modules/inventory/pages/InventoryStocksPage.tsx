@@ -216,7 +216,8 @@ function CompanyStocks({ companyId }: { companyId: string }) {
     const ids = new Set(entries.map((entry) => entry._id));
     const children = new Map<string, InventoryLocation[]>();
     for (const entry of entries) {
-      const parentId = entry.parentId && ids.has(entry.parentId) ? entry.parentId : "";
+      const parentId =
+        entry.parentId && ids.has(entry.parentId) ? entry.parentId : "";
       const siblings = children.get(parentId) ?? [];
       siblings.push(entry);
       children.set(parentId, siblings);

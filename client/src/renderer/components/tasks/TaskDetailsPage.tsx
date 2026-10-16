@@ -202,6 +202,7 @@ export default function TaskDetailsPage() {
           px={{ base: 6, md: 12, lg: 16 }}
           py={{ base: 8, md: 14 }}
           sx={{ "@media print": { border: 0, boxShadow: "none", padding: 0 } }}
+          position="relative"
         >
           {!task ? (
             <Text color="#737373">
@@ -229,7 +230,7 @@ export default function TaskDetailsPage() {
                     <Text
                       as="h1"
                       fontFamily="Georgia, 'Times New Roman', serif"
-                      fontSize={{ base: "2xl", md: "4xl" }}
+                      fontSize={{ base: "1.3", md: "1.5rem" }}
                       fontWeight="normal"
                       lineHeight="1.25"
                       overflowWrap="anywhere"
@@ -247,6 +248,9 @@ export default function TaskDetailsPage() {
                     py={1}
                     fontWeight="500"
                     fontSize="xs"
+                    position="absolute"
+                    top="3rem"
+                    right="2em"
                   >
                     {task.isResolved ? "Résolue" : "Ouverte"}
                   </Badge>

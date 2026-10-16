@@ -32,31 +32,38 @@ import { useState } from "react";
 import { queryClient } from "../../../lib/queryClient";
 import useTaskStore from "../../../../store/task.store";
 
-const schema = z
-  .object({
-    firstName: z.string().min(3, { message: "Minimum de 3 caractères requis" }),
-    lastName: z.string().min(3, { message: "Minimum de 3 caractères requis" }),
-    email: z.string().email("Addresse email non valide."),
-    signUpCode: z.string(),
-    password: z
-      .string()
-      .min(8, { message: "Minimum de 8 caractères requis" })
-      .regex(/[a-z]/, "Incluez au moins une lettre minuscule.")
-      .regex(/[A-Z]/, "Incluez au moins une lettre majuscule.")
-      .regex(/[0-9]/, "Incluez au moins un chiffre."),
-    confirmPassword: z.string(),
-  })
-  .superRefine(({ confirmPassword, password }, ctx) => {
-    if (confirmPassword !== password) {
-      ctx.addIssue({
-        code: "custom",
-        message: "Mots de passe non identiques.",
-        path: ["confirmPassword"],
-      });
-    }
-  });
+const createSchema = (companySetup: boolean) =>
+  z
+    .object({
+      firstName: companySetup
+        ? z.string().optional()
+        : z.string().min(3, { message: "Minimum de 3 caractères requis" }),
+      lastName: companySetup
+        ? z.string().optional()
+        : z.string().min(3, { message: "Minimum de 3 caractères requis" }),
+      email: z.string().email("Addresse email non valide."),
+      signUpCode: z.string().trim().min(1, "Code d’accès requis."),
+      password: companySetup
+        ? z.string().min(1, "Mot de passe requis.")
+        : z
+            .string()
+            .min(8, { message: "Minimum de 8 caractères requis" })
+            .regex(/[a-z]/, "Incluez au moins une lettre minuscule.")
+            .regex(/[A-Z]/, "Incluez au moins une lettre majuscule.")
+            .regex(/[0-9]/, "Incluez au moins un chiffre."),
+      confirmPassword: z.string().optional(),
+    })
+    .superRefine(({ confirmPassword, password }, ctx) => {
+      if (!companySetup && confirmPassword !== password) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Mots de passe non identiques.",
+          path: ["confirmPassword"],
+        });
+      }
+    });
 
-type SignUpData = z.infer<typeof schema>;
+type SignUpData = z.infer<ReturnType<typeof createSchema>>;
 
 const labelColor = "#374151";
 
@@ -79,7 +86,7 @@ const inputStyle = {
   },
   _focus: {
     borderColor: "#0078D4",
-    boxShadow: "0 0 0 1px #0078D4",
+    boxShadow: "0 0 0 1pxrgba(2, 9, 0, 0.51)",
   },
 };
 
@@ -97,31 +104,36 @@ const SignUp = ({ companySetup = false }: { companySetup?: boolean }) => {
     handleSubmit,
     formState: { errors },
   } = useForm<SignUpData>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(createSchema(companySetup)),
   });
 
   const onSubmit = async (data: SignUpData) => {
     setIsLoggingIn(true);
     setErrorMessage("");
 
-    console.log("FORM SUBMITTED:", data);
-
     try {
-      const res = await window.electron.auth.auth.signup({
-        firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email,
-        password: data.password,
-        signUpCode: data.signUpCode,
-      });
+      const res = companySetup
+        ? await window.electron.auth.auth.setupCompany({
+            email: data.email,
+            password: data.password,
+            signUpCode: data.signUpCode,
+          })
+        : await window.electron.auth.auth.signup({
+            firstName: data.firstName!,
+            lastName: data.lastName!,
+            email: data.email,
+            password: data.password,
+            signUpCode: data.signUpCode,
+          });
 
       console.log("USER SIGN UP SUCCESS: ", res);
 
-      await window.electron.auth.offlineUsers.save(res.company.companyId, {
-        ...res.admin,
-        companyId: res.company.companyId,
-        password: data.password,
-      });
+      if (!companySetup)
+        await window.electron.auth.offlineUsers.save(res.company.companyId, {
+          ...res.admin,
+          companyId: res.company.companyId,
+          password: data.password,
+        });
       await useTaskStore.getState().clearTasks();
       queryClient.clear();
       setAuth({
@@ -137,7 +149,11 @@ const SignUp = ({ companySetup = false }: { companySetup?: boolean }) => {
       navigate("/admin");
     } catch (error) {
       console.error("AN ERROR OCCURED WHILE SIGNING UP", error);
-      setErrorMessage("Une erreur est survenue. Veuillez contacter ADB Tech.");
+      setErrorMessage(
+        companySetup && error instanceof Error
+          ? error.message
+          : "Une erreur est survenue. Veuillez contacter ADB Tech."
+      );
     } finally {
       setIsLoggingIn(false);
     }
@@ -258,7 +274,7 @@ const SignUp = ({ companySetup = false }: { companySetup?: boolean }) => {
                     mt={1}
                   >
                     {companySetup
-                      ? "Utilisez le code d’accès de votre entreprise pour la configurer sur cet appareil."
+                      ? "Saisissez le code d’accès et les identifiants de l’administrateur existant de votre entreprise."
                       : "Remplissez le formulaire"}
                   </Text>
                 </VStack>
@@ -302,32 +318,35 @@ const SignUp = ({ companySetup = false }: { companySetup?: boolean }) => {
                     md: 5,
                   }}
                 >
-                  {/* LAST NAME */}
-                  <FormField
-                    icon={<MdPerson2 color="#F2B705" size="1.3rem" />}
-                    label="Nom"
-                    error={errors.lastName?.message}
-                  >
-                    <Input
-                      {...inputStyle}
-                      type="text"
-                      {...register("lastName")}
-                    />
-                  </FormField>
+                  {!companySetup && (
+                    <>
+                      {/* LAST NAME */}
+                      <FormField
+                        icon={<MdPerson2 color="#F2B705" size="1.3rem" />}
+                        label="Nom"
+                        error={errors.lastName?.message}
+                      >
+                        <Input
+                          {...inputStyle}
+                          type="text"
+                          {...register("lastName")}
+                        />
+                      </FormField>
 
-                  {/* FIRST NAME */}
-                  <FormField
-                    icon={<MdPerson2 color="#F2B705" size="1.3rem" />}
-                    label="Prénom"
-                    error={errors.firstName?.message}
-                  >
-                    <Input
-                      {...inputStyle}
-                      type="text"
-                      {...register("firstName")}
-                    />
-                  </FormField>
-
+                      {/* FIRST NAME */}
+                      <FormField
+                        icon={<MdPerson2 color="#F2B705" size="1.3rem" />}
+                        label="Prénom"
+                        error={errors.firstName?.message}
+                      >
+                        <Input
+                          {...inputStyle}
+                          type="text"
+                          {...register("firstName")}
+                        />
+                      </FormField>
+                    </>
+                  )}
                   {/* EMAIL */}
                   <FormField
                     icon={<MdAlternateEmail color="#F2B705" size="1.3rem" />}
@@ -344,7 +363,8 @@ const SignUp = ({ companySetup = false }: { companySetup?: boolean }) => {
                   {/* Sign up code*/}
                   <FormField
                     icon={<MdBusiness color="#F2B705" size="1.3rem" />}
-                    label="Code d'acces"
+                    label="Code d’accès"
+                    error={errors.signUpCode?.message}
                   >
                     <Input
                       {...inputStyle}
@@ -362,24 +382,38 @@ const SignUp = ({ companySetup = false }: { companySetup?: boolean }) => {
                     <Input
                       {...inputStyle}
                       type="password"
-                      placeholder="Min. 8 car. avec 1 chiffre et 1 lettre maj"
+                      placeholder={
+                        companySetup
+                          ? "Mot de passe existant"
+                          : "Min. 8 car. avec 1 chiffre et 1 lettre maj"
+                      }
                       {...register("password")}
                     />
                   </FormField>
 
-                  {/* CONFIRM PASSWORD */}
-                  <FormField
-                    icon={<RiLockPasswordFill color="#F2B705" size="1.3rem" />}
-                    label="Confirmez le mot de passe"
-                    error={errors.confirmPassword?.message}
-                  >
-                    <Input
-                      {...inputStyle}
-                      type="password"
-                      placeholder="Min. 8 car. avec 1 chiffre et 1 lettre maj"
-                      {...register("confirmPassword")}
-                    />
-                  </FormField>
+                  {!companySetup && (
+                    <>
+                      {/* CONFIRM PASSWORD */}
+                      <FormField
+                        icon={
+                          <RiLockPasswordFill color="#F2B705" size="1.3rem" />
+                        }
+                        label="Confirmez le mot de passe"
+                        error={errors.confirmPassword?.message}
+                      >
+                        <Input
+                          {...inputStyle}
+                          type="password"
+                          placeholder={
+                            companySetup
+                              ? "Mot de passe existant"
+                              : "Min. 8 car. avec 1 chiffre et 1 lettre maj"
+                          }
+                          {...register("confirmPassword")}
+                        />
+                      </FormField>
+                    </>
+                  )}
                 </SimpleGrid>
 
                 {errorMessage && (
@@ -447,7 +481,7 @@ const SignUp = ({ companySetup = false }: { companySetup?: boolean }) => {
                   borderWidth="0.5px"
                   borderColor="#D49F00"
                   isLoading={isLoggingIn}
-                  loadingText="Création..."
+                  loadingText={companySetup ? "Validation..." : "Création..."}
                   spinnerPlacement="start"
                   isDisabled={isLoggingIn}
                   leftIcon={<FaSave />}
@@ -463,7 +497,7 @@ const SignUp = ({ companySetup = false }: { companySetup?: boolean }) => {
                     bg: "#DFA900",
                   }}
                 >
-                  Créer
+                  {companySetup ? "Valider et configurer" : "Créer"}
                 </Button>
               </HStack>
             </ModalFooter>

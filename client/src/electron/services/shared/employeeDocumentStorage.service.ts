@@ -18,6 +18,7 @@ import {
   upsertEmployeeDocument,
   updateEmployeeDocument,
   deleteEmployeeDocument,
+  applyEmployeeDocumentDeletion,
 } from "../../database/repositories/modules/hr/employeesDocuments.repository.js";
 import {
   documentTransaction,
@@ -612,6 +613,29 @@ export async function updateStoredEmployeeDocument(
     });
 
     await cleanupEmployeeDocuments();
+  });
+}
+
+// Cleanup is journaled in the import transaction and performed after pull commits.
+export async function importEmployeeDocumentDeletion(
+  incoming: EmployeeDocument
+): Promise<void> {
+  if (!incoming.isDeleted) throw new Error("Expected a deleted employee document");
+  if (requireCompanyStorage().companyId !== incoming.companyId) {
+    throw new Error("Employee document company mismatch");
+  }
+  await withEmployeeMedia(incoming.companyId, async () => {
+    await documentTransaction(async () => {
+      const existing = await getEmployeeDocumentById(incoming.companyId, incoming._id);
+      if (!existing) return;
+      if (existing.needsUpload) throw new Error("Employee document has pending local changes");
+      if (existing.serverVersion > incoming.serverVersion) return;
+      if (existing.localPath) {
+        const file = await documentPath(existing.localPath);
+        if (await stat(file)) await queueCleanup(existing.localPath, await fs.readFile(file));
+      }
+      await applyEmployeeDocumentDeletion(incoming);
+    });
   });
 }
 

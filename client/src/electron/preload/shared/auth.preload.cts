@@ -1,12 +1,18 @@
 type OfflineUser = import("../../../common/types/shared/OfflineUser", {
   with: { "resolution-mode": "require" },
 }).default;
-type LoginCredentials =typeof import("../../../common/types/shared/Credentials", {
+type LoginCredentials = import("../../../common/types/shared/Credentials", {
   with: { "resolution-mode": "require" },
-});
-type SignUpCredentials =typeof import("../../../common/types/shared/Credentials", {
+}).LoginCredentials;
+type SignUpCredentials = import("../../../common/types/shared/Credentials", {
   with: { "resolution-mode": "require" },
-});
+}).SignUpCredentials;
+type CompanySetupCredentials = import("../../../common/types/shared/Credentials", {
+  with: { "resolution-mode": "require" },
+}).CompanySetupCredentials;
+type CompanySetupResult = import("../../../common/types/shared/Credentials", {
+  with: { "resolution-mode": "require" },
+}).CompanySetupResult;
 import { invoke } from "../../ipc/ipc.cjs";
 
 
@@ -17,6 +23,9 @@ export const authApi = {
 
     signup: (credentials: SignUpCredentials) =>
       invoke("auth:signup", credentials),
+
+    setupCompany: (credentials: CompanySetupCredentials) =>
+      invoke<CompanySetupResult>("auth:setup-company", credentials),
 
     logout: () => invoke("auth:logout"),
   },

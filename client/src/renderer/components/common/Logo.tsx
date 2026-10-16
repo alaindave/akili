@@ -12,9 +12,17 @@ interface Props {
   showCompanyName: boolean;
   width: string;
   height: string;
+  isDisabled?: boolean;
 }
 
-const Logo = ({ text, companyId, showCompanyName, width, height }: Props) => {
+const Logo = ({
+  text,
+  companyId,
+  showCompanyName,
+  width,
+  height,
+  isDisabled,
+}: Props) => {
   const syncVersion = useSyncStore((store) => store.syncVersion);
   const [branding, setBranding] = useState<
     (CompanyBranding & { companyId: string }) | null
@@ -53,9 +61,11 @@ const Logo = ({ text, companyId, showCompanyName, width, height }: Props) => {
 
         if (!cancelled && companyId) {
           // Keep existing branding on refresh errors; use Akili on initial failure.
-          setBranding((previous) => previous?.companyId === companyId
-            ? previous
-            : { companyId, name: "", logoUrl: null });
+          setBranding((previous) =>
+            previous?.companyId === companyId
+              ? previous
+              : { companyId, name: "", logoUrl: null }
+          );
         }
       }
     };
@@ -79,7 +89,18 @@ const Logo = ({ text, companyId, showCompanyName, width, height }: Props) => {
       }}
     >
       {/* Logo */}
-      <Link to="/admin">
+      <Link
+        to="/admin"
+        onClick={(e) => {
+          if (isDisabled) {
+            e.preventDefault(); // Prevents React Router navigation
+          }
+        }}
+        style={{
+          pointerEvents: isDisabled ? "none" : "auto",
+          cursor: isDisabled ? "not-allowed" : "pointer",
+        }}
+      >
         {isLoading ? (
           <Skeleton width={width} height={height} borderRadius="md" />
         ) : (

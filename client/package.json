@@ -53,7 +53,7 @@
     "test:opening-stock-locations": "node scripts/check-opening-stock-locations.cjs",
     "test:payslip": "node scripts/check-payslip-report.cjs",
     "test:payroll": "node scripts/check-individual-payroll.cjs",
-    "test:employee-document-sync": "node scripts/check-employee-document-sync.mjs",
+    "test:employee-document-sync": "node scripts/check-employee-document-deletion.mjs && node scripts/check-employee-document-sync.mjs",
     "test:payroll-profile-sync": "node scripts/check-payroll-profile-ack.mjs",
     "test:sync-deferred": "node scripts/check-sync-deferred.mjs",
     "test:sync": "node scripts/check-payroll-profile-ack.mjs && node scripts/check-employee-document-sync.mjs && node scripts/check-sync-reliability.cjs && node scripts/check-media-sync.cjs && node scripts/check-attendance-sync.cjs",

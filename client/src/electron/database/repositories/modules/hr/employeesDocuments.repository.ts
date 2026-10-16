@@ -317,6 +317,18 @@ export async function updateEmployeeDocument(
 // Delete employee document
 // ============================================================
 
+export async function applyEmployeeDocumentDeletion(document: EmployeeDocument) {
+  await run(
+    `UPDATE employees_documents
+     SET isDeleted = 1, serverVersion = ?, updatedAt = ?,
+         lastSyncedAt = CURRENT_TIMESTAMP
+     WHERE companyId = ? AND _id = ? AND needsUpload = 0
+       AND serverVersion <= ?`,
+    [document.serverVersion, document.updatedAt, document.companyId,
+      document._id, document.serverVersion]
+  );
+}
+
 export async function deleteEmployeeDocument(companyId: string, _id: string) {
   return transaction(async () => {
     const now = new Date().toISOString();

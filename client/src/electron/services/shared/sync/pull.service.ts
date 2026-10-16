@@ -44,12 +44,15 @@ import { upsertEmployeeWithPhoto } from "../employeePhoto.service.js";
 import { upsertTaskComment } from "../../../database/repositories/shared/tasks_comments.repository.js";
 
 import {
-  getEmployeeDocument,
-  upsertEmployeeDocument,
+  getEmployeeDocumentById,
   markEmployeeDocumentSynced,
 } from "../../../database/repositories/modules/hr/employeesDocuments.repository.js";
 
 import { downloadEmployeeDocument } from "../../../util/downloadEmployeeDocument.util.js";
+import {
+  importEmployeeDocumentDeletion,
+  cleanupEmployeeDocuments,
+} from "../employeeDocumentStorage.service.js";
 
 import { EmployeeDocument } from "../../../../common/types/hr/employees/EmployeeDocuments.js";
 
@@ -101,10 +104,8 @@ import {
 import { getToken } from "../../../auth.js";
 import { getPendingSyncItems } from "../../../database/repositories/shared/sync.repository.js";
 
-import {
-  getEmployeeDocumentsDir,
-  getEmployeePhotoDir,
-} from "../../../storage/directories.js";
+import { getEmployeePhotoDir } from "../../../storage/directories.js";
+import { withEmployeeMedia } from "../../../storage/employeeMediaLock.js";
 import { downloadCompanyLogo } from "../../../util/downloadCompanyLogo.util.js";
 import { upsertAttendance } from "../../../database/repositories/modules/hr/attendances.repository.js";
 import {
@@ -237,6 +238,11 @@ export async function pullLatestChanges(companyId: string) {
     latestServerTime = employeeDocumentsResult.serverTime ?? latestServerTime;
 
     const employeesDocuments = employeeDocumentsResult.items;
+    try {
+      await withEmployeeMedia(companyId, cleanupEmployeeDocuments);
+    } catch (error) {
+      errors.push(`Employee document cleanup failed: ${String(error)}`);
+    }
 
     /* =====================================================
        ATTENDANCES
@@ -917,11 +923,14 @@ async function syncEmployeeDocuments(
 
   for (const document of employeeDocuments) {
     try {
-      const localDocument = await getEmployeeDocument(
+      const localDocument = await getEmployeeDocumentById(
         document.companyId,
-        document.employeeId,
-        document.documentType
+        document._id
       );
+
+      if (localDocument?.needsUpload) {
+        throw new Error("Employee document has pending local changes");
+      }
 
       const localVersion = localDocument?.serverVersion ?? 0;
 
@@ -932,35 +941,7 @@ async function syncEmployeeDocuments(
       if (document.isDeleted) {
         console.log(`DOCUMENT DELETED ON SERVER: ${document._id}`);
 
-        if (localDocument?.localPath) {
-          const employeeDocumentsDir = getEmployeeDocumentsDir();
-
-          const absolutePath = path.join(
-            employeeDocumentsDir,
-            localDocument.localPath
-          );
-
-          try {
-            await fs.unlink(absolutePath);
-
-            console.log("PHYSICALLY DELETED EMPLOYEE DOCUMENT:", absolutePath);
-          } catch (error: any) {
-            if (error?.code === "ENOENT") {
-              console.log("DOCUMENT FILE ALREADY DELETED:", absolutePath);
-            } else {
-              throw error;
-            }
-          }
-        } else {
-          console.log(
-            "NO LOCAL PATH FOUND FOR DELETED DOCUMENT:",
-            document._id
-          );
-        }
-
-        await upsertEmployeeDocument(document);
-
-        await markEmployeeDocumentSynced(document.companyId, document._id);
+        await importEmployeeDocumentDeletion(document);
 
         console.log(
           `DELETED DOCUMENT SYNCED: ${document._id} ` +

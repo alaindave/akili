@@ -1,3 +1,4 @@
+import { setupCompany, companySetupCredentialsSchema } from "../../services/shared/companySetup.service.js";
 import { ipcMain } from "../companyIpc.js";
 import { app } from "electron";
 import { NetworkService } from "../../services/shared/sync/network.service.js";
@@ -15,6 +16,8 @@ const API_URL = app.isPackaged
   : process.env.VITE_API_URL;
 
 export function registerAuthIPC() {
+  ipcMain.handle("auth:setup-company", (_, credentials: unknown) =>
+    setupCompany(companySetupCredentialsSchema.parse(credentials)));
   console.log("REGISTERING AUTH IPC");
   console.log("AUTH API URL:", API_URL);
 
