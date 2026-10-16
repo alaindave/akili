@@ -5,6 +5,9 @@ import {
   FormLabel,
   HStack,
   Input,
+  InputGroup,
+  InputRightElement,
+  IconButton,
   Modal,
   ModalBody,
   ModalCloseButton,
@@ -24,7 +27,7 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import useAdminUser from "../../../../store/auth.store";
 import { MdAlternateEmail, MdPerson2, MdBusiness } from "react-icons/md";
-import { FaSave } from "react-icons/fa";
+import { FaSave, FaEye, FaEyeSlash } from "react-icons/fa";
 import { RxCrossCircled } from "react-icons/rx";
 import { RiLockPasswordFill } from "react-icons/ri";
 import logo from "../../../assets/AkiliLogo.png";
@@ -51,10 +54,10 @@ const createSchema = (companySetup: boolean) =>
             .regex(/[a-z]/, "Incluez au moins une lettre minuscule.")
             .regex(/[A-Z]/, "Incluez au moins une lettre majuscule.")
             .regex(/[0-9]/, "Incluez au moins un chiffre."),
-      confirmPassword: z.string().optional(),
+      confirmPassword: z.string().min(1, "Veuillez confirmer le mot de passe."),
     })
     .superRefine(({ confirmPassword, password }, ctx) => {
-      if (!companySetup && confirmPassword !== password) {
+      if (confirmPassword !== password) {
         ctx.addIssue({
           code: "custom",
           message: "Mots de passe non identiques.",
@@ -64,6 +67,29 @@ const createSchema = (companySetup: boolean) =>
     });
 
 type SignUpData = z.infer<ReturnType<typeof createSchema>>;
+
+const companySetupErrorMessages = new Set([
+  "Code d’accès ou identifiants administrateur invalides",
+  "Connexion au serveur requise pour configurer l’entreprise",
+  "Impossible de joindre le serveur. Veuillez réessayer",
+  "Réponse d’authentification invalide",
+  "Stockage de l’entreprise indisponible",
+  "Entreprise non configurée sur cet appareil",
+  "Entreprise indisponible",
+  "L’entreprise ne correspond pas à la sélection",
+]);
+
+function formatCompanySetupError(error: unknown): string {
+  const message = (error instanceof Error ? error.message : "")
+    .replace(/^Error invoking remote method '[^']+':\s*/, "")
+    .replace(/^(?:Error:\s*)+/, "")
+    .trim()
+    .replace(/\.$/, "");
+
+  return companySetupErrorMessages.has(message)
+    ? message
+    : "Impossible de configurer l’entreprise. Veuillez réessayer ou contacter ADB Tech.";
+}
 
 const labelColor = "#374151";
 
@@ -96,6 +122,8 @@ const SignUp = ({ companySetup = false }: { companySetup?: boolean }) => {
 
   const setAuth = useAdminUser((store) => store.login);
 
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -150,8 +178,8 @@ const SignUp = ({ companySetup = false }: { companySetup?: boolean }) => {
     } catch (error) {
       console.error("AN ERROR OCCURED WHILE SIGNING UP", error);
       setErrorMessage(
-        companySetup && error instanceof Error
-          ? error.message
+        companySetup
+          ? formatCompanySetupError(error)
           : "Une erreur est survenue. Veuillez contacter ADB Tech."
       );
     } finally {
@@ -274,7 +302,7 @@ const SignUp = ({ companySetup = false }: { companySetup?: boolean }) => {
                     mt={1}
                   >
                     {companySetup
-                      ? "Saisissez le code d’accès et les identifiants de l’administrateur existant de votre entreprise."
+                      ? "Saisissez vos identifiants et le code d’accès de l’entreprise"
                       : "Remplissez le formulaire"}
                   </Text>
                 </VStack>
@@ -368,52 +396,69 @@ const SignUp = ({ companySetup = false }: { companySetup?: boolean }) => {
                   >
                     <Input
                       {...inputStyle}
-                      type="text"
+                      type="password"
                       {...register("signUpCode")}
                     />
                   </FormField>
 
-                  {/* PASSWORD */}
                   <FormField
                     icon={<RiLockPasswordFill color="#F2B705" size="1.3rem" />}
                     label="Mot de passe"
                     error={errors.password?.message}
                   >
-                    <Input
-                      {...inputStyle}
-                      type="password"
-                      placeholder={
-                        companySetup
-                          ? "Mot de passe existant"
-                          : "Min. 8 car. avec 1 chiffre et 1 lettre maj"
-                      }
-                      {...register("password")}
-                    />
+                    <InputGroup>
+                      <Input
+                        {...inputStyle}
+                        pr="48px"
+                        type={showPassword ? "text" : "password"}
+                        placeholder={companySetup ? "" : "Min. 8 car. avec 1 chiffre et 1 lettre maj"}
+                        {...register("password")}
+                      />
+                      <InputRightElement w="48px" h={{ base: "46px", md: "48px" }}>
+                        <IconButton
+                          type="button"
+                          aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                          aria-pressed={showPassword}
+                          icon={showPassword ? <FaEyeSlash /> : <FaEye />}
+                          variant="ghost"
+                          size="sm"
+                          color="#5B6472"
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => setShowPassword((visible) => !visible)}
+                        />
+                      </InputRightElement>
+                    </InputGroup>
                   </FormField>
 
-                  {!companySetup && (
-                    <>
-                      {/* CONFIRM PASSWORD */}
-                      <FormField
-                        icon={
-                          <RiLockPasswordFill color="#F2B705" size="1.3rem" />
-                        }
-                        label="Confirmez le mot de passe"
-                        error={errors.confirmPassword?.message}
-                      >
-                        <Input
-                          {...inputStyle}
-                          type="password"
-                          placeholder={
-                            companySetup
-                              ? "Mot de passe existant"
-                              : "Min. 8 car. avec 1 chiffre et 1 lettre maj"
-                          }
-                          {...register("confirmPassword")}
+                  <FormField
+                    icon={<RiLockPasswordFill color="#F2B705" size="1.3rem" />}
+                    label="Confirmez le mot de passe"
+                    error={errors.confirmPassword?.message}
+                  >
+                    <InputGroup>
+                      <Input
+                        {...inputStyle}
+                        pr="48px"
+                        type={showConfirmPassword ? "text" : "password"}
+                        placeholder={companySetup ? "" : "Min. 8 car. avec 1 chiffre et 1 lettre maj"}
+                        {...register("confirmPassword")}
+                      />
+                      <InputRightElement w="48px" h={{ base: "46px", md: "48px" }}>
+                        <IconButton
+                          type="button"
+                          aria-label={showConfirmPassword ? "Masquer la confirmation du mot de passe" : "Afficher la confirmation du mot de passe"}
+                          aria-pressed={showConfirmPassword}
+                          icon={showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+                          variant="ghost"
+                          size="sm"
+                          color="#5B6472"
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => setShowConfirmPassword((visible) => !visible)}
                         />
-                      </FormField>
-                    </>
-                  )}
+                      </InputRightElement>
+                    </InputGroup>
+                  </FormField>
+
                 </SimpleGrid>
 
                 {errorMessage && (
