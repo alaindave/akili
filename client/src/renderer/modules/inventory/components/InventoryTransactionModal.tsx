@@ -1,6 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import InventoryCustomFields, {
-  CustomFieldsLoadStatus,
   useInventoryCustomFields,
 } from "./InventoryCustomFields";
 import { Global } from "@emotion/react";
@@ -54,6 +53,12 @@ const titles: Record<InventoryTransactionType, string> = {
   TRANSFER: "Transfert de stock",
   ADJUSTMENT: "Ajustement de stock",
 };
+const articleSectionTitles: Record<InventoryTransactionType, string> = {
+  RECEIPT: "Articles réceptionnés",
+  ISSUE: "Articles sortis",
+  TRANSFER: "Articles transférés",
+  ADJUSTMENT: "Articles ajustés",
+};
 interface DraftLine {
   customFields?: Record<string, string>;
   key: string;
@@ -102,6 +107,9 @@ export default function InventoryTransactionModal({
   const [locationPath, setLocationPath] = useState<string[]>([]);
   const [destinationWarehouseId, setDestinationWarehouseId] = useState("");
   const [destinationLocationId, setDestinationLocationId] = useState("");
+  const [destinationLocationPath, setDestinationLocationPath] = useState<
+    string[]
+  >([]);
   const [direction, setDirection] = useState<"IN" | "OUT">("IN");
   const [lines, setLines] = useState<DraftLine[]>(() => [newLine()]);
   const [locations, setLocations] = useState<InventoryLocation[]>([]);
@@ -110,11 +118,31 @@ export default function InventoryTransactionModal({
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [retry, setRetry] = useState(0);
-  const [error, setError] = useState("");
+  const showError = useCallback(
+    (message: string) => {
+      const id = `inventory-transaction-error:${message}`;
+      if (!toast.isActive(id)) {
+        toast({
+          id,
+          title: message,
+          status: "error",
+          duration: 8000,
+          isClosable: true,
+        });
+      }
+    },
+    [toast]
+  );
+  useEffect(() => {
+    if (loadError) showError(loadError);
+  }, [loadError, showError]);
+  useEffect(() => {
+    if (customFieldState.error) showError(customFieldState.error);
+  }, [customFieldState.error, showError]);
   const [saving, setSaving] = useState(false);
   const submitting = useRef(false);
-  const receipt = type === "RECEIPT";
   const transfer = type === "TRANSFER";
+  const filterSourceItems = type === "ISSUE" || transfer;
   const incoming =
     type === "RECEIPT" || (type === "ADJUSTMENT" && direction === "IN");
   const activeItems = items.filter((item) => item.isActive && !item.isDeleted);
@@ -128,10 +156,9 @@ export default function InventoryTransactionModal({
   const availableItemIds = new Set(
     availableBalances.map((balance) => balance.itemId)
   );
-  const selectableItems =
-    type === "ISSUE"
-      ? activeItems.filter((item) => availableItemIds.has(item._id))
-      : activeItems;
+  const selectableItems = filterSourceItems
+    ? activeItems.filter((item) => availableItemIds.has(item._id))
+    : activeItems;
   const activeWarehouses = warehouses.filter(
     (warehouse) => warehouse.isActive && !warehouse.isDeleted
   );
@@ -158,7 +185,7 @@ export default function InventoryTransactionModal({
     };
     const loadBalances = async () => {
       const result: InventoryBalance[] = [];
-      if (type !== "ISSUE") return result;
+      if (type !== "ISSUE" && type !== "TRANSFER") return result;
       for (let offset = 0; ; offset += 100) {
         const page = await window.electron.inventory.balances.list(companyId, {
           limit: 100,
@@ -208,20 +235,19 @@ export default function InventoryTransactionModal({
       customFieldState.error
     )
       return;
-    setError("");
     if (
-      type === "ISSUE" &&
+      filterSourceItems &&
       lines.some(
         (line) => !selectableItems.some((item) => item._id === line.itemId)
       )
     ) {
-      setError(
+      showError(
         "Sélectionnez des articles avec du stock disponible à cet emplacement."
       );
       return;
     }
     if (!date || Number.isNaN(date.getTime())) {
-      setError("Indiquez une date valide.");
+      showError("Indiquez une date valide.");
       return;
     }
     if (
@@ -229,7 +255,7 @@ export default function InventoryTransactionModal({
       warehouseId === destinationWarehouseId &&
       locationId === destinationLocationId
     ) {
-      setError("La source et la destination doivent être différentes.");
+      showError("La source et la destination doivent être différentes.");
       return;
     }
     const input: InventoryTransactionInput = {
@@ -271,14 +297,14 @@ export default function InventoryTransactionModal({
       });
       onSaved();
     } catch (cause) {
-      setError(
+      const message =
         cause instanceof Error
           ? cause.message.replace(
               /^Error invoking remote method '[^']+': (Error: )?/,
               ""
             )
-          : "Impossible d’enregistrer l’opération."
-      );
+          : "Impossible d’enregistrer l’opération.";
+      showError(message);
     } finally {
       submitting.current = false;
       setSaving(false);
@@ -286,33 +312,33 @@ export default function InventoryTransactionModal({
   };
   const placeFields = (destination: boolean) => {
     const warehouse = destination ? destinationWarehouseId : warehouseId;
-    const location = destination ? destinationLocationId : locationId;
+    const path = destination ? destinationLocationPath : locationPath;
     const label = destination ? "destination" : "source";
     const locationLevels: InventoryLocation[][] = [];
-    if (type === "RECEIPT" && warehouse) {
+    if (warehouse) {
       const warehouseLocations = locations.filter(
         (entry) =>
           entry.warehouseId === warehouse && entry.isActive && !entry.isDeleted
       );
-      for (let depth = 0; depth <= locationPath.length; depth += 1) {
-        const parentId = depth === 0 ? "" : locationPath[depth - 1];
+      for (let depth = 0; depth <= path.length; depth += 1) {
+        const parentId = depth === 0 ? "" : path[depth - 1];
         const children = warehouseLocations.filter(
           (entry) =>
             (entry.parentId || "") === parentId &&
-            !locationPath.slice(0, depth).includes(entry._id)
+            !path.slice(0, depth).includes(entry._id)
         );
         if (!children.length) break;
         locationLevels.push(children);
-        if (!children.some((entry) => entry._id === locationPath[depth])) break;
+        if (!children.some((entry) => entry._id === path[depth])) break;
       }
     }
     return (
       <Box
         borderWidth="1px"
-        borderColor={receipt ? "#bbb" : undefined}
-        bg={receipt ? "#f7f7f7" : undefined}
-        borderRadius={receipt ? 0 : "md"}
-        p={receipt ? "16px" : 3}
+        borderColor="#bbb"
+        bg="#f7f7f7"
+        borderRadius={0}
+        p="16px"
       >
         <Text fontWeight="semibold" mb={2}>
           {transfer
@@ -323,19 +349,15 @@ export default function InventoryTransactionModal({
         </Text>
         <Stack
           spacing={3}
-          sx={
-            receipt
-              ? {
-                  display: "grid",
-                  gridTemplateColumns: {
-                    base: "1fr",
-                    sm: "repeat(2, minmax(0, 1fr))",
-                  },
-                  gap: "12px",
-                  "& > *": { margin: "0 !important" },
-                }
-              : undefined
-          }
+          sx={{
+            display: "grid",
+            gridTemplateColumns: {
+              base: "1fr",
+              sm: "repeat(2, minmax(0, 1fr))",
+            },
+            gap: "12px",
+            "& > *": { margin: "0 !important" },
+          }}
         >
           <FormControl isRequired>
             <FormLabel htmlFor={`transaction-warehouse-${label}`}>
@@ -348,11 +370,12 @@ export default function InventoryTransactionModal({
                 if (destination) {
                   setDestinationWarehouseId(event.target.value);
                   setDestinationLocationId("");
+                  setDestinationLocationPath([]);
                 } else {
                   setWarehouseId(event.target.value);
                   setLocationId("");
                   setLocationPath([]);
-                  if (type === "ISSUE") setLines([newLine()]);
+                  if (filterSourceItems) setLines([newLine()]);
                 }
               }}
             >
@@ -364,67 +387,45 @@ export default function InventoryTransactionModal({
               ))}
             </Select>
           </FormControl>
-          {type === "RECEIPT" ? (
-            locationLevels.map((options, depth) => {
-              const types = [
-                ...new Set(options.map((entry) => entry.locationType)),
-              ];
-              const levelLabel = types
-                .map((entry) => locationTypeLabels[entry])
-                .join(" / ");
-              const fieldId = `transaction-location-${label}-${depth}`;
-              return (
-                <FormControl key={fieldId}>
-                  <FormLabel htmlFor={fieldId}>{levelLabel}</FormLabel>
-                  <Select
-                    id={fieldId}
-                    value={locationPath[depth] ?? ""}
-                    isDisabled={saving}
-                    onChange={(event) => {
-                      const nextPath = locationPath.slice(0, depth);
-                      if (event.target.value) nextPath.push(event.target.value);
+          {locationLevels.map((options, depth) => {
+            const types = [
+              ...new Set(options.map((entry) => entry.locationType)),
+            ];
+            const levelLabel = types
+              .map((entry) => locationTypeLabels[entry])
+              .join(" / ");
+            const fieldId = `transaction-location-${label}-${depth}`;
+            return (
+              <FormControl key={fieldId}>
+                <FormLabel htmlFor={fieldId}>{levelLabel}</FormLabel>
+                <Select
+                  id={fieldId}
+                  value={path[depth] ?? ""}
+                  isDisabled={saving}
+                  onChange={(event) => {
+                    const nextPath = path.slice(0, depth);
+                    if (event.target.value) nextPath.push(event.target.value);
+                    const nextLocationId = nextPath[nextPath.length - 1] ?? "";
+                    if (destination) {
+                      setDestinationLocationPath(nextPath);
+                      setDestinationLocationId(nextLocationId);
+                    } else {
                       setLocationPath(nextPath);
-                      setLocationId(nextPath[nextPath.length - 1] ?? "");
-                    }}
-                  >
-                    <option value="">Emplacement précis</option>
-                    {options.map((entry) => (
-                      <option key={entry._id} value={entry._id}>
-                        {entry.code} — {entry.name}
-                      </option>
-                    ))}
-                  </Select>
-                </FormControl>
-              );
-            })
-          ) : (
-            <FormControl>
-              <FormLabel htmlFor={`transaction-location-${label}`}>
-                Emplacement
-              </FormLabel>
-              <Select
-                id={`transaction-location-${label}`}
-                value={location}
-                isDisabled={!warehouse || saving}
-                onChange={(event) => {
-                  if (destination) setDestinationLocationId(event.target.value);
-                  else {
-                    setLocationId(event.target.value);
-                    if (type === "ISSUE") setLines([newLine()]);
-                  }
-                }}
-              >
-                <option value="">Emplacement précis</option>
-                {locations
-                  .filter((entry) => entry.warehouseId === warehouse)
-                  .map((entry) => (
+                      setLocationId(nextLocationId);
+                      if (filterSourceItems) setLines([newLine()]);
+                    }
+                  }}
+                >
+                  <option value="">Emplacement précis</option>
+                  {options.map((entry) => (
                     <option key={entry._id} value={entry._id}>
                       {entry.code} — {entry.name}
                     </option>
                   ))}
-              </Select>
-            </FormControl>
-          )}
+                </Select>
+              </FormControl>
+            );
+          })}
         </Stack>
       </Box>
     );
@@ -435,137 +436,120 @@ export default function InventoryTransactionModal({
       isOpen
       onClose={saving ? () => {} : onClose}
       size="4xl"
-      scrollBehavior={receipt ? "outside" : "inside"}
+      scrollBehavior="outside"
       closeOnOverlayClick={!saving}
       closeOnEsc={!saving}
     >
-      {receipt && (
-        <Global
-          styles={`
-        @media print {
-          @page { size: A4 portrait; margin: 12mm; }
-          body:has([data-stock-paper]) { background: white; }
-          body:has([data-stock-paper]) *:has([data-stock-paper]) {
-            height: auto !important; min-height: 0 !important; max-height: none !important;
-            overflow: visible !important; display: block !important; position: static !important;
-            padding: 0 !important; margin: 0 !important;
-          }
-          body:has([data-stock-paper]) *:has([data-stock-paper]) > :not([data-stock-paper]):not(:has([data-stock-paper])) {
-            display: none !important;
-          }
+      <Global
+        styles={`
+      @media print {
+        @page { size: A4 portrait; margin: 12mm; }
+        body:has([data-stock-paper]) { background: white; }
+        body:has([data-stock-paper]) *:has([data-stock-paper]) {
+          height: auto !important; min-height: 0 !important; max-height: none !important;
+          overflow: visible !important; display: block !important; position: static !important;
+          padding: 0 !important; margin: 0 !important;
         }
-      `}
-        />
-      )}
+        body:has([data-stock-paper]) *:has([data-stock-paper]) > :not([data-stock-paper]):not(:has([data-stock-paper])) {
+          display: none !important;
+        }
+      }
+    `}
+      />
       <ModalOverlay />
       <ModalContent
         as="form"
         onSubmit={submit}
-        data-stock-paper={receipt ? "" : undefined}
-        w={receipt ? "calc(100% - 24px)" : undefined}
-        maxW={receipt ? "210mm" : undefined}
-        minH={receipt ? { base: 0, sm: "297mm" } : undefined}
-        mx={receipt ? "auto" : undefined}
-        p={receipt ? { base: "28px 18px", sm: "14mm 13mm" } : undefined}
-        border={receipt ? "1px solid #d0d0d0" : undefined}
-        borderRadius={receipt ? 0 : undefined}
-        bg={receipt ? "white" : undefined}
-        color={receipt ? "#171717" : undefined}
-        boxShadow={receipt ? "0 4px 24px rgb(0 0 0 / 8%)" : undefined}
-        fontSize={receipt ? "13px" : undefined}
-        sx={
-          receipt
-            ? {
-                fontVariantNumeric: "tabular-nums",
-                colorScheme: "light",
-                ".chakra-form__label": {
-                  fontSize: "11px",
-                  fontWeight: 600,
-                  color: "#444",
-                },
-                ".chakra-input, .chakra-select, .chakra-textarea": {
-                  border: "1px solid #aaa",
-                  borderRadius: 0,
-                  background: "white",
-                  color: "#171717",
-                  fontSize: "13px",
-                  "&::placeholder": { color: "#777" },
-                },
-                ".chakra-input[readonly]": { background: "#f5f5f5" },
-                ".chakra-input:focus-visible, .chakra-select:focus-visible, .chakra-textarea:focus-visible, button:focus-visible":
-                  {
-                    borderColor: "#171717",
-                    outline: "2px solid #171717",
-                    outlineOffset: "2px",
-                    boxShadow: "none",
-                  },
-                ".chakra-form__required-indicator": { color: "#171717" },
-                ".chakra-button": { borderRadius: 0, fontSize: "12px" },
-                ".chakra-button:not([type=submit])": { color: "#171717" },
-                ".chakra-alert": {
-                  border: "1px solid #888",
-                  background: "#f3f3f3",
-                  color: "#171717",
-                  fontSize: "12px",
-                },
-                ".react-datepicker__day--selected, .react-datepicker__day--keyboard-selected, .react-datepicker__time-list-item--selected":
-                  {
-                    backgroundColor: "#333 !important",
-                    color: "#fff !important",
-                  },
-                "@media print": {
-                  width: "100%",
-                  maxWidth: "none",
-                  minHeight: 0,
-                  margin: 0,
-                  padding: 0,
-                  border: 0,
-                  boxShadow: "none",
-                  "button, .chakra-modal__footer": { display: "none" },
-                },
-              }
-            : undefined
-        }
+        onInvalid={(event) => {
+          const field = event.target;
+          if (
+            !(
+              field instanceof HTMLInputElement ||
+              field instanceof HTMLSelectElement ||
+              field instanceof HTMLTextAreaElement
+            )
+          )
+            return;
+          event.preventDefault();
+          const firstInvalid = event.currentTarget.querySelector<HTMLElement>(
+            "input:invalid, select:invalid, textarea:invalid"
+          );
+          firstInvalid?.focus();
+          if (field === firstInvalid) {
+            showError(
+              field.validity.valueMissing
+                ? "Veuillez compléter tous les champs"
+                : "Veuillez saisir une valeur valide pour ce champ."
+            );
+          }
+        }}
+        data-stock-paper=""
+        w="calc(100% - 24px)"
+        maxW="210mm"
+        minH={{ base: 0, sm: "297mm" }}
+        mx="auto"
+        p={{ base: "28px 18px", sm: "14mm 13mm" }}
+        border="1px solid #d0d0d0"
+        borderRadius={0}
+        bg="white"
+        color="#171717"
+        boxShadow="0 4px 24px rgb(0 0 0 / 8%)"
+        fontSize="13px"
+        sx={{
+          fontVariantNumeric: "tabular-nums",
+          colorScheme: "light",
+          ".chakra-form__label": {
+            fontSize: "11px",
+            fontWeight: 600,
+            color: "#444",
+          },
+          ".chakra-input, .chakra-select, .chakra-textarea": {
+            border: "1px solid #aaa",
+            borderRadius: 0,
+            background: "white",
+            color: "#171717",
+            fontSize: "13px",
+            "&::placeholder": { color: "#777" },
+          },
+          ".chakra-input[readonly]": { background: "#f5f5f5" },
+          ".chakra-input:focus-visible, .chakra-select:focus-visible, .chakra-textarea:focus-visible, button:focus-visible":
+            {
+              borderColor: "#171717",
+              outline: "2px solid #171717",
+              outlineOffset: "2px",
+              boxShadow: "none",
+            },
+          ".chakra-form__required-indicator": { color: "#171717" },
+          ".chakra-button": { borderRadius: 0, fontSize: "12px" },
+          ".chakra-button:not([type=submit])": { color: "#171717" },
+          ".chakra-alert": {
+            border: "1px solid #888",
+            background: "#f3f3f3",
+            color: "#171717",
+            fontSize: "12px",
+          },
+          ".react-datepicker__day--selected, .react-datepicker__day--keyboard-selected, .react-datepicker__time-list-item--selected":
+            {
+              backgroundColor: "#333 !important",
+              color: "#fff !important",
+            },
+          "@media print": {
+            width: "100%",
+            maxWidth: "none",
+            minHeight: 0,
+            margin: 0,
+            padding: 0,
+            border: 0,
+            boxShadow: "none",
+            "button, .chakra-modal__footer": { display: "none" },
+          },
+        }}
       >
-        <ModalHeader
-          p={receipt ? 0 : undefined}
-          mb={receipt ? "16px" : undefined}
-        >
-          {receipt ? (
-            <Box
-              borderBottom="2px solid #171717"
-              pb="24px"
-              mb="4px"
-              sx={{ "@media print": { breakInside: "avoid" } }}
-            >
-              <Text
-                fontSize={{ base: "9px", sm: "10px" }}
-                fontWeight={600}
-                letterSpacing="0.12em"
-                textTransform="uppercase"
-                color="#555"
-              >
-                Gestion des stocks / Réception
-              </Text>
-              <Text
-                as="h1"
-                mt="22px"
-                fontFamily='Georgia, "Times New Roman", serif'
-                fontSize="clamp(28px, 4vw, 38px)"
-                lineHeight="1.15"
-                fontWeight={400}
-                letterSpacing="-0.025em"
-                color="#171717"
-              >
-                Bon d’entrée
-              </Text>
-            </Box>
-          ) : (
-            titles[type]
-          )}
+        <ModalHeader p={0} mb="16px">
+          {titles[type]}
         </ModalHeader>
         <ModalCloseButton isDisabled={saving} />
-        <ModalBody p={receipt ? 0 : undefined} flex={receipt ? 1 : undefined}>
+        <ModalBody p={0} flex={1}>
           {loading ? (
             <HStack role="status">
               <Spinner size="sm" />
@@ -573,7 +557,6 @@ export default function InventoryTransactionModal({
             </HStack>
           ) : loadError ? (
             <Stack>
-              <Alert status="error">{loadError}</Alert>
               <Button onClick={() => setRetry((value) => value + 1)}>
                 Réessayer
               </Button>
@@ -581,7 +564,14 @@ export default function InventoryTransactionModal({
           ) : (
             <Box as="fieldset" disabled={saving} border={0} p={0} minW={0}>
               <Stack spacing={4}>
-                <CustomFieldsLoadStatus state={customFieldState} />
+                {customFieldState.loading && (
+                  <Text fontSize="sm">Chargement des champs personnalisés…</Text>
+                )}
+                {customFieldState.error && (
+                  <Button type="button" onClick={customFieldState.reload}>
+                    Réessayer le chargement des champs personnalisés
+                  </Button>
+                )}
                 <InventoryCustomFields
                   width="300px"
                   fields={customFieldState.fields}
@@ -590,11 +580,6 @@ export default function InventoryTransactionModal({
                   onChange={setCustomFields}
                   disabled={saving}
                 />
-                {error && (
-                  <Alert status="error" role="alert">
-                    {error}
-                  </Alert>
-                )}
                 {unsupportedCosting && (
                   <Alert status="warning">
                     Ces formulaires prennent en charge le coût moyen. La
@@ -608,20 +593,18 @@ export default function InventoryTransactionModal({
                     d’enregistrer une opération.
                   </Alert>
                 )}
-                {receipt && (
-                  <Text
-                    py="10px"
-                    borderBottom="1px solid #999"
-                    fontSize="10px"
-                    fontWeight={700}
-                    lineHeight="1.5"
-                    letterSpacing="0.1em"
-                    textTransform="uppercase"
-                    color="#333"
-                  >
-                    01 / Informations générales
-                  </Text>
-                )}
+                <Text
+                  py="10px"
+                  borderBottom="1px solid #999"
+                  fontSize="10px"
+                  fontWeight={700}
+                  lineHeight="1.5"
+                  letterSpacing="0.1em"
+                  textTransform="uppercase"
+                  color="#333"
+                >
+                  01 / Informations générales
+                </Text>
                 <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
                   <FormControl
                     isRequired
@@ -702,30 +685,26 @@ export default function InventoryTransactionModal({
                     nouveau stock total.
                   </Text>
                 )}
-                {!incoming && (
-                  <Text fontSize="sm" color="gray.600">
-                    Les quantités réservées ne sont pas disponibles.
-                  </Text>
-                )}
-                {type === "ISSUE" && warehouseId && !selectableItems.length && (
-                  <Alert status="info">
-                    Aucun article avec du stock non réservé à cet emplacement.
-                  </Alert>
-                )}
-                {receipt && (
-                  <Text
-                    py="10px"
-                    borderBottom="1px solid #999"
-                    fontSize="10px"
-                    fontWeight={700}
-                    lineHeight="1.5"
-                    letterSpacing="0.1em"
-                    textTransform="uppercase"
-                    color="#333"
-                  >
-                    02 / Articles réceptionnés
-                  </Text>
-                )}
+
+                {filterSourceItems &&
+                  warehouseId &&
+                  !selectableItems.length && (
+                    <Alert status="info">
+                      Aucun article avec du stock non réservé à cet emplacement.
+                    </Alert>
+                  )}
+                <Text
+                  py="10px"
+                  borderBottom="1px solid #999"
+                  fontSize="10px"
+                  fontWeight={700}
+                  lineHeight="1.5"
+                  letterSpacing="0.1em"
+                  textTransform="uppercase"
+                  color="#333"
+                >
+                  02 / {articleSectionTitles[type]}
+                </Text>
                 {lines.map((line, index) => {
                   const item = activeItems.find(
                     (entry) => entry._id === line.itemId
@@ -744,15 +723,11 @@ export default function InventoryTransactionModal({
                   return (
                     <Box
                       key={line.key}
-                      borderWidth={receipt ? 0 : "1px"}
-                      borderBottom={receipt ? "1px solid #bbb" : undefined}
-                      borderRadius={receipt ? 0 : "md"}
-                      p={receipt ? "14px 0" : 3}
-                      sx={
-                        receipt
-                          ? { "@media print": { breakInside: "avoid" } }
-                          : undefined
-                      }
+                      borderWidth={0}
+                      borderBottom="1px solid #bbb"
+                      borderRadius={0}
+                      p="14px 0"
+                      sx={{ "@media print": { breakInside: "avoid" } }}
                     >
                       <HStack justify="space-between" mb={2}>
                         <Text fontWeight="semibold">Article {index + 1}</Text>
@@ -792,7 +767,7 @@ export default function InventoryTransactionModal({
                             id={`${line.key}-item`}
                             value={line.itemId}
                             isDisabled={
-                              type === "ISSUE" && !selectableItems.length
+                              filterSourceItems && !selectableItems.length
                             }
                             onChange={(event) => {
                               const stocked = availableBalances.filter(
@@ -800,7 +775,7 @@ export default function InventoryTransactionModal({
                                   balance.itemId === event.target.value
                               );
                               const onlyBalance =
-                                type === "ISSUE" && stocked.length === 1
+                                filterSourceItems && stocked.length === 1
                                   ? stocked[0]
                                   : undefined;
                               updateLine(line.key, {
@@ -856,7 +831,7 @@ export default function InventoryTransactionModal({
                             />
                           </FormControl>
                         )}
-                        {type === "ISSUE" &&
+                        {filterSourceItems &&
                         item &&
                         item.trackingMethod !== "NONE" ? (
                           <FormControl isRequired>
@@ -932,7 +907,7 @@ export default function InventoryTransactionModal({
                             )}
                           </>
                         )}
-                        {type === "ISSUE" && selectedBalance && (
+                        {filterSourceItems && selectedBalance && (
                           <Text fontSize="sm" color="gray.600">
                             Disponible :{" "}
                             {selectedBalance.quantityOnHand -
@@ -956,25 +931,21 @@ export default function InventoryTransactionModal({
                 <FormControl isRequired>
                   <FormLabel
                     htmlFor="transaction-reason"
-                    py={receipt ? "10px" : undefined}
-                    borderBottom={receipt ? "1px solid #999" : undefined}
-                    letterSpacing={receipt ? "0.1em" : undefined}
-                    textTransform={receipt ? "uppercase" : undefined}
-                    lineHeight={receipt ? "1.5" : undefined}
-                    mb={receipt ? 0 : undefined}
-                    sx={
-                      receipt
-                        ? {
-                            "&&": {
-                              fontSize: "10px",
-                              fontWeight: 700,
-                              color: "#333",
-                            },
-                          }
-                        : undefined
-                    }
+                    py="10px"
+                    borderBottom="1px solid #999"
+                    letterSpacing="0.1em"
+                    textTransform="uppercase"
+                    lineHeight="1.5"
+                    mb={0}
+                    sx={{
+                      "&&": {
+                        fontSize: "10px",
+                        fontWeight: 700,
+                        color: "#333",
+                      },
+                    }}
                   >
-                    {receipt ? "03 / Motif" : "Motif"}
+                    03 / Motif
                   </FormLabel>
                   <Textarea
                     id="transaction-reason"
@@ -989,10 +960,10 @@ export default function InventoryTransactionModal({
         </ModalBody>
         <ModalFooter
           gap={3}
-          p={receipt ? 0 : undefined}
-          mt={receipt ? "28px" : undefined}
-          pt={receipt ? "18px" : undefined}
-          borderTop={receipt ? "1px solid #171717" : undefined}
+          p={0}
+          mt="28px"
+          pt="18px"
+          borderTop="1px solid #171717"
         >
           <Button
             type="button"
@@ -1004,11 +975,11 @@ export default function InventoryTransactionModal({
           </Button>
           <Button
             type="submit"
-            colorScheme={receipt ? "gray" : "blue"}
-            bg={receipt ? "#171717" : undefined}
-            color={receipt ? "white" : undefined}
-            px={receipt ? "24px" : undefined}
-            _hover={receipt ? { bg: "#333" } : undefined}
+            colorScheme="gray"
+            bg="#171717"
+            color="white"
+            px="24px"
+            _hover={{ bg: "#333" }}
             isLoading={saving}
             isDisabled={
               loading ||

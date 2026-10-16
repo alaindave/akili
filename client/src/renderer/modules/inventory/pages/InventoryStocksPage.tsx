@@ -188,9 +188,54 @@ function CompanyStocks({ companyId }: { companyId: string }) {
   const warehouses = new Map(
     data?.warehouses.map((entry) => [entry._id, entry.name])
   );
-  const locations = new Map(
-    data?.locations.map((entry) => [entry._id, entry.name])
-  );
+  const locations = useMemo(() => {
+    const byId = new Map(data?.locations.map((entry) => [entry._id, entry]));
+    return new Map(
+      data?.locations.map((entry) => {
+        const names: string[] = [];
+        const visited = new Set<string>();
+        let current: InventoryLocation | undefined = entry;
+        while (
+          current &&
+          current.warehouseId === entry.warehouseId &&
+          !visited.has(current._id)
+        ) {
+          visited.add(current._id);
+          names.unshift(current.name);
+          current = current.parentId ? byId.get(current.parentId) : undefined;
+        }
+        return [entry._id, names.join(">")];
+      })
+    );
+  }, [data?.locations]);
+  const locationOptions = useMemo(() => {
+    if (!warehouse) return [];
+    const entries = (data?.locations ?? []).filter(
+      (entry) => entry.warehouseId === warehouse
+    );
+    const ids = new Set(entries.map((entry) => entry._id));
+    const children = new Map<string, InventoryLocation[]>();
+    for (const entry of entries) {
+      const parentId = entry.parentId && ids.has(entry.parentId) ? entry.parentId : "";
+      const siblings = children.get(parentId) ?? [];
+      siblings.push(entry);
+      children.set(parentId, siblings);
+    }
+    const options: { entry: InventoryLocation; depth: number }[] = [];
+    const visited = new Set<string>();
+    const visit = (entry: InventoryLocation, depth: number) => {
+      if (visited.has(entry._id)) return;
+      visited.add(entry._id);
+      options.push({ entry, depth });
+      for (const child of children.get(entry._id) ?? []) {
+        visit(child, depth + 1);
+      }
+    };
+    for (const entry of children.get("") ?? []) visit(entry, 0);
+    // Keep locations with circular parent links reachable without duplicating them.
+    for (const entry of entries) visit(entry, 0);
+    return options;
+  }, [data?.locations, warehouse]);
   const query = search.trim().toLocaleLowerCase("fr");
   const filteredRows = rows.filter(
     (row) =>
@@ -355,6 +400,7 @@ function CompanyStocks({ companyId }: { companyId: string }) {
           </Select>
           <Select
             aria-label="Filtrer par emplacement"
+            isDisabled={!warehouse}
             w={{ base: "100%", sm: "190px" }}
             value={location}
             onChange={(event) => {
@@ -363,14 +409,15 @@ function CompanyStocks({ companyId }: { companyId: string }) {
             }}
             fontSize="sm"
           >
-            <option value="">Tous les emplacements</option>
-            {data?.locations
-              .filter((entry) => !warehouse || entry.warehouseId === warehouse)
-              .map((entry) => (
-                <option key={entry._id} value={entry._id}>
-                  {entry.name}
-                </option>
-              ))}
+            <option value="">
+              {warehouse ? "Tous les emplacements" : "Sélectionnez un entrepôt"}
+            </option>
+            {locationOptions.map(({ entry, depth }) => (
+              <option key={entry._id} value={entry._id}>
+                {depth > 0 ? `${"\u00a0\u00a0".repeat(depth)}↳ ` : ""}
+                {entry.name}
+              </option>
+            ))}
           </Select>
           <Select
             aria-label="Filtrer par statut"

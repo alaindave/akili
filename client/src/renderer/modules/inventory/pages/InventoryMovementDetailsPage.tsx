@@ -157,7 +157,9 @@ function MovementDetails({
   }, [companyId, documentId, retry, syncVersion]);
 
   const receipt = data?.document.type === "RECEIPT";
-  const paperDocument = receipt || data?.document.type === "ISSUE";
+  const transfer = data?.document.type === "TRANSFER";
+  const supportsDownload = receipt || data?.document.type === "ISSUE";
+  const paperDocument = supportsDownload || transfer;
   const warehouseName = (id?: string) =>
     id
       ? data?.warehouses.find((warehouse) => warehouse._id === id)?.name ??
@@ -190,7 +192,7 @@ function MovementDetails({
 
   const toast = useToast();
   const download = async () => {
-    if (!paperDocument || loading || error || isDownloading) return;
+    if (!supportsDownload || loading || error || isDownloading) return;
     setIsDownloading(true);
     try {
       const result =
@@ -361,7 +363,7 @@ function MovementDetails({
                         : data.document.documentNumber}
                     </Heading>
                   </HStack>
-                  {paperDocument && (
+                  {supportsDownload && (
                     <Button
                       size="sm"
                       bg="#171717"
@@ -457,6 +459,8 @@ function MovementDetails({
                   {paperDocument
                     ? receipt
                       ? "02 / Articles réceptionnés"
+                      : transfer
+                      ? "02 / Articles transférés"
                       : "02 / Articles sortis"
                     : "Articles"}
                 </Heading>
