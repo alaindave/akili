@@ -1,6 +1,7 @@
 export type InventoryTransactionType = "RECEIPT" | "ISSUE" | "TRANSFER" | "ADJUSTMENT";
 
 export interface InventoryTransactionInput {
+  customFields?: Record<string, string>;
   requestId: string;
   type: InventoryTransactionType;
   date: string;
@@ -12,6 +13,7 @@ export interface InventoryTransactionInput {
   destinationLocationId?: string;
   adjustmentDirection?: "IN" | "OUT";
   lines: {
+    customFields?: Record<string, string>;
     itemId: string;
     quantity: number;
     unitCost?: number;

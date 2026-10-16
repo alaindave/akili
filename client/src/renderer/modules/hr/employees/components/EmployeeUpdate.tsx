@@ -336,8 +336,7 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
   return (
     <>
       <Button
-        bg="#4F46E5"
-        color="white"
+        colorScheme="blue"
         height="40px"
         px={4}
         borderRadius="6px"

@@ -1,4 +1,5 @@
-import { ipcMain, app } from "electron";
+import { ipcMain } from "../companyIpc.js";
+import { app } from "electron";
 import {
   createTask,
   getAllTasks,
@@ -8,13 +9,23 @@ import {
   getTaskById,
   getAllTasksForUser,
 } from "../../database/repositories/shared/tasks.repository.js";
+import Task from "../../../common/types/task/Task.js";
 
 const API_URL = app.isPackaged
   ? "https://leather-works.onrender.com"
   : process.env.VITE_API_URL;
 
 function requireTaskModule(module: unknown) {
-  if (!["HR", "INVENTORY", "PROCUREMENT", "PRODUCTION", "SALES", "ACCOUNTING"].includes(module as string)) {
+  if (
+    ![
+      "HR",
+      "INVENTORY",
+      "PROCUREMENT",
+      "PRODUCTION",
+      "SALES",
+      "ACCOUNTING",
+    ].includes(module as string)
+  ) {
     throw new Error("A valid task module is required");
   }
 }
@@ -24,18 +35,21 @@ export function registerTaskIPC() {
   console.log("TASKS API URL:", API_URL);
 
   //Create tasks
-  ipcMain.handle("tasks:create", async (_, companyId, task) => {
-    console.log("TASK CREATE CALLED: ", task);
-    try {
-      requireTaskModule(task.module);
-      const result = await createTask(companyId, task);
-      console.log("Created task: ", result);
-      return result;
-    } catch (error) {
-      console.error("From Main: Error creating task: ", error);
-      throw error;
+  ipcMain.handle(
+    "tasks:create",
+    async (_, companyId, task: Omit<Task, "_id">) => {
+      console.log("TASK CREATE CALLED: ", task);
+      try {
+        requireTaskModule(task.module);
+        const result = await createTask(companyId, task);
+        console.log("Created task: ", result);
+        return result;
+      } catch (error) {
+        console.error("From Main: Error creating task: ", error);
+        throw error;
+      }
     }
-  });
+  );
 
   //Get all tasks
   ipcMain.handle("tasks:getAll", async (_, companyId, module) => {
@@ -90,7 +104,7 @@ export function registerTaskIPC() {
   });
 
   //Update tasks
-  ipcMain.handle("tasks:update", async (_, companyId, task) => {
+  ipcMain.handle("tasks:update", async (_, companyId, task: Task) => {
     console.log("TASK UPDATE CALLED: ", task);
     try {
       requireTaskModule(task.module);

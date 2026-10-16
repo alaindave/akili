@@ -14,6 +14,7 @@ const API_URL = app.isPackaged
   : process.env.VITE_API_URL;
 
 let syncing = false;
+let syncingCompanyId: string | null = null;
 
 const MAX_SYNC_RETRIES = 10;
 const SYNC_RETRY_DELAY = 3000;
@@ -23,9 +24,11 @@ export default async function sync(companyId: string) {
   console.log("SYNC SERVICE FOR COMPANY", companyId);
 
   if (syncing) {
+    if (syncingCompanyId !== companyId) return;
     console.log("SYNC ALREADY IN PROGRESS. SKIPPING.");
 
     notifyRenderer({
+      companyId,
       status: "SYNCING",
       timestamp: new Date().toISOString(),
     });
@@ -34,6 +37,7 @@ export default async function sync(companyId: string) {
   }
 
   syncing = true;
+  syncingCompanyId = companyId;
 
   /*
    * ---------------------------------------------------------
@@ -42,6 +46,7 @@ export default async function sync(companyId: string) {
    */
 
   notifyRenderer({
+      companyId,
     status: "SYNCING",
     timestamp: new Date().toISOString(),
   });
@@ -61,6 +66,7 @@ export default async function sync(companyId: string) {
       const pendingChanges = await getPendingChangesCount(companyId);
 
       notifyRenderer({
+      companyId,
         status: "OFFLINE",
         timestamp: new Date().toISOString(),
         pendingChanges,
@@ -114,7 +120,8 @@ export default async function sync(companyId: string) {
          * Retry unless this was the final attempt.
          */
         lastPushError = new Error(
-          `PUSH INCOMPLETE: ${pendingAfterPush} item(s) remain`
+          `PUSH INCOMPLETE: ${pendingAfterPush} item(s) remain` +
+          (pushResult.failures?.length ? `\n${pushResult.failures.join("\n")}` : "")
         );
 
         if (attempt < MAX_SYNC_RETRIES) {
@@ -123,6 +130,7 @@ export default async function sync(companyId: string) {
           );
 
           notifyRenderer({
+      companyId,
             status: "SYNCING",
             timestamp: new Date().toISOString(),
             pendingChanges: pendingAfterPush,
@@ -147,6 +155,7 @@ export default async function sync(companyId: string) {
           );
 
           notifyRenderer({
+      companyId,
             status: "SYNCING",
             timestamp: new Date().toISOString(),
             pendingChanges,
@@ -191,10 +200,12 @@ export default async function sync(companyId: string) {
       const pendingChanges = await getPendingChangesCount(companyId);
 
       notifyRenderer({
+      companyId,
         status: "ERROR",
         timestamp: new Date().toISOString(),
         pendingChanges,
-        error: getErrorMessage(error),
+        error: [!pushSuccessful && lastPushError ? getErrorMessage(lastPushError) : "", getErrorMessage(error)]
+          .filter(Boolean).join("\n"),
         pulledChanges: true,
       });
 
@@ -217,6 +228,7 @@ export default async function sync(companyId: string) {
       );
 
       notifyRenderer({
+      companyId,
         status: "ERROR",
         timestamp: new Date().toISOString(),
         pendingChanges,
@@ -244,6 +256,7 @@ export default async function sync(companyId: string) {
     console.log("========================================");
 
     notifyRenderer({
+      companyId,
       status: "IDLE",
       timestamp: new Date().toISOString(),
       pendingChanges: 0,
@@ -256,6 +269,7 @@ export default async function sync(companyId: string) {
     const pendingChanges = await getPendingChangesCount(companyId);
 
     notifyRenderer({
+      companyId,
       status: "ERROR",
       timestamp: new Date().toISOString(),
       pendingChanges,
@@ -263,6 +277,7 @@ export default async function sync(companyId: string) {
     });
   } finally {
     syncing = false;
+    syncingCompanyId = null;
   }
 }
 

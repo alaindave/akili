@@ -1,20 +1,15 @@
 type OfflineUser = import("../../../common/types/shared/OfflineUser", {
   with: { "resolution-mode": "require" },
 }).default;
+type LoginCredentials =typeof import("../../../common/types/shared/Credentials", {
+  with: { "resolution-mode": "require" },
+});
+type SignUpCredentials =typeof import("../../../common/types/shared/Credentials", {
+  with: { "resolution-mode": "require" },
+});
 import { invoke } from "../../ipc/ipc.cjs";
 
-interface LoginCredentials {
-  email: string;
-  password: string;
-}
 
-interface SignUpCredentials {
-  firstName: string;
-  lastName: string;
-  email: string;
-  password: string;
-  signUpCode: string;
-}
 
 export const authApi = {
   auth: {

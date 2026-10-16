@@ -23,8 +23,9 @@ export async function createOrUpdateOfflineUser(user: OfflineUser) {
     )
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 
-    ON CONFLICT(email)
+    ON CONFLICT(companyId, email)
     DO UPDATE SET
+      _id = excluded._id,
       password = excluded.password,
       role = excluded.role,
       firstName = excluded.firstName,
@@ -46,7 +47,7 @@ export async function createOrUpdateOfflineUser(user: OfflineUser) {
     ]
   );
 
-  return getOfflineUserByEmail(user.email);
+  return getOfflineUserByEmail(user.email, user.companyId);
 }
 
 /**
@@ -69,16 +70,19 @@ export async function getOfflineUserById(
  * Get an offline user by email .
  */
 export async function getOfflineUserByEmail(
-  email: string
+  email: string,
+  companyId?: string
 ): Promise<OfflineUser | undefined | null> {
-  return get<OfflineUser>(
+  const users = await all<OfflineUser>(
     `
     SELECT *
     FROM offline_users
     WHERE email = ?
+      AND (? IS NULL OR companyId = ?)
     `,
-    [email]
+    [email, companyId ?? null, companyId ?? null]
   );
+  return users.length === 1 ? users[0] : null;
 }
 
 /**

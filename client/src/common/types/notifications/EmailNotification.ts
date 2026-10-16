@@ -1,4 +1,9 @@
-export type EmailNotificationType = "attendance" | "leave" | "payroll" | "task";
+export type EmailNotificationType =
+  | "attendance"
+  | "leave"
+  | "payroll"
+  | "task"
+  | "inventory";
 
 /** A file carried with a queued email notification. Content is base64 encoded. */
 export interface EmailAttachment {

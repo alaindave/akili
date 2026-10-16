@@ -6,14 +6,15 @@ const ts = require('typescript');
 
 (async () => {
   let pending = 0;
+  let syncError;
   let statusListener, pendingListener, companyListener;
   let companyId = 'a';
   let resolveCount;
   let unsubscribed = 0;
   const store = {
     setPendingChanges: (count) => { pending = count; },
-    setSyncing() {}, setOffline() {}, setSyncError() {},
-    setSyncCompleted() {}, resetSyncStatus() {},
+    setSyncing() {}, setOffline() {}, setSyncError(message) { syncError = message; },
+    setSyncCompleted() {}, resetSyncStatus() { syncError = undefined; },
   };
   const api = {
     getPendingCount: () => new Promise((resolve) => { resolveCount = resolve; }),
@@ -45,8 +46,13 @@ const ts = require('typescript');
   assert.equal(pending, 2, 'A status without a count must not clear it');
   pendingListener({ companyId: 'other', pendingChanges: 10 });
   assert.equal(pending, 2);
+  statusListener({ companyId: 'a', status: 'ERROR', error: 'PULL SYNC: authentication token is missing' });
+  assert.equal(syncError, 'PULL SYNC: authentication token is missing', 'Missing-token detail must reach the navbar store');
+  statusListener({ companyId: 'other', status: 'ERROR', error: 'Other company failure' });
+  assert.equal(syncError, 'PULL SYNC: authentication token is missing', 'Other company errors must be ignored');
   companyId = 'b';
   companyListener({ adminUser: { companyId } }, { adminUser: { companyId: 'a' } });
+  assert.equal(syncError, undefined, 'Switching companies must clear the previous authentication notice');
   pendingListener({ companyId: 'b', pendingChanges: 3 });
   resolveCount(1);
   await new Promise(setImmediate);
@@ -55,5 +61,5 @@ const ts = require('typescript');
   assert.equal(pending, 0, 'Successful push clears the count');
   manager.destroyRendererSync();
   assert.equal(unsubscribed, 3);
-  console.log('Passed: startup count, failed/offline sync, company scope, stale reads, and cleanup.');
+  console.log('Passed: startup count, failed/offline sync, missing-token error propagation, company scope/reset, stale reads, and cleanup.');
 })().catch((error) => { console.error(error); process.exitCode = 1; });

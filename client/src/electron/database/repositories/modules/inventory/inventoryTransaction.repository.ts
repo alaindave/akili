@@ -34,6 +34,20 @@ export class InventoryTransactionRepository {
     return getDirect<InventoryItem>("SELECT * FROM inventory_items WHERE companyId = ? AND _id = ? AND isDeleted = 0 AND isActive = 1", [companyId, id]);
   }
 
+  getStockAlertRecipient(companyId: string) {
+    return getDirect<{ email: string | null }>(
+      "SELECT email FROM companies WHERE companyId = ? AND isDeleted = 0",
+      [companyId]);
+  }
+
+  async getAvailableQuantity(companyId: string, itemId: string): Promise<number> {
+    const row = await getDirect<{ quantity: number }>(
+      `SELECT COALESCE(SUM(quantityAvailable), 0) AS quantity FROM inventory_balances
+       WHERE companyId = ? AND itemId = ? AND isDeleted = 0`,
+      [companyId, itemId]);
+    return row?.quantity ?? 0;
+  }
+
   getUnit(companyId: string, id: string) {
     return getDirect<InventoryUnit>("SELECT * FROM inventory_units WHERE companyId = ? AND _id = ? AND isDeleted = 0", [companyId, id]);
   }

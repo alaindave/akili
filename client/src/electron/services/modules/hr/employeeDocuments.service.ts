@@ -1,5 +1,5 @@
 import { UploadedEmployeeDocument } from "../../../../common/types/hr/employees/EmployeeDocuments.js";
-import { uploadEmployeeDocument } from "../../../database/repositories/modules/hr/employeesDocuments.repository.js";
+import { uploadEmployeeDocument } from "../../shared/employeeDocumentStorage.service.js";
 
 export async function uploadValidatedEmployeeDocument(document: UploadedEmployeeDocument) {
   if (!document || typeof document.documentType !== "string" || !document.documentType.trim()) {

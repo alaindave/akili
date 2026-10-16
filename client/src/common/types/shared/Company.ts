@@ -1,3 +1,10 @@
+export type CompanySummary = Pick<Company, "companyId" | "name" | "address" | "city" | "country">;
+
+export interface CompanyBranding {
+  name: string;
+  logoUrl: string | null;
+}
+
 export default interface Company {
   _id: string;
   companyId: string;

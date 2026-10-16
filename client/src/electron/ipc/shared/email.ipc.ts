@@ -1,4 +1,4 @@
-import { ipcMain } from "electron";
+import { ipcMain } from "../companyIpc.js";
 import type { EmailNotification } from "../../../common/types/notifications/EmailNotification.js";
 import { sendNotificationEmail } from "../../services/shared/email/email.service.js";
 

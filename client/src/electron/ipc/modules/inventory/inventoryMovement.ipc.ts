@@ -1,6 +1,6 @@
-import { ipcMain } from "electron";
+import { ipcMain } from "../../companyIpc.js";
 import { z } from "zod";
-import { getToken } from "../../../auth.js";
+import { requireLocalIdentity } from "../../../auth.js";
 import { inventoryTransactionService } from "../../../services/modules/inventory/inventoryTransaction.service.js";
 import type { InventoryTransactionInput } from "../../../../common/types/inventory/InventoryTransaction.js";
 import {
@@ -32,11 +32,8 @@ function pagination(limit = 100, offset = 0): [number, number] {
 export function registerInventoryMovementIpc(): void {
   ipcMain.handle("inventory:movement:postTransaction", async (_, companyId: string, input: InventoryTransactionInput) => {
     const company = await requireAuthenticatedCompanyId(companyId);
-    const token = await getToken();
-    if (!token) throw new Error("Veuillez vous connecter.");
-    const user = z.object({ _id: z.string().trim().min(1), companyId: z.literal(company),
-      role: z.enum(["ADMIN", "MANAGER"]), exp: z.number().gt(Date.now() / 1000).optional(),
-    }).parse(JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString("utf8")));
+    const user = await requireLocalIdentity(company);
+    z.enum(["ADMIN", "MANAGER"]).parse(user.role);
     return inventoryTransactionService.post(company, user._id, input);
   });
 

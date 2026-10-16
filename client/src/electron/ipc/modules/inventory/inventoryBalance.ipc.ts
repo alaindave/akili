@@ -1,4 +1,4 @@
-import { ipcMain } from "electron";
+import { ipcMain } from "../../companyIpc.js";
 import {
   InventoryBalanceRepository,
   type InventoryBalanceListOptions,

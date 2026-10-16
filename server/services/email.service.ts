@@ -1,6 +1,11 @@
 import { Resend } from "resend";
 
-export type EmailNotificationType = "attendance" | "leave" | "payroll" | "task";
+export type EmailNotificationType =
+  | "attendance"
+  | "leave"
+  | "payroll"
+  | "task"
+  | "inventory";
 
 export interface EmailAttachment {
   filename: string;
@@ -41,7 +46,7 @@ export function validateEmailNotification(
 
   if (
     !notification ||
-    !["attendance", "leave", "payroll", "task"].includes(notification.type)
+    !["attendance", "leave", "payroll", "task", "inventory"].includes(notification.type)
   ) {
     errors.push("Unsupported notification type.");
   }

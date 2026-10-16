@@ -70,7 +70,7 @@ type TaskRow = {
   serverVersion: number;
 };
 
-export async function createTask(companyId: string, task: Task) {
+export async function createTask(companyId: string, task: Omit<Task, "_id">) {
   const module = requireModule(task.module);
   console.log("TASK TO CREATE:", {
     companyId,

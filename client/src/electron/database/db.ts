@@ -1,6 +1,6 @@
 import sqlite3 from "sqlite3";
 import path from "path";
-import { app } from "electron";
+import { requireCompanyStorage, withCompanyStorage } from "../storage/companyStorage.js";
 import { AsyncLocalStorage } from "node:async_hooks";
 
 // =====================
@@ -15,36 +15,51 @@ type Migration = {
   up: () => Promise<void> | void;
 };
 
-// =====================
-// DB PATH
-// =====================
-const dbPath: string = path.join(app.getPath("userData"), "Akili_db");
+// Connections are lazy and isolated per company; no root database is opened.
+interface ConnectionState {
+  connection: sqlite3.Database;
+  queue: Promise<unknown>;
+  ready: Promise<void>;
+}
+const connections = new Map<string, ConnectionState>();
 
-console.log("DATABASE PATH:", dbPath);
-
-// =====================
-// CONNECTION
-// =====================
-export const db = new sqlite3.Database(dbPath, (err: Error | null) => {
-  if (err) {
-    console.error("DB error:", err);
-    return;
-  }
-
-  console.log("SQLite CONNECTED");
-
-  db.serialize(() => {
-    db.run("PRAGMA foreign_keys = ON");
-    db.run("PRAGMA journal_mode = WAL");
-    db.run("PRAGMA synchronous = NORMAL");
-    db.run("PRAGMA busy_timeout = 5000");
+function connectionState(): ConnectionState {
+  const company = requireCompanyStorage();
+  const dbPath = path.join(company.directory, "Akili_db");
+  const existing = connections.get(dbPath);
+  if (existing) return existing;
+  let connection: sqlite3.Database;
+  const ready = new Promise<void>((resolve, reject) => {
+    connection = new sqlite3.Database(dbPath, (error) => {
+      if (error) { reject(error); return; }
+      connection.exec("PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL; PRAGMA busy_timeout = 5000;", (pragmaError) => {
+        if (pragmaError) reject(pragmaError);
+        else resolve();
+      });
+    });
   });
+  const state = { connection: connection!, queue: ready, ready };
+  connections.set(dbPath, state);
+  return state;
+}
+
+// Preserve the existing sqlite3 interface for repositories using direct statements.
+export const db = new Proxy({} as sqlite3.Database, {
+  get(_target, property) {
+    const connection = connectionState().connection;
+    const value = Reflect.get(connection, property);
+    return typeof value === "function" ? value.bind(connection) : value;
+  },
 });
 
-// =====================
-//  UNIFIED QUEUE (READ + WRITE)
-// =====================
-let queue: Promise<any> = Promise.resolve();
+export async function closeCompanyDatabases(): Promise<void> {
+  for (const state of connections.values()) {
+    await state.queue;
+    await new Promise<void>((resolve, reject) => state.connection.close((error) => error ? reject(error) : resolve()));
+  }
+  connections.clear();
+}
+
 const transactionContext = new AsyncLocalStorage<{ afterCommit: Array<() => void> }>();
 
 export function afterCommit(callback: () => void): void {
@@ -57,11 +72,16 @@ function enqueue<T>(task: () => Promise<T>): Promise<T> {
   // Nested repository calls share the transaction that already owns the queue.
   // Other asynchronous callers still queue behind it.
   if (transactionContext.getStore()) return task();
-  const next = queue
+  const company = requireCompanyStorage();
+  const state = connectionState();
+  const next = state.queue
     .catch(() => {}) // prevent chain break
-    .then(task);
+    .then(() => withCompanyStorage(company, async () => {
+      await state.ready;
+      return task();
+    }));
 
-  queue = next.catch(() => {}); // keep queue alive even if failure
+  state.queue = next.catch(() => {}); // keep queue alive even if failure
 
   return next;
 }

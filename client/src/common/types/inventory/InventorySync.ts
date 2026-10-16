@@ -1,5 +1,6 @@
 // Ordered so catalog and parent records are pulled before their dependents.
 export const INVENTORY_SYNC_TABLES = {
+  inventory_custom_field: "inventory_custom_fields",
   inventory_category: "inventory_categories",
   inventory_unit: "inventory_units",
   inventory_item: "inventory_items",

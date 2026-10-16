@@ -73,6 +73,29 @@ export async function getUnsyncedItems(
   );
 }
 
+/** Read only queue entries relevant to a pull, inside its write transaction. */
+export async function getPendingSyncItems(
+  companyId: string,
+  targets: ReadonlyArray<{ entity: string; entityId?: string }>
+): Promise<SyncQueueItem[]> {
+  if (!companyId) throw new Error("SYNC QUEUE: companyId is required");
+  if (!targets.length) return [];
+
+  const parameters: string[] = [companyId];
+  const conditions = targets.map(({ entity, entityId }) => {
+    parameters.push(entity);
+    if (entityId === undefined) return "entity = ?";
+    parameters.push(entityId);
+    return "(entity = ? AND entityId = ?)";
+  });
+  return all<SyncQueueItem>(
+    `SELECT * FROM sync_queue
+     WHERE companyId = ? AND synced = 0 AND (${conditions.join(" OR ")})
+     ORDER BY createdAt ASC, _id ASC`,
+    parameters
+  );
+}
+
 export async function markManySynced(
   companyId: string,
   ids: string[]

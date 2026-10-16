@@ -1,17 +1,17 @@
 import path from "path";
-import { app } from "electron";
+import { getCompanyFilesRoot } from "./companyStorage.js";
 import fs from "fs/promises";
 
 export function getEmployeePhotoDir() {
-  return path.join(app.getPath("userData"), "employees_photos");
+  return path.join(getCompanyFilesRoot(), "employees_photos");
 }
 
 export function getEmployeeDocumentsDir() {
-  return path.join(app.getPath("userData"), "employees_documents");
+  return path.join(getCompanyFilesRoot(), "employees_documents");
 }
 
 export function getCompanyLogoDir() {
-  return path.join(app.getPath("userData"), "company_logo");
+  return path.join(getCompanyFilesRoot(), "company_logo");
 }
 
 export async function ensureStorageDirectories() {

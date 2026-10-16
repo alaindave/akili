@@ -85,7 +85,7 @@ export async function submitOpeningStock(companyId: string, input: OpeningStockD
     if (!draft.lines.length) throw new Error("Ajoutez au moins un article.");
     const company = await getCompanyById(companyId);
     if (company?.inventoryInitialized) throw new Error("Le stock a déjà été initialisé.");
-    const token = await getToken();
+    const token = await getToken(companyId);
     if (!token) throw new Error("Veuillez vous connecter.");
     const pending = await pushPendingChanges(companyId);
     if (pending.pendingChanges) throw new Error("Synchronisez les modifications en attente avant de soumettre le stock initial.");

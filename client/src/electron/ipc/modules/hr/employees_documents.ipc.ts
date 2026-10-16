@@ -1,12 +1,12 @@
+import { updateStoredEmployeeDocument, deleteStoredEmployeeDocument } from "../../../services/shared/employeeDocumentStorage.service.js";
+import { resolveEmployeeDocumentPath } from "../../../services/shared/mediaFile.service.js";
 import { uploadValidatedEmployeeDocument } from "../../../services/modules/hr/employeeDocuments.service.js";
-import { ipcMain, shell, dialog, app } from "electron";
+import { ipcMain } from "../../companyIpc.js";
+import { shell, dialog } from "electron";
 import fs from "fs";
 import fsPromises from "fs/promises";
-import path from "path";
 
 import {
-  updateEmployeeDocument,
-  deleteEmployeeDocument,
   getEmployeeDocumentById,
   getEmployeeDocumentsByEmployee,
   getEmployeeDocumentsByType,
@@ -20,88 +20,6 @@ import {
   EmployeeDocumentType,
   UploadedEmployeeDocument,
 } from "../../../../common/types/hr/employees/EmployeeDocuments.js";
-
-function resolveEmployeeDocumentPath(
-  companyId: string,
-  localPath: string
-): string {
-  if (!companyId) {
-    throw new Error("Company ID is required");
-  }
-
-  if (!localPath) {
-    throw new Error("Employee document path is empty");
-  }
-
-  /*
-   * Normalize separators.
-   */
-  let normalizedPath = localPath.replace(/\\/g, "/").replace(/^\/+/, "");
-
-  console.log("NORMALIZED PATH", normalizedPath);
-
-  /*
-   * Remove employees_documents prefix if it exists.
-   */
-  if (normalizedPath.startsWith("employees_documents/")) {
-    normalizedPath = normalizedPath.substring("employees_documents/".length);
-  }
-
-  /*
-   * The stored path MUST start with the requested companyId.
-   */
-  const expectedPrefix = `${companyId}/`;
-
-  if (!normalizedPath.startsWith(expectedPrefix)) {
-    throw new Error(
-      `EMPLOYEE DOCUMENT DOES NOT BELONG TO COMPANY ${companyId}`
-    );
-  }
-
-  /*
-   * Base directory:
-   *
-   * userData/
-   *   employees_documents/
-   */
-  const documentsRoot = path.resolve(
-    app.getPath("userData"),
-    "employees_documents"
-  );
-
-  /*
-   * Final path:
-   *
-   * userData/
-   *   employees_documents/
-   *     companyId/
-   *       employeeId/
-   *         file.pdf
-   */
-  const absolutePath = path.resolve(documentsRoot, normalizedPath);
-
-  /*
-   * Security check.
-   *
-   * Make sure the resolved path is still inside:
-   *
-   * userData/employees_documents/{companyId}
-   */
-  const companyRoot = path.resolve(documentsRoot, companyId);
-
-  const relativeToCompany = path.relative(companyRoot, absolutePath);
-
-  if (
-    relativeToCompany.startsWith("..") ||
-    path.isAbsolute(relativeToCompany)
-  ) {
-    throw new Error(
-      "EMPLOYEE DOCUMENT PATH IS OUTSIDE THE COMPANY STORAGE FOLDER"
-    );
-  }
-
-  return absolutePath;
-}
 
 export function registerEmployeeDocumentIPC() {
   console.log("REGISTERING EMPLOYEES DOCUMENTS IPC");
@@ -209,7 +127,7 @@ export function registerEmployeeDocumentIPC() {
         throw new Error("EMPLOYEE DOCUMENT DOES NOT BELONG TO THIS COMPANY");
       }
 
-      return await updateEmployeeDocument(companyId, document);
+      return await updateStoredEmployeeDocument(companyId, document);
     }
   );
 
@@ -233,18 +151,7 @@ export function registerEmployeeDocumentIPC() {
         throw new Error("EMPLOYEE DOCUMENT DOES NOT BELONG TO THIS COMPANY");
       }
 
-      try {
-        const absolutePath = resolveEmployeeDocumentPath(
-          companyId,
-          document.localPath
-        );
-
-        await fsPromises.unlink(absolutePath);
-      } catch {
-        // Ignore if the file has already been removed
-      }
-
-      await deleteEmployeeDocument(companyId, _id);
+      await deleteStoredEmployeeDocument(companyId, _id);
 
       return true;
     }

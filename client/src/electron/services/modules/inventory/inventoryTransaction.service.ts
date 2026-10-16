@@ -1,6 +1,7 @@
 import { randomInt, randomUUID } from "node:crypto";
 import { z } from "zod";
-import type { InventoryBalance } from "../../../../common/types/inventory/InventoryItem.js";
+import { customFieldValuesSchema } from "../../../../common/types/inventory/customFieldValidation.js";
+import type { InventoryBalance, InventoryItem } from "../../../../common/types/inventory/InventoryItem.js";
 import type { InventoryMovement } from "../../../../common/types/inventory/InventoryMovement.js";
 import type {
   InventoryTransactionInput,
@@ -10,12 +11,15 @@ import {
   InventoryTransactionRepository,
   type BalanceBucket,
 } from "../../../database/repositories/modules/inventory/inventoryTransaction.repository.js";
+import { enqueueNotification } from "../../../database/repositories/shared/notificationQueue.repository.js";
+import { buildStockAlert } from "./stockAlert.service.js";
 
 const id = z.string().trim().min(1).max(255);
 const optionalId = id.optional();
 const schema = z
   .object({
     requestId: z.string().uuid(),
+    customFields: customFieldValuesSchema.optional(),
     type: z.enum(["RECEIPT", "ISSUE", "TRANSFER", "ADJUSTMENT"]),
     date: z.string().datetime({ offset: true }),
     reference: z.string().trim().max(255),
@@ -34,6 +38,7 @@ const schema = z
         z
           .object({
             itemId: id,
+            customFields: customFieldValuesSchema.optional(),
             quantity: z.number().finite().positive(),
             unitCost: z.number().finite().nonnegative().optional(),
             lotId: optionalId,
@@ -176,6 +181,7 @@ export class InventoryTransactionService {
         referenceId: draft.reference,
         reason: draft.reason,
         customFields: {
+          ...(draft.customFields ? { userFields: draft.customFields } : {}),
           transactionRequest: fingerprint,
           sourceLocationId: draft.locationId,
           destinationLocationId: draft.destinationLocationId,
@@ -183,6 +189,11 @@ export class InventoryTransactionService {
         },
       });
 
+      const alertSnapshots = new Map<string, {
+        item: InventoryItem;
+        before: number;
+        precision: number;
+      }>();
       for (const [index, line] of draft.lines.entries()) {
         const item = await this.repository.getItem(companyId, line.itemId);
         if (!item)
@@ -197,6 +208,14 @@ export class InventoryTransactionService {
         const unit = await this.repository.getUnit(companyId, item.baseUnitId);
         if (!unit) throw new Error(`${item.name} : unité de base introuvable.`);
         const precision = 10 ** unit.decimalPlaces;
+        // Transfers do not change company-wide availability.
+        if (!transfer && !alertSnapshots.has(item._id)) {
+          alertSnapshots.set(item._id, {
+            item,
+            before: await this.repository.getAvailableQuantity(companyId, item._id),
+            precision,
+          });
+        }
         if (
           Math.abs(
             line.quantity * precision - Math.round(line.quantity * precision)
@@ -287,12 +306,13 @@ export class InventoryTransactionService {
           ...common,
           _id: lineId,
           lineNumber: index + 1,
-          customFields: transfer
-            ? {
-                destinationWarehouseId: draft.destinationWarehouseId,
-                destinationLocationId: draft.destinationLocationId,
-              }
-            : undefined,
+          customFields: transfer || line.customFields ? {
+            ...(line.customFields ? { userFields: line.customFields } : {}),
+            ...(transfer ? {
+              destinationWarehouseId: draft.destinationWarehouseId,
+              destinationLocationId: draft.destinationLocationId,
+            } : {}),
+          } : undefined,
         });
 
         const apply = async (
@@ -391,6 +411,20 @@ export class InventoryTransactionService {
         }
       }
       await this.repository.queuePostedDocument(companyId, documentId);
+      if (alertSnapshots.size) {
+        const recipient = await this.repository.getStockAlertRecipient(companyId);
+        for (const { item, before, precision } of alertSnapshots.values()) {
+          const after = await this.repository.getAvailableQuantity(companyId, item._id);
+          const notification = buildStockAlert(
+            companyId, recipient?.email, item,
+            Math.round(before * precision) / precision,
+            Math.round(after * precision) / precision,
+            documentId, documentNumber
+          );
+          // Persist with the stock document; delivery is handled by the offline queue.
+          if (notification) await enqueueNotification(notification);
+        }
+      }
       return { documentId, documentNumber };
     });
   }

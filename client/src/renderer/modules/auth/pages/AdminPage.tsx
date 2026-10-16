@@ -168,7 +168,13 @@ const AdminPage = () => {
       >
         {/* Logo + company name — upper left */}
         <Box mt={{ base: "1rem", md: "1.5rem", lg: "2rem" }} flexShrink={0}>
-          <Logo text="Gestion de stock et de personnel" />
+          <Logo
+            text="Gestion d'entreprise"
+            companyId={user.companyId}
+            width="6rem"
+            height="6rem"
+            showCompanyName
+          />
         </Box>
 
         {/* Settings — upper right */}

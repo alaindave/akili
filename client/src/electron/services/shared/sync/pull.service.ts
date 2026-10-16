@@ -1,3 +1,4 @@
+import { getCompanyFilesRoot } from "../../../storage/companyStorage.js";
 import type { Incident } from "../../../../common/types/incident/Incident.js";
 import { upsertIncident } from "../../../database/repositories/shared/incidents.repository.js";
 import axios from "axios";
@@ -16,7 +17,6 @@ import { upsertAdminUser } from "../../../database/repositories/shared/admin_use
 
 import {
   markEmployeeSynced,
-  upsertEmployee,
 } from "../../../database/repositories/modules/hr/employees.repository.js";
 
 import {
@@ -39,7 +39,7 @@ import {
 
 import { downloadEmployeePhoto } from "../../../util/downloadEmployeePhoto.util.js";
 
-import { updateEmployeePhotoMetadata } from "../../../database/repositories/modules/hr/employeesPhotos.repository.js";
+import { upsertEmployeeWithPhoto } from "../employeePhoto.service.js";
 
 import { upsertTaskComment } from "../../../database/repositories/shared/tasks_comments.repository.js";
 
@@ -99,7 +99,7 @@ import {
 } from "../../../database/repositories/shared/companies.repository.js";
 
 import { getToken } from "../../../auth.js";
-import { getUnsyncedItems } from "../../../database/repositories/shared/sync.repository.js";
+import { getPendingSyncItems } from "../../../database/repositories/shared/sync.repository.js";
 
 import {
   getEmployeeDocumentsDir,
@@ -143,9 +143,15 @@ export async function pullLatestChanges(companyId: string) {
   console.log("PULL SERVICE API URL:", API_URL);
 
   const errors: string[] = [];
-  async function pullIndependently<T>(...args: Parameters<typeof pullEntityByVersion<T>>): Promise<VersionPullResult<T>> {
-    try { return await pullEntityByVersion<T>(...args); }
-    catch (error) { errors.push(String(error)); return { items: [] }; }
+  async function pullIndependently<T>(
+    ...args: Parameters<typeof pullEntityByVersion<T>>
+  ): Promise<VersionPullResult<T>> {
+    try {
+      return await pullEntityByVersion<T>(...args);
+    } catch (error) {
+      errors.push(String(error));
+      return { items: [] };
+    }
   }
   try {
     if (!companyId) {
@@ -518,7 +524,7 @@ async function syncCompanies(companies: Company[]): Promise<boolean> {
     (a, b) => (a.serverVersion ?? 0) - (b.serverVersion ?? 0)
   );
 
-  let allSucceeded = true;
+  const allSucceeded = true;
 
   for (const company of sortedCompanies) {
     try {
@@ -535,7 +541,6 @@ async function syncCompanies(companies: Company[]): Promise<boolean> {
         `COMPANY SYNCED ${company.companyId} ` + `(v${company.serverVersion})`
       );
     } catch (error) {
-      allSucceeded = false;
 
       console.error("FAILED TO SYNC PULLED COMPANY:", {
         companyId: company.companyId,
@@ -544,6 +549,7 @@ async function syncCompanies(companies: Company[]): Promise<boolean> {
 
         error,
       });
+      throw error;
     }
   }
 
@@ -563,7 +569,7 @@ async function syncCompanyLogos(companyLogos: CompanyLogo[]): Promise<boolean> {
     return true;
   }
 
-  let succeeded = true;
+  const succeeded = true;
 
   for (const logo of companyLogos) {
     try {
@@ -594,7 +600,7 @@ async function syncCompanyLogos(companyLogos: CompanyLogo[]): Promise<boolean> {
 
         if (localCompany?.logoPath) {
           const absolutePath = path.join(
-            app.getPath("userData"),
+            getCompanyFilesRoot(),
             localCompany.logoPath
           );
 
@@ -653,7 +659,7 @@ async function syncCompanyLogos(companyLogos: CompanyLogo[]): Promise<boolean> {
       ===================================================== */
 
       const relativeLogoPath = path
-        .relative(app.getPath("userData"), absolutePath)
+        .relative(getCompanyFilesRoot(), absolutePath)
         .split(path.sep)
         .join("/");
 
@@ -689,13 +695,13 @@ async function syncCompanyLogos(companyLogos: CompanyLogo[]): Promise<boolean> {
 
       console.log("COMPANY LOGO SYNCED:", logo.companyId);
     } catch (error) {
-      succeeded = false;
 
       console.error("FAILED TO SYNC COMPANY LOGO:", {
         companyId: logo.companyId,
         serverVersion: logo.serverVersion,
         error,
       });
+      throw error;
     }
   }
 
@@ -711,15 +717,15 @@ async function syncAdminUsers(adminUsers: AdminUser[]): Promise<boolean> {
     return true;
   }
 
-  let succeeded = true;
+  const succeeded = true;
 
   for (const adminUser of adminUsers) {
     try {
       await upsertAdminUser(adminUser);
     } catch (error) {
-      succeeded = false;
 
       console.error("FAILED TO SYNC PULLED ADMIN USER:", adminUser._id, error);
+      throw error;
     }
   }
 
@@ -741,7 +747,7 @@ async function syncEmployees(employees: Employee[]): Promise<boolean> {
     (a, b) => (a.serverVersion ?? 0) - (b.serverVersion ?? 0)
   );
 
-  let allSucceeded = true;
+  const allSucceeded = true;
 
   for (const employee of sortedEmployees) {
     try {
@@ -750,7 +756,7 @@ async function syncEmployees(employees: Employee[]): Promise<boolean> {
           `(serverVersion=${employee.serverVersion})`
       );
 
-      await upsertEmployee(employee);
+      await upsertEmployeeWithPhoto(employee);
 
       await markEmployeeSynced(employee.companyId, employee._id);
 
@@ -758,7 +764,6 @@ async function syncEmployees(employees: Employee[]): Promise<boolean> {
         `EMPLOYEE SYNCED ${employee._id} ` + `(v${employee.serverVersion})`
       );
     } catch (error) {
-      allSucceeded = false;
 
       console.error("FAILED TO SYNC PULLED EMPLOYEE:", {
         employeeId: employee._id,
@@ -767,6 +772,7 @@ async function syncEmployees(employees: Employee[]): Promise<boolean> {
 
         error,
       });
+      throw error;
     }
   }
 
@@ -813,7 +819,7 @@ async function syncEmployeePhotoFiles(companyId: string) {
 }
 
 async function syncEmployeePhotos(employees: Employee[]): Promise<boolean> {
-  let succeeded = true;
+  const succeeded = true;
   for (const employee of employees) {
     try {
       if (
@@ -873,31 +879,14 @@ async function syncEmployeePhotos(employees: Employee[]): Promise<boolean> {
         continue;
       }
 
-      const absolutePath = await downloadEmployeePhoto(
+      await downloadEmployeePhoto(
         employee.companyId,
         employee._id,
         employee.photo_version,
         employee.photo_mime_type,
-        employee.photo_hash
+        employee.photo_hash,
+        employee.photo_last_modified
       );
-      const photo_path = path
-        .relative(getEmployeePhotoDir(), absolutePath)
-        .split(path.sep)
-        .join("/");
-
-      await updateEmployeePhotoMetadata(employee.companyId, employee._id, {
-        photo_path,
-
-        photo_filename: employee.photo_filename,
-
-        photo_version: employee.photo_version,
-
-        photo_hash: employee.photo_hash,
-
-        photo_mime_type: employee.photo_mime_type,
-
-        photo_last_modified: employee.photo_last_modified,
-      });
 
       console.log(
         `DOWNLOADED NEW PHOTO FOR ` +
@@ -906,8 +895,8 @@ async function syncEmployeePhotos(employees: Employee[]): Promise<boolean> {
           `Version ${employee.photo_version}`
       );
     } catch (error) {
-      succeeded = false;
       console.error(`FAILED TO SYNC PHOTO FOR EMPLOYEE ${employee._id}`, error);
+      throw error;
     }
   }
   return succeeded;
@@ -924,7 +913,7 @@ async function syncEmployeeDocuments(
     return true;
   }
 
-  let succeeded = true;
+  const succeeded = true;
 
   for (const document of employeeDocuments) {
     try {
@@ -1014,21 +1003,7 @@ async function syncEmployeeDocuments(
          DOWNLOAD DOCUMENT
       ===================================================== */
 
-      const absolutePath = await downloadEmployeeDocument(employee, document);
-
-      /* =====================================================
-         LOCAL STORED PATH
-      ===================================================== */
-
-      const localPath = path
-        .relative(getEmployeeDocumentsDir(), absolutePath)
-        .split(path.sep)
-        .join("/");
-
-      await upsertEmployeeDocument({
-        ...document,
-        localPath,
-      });
+      await downloadEmployeeDocument(employee, document);
 
       await markEmployeeDocumentSynced(document.companyId, document._id);
 
@@ -1039,9 +1014,9 @@ async function syncEmployeeDocuments(
           `(v${document.serverVersion})`
       );
     } catch (error) {
-      succeeded = false;
 
       console.error(`FAILED TO SYNC DOCUMENT ${document._id}`, error);
+      throw error;
     }
   }
 
@@ -1064,9 +1039,9 @@ async function syncAttendances(attendances: Attendance[]): Promise<boolean> {
       const applied = await upsertAttendance(attendance);
       if (!applied) succeeded = false;
     } catch (error) {
-      succeeded = false;
 
       console.error("FAILED TO SYNC PULLED ATTENDANCE:", attendance._id, error);
+      throw error;
     }
   }
 
@@ -1084,7 +1059,7 @@ async function syncAttendanceDailyChecks(
     return true;
   }
 
-  let succeeded = true;
+  const succeeded = true;
 
   for (const attendanceDailyCheck of attendanceDailyChecks) {
     try {
@@ -1095,13 +1070,13 @@ async function syncAttendanceDailyChecks(
         attendanceDailyCheck._id
       );
     } catch (error) {
-      succeeded = false;
 
       console.error(
         "FAILED TO SYNC PULLED ATTENDANCE DAILY CHECK:",
         attendanceDailyCheck._id,
         error
       );
+      throw error;
     }
   }
 
@@ -1117,7 +1092,7 @@ async function syncLeaves(leaves: Leave[]): Promise<boolean> {
     return true;
   }
 
-  let succeeded = true;
+  const succeeded = true;
 
   for (const leave of leaves) {
     try {
@@ -1125,9 +1100,9 @@ async function syncLeaves(leaves: Leave[]): Promise<boolean> {
 
       await markLeaveSynced(leave.companyId, leave._id);
     } catch (error) {
-      succeeded = false;
 
       console.error("FAILED TO SYNC PULLED LEAVE:", leave._id, error);
+      throw error;
     }
   }
 
@@ -1143,23 +1118,21 @@ async function syncTasks(tasks: Task[]): Promise<boolean> {
     return true;
   }
 
-  let succeeded = true;
+  const succeeded = true;
 
   for (const task of tasks) {
     try {
       await upsertTask({ ...task, module: task.module ?? "HR" });
 
       if (task.comments?.length) {
-        await Promise.all(
-          task.comments.map((comment) => upsertTaskComment(comment))
-        );
+        for (const comment of task.comments) await upsertTaskComment(comment);
       }
 
       await markTaskSynced(task.companyId, task._id, task.module ?? "HR");
     } catch (error) {
-      succeeded = false;
 
       console.error("FAILED TO SYNC PULLED TASK:", task._id, error);
+      throw error;
     }
   }
 
@@ -1177,7 +1150,7 @@ async function syncPayrollSettings(
     return true;
   }
 
-  let succeeded = true;
+  const succeeded = true;
 
   for (const settings of payrollSettings) {
     try {
@@ -1185,13 +1158,13 @@ async function syncPayrollSettings(
 
       await markPayrollSettingsSynced(settings.companyId, settings._id);
     } catch (error) {
-      succeeded = false;
 
       console.error(
         "FAILED TO SYNC PULLED PAYROLL SETTINGS:",
         settings._id,
         error
       );
+      throw error;
     }
   }
 
@@ -1209,7 +1182,7 @@ async function syncPayrollComponents(
     return true;
   }
 
-  let succeeded = true;
+  const succeeded = true;
 
   for (const component of payrollComponents) {
     try {
@@ -1217,13 +1190,13 @@ async function syncPayrollComponents(
 
       await markPayrollComponentSynced(component.companyId, component._id);
     } catch (error) {
-      succeeded = false;
 
       console.error(
         "FAILED TO SYNC PULLED PAYROLL COMPONENT:",
         component._id,
         error
       );
+      throw error;
     }
   }
 
@@ -1241,7 +1214,7 @@ async function syncPayrollEmployeeProfiles(
     return true;
   }
 
-  let succeeded = true;
+  const succeeded = true;
 
   for (const profile of payrollEmployeeProfiles) {
     if (!profile._id) {
@@ -1251,13 +1224,13 @@ async function syncPayrollEmployeeProfiles(
     try {
       await upsertEmployeePayrollProfile(profile);
     } catch (error) {
-      succeeded = false;
 
       console.error(
         "FAILED TO SYNC PULLED PAYROLL EMPLOYEE PROFILE:",
         profile._id,
         error
       );
+      throw error;
     }
   }
 
@@ -1290,13 +1263,13 @@ async function syncPayrollRuns(payrollRuns: PayrollRun[]): Promise<boolean> {
 
       console.log("PAYROLL RUN SYNCED:", payrollRun._id);
     } catch (error) {
-      succeeded = false;
 
       console.error(
         "FAILED TO SYNC PULLED PAYROLL RUN:",
         payrollRun._id,
         error
       );
+      throw error;
     }
   }
 
@@ -1379,7 +1352,6 @@ async function syncPayrollResults(
 
       console.log("PAYROLL RESULT SYNCED:", result._id);
     } catch (error) {
-      succeeded = false;
 
       console.error("FAILED TO SYNC PULLED PAYROLL RESULT:", {
         resultId: result._id,
@@ -1390,6 +1362,7 @@ async function syncPayrollResults(
 
         error,
       });
+      throw error;
     }
   }
 
@@ -1418,9 +1391,9 @@ async function syncPayrollItems(payrollItems: PayrollItem[]): Promise<boolean> {
         continue;
       }
     } catch (error) {
-      succeeded = false;
 
       console.error("FAILED TO SYNC PULLED PAYROLL ITEM:", item._id, error);
+      throw error;
     }
   }
 
@@ -1438,14 +1411,18 @@ export async function pullEntityByVersion<T>(
   limit = 500,
   cursorEntity = entity
 ): Promise<VersionPullResult<T>> {
-  await getSyncState(companyId, cursorEntity);
+  const state = await getSyncState(companyId, cursorEntity);
 
-  const token = await getToken();
+  const token = await getToken(companyId);
 
-  // Reconcile from zero on each cycle. Counters allocated before a remote write
-  // commits are not safe durable watermarks; this also repairs legacy skipped rows.
-  let afterVersion = 0;
-  let deferred = false;
+  let afterVersion = state.lastPulledVersion;
+  let blockedCount = 0;
+  let failedCount = 0;
+  const issueDetails: string[] = [];
+  const recordIssue = (message: string) => {
+    console.error(message);
+    if (issueDetails.length < 10) issueDetails.push(message);
+  };
 
   const allItems: T[] = [];
 
@@ -1464,42 +1441,48 @@ export async function pullEntityByVersion<T>(
       throw new Error("PULL SYNC: authentication token is missing");
     }
 
-    const response = await axios.get(`${API_URL}/sync/pull`, {
-      params: {
-        entity,
-        afterVersion,
-        limit,
-      },
+    const response = await axios
+      .get(`${API_URL}/sync/pull`, {
+        params: {
+          entity,
+          afterVersion,
+          limit,
+        },
 
-      headers: {
-        "x-auth-token": token,
+        headers: {
+          "x-auth-token": token,
 
-        "x-company-id": companyId,
-      },
+          "x-company-id": companyId,
+        },
 
-      timeout: 90000,
-    }).catch((error: unknown) => {
-      if (!axios.isAxiosError(error)) throw error;
+        timeout: 90000,
+      })
+      .catch((error: unknown) => {
+        if (!axios.isAxiosError(error)) throw error;
 
-      const body: unknown = error.response?.data;
-      const message = typeof body === "object" && body !== null &&
-        "message" in body && typeof body.message === "string"
-        ? body.message
-        : error.message;
-      const unsupportedInventory = error.response?.status === 400 &&
-        entity.startsWith("inventory_") &&
-        message === `Unknown sync entity: ${entity}`;
+        const body: unknown = error.response?.data;
+        const message =
+          typeof body === "object" &&
+          body !== null &&
+          "message" in body &&
+          typeof body.message === "string"
+            ? body.message
+            : error.message;
+        const unsupportedInventory =
+          error.response?.status === 400 &&
+          entity.startsWith("inventory_") &&
+          message === `Unknown sync entity: ${entity}`;
 
-      throw new Error(
-        `PULL ${entity} FROM ${API_URL}/sync/pull FAILED ` +
-        `(${error.response?.status ?? "network error"}): ${message}` +
-        (unsupportedInventory
-          ? ". This backend does not support inventory sync. Rebuild and restart " +
-            "the backend with the current server code. If VITE_API_URL changed, " +
-            "restart Electron to use the new backend."
-          : "")
-      );
-    });
+        throw new Error(
+          `PULL ${entity} FROM ${API_URL}/sync/pull FAILED ` +
+            `(${error.response?.status ?? "network error"}): ${message}` +
+            (unsupportedInventory
+              ? ". This backend does not support inventory sync. Rebuild and restart " +
+                "the backend with the current server code. If VITE_API_URL changed, " +
+                "restart Electron to use the new backend."
+              : "")
+        );
+      });
 
     const {
       items,
@@ -1532,18 +1515,52 @@ export async function pullEntityByVersion<T>(
 
     // A failed push must not let a pull overwrite the remaining local edits or
     // mark them synced. Retain this page until those edits are acknowledged.
-    for (const row of batch as Array<T & { _id?: string }>) {
-      const succeeded = await transaction(async () => {
-        const pending = await getUnsyncedItems(companyId);
-        const blocked = pending.some(item =>
-          (item.entity === cursorEntity && item.entityId === row._id) ||
-          (entity === "task" && item.entity === "task_comment" && JSON.parse(item.payload).taskId === row._id) ||
-          (entity === "admin_user" && item.entity === "user_notes" && item.entityId === row._id) ||
-          (entity === "company" && item.entity === "company_logo") ||
-          (entity.startsWith("inventory_") && item.entity === "inventory_transaction"));
-        return !blocked && await syncBatch([row]);
-      });
-      if (!succeeded) deferred = true;
+    for (const row of batch as Array<T & { _id?: string; companyId?: string }>) {
+      const recordId = entity === "company" || entity === "company_logo"
+        ? row.companyId : row._id;
+      try {
+        if (!recordId) throw new Error("Pull record is missing its ID");
+        const blockers = await transaction(async () => {
+          const targets: Array<{ entity: string; entityId?: string }> = [
+            { entity: cursorEntity, entityId: recordId },
+          ];
+          if (entity === "task") targets.push({ entity: "task_comment" });
+          if (entity === "admin_user")
+            targets.push({ entity: "user_notes", entityId: row._id });
+          if (entity === "company") targets.push({ entity: "company_logo" });
+          // Aggregate stock operations replace individual queue entries for
+          // these four groups. Catalog rows are not part of the snapshot.
+          if (["inventory_document", "inventory_document_line",
+            "inventory_movement", "inventory_balance"].includes(entity))
+            targets.push({ entity: "inventory_transaction" });
+          const pending = await getPendingSyncItems(companyId, targets);
+          const blocked = pending.filter((item) => {
+            if (item.entity !== "task_comment") return true;
+            try {
+              const payload: unknown = JSON.parse(item.payload);
+              if (typeof payload !== "object" || payload === null || !("taskId" in payload))
+                throw new Error("Missing taskId");
+              return payload.taskId === row._id;
+            } catch {
+              throw new Error(`Invalid task comment payload in queue ${item._id}`);
+            }
+          });
+          if (blocked.length) return blocked;
+          // A resolved false must roll back writes too, not commit a partial import.
+          if (!(await syncBatch([row])))
+            throw new Error("Record import was refused; local data may require reconciliation");
+          return [];
+        });
+        if (blockers.length) {
+          blockedCount++;
+          recordIssue(`${cursorEntity} ${recordId}: waiting for local changes in queue ` +
+            blockers.map((item) => `${item._id} (${item.entity})`).join(", "));
+        }
+      } catch (error) {
+        failedCount++;
+        recordIssue(`${cursorEntity} ${recordId ?? "<missing ID>"}: import failed: ` +
+          (error instanceof Error ? error.message : String(error)));
+      }
     }
 
     const newVersion = Number(nextVersion ?? afterVersion);
@@ -1563,7 +1580,8 @@ export async function pullEntityByVersion<T>(
       );
     }
 
-    if (!deferred) await updateLastPulledVersion(companyId, cursorEntity, newVersion);
+    if (blockedCount === 0 && failedCount === 0)
+      await updateLastPulledVersion(companyId, cursorEntity, newVersion);
 
     afterVersion = newVersion;
 
@@ -1572,7 +1590,13 @@ export async function pullEntityByVersion<T>(
     hasMore = Boolean(serverHasMore);
   }
 
-  if (deferred) throw new Error(`${cursorEntity.toUpperCase()} has deferred records. SYNC CURSOR WAS NOT ADVANCED past the conflict.`);
+  if (blockedCount || failedCount)
+    throw new Error(
+      `${cursorEntity.toUpperCase()}: ${blockedCount} record(s) waiting for local changes, ` +
+      `${failedCount} import failure(s). SYNC CURSOR WAS NOT ADVANCED past unapplied records.\n` +
+      issueDetails.join("\n") +
+      (blockedCount + failedCount > issueDetails.length ? "\nAdditional details are in the sync log." : "")
+    );
 
   console.log(`${entity.toUpperCase()} VERSION SYNC COMPLETE:`, {
     companyId,

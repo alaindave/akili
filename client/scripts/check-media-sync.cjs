@@ -26,6 +26,9 @@ const auth = { getToken: async () => 'token' };
 let queueId = 0;
 const syncQueue = {
   getUnsyncedItems: async () => queued.map((item) => ({ ...item })),
+  getPendingSyncItems: async (_company, targets) => queued.filter(item => targets.some(
+    target => target.entity === item.entity && (target.entityId === undefined || target.entityId === item.entityId)
+  )),
   addToSyncQueue: async (item) => queued.push({ ...item, _id: String(++queueId) }),
   markManySynced: async (_company, ids) => {
     for (let i = queued.length - 1; i >= 0; i--) if (ids.includes(queued[i]._id)) queued.splice(i, 1);
@@ -107,7 +110,7 @@ function load(file, overrides = {}, expose = '') {
 
   responseBytes = Buffer.from('wrong cached content');
   const next = [{ ...remote[0], photo_version: 2 }];
-  assert.equal(await pull.syncEmployeePhotos(next), false, 'Hash mismatch must remain retryable');
+  await assert.rejects(() => pull.syncEmployeePhotos(next), /hash/i, 'Hash mismatch must remain retryable');
   assert.equal((await employee()).photo_version, 1);
   responseBytes = Buffer.from('png photo bytes');
 
@@ -121,7 +124,7 @@ function load(file, overrides = {}, expose = '') {
     photo_path: 'old.png', photo_filename: 'old.png', photo_version: 1,
   }), /changed during download/);
   assert.equal((await employee()).photo_path, second.photo_path);
-  assert.equal(await pull.syncEmployeePhotos(remote), false, 'Pull must preserve pending upload');
+  await assert.rejects(() => pull.syncEmployeePhotos(remote), /pending photo upload/, 'Pull must preserve pending upload');
 
   // Remaining local edits must block application and retain the entity cursor.
   queued.push({ entity: 'employee', entityId: 'e1' });

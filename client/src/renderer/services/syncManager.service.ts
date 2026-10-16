@@ -43,7 +43,8 @@ export function initializeRendererSync() {
   ======================================================= */
 
   unsubscribeSyncStatus = window.electron.sync.onSyncStatus(
-    ({ status, timestamp, pulledChanges, pendingChanges }: SyncStatusEvent) => {
+    ({ companyId, status, timestamp, pulledChanges, pendingChanges, error }: SyncStatusEvent) => {
+      if (companyId && companyId !== useAdminUser.getState().adminUser.companyId) return;
       const syncStore = useSyncStore.getState();
       if (typeof pendingChanges === "number") {
         pendingRevision++;
@@ -92,7 +93,7 @@ export function initializeRendererSync() {
 
         case "ERROR": {
           if (pulledChanges && timestamp) syncStore.setSyncCompleted(timestamp);
-          syncStore.setSyncError();
+          syncStore.setSyncError(error);
           break;
         }
 
@@ -137,6 +138,7 @@ export function initializeRendererSync() {
 
   unsubscribeCompany = useAdminUser.subscribe((state, previous) => {
     if (state.adminUser.companyId !== previous.adminUser.companyId) {
+      useSyncStore.getState().resetSyncStatus();
       useSyncStore.getState().setPendingChanges(0);
       void refreshPendingChanges(state.adminUser.companyId);
     }

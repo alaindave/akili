@@ -2,6 +2,8 @@ import { BrowserWindow } from "electron";
 import { NetworkService } from "./network.service.js";
 import sync from "./sync.service.js";
 import { processNotificationQueue } from "../email/notificationQueue.service.js";
+import { getActiveCompanyId } from "../../../auth.js";
+import { findCompanyStorage, withCompanyStorage } from "../../../storage/companyStorage.js";
 
 const SYNC_INTERVAL = 2 * 60 * 1000;
 
@@ -9,6 +11,8 @@ let syncInterval: NodeJS.Timeout | null = null;
 let syncing = false;
 
 export function startBackgroundSync(companyId: string) {
+  const storage = findCompanyStorage(companyId);
+  if (!storage) return;
   if (!companyId) {
     console.log("NO COMPANY CONFIGURED. BACKGROUND SYNC WAITING.");
     return;
@@ -22,10 +26,10 @@ export function startBackgroundSync(companyId: string) {
   console.log("STARTING BACKGROUND SYNC...");
 
   // Perform one immediately when Electron starts
-  runBackgroundSync(companyId);
+  void withCompanyStorage(storage, () => runBackgroundSync(companyId));
 
   syncInterval = setInterval(() => {
-    runBackgroundSync(companyId);
+    void withCompanyStorage(storage, () => runBackgroundSync(companyId));
   }, SYNC_INTERVAL);
 }
 
@@ -41,10 +45,12 @@ export function stopBackgroundSync() {
 }
 
 async function runBackgroundSync(companyId: string) {
+  if (await getActiveCompanyId() !== companyId) return;
   if (syncing) {
     console.log("SYNC ALREADY IN PROGRESS. SKIPPING...");
 
     notifyRenderer({
+      companyId,
       status: "SYNCING",
       timestamp: new Date().toISOString(),
     });
@@ -61,6 +67,7 @@ async function runBackgroundSync(companyId: string) {
       console.log("BACKEND UNAVAILABLE. BACKGROUND SYNC SKIPPED.");
 
       notifyRenderer({
+      companyId,
         status: "OFFLINE",
         timestamp: new Date().toISOString(),
       });
@@ -97,6 +104,7 @@ async function runBackgroundSync(companyId: string) {
     console.error("BACKGROUND SYNC FAILED:", error);
 
     notifyRenderer({
+      companyId,
       status: "ERROR",
       timestamp: new Date().toISOString(),
       error: getErrorMessage(error),
@@ -110,6 +118,7 @@ async function runBackgroundSync(companyId: string) {
  * Notify all renderer windows about the current sync state.
  */
 function notifyRenderer(event: {
+  companyId: string;
   status: "SYNCING" | "OFFLINE" | "ERROR";
   timestamp: string;
   error?: string;

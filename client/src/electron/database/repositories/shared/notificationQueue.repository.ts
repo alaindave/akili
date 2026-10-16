@@ -134,7 +134,8 @@ export async function enqueueNotification(
 }
 
 export async function getPendingNotifications(
-  limit = 20
+  limit = 20,
+  companyId?: string
 ): Promise<NotificationQueueItem[]> {
   const now = new Date().toISOString();
 
@@ -144,6 +145,7 @@ export async function getPendingNotifications(
       FROM notification_queue
       WHERE
         status IN ('PENDING', 'FAILED')
+        AND (? IS NULL OR companyId = ?)
         AND (
           nextAttemptAt IS NULL
           OR nextAttemptAt <= ?
@@ -151,7 +153,7 @@ export async function getPendingNotifications(
       ORDER BY createdAt ASC
       LIMIT ?
     `,
-    [now, limit]
+    [companyId ?? null, companyId ?? null, now, limit]
   );
 
   return rows.map(toNotificationQueueItem);

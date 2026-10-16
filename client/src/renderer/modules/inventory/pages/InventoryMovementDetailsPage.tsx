@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Global } from "@emotion/react";
 import { Link as RouterLink, useParams } from "react-router-dom";
 import {
   Alert,
@@ -16,8 +17,9 @@ import {
   Th,
   Thead,
   Tr,
+  useToast,
 } from "@chakra-ui/react";
-import { FaArrowLeftLong } from "react-icons/fa6";
+import { FaArrowLeftLong, FaDownload } from "react-icons/fa6";
 import type {
   InventoryDocument,
   InventoryDocumentLine,
@@ -90,6 +92,7 @@ function MovementDetails({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [retry, setRetry] = useState(0);
+  const [isDownloading, setIsDownloading] = useState(false);
   const syncVersion = useSyncStore((store) => store.syncVersion);
   useEffect(() => {
     let active = true;
@@ -153,6 +156,8 @@ function MovementDetails({
     };
   }, [companyId, documentId, retry, syncVersion]);
 
+  const receipt = data?.document.type === "RECEIPT";
+  const paperDocument = receipt || data?.document.type === "ISSUE";
   const warehouseName = (id?: string) =>
     id
       ? data?.warehouses.find((warehouse) => warehouse._id === id)?.name ??
@@ -160,10 +165,21 @@ function MovementDetails({
       : "—";
   const field = (label: string, value: string) => (
     <Box>
-      <Text fontSize="sm" color="gray.600">
+      <Text
+        fontSize={paperDocument ? "10px" : "sm"}
+        color={paperDocument ? "#666" : "gray.600"}
+        mb={paperDocument ? "5px" : undefined}
+        textTransform={paperDocument ? "uppercase" : undefined}
+        letterSpacing={paperDocument ? "0.06em" : undefined}
+      >
         {label}
       </Text>
-      <Text fontWeight="medium" whiteSpace="pre-wrap" overflowWrap="anywhere">
+      <Text
+        fontSize={paperDocument ? "13px" : undefined}
+        fontWeight="medium"
+        whiteSpace="pre-wrap"
+        overflowWrap="anywhere"
+      >
         {value}
       </Text>
     </Box>
@@ -171,8 +187,66 @@ function MovementDetails({
   const total = data?.lines.every((line) => line.unitCost != null)
     ? data.lines.reduce((sum, line) => sum + line.quantity * line.unitCost!, 0)
     : undefined;
+
+  const toast = useToast();
+  const download = async () => {
+    if (!paperDocument || loading || error || isDownloading) return;
+    setIsDownloading(true);
+    try {
+      const result =
+        await window.electron.inventory.documents.saveStockMovementReport(
+          companyId,
+          documentId
+        );
+      if (!result.canceled) {
+        toast({
+          title: receipt
+            ? "Bon d’entrée enregistré"
+            : "Bon de sortie enregistré",
+          status: "success",
+          isClosable: true,
+        });
+      }
+    } catch (cause: unknown) {
+      toast({
+        title: receipt
+          ? "Impossible de télécharger le bon d’entrée"
+          : "Impossible de télécharger le bon de sortie",
+        description:
+          cause instanceof Error ? cause.message : "Veuillez r\u00e9essayer.",
+        status: "error",
+        isClosable: true,
+      });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   return (
-    <Box h="100%" overflowY="auto" p={{ base: 3, md: 6 }} bg="#FAFAFA">
+    <Box
+      h="100%"
+      overflowY="auto"
+      p={{ base: 3, md: 6 }}
+      bg={paperDocument ? "#e9e9e7" : "#FAFAFA"}
+    >
+      {paperDocument && (
+        <Global
+          styles={`
+        @media print {
+          @page { size: A4 portrait; margin: 12mm; }
+          body:has([data-stock-paper]) { background: white; }
+          body:has([data-stock-paper]) *:has([data-stock-paper]) {
+            height: auto !important; min-height: 0 !important; max-height: none !important;
+            overflow: visible !important; display: block !important; position: static !important;
+            padding: 0 !important; margin: 0 !important;
+          }
+          body:has([data-stock-paper]) *:has([data-stock-paper]) > :not([data-stock-paper]):not(:has([data-stock-paper])) {
+            display: none !important;
+          }
+        }
+      `}
+        />
+      )}
       <Stack spacing={6}>
         {loading ? (
           <Stack role="status" aria-label="Chargement du mouvement">
@@ -191,37 +265,156 @@ function MovementDetails({
           </Stack>
         ) : (
           data && (
-            <>
-              <Box>
-                <HStack>
-                  <Button
-                    as={RouterLink}
-                    to="/inventory/movements"
-                    alignSelf="start"
-                    variant="ghost"
-                  >
-                    <FaArrowLeftLong color="black" />
-                  </Button>
-                  <Heading
-                    as="h1"
-                    size="md"
-                    color="#03143B"
-                    overflowWrap="anywhere"
-                  >
-                    {data.document.documentNumber}
-                  </Heading>
+            <Box
+              position="relative"
+              as="article"
+              data-stock-paper={paperDocument ? "" : undefined}
+              w="100%"
+              maxW={paperDocument ? "210mm" : undefined}
+              minH={paperDocument ? { base: 0, sm: "297mm" } : undefined}
+              mx="auto"
+              p={
+                paperDocument
+                  ? { base: "28px 18px", sm: "14mm 13mm" }
+                  : undefined
+              }
+              border={paperDocument ? "1px solid #d0d0d0" : undefined}
+              bg={paperDocument ? "white" : undefined}
+              color={paperDocument ? "#171717" : undefined}
+              boxShadow={
+                paperDocument ? "0 4px 24px rgb(0 0 0 / 8%)" : undefined
+              }
+              fontSize={paperDocument ? "13px" : undefined}
+              sx={
+                paperDocument
+                  ? {
+                      fontVariantNumeric: "tabular-nums",
+                      colorScheme: "light",
+                      "@media print": {
+                        maxWidth: "none",
+                        minHeight: 0,
+                        padding: 0,
+                        border: 0,
+                        boxShadow: "none",
+                        "button, a": { display: "none" },
+                        "header, tr": { breakInside: "avoid" },
+                      },
+                    }
+                  : undefined
+              }
+              display="flex"
+              flexDirection="column"
+              gap={paperDocument ? "18px" : 6}
+            >
+              <Button
+                position="absolute"
+                left="1rem"
+                top="1rem"
+                as={RouterLink}
+                to="/inventory/movements"
+                variant="outline"
+                aria-label="Retour aux mouvements"
+                minW="33px"
+                h="33px"
+                p="5px"
+                flexShrink={0}
+                color="#171717"
+                _hover={{ bg: "#f3f3f3" }}
+                _focusVisible={{
+                  outline: "2px solid #171717",
+                  outlineOffset: "2px",
+                }}
+              >
+                <FaArrowLeftLong color="black" />
+              </Button>
+              <Box
+                as="header"
+                borderBottom={paperDocument ? "2px solid #171717" : undefined}
+                pb={paperDocument ? "24px" : undefined}
+                mb={paperDocument ? "4px" : undefined}
+              >
+                <HStack
+                  justify="space-between"
+                  align="start"
+                  gap={4}
+                  flexWrap="wrap"
+                >
+                  <HStack align="center" gap={3} flex="1" minW={0}>
+                    <Heading
+                      as="h1"
+                      size={paperDocument ? undefined : "md"}
+                      fontFamily={
+                        paperDocument
+                          ? 'Georgia, "Times New Roman", serif'
+                          : undefined
+                      }
+                      fontSize={
+                        paperDocument ? "clamp(28px, 4vw, 38px)" : undefined
+                      }
+                      fontWeight={paperDocument ? 400 : undefined}
+                      lineHeight="1.15"
+                      letterSpacing={paperDocument ? "-0.025em" : undefined}
+                      overflowWrap="anywhere"
+                    >
+                      {paperDocument
+                        ? labels[data.document.type]
+                        : data.document.documentNumber}
+                    </Heading>
+                  </HStack>
+                  {paperDocument && (
+                    <Button
+                      size="sm"
+                      bg="#171717"
+                      color="white"
+                      borderRadius={0}
+                      flexShrink={0}
+                      ml="auto"
+                      _hover={{ bg: "#404040" }}
+                      _focusVisible={{
+                        outline: "2px solid #171717",
+                        outlineOffset: "2px",
+                      }}
+                      onClick={download}
+                      isLoading={isDownloading}
+                      loadingText="Génération…"
+                    >
+                      <FaDownload />
+                    </Button>
+                  )}
                 </HStack>
-                <HStack mt={2}>
-                  <Text>{labels[data.document.type]}</Text>
-                </HStack>
+                <Text
+                  mt={3}
+                  fontFamily={paperDocument ? "mono" : undefined}
+                  fontSize={paperDocument ? "12px" : undefined}
+                  overflowWrap="anywhere"
+                >
+                  {paperDocument
+                    ? data.document.documentNumber
+                    : labels[data.document.type]}
+                </Text>
               </Box>
+              {paperDocument && (
+                <Text
+                  py="10px"
+                  borderBottom="1px solid #999"
+                  fontSize="10px"
+                  fontWeight={700}
+                  lineHeight="1.5"
+                  letterSpacing="0.1em"
+                  textTransform="uppercase"
+                  color="#333"
+                >
+                  01 / Informations générales
+                </Text>
+              )}
               <SimpleGrid
-                columns={{ base: 1, md: 2, xl: 3 }}
+                columns={{ base: 1, md: 2, xl: paperDocument ? 2 : 3 }}
                 spacing={5}
                 bg="white"
-                p={5}
-                borderWidth="1px"
-                borderRadius="lg"
+                p={paperDocument ? "0 0 20px" : 5}
+                borderWidth={paperDocument ? 0 : "1px"}
+                borderRadius={paperDocument ? 0 : "lg"}
+                gap={paperDocument ? "20px 28px" : undefined}
               >
                 {field("Date", date(data.document.postedAt))}
                 {field("Responsable", data.responsible)}
@@ -245,15 +438,64 @@ function MovementDetails({
               </SimpleGrid>
               <Box
                 bg="white"
-                borderWidth="1px"
-                borderRadius="lg"
-                overflow="hidden"
+                borderWidth={paperDocument ? 0 : "1px"}
+                borderRadius={paperDocument ? 0 : "lg"}
+                overflow={paperDocument ? "visible" : "hidden"}
               >
-                <Heading as="h2" size="md" p={5}>
-                  Articles
+                <Heading
+                  as="h2"
+                  size="md"
+                  p={paperDocument ? "10px 0" : 5}
+                  borderBottom={paperDocument ? "1px solid #999" : undefined}
+                  fontSize={paperDocument ? "10px" : undefined}
+                  fontWeight={700}
+                  lineHeight="1.5"
+                  letterSpacing={paperDocument ? "0.1em" : undefined}
+                  textTransform={paperDocument ? "uppercase" : undefined}
+                  color={paperDocument ? "#333" : undefined}
+                >
+                  {paperDocument
+                    ? receipt
+                      ? "02 / Articles réceptionnés"
+                      : "02 / Articles sortis"
+                    : "Articles"}
                 </Heading>
-                <Box overflowX="auto">
-                  <Table size="sm">
+                <Box
+                  overflowX="auto"
+                  sx={{ "@media print": { overflow: "visible" } }}
+                >
+                  <Table
+                    size="sm"
+                    sx={
+                      paperDocument
+                        ? {
+                            tableLayout: "fixed",
+                            width: "100%",
+                            minWidth: { base: "580px", sm: 0 },
+                            "th:nth-of-type(2)": { width: "23%" },
+                            "th, td": {
+                              padding: "12px 5px",
+                              borderBottom: "1px solid #d5d5d5",
+                              color: "#171717",
+                              fontSize: "11px",
+                              lineHeight: "1.5",
+                              whiteSpace: "normal",
+                              overflowWrap: "anywhere",
+                            },
+                            th: {
+                              background: "#f3f3f3",
+                              borderBottom: "1px solid #333",
+                              fontSize: "9px",
+                              letterSpacing: "0.025em",
+                            },
+                            "@media print": {
+                              minWidth: 0,
+                              thead: { display: "table-header-group" },
+                            },
+                          }
+                        : undefined
+                    }
+                  >
                     <Thead>
                       <Tr>
                         <Th>SKU</Th>
@@ -310,11 +552,38 @@ function MovementDetails({
                     </Tbody>
                   </Table>
                 </Box>
-                <Text p={5} textAlign="right" fontWeight="bold">
+                <Text
+                  mt={paperDocument ? "18px" : undefined}
+                  p={paperDocument ? "15px 8px" : 5}
+                  borderTop={paperDocument ? "2px solid #171717" : undefined}
+                  borderBottom={paperDocument ? "1px solid #171717" : undefined}
+                  fontSize={paperDocument ? "14px" : undefined}
+                  textAlign="right"
+                  fontWeight="bold"
+                >
                   Valeur totale : {number(total)}
                 </Text>
               </Box>
-            </>
+              {paperDocument && (
+                <Box
+                  as="footer"
+                  display="flex"
+                  justifyContent="space-between"
+                  gap="20px"
+                  mt={{ base: "40px", sm: "auto" }}
+                  pt="14px"
+                  borderTop="1px solid #aaa"
+                  fontSize="10px"
+                  color="#666"
+                  sx={{ "@media print": { marginTop: "24px" } }}
+                >
+                  <Text>{labels[data.document.type]}</Text>
+                  <Text overflowWrap="anywhere">
+                    {data.document.documentNumber}
+                  </Text>
+                </Box>
+              )}
+            </Box>
           )
         )}
       </Stack>

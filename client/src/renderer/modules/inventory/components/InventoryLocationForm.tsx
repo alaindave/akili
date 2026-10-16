@@ -1,4 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import InventoryCustomFields, {
+  CustomFieldsLoadStatus,
+  useInventoryCustomFields,
+} from "./InventoryCustomFields";
 import {
   Alert,
   AlertIcon,
@@ -110,6 +114,8 @@ export default function InventoryLocationForm({
     };
   }, [companyId, warehouse._id, type, location, codeVersion]);
   const submitting = useRef(false);
+  const customFieldState = useInventoryCustomFields(companyId);
+  const [customFields, setCustomFields] = useState<Record<string, string>>({});
   const focus = useRef<HTMLInputElement>(null);
   const descendants = new Set(location ? [location._id] : []);
   let added = true;
@@ -134,7 +140,13 @@ export default function InventoryLocationForm({
   );
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (submitting.current || generating || codeError) return;
+    if (
+      submitting.current ||
+      generating ||
+      codeError ||
+      (!location && (customFieldState.loading || customFieldState.error))
+    )
+      return;
     if (!code.trim() || !name.trim()) {
       setError("Le code et le nom sont obligatoires.");
       return;
@@ -144,6 +156,7 @@ export default function InventoryLocationForm({
     setError("");
     try {
       const input = {
+        customFields: location ? undefined : customFields,
         warehouseId: warehouse._id,
         parentId: parentId || null,
         code: code.trim(),
@@ -202,6 +215,19 @@ export default function InventoryLocationForm({
         <ModalCloseButton isDisabled={saving} />
         <ModalBody>
           <Stack spacing={4}>
+            {!location && (
+              <>
+                <CustomFieldsLoadStatus state={customFieldState} />
+                <InventoryCustomFields
+                  width="300px"
+                  fields={customFieldState.fields}
+                  entity="LOCATION"
+                  values={customFields}
+                  onChange={setCustomFields}
+                  disabled={saving}
+                />
+              </>
+            )}
             {error && (
               <Alert status="error">
                 <AlertIcon />

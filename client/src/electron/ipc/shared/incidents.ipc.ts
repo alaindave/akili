@@ -1,4 +1,4 @@
-import { ipcMain } from "electron";
+import { ipcMain } from "../companyIpc.js";
 import { addIncidentNote, updateIncident, createIncident, getIncidentById, getIncidentLocations, getIncidents } from "../../database/repositories/shared/incidents.repository.js";
 import type { IncidentFilters, IncidentInput } from "../../../common/types/incident/Incident.js";
 

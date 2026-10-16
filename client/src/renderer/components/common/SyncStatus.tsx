@@ -29,6 +29,10 @@ const SyncStatus = ({ onSync }: SyncStatusProps) => {
   const status = useSyncStore((store) => store.status);
   const pendingChanges = useSyncStore((store) => store.pendingChanges);
   const lastSyncAt = useSyncStore((store) => store.lastSyncAt);
+  const errorMessage = useSyncStore((store) => store.errorMessage);
+  const needsLogin =
+    status === "ERROR" &&
+    Boolean(errorMessage?.includes("authentication token is missing"));
 
   const isSyncing = status === "SYNCING";
   const isPartialSync =
@@ -52,6 +56,9 @@ const SyncStatus = ({ onSync }: SyncStatusProps) => {
   };
 
   const getStatus = () => {
+    if (needsLogin) {
+      return { text: "Reconnection requise", color: "orange.600" };
+    }
     if (isPartialSync) {
       return {
         text: "Modifications en attente",
@@ -135,7 +142,7 @@ const SyncStatus = ({ onSync }: SyncStatusProps) => {
           <Text
             fontSize="1rem"
             fontWeight="500"
-            color={isPartialSync ? currentStatus.color : undefined}
+            color={isPartialSync ? currentStatus.color : "gray.700"}
           >
             {currentStatus.text}
           </Text>
@@ -144,7 +151,7 @@ const SyncStatus = ({ onSync }: SyncStatusProps) => {
 
       <PopoverContent
         width="300px"
-        height="120px"
+        minH="120px"
         borderRadius="xl"
         bg="white"
         borderColor="gray.200"
@@ -158,6 +165,12 @@ const SyncStatus = ({ onSync }: SyncStatusProps) => {
 
         <PopoverBody py={5} px={5}>
           <VStack align="stretch" spacing={4}>
+            {needsLogin && (
+              <Text role="alert" fontSize="sm" color="orange.700">
+                Veuillez vous déconnecter, puis vous reconnecter avec une
+                connexion Internet pour synchroniser vos données.
+              </Text>
+            )}
             {/* PENDING CHANGES */}
             <HStack justify="space-between">
               <HStack spacing={2}>

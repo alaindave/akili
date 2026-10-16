@@ -3,12 +3,14 @@ import fs from "fs/promises";
 import path from "path";
 import { app } from "electron";
 import { getCompanyLogoDir } from "../storage/directories.js";
+import { validateStorageCompany } from "../storage/companyStorage.js";
 import { getCompanyById } from "../database/repositories/shared/companies.repository.js";
 
 export async function downloadCompanyLogo(
   companyId: string,
   mimeType?: string | null
 ) {
+  validateStorageCompany(companyId);
   const API_URL = app.isPackaged
     ? "https://leather-works.onrender.com"
     : process.env.VITE_API_URL;
@@ -49,8 +51,8 @@ export async function downloadCompanyLogo(
   })();
 
   // File path:
-  // company_logos/<companyId>/logo.<extension>
-  const logoRelativePath = path.join(companyId, `logo${extension}`);
+  // company_logo/logo.<extension> inside the company's files directory.
+  const logoRelativePath = `logo${extension}`;
 
   const absolutePath = path.join(companyLogoDir, logoRelativePath);
 
@@ -102,7 +104,7 @@ export async function downloadCompanyLogo(
   const oldExtensions = [".png", ".jpg", ".jpeg", ".webp"];
 
   for (const oldExtension of oldExtensions) {
-    const oldPath = path.join(companyLogoDir, companyId, `logo${oldExtension}`);
+    const oldPath = path.join(companyLogoDir, `logo${oldExtension}`);
 
     if (oldPath === absolutePath) {
       continue;

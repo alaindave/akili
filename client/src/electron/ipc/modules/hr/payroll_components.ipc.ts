@@ -1,4 +1,4 @@
-import { ipcMain } from "electron";
+import { ipcMain } from "../../companyIpc.js";
 
 import {
   createPayrollComponent,
@@ -13,6 +13,7 @@ import {
   getUnsyncedPayrollComponents,
   markPayrollComponentSynced,
 } from "../../../database/repositories/modules/hr/payrollComponents.repository.js";
+import PayrollComponent from "../../../../common/types/hr/payroll/PayrollComponent.js";
 
 export function registerPayrollComponentIPC() {
   console.log("REGISTERING PAYROLL COMPONENT IPC");
@@ -92,7 +93,7 @@ export function registerPayrollComponentIPC() {
   //Upsert
   ipcMain.handle(
     "payroll-components:upsert",
-    async (_, companyId, component) => {
+    async (_, companyId, component: PayrollComponent) => {
       await upsertPayrollComponent(component);
 
       return await getPayrollComponentById(companyId, component._id);

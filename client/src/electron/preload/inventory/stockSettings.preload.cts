@@ -1,6 +1,10 @@
 type StockSettingsApi = import("../../../common/types/inventory/StockSettings.js", { with: { "resolution-mode": "require" } }).StockSettingsApi;
 import { invoke } from "../../ipc/ipc.cjs";
 export const stockSettingsApi: StockSettingsApi = {
+  updateCustomField: (companyId, input) => invoke("inventory:settings:updateCustomField", companyId, input),
+  archiveCustomField: (companyId, id) => invoke("inventory:settings:archiveCustomField", companyId, id),
+  createCustomField: (companyId, input) => invoke("inventory:settings:createCustomField", companyId, input),
+  getCustomFields: (companyId) => invoke("inventory:settings:getCustomFields", companyId),
   getInitialization: (companyId) => invoke("inventory:settings:getInitialization", companyId),
   saveOpeningDraft: (companyId, input) => invoke("inventory:settings:saveOpeningDraft", companyId, input),
   submitOpeningDraft: (companyId, input) => invoke("inventory:settings:submitOpeningDraft", companyId, input),

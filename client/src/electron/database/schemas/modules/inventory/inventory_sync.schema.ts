@@ -6,6 +6,16 @@ export async function initializeInventorySync() {
 }
 
 async function initializeInventorySyncTables() {
+  // Additive migration: existing inventory records and their JSON values are unchanged.
+  await run(`CREATE TABLE IF NOT EXISTS inventory_custom_fields (
+    _id TEXT PRIMARY KEY, companyId TEXT NOT NULL,
+    entity TEXT NOT NULL CHECK(entity IN ('ITEM','CATEGORY','WAREHOUSE','LOCATION','DOCUMENT','DOCUMENT_LINE')),
+    key TEXT NOT NULL, label TEXT NOT NULL, type TEXT NOT NULL DEFAULT 'TEXT' CHECK(type = 'TEXT'),
+    required INTEGER NOT NULL DEFAULT 0, sortOrder INTEGER NOT NULL DEFAULT 0,
+    isActive INTEGER NOT NULL DEFAULT 1, createdAt TEXT NOT NULL, updatedAt TEXT NOT NULL,
+    serverVersion INTEGER NOT NULL DEFAULT 0, synced INTEGER NOT NULL DEFAULT 0,
+    isDeleted INTEGER NOT NULL DEFAULT 0, UNIQUE(companyId, entity, key)
+  )`);
   const settingsColumns = await all<{ name: string }>("PRAGMA table_info(inventory_sku_settings)");
   for (const [name, definition] of Object.entries({
     createdAt: "TEXT NOT NULL DEFAULT ''",

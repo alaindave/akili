@@ -1,69 +1,61 @@
-import { Box, Flex, Image, Text } from "@chakra-ui/react";
+import { Box, Flex, Image, Skeleton, Text } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-// @ts-ignore
-import defaultLogo from "../../../renderer/assets/afritan_logo.png";
+import defaultLogo from "../../../renderer/assets/AkiliLogo.png";
+import type { CompanyBranding } from "../../../common/types/shared/Company";
 import "../../styles/App.css";
-import useAdminUser from "../../../store/auth.store";
 import useSyncStore from "../../../store/sync.store";
 
 interface Props {
-  text: string;
+  text?: string;
+  companyId?: string;
+  showCompanyName: boolean;
+  width: string;
+  height: string;
 }
 
-const Logo = ({ text }: Props) => {
-  const user = useAdminUser((store) => store.adminUser);
+const Logo = ({ text, companyId, showCompanyName, width, height }: Props) => {
   const syncVersion = useSyncStore((store) => store.syncVersion);
-  const [logoSrc, setLogoSrc] = useState<string>(defaultLogo);
-  const [companyName, setCompanyName] = useState("AFRITAN");
+  const [branding, setBranding] = useState<
+    (CompanyBranding & { companyId: string }) | null
+  >(null);
+  const selectedBranding = branding?.companyId === companyId ? branding : null;
+  const isLoading = Boolean(companyId) && !selectedBranding;
+  const logoSrc = selectedBranding?.logoUrl || defaultLogo;
+  const companyName = selectedBranding?.name.trim() || "";
 
   useEffect(() => {
     let cancelled = false;
-
     const loadCompanyLogo = async () => {
       try {
-        if (!user?.companyId) {
-          return;
-        }
+        if (companyId) {
+          const company = await window.electron.company.getBranding(companyId);
+          let logoUrl = company?.logoUrl ?? null;
 
-        const company = await window.electron.company.getById(user.companyId);
-
-        if (cancelled || !company) {
-          return;
-        }
-
-        /**
-         * Use the company name stored in SQLite.
-         */
-        if (company.name?.trim()) {
-          console.log("COMPANY NAME", company.name);
-          setCompanyName(company.name.trim());
-        }
-
-        /**
-         * If the company has a stored logo,
-         * resolve its local path through Electron.
-         */
-        if (company.logoPath) {
-          const logoUrl = await window.electron.company.getLogoUrl(
-            company.logoPath
-          );
-
-          console.log("FETCHED LOGO URL", logoUrl);
-
-          if (!cancelled && logoUrl) {
-            setLogoSrc(logoUrl);
+          if (logoUrl) {
+            const source = logoUrl;
+            const image = new window.Image();
+            const loaded = await new Promise<boolean>((resolve) => {
+              image.onload = () => resolve(true);
+              image.onerror = () => resolve(false);
+              image.src = source;
+            });
+            if (!loaded) logoUrl = null;
           }
+
+          if (cancelled) {
+            return;
+          }
+          setBranding({ name: company?.name ?? "", logoUrl, companyId });
         }
       } catch (error) {
         console.error("Failed to load company logo:", error);
 
-        /**
-         * Keep the default bundled logo
-         * if the stored logo cannot be loaded.
-         */
-        if (!cancelled) {
-          setLogoSrc(defaultLogo);
+        if (!cancelled && companyId) {
+          // Keep existing branding on refresh errors; use Akili on initial failure.
+          setBranding((previous) => previous?.companyId === companyId
+            ? previous
+            : { companyId, name: "", logoUrl: null });
         }
       }
     };
@@ -73,7 +65,7 @@ const Logo = ({ text }: Props) => {
     return () => {
       cancelled = true;
     };
-  }, [user?.companyId, syncVersion]);
+  }, [companyId, syncVersion]);
 
   return (
     <Flex
@@ -88,66 +80,69 @@ const Logo = ({ text }: Props) => {
     >
       {/* Logo */}
       <Link to="/admin">
-        <Image
-          src={logoSrc}
-          width={{
-            base: "4rem",
-            sm: "4.5rem",
-            md: "5rem",
-          }}
-          height={{
-            base: "4rem",
-            sm: "4.5rem",
-            md: "5rem",
-          }}
-          objectFit="contain"
-          fallbackSrc={defaultLogo}
-        />
+        {isLoading ? (
+          <Skeleton width={width} height={height} borderRadius="md" />
+        ) : (
+          <Image
+            src={logoSrc}
+            width={width}
+            height={height}
+            objectFit="contain"
+            ignoreFallback
+            onError={(event) => {
+              if (event.currentTarget.getAttribute("src") !== defaultLogo) {
+                event.currentTarget.src = defaultLogo;
+              }
+            }}
+          />
+        )}
       </Link>
 
       {/* Text */}
-      <Box
-        minWidth={0}
-        display="flex"
-        flexDirection="column"
-        justifyContent="center"
-      >
-        {/* Company name */}
-        <Text
-          color="#1F2937"
-          fontSize={{
-            base: "20px",
-            sm: "22px",
-            md: "25px",
-          }}
-          fontWeight="700"
-          lineHeight="1.1"
-          whiteSpace="normal"
+      {showCompanyName && (
+        <Box
+          minWidth={0}
+          display="flex"
+          flexDirection="column"
+          justifyContent="center"
         >
-          {companyName}
-        </Text>
+          {/* Company name */}
+          <Text
+            color="#1F2937"
+            fontSize={{
+              base: "20px",
+              sm: "22px",
+              md: "25px",
+            }}
+            fontWeight="700"
+            lineHeight="1.1"
+            whiteSpace="normal"
+          >
+            {companyName}
+          </Text>
 
-        {/* Subtitle */}
-        <Text
-          marginTop={{
-            base: "1px",
-            sm: "1px",
-            md: "2px",
-          }}
-          mr="0.8rem"
-          fontSize={{
-            base: "0.7rem",
-            sm: "0.8rem",
-            md: "0.85rem",
-          }}
-          lineHeight="1.3"
-          color="gray.800"
-          fontWeight="400"
-          whiteSpace="nowrap"
-        >
-          {text}
-        </Text>
-      </Box>
+          {/* Subtitle */}
+          <Text
+            marginTop={{
+              base: "1px",
+              sm: "1px",
+              md: "2px",
+            }}
+            mr="0.8rem"
+            fontSize={{
+              base: "0.7rem",
+              sm: "0.8rem",
+              md: "0.85rem",
+            }}
+            lineHeight="1.3"
+            color="gray.800"
+            fontWeight="400"
+            whiteSpace="nowrap"
+          >
+            {text}
+          </Text>
+        </Box>
+      )}
     </Flex>
   );
 };

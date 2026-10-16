@@ -22,7 +22,6 @@ import {
   FaSignOutAlt,
   FaTasks,
 } from "react-icons/fa";
-import { BiSolidReport } from "react-icons/bi";
 import { CgDanger } from "react-icons/cg";
 import { MdPersonOutline } from "react-icons/md";
 import { NavLink, useNavigate } from "react-router-dom";
@@ -113,7 +112,13 @@ const InventoryNavBar = () => {
           pb={{ base: "8px", md: "14px" }}
           flexShrink={0}
         >
-          <Logo text="Gestion de stock" />
+          <Logo
+            text="Gestion de stock"
+            companyId={user.companyId}
+            showCompanyName
+            width="5rem"
+            height="5rem"
+          />
         </Box>
 
         {/* =================================================
@@ -302,19 +307,47 @@ const InventoryNavBar = () => {
         {/* =================================================
       LEFT: COMPANY NAME
   ================================================= */}
-        <Text
-          justifySelf="start"
-          fontSize={{ base: "0.96rem", md: "1rem" }}
-          fontWeight="700"
-          fontStyle="revert-layer"
-          whiteSpace="nowrap"
-          overflow="hidden"
-          textOverflow="ellipsis"
-          minWidth={0}
-          fontFamily="heading"
-        >
-          AKILI
-        </Text>
+        <HStack>
+          <Text
+            justifySelf="start"
+            fontSize="1.1rem"
+            fontWeight="700"
+            fontStyle="revert-layer"
+            whiteSpace="nowrap"
+            overflow="hidden"
+            textOverflow="ellipsis"
+            minWidth={0}
+            fontFamily="heading"
+            color="#1d2883"
+          >
+            AKILI
+          </Text>
+          <Box
+            width="0.45rem"
+            height="0.45rem"
+            borderRadius="full"
+            bg="#000080"
+            position="relative"
+            top="0.2rem"
+            right="0.23rem"
+          />
+          <Text
+            fontSize="0.65rem"
+            fontWeight="700"
+            fontStyle="revert-layer"
+            whiteSpace="nowrap"
+            overflow="hidden"
+            textOverflow="ellipsis"
+            minWidth={0}
+            fontFamily="heading"
+            color="#1d2883"
+            position="relative"
+            top="0.2rem"
+            right="0.3rem"
+          >
+            V1.0.0
+          </Text>
+        </HStack>
 
         {/* =================================================
       CENTER: SYNC STATUS
@@ -337,19 +370,19 @@ const InventoryNavBar = () => {
         >
           {/* Date */}
           <Flex align="center" gap={1} whiteSpace="nowrap">
-            <CiCalendarDate color="#0078D4" size={22} />
+            <CiCalendarDate color="blue" size={22} />
 
-            <Text color="gray.900" fontSize={{ base: "0.75rem", md: "0.9rem" }}>
+            <Text color="gray.800" fontSize={{ base: "0.75rem", md: "0.9rem" }}>
               {time.toLocaleDateString("fr-FR")}
             </Text>
           </Flex>
 
           {/* Time */}
           <Flex align="center" gap={1} whiteSpace="nowrap">
-            <CiClock2 color="#0078D4" size={22} />
+            <CiClock2 color="blue" size={22} />
 
             <Text
-              color="gray.900"
+              color="gray.800"
               fontSize={{ base: "0.85rem", md: "0.95rem" }}
             >
               {String(time.getHours()).padStart(2, "0")}:

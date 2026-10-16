@@ -1,4 +1,4 @@
-import { ipcMain } from "electron";
+import { ipcMain } from "../../companyIpc.js";
 
 import {
   createLeave,

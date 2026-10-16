@@ -1,9 +1,13 @@
-import { ipcMain } from "electron";
+import { ipcMain } from "../../companyIpc.js";
 import {
   InventoryDocumentRepository,
   type InventoryDocumentListOptions,
 } from "../../../database/repositories/modules/inventory/inventoryDocument.repository.js";
 import { requireAuthenticatedCompanyId } from "./inventoryItem.ipc.js";
+import {
+  getStockMovementDocumentData,
+  saveStockMovementReport,
+} from "../../../services/modules/inventory/stockMovementReport.service.js";
 
 const repository = new InventoryDocumentRepository();
 
@@ -100,6 +104,34 @@ export function registerInventoryDocumentIpc(): void {
         companyId
       );
       return repository.count(authenticatedCompanyId, options);
+    }
+  );
+
+  // Receipt and issue PDF generation delegates to a service that
+  // reads local SQLite data and renders the document with @react-pdf/renderer.
+  ipcMain.handle(
+    "inventory:document:getStockMovementDocument",
+    async (_, companyId: string, id: string) => {
+      const authenticatedCompanyId = await requireAuthenticatedCompanyId(
+        companyId
+      );
+      return getStockMovementDocumentData(
+        authenticatedCompanyId,
+        requireId(id, "Document ID")
+      );
+    }
+  );
+
+  ipcMain.handle(
+    "inventory:document:saveStockMovementReport",
+    async (_, companyId: string, id: string) => {
+      const authenticatedCompanyId = await requireAuthenticatedCompanyId(
+        companyId
+      );
+      return saveStockMovementReport(
+        authenticatedCompanyId,
+        requireId(id, "Document ID")
+      );
     }
   );
 }

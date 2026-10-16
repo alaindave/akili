@@ -8,12 +8,13 @@ interface SyncStore {
   lastSyncAt: string | null;
   syncVersion: number;
   pendingChanges: number;
+  errorMessage: string | null;
 
   setSyncing: () => void;
   setSyncCompleted: (timestamp: string) => void;
   setPendingChanges: (count: number) => void;
   setOffline: () => void;
-  setSyncError: () => void;
+  setSyncError: (message?: string) => void;
   resetSyncStatus: () => void;
 }
 
@@ -24,15 +25,18 @@ const useSyncStore = create<SyncStore>()(
       lastSyncAt: null,
       syncVersion: 0,
       pendingChanges: 0,
+      errorMessage: null,
 
       setSyncing: () =>
         set({
           status: "SYNCING",
+          errorMessage: null,
         }),
 
       setSyncCompleted: (timestamp) =>
         set((store) => ({
           status: "IDLE",
+          errorMessage: null,
           lastSyncAt: timestamp,
           syncVersion: store.syncVersion + 1,
         })),
@@ -45,16 +49,19 @@ const useSyncStore = create<SyncStore>()(
       setOffline: () =>
         set({
           status: "OFFLINE",
+          errorMessage: null,
         }),
 
-      setSyncError: () =>
+      setSyncError: (message) =>
         set({
           status: "ERROR",
+          errorMessage: message ?? null,
         }),
 
       resetSyncStatus: () =>
         set({
           status: "IDLE",
+          errorMessage: null,
         }),
     }),
     {

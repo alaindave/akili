@@ -1,4 +1,4 @@
-import { ipcMain } from "electron";
+import { ipcMain } from "../companyIpc.js";
 import { getAllAdminUsers } from "../../database/repositories/shared/admin_users.repository.js";
 
 export function registerAdminUsersIPC() {

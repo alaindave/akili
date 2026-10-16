@@ -281,11 +281,9 @@ const CompanySettingsPage = () => {
     >
       <Box maxW="1100px" mx="auto">
         {/* Header */}
-        <HStack>
+        <HStack mb="2rem">
           <Button
-            position="relative"
-            bottom="1.5rem"
-            mr="1rem"
+            mr="0.7rem"
             p={2}
             border="1px solid #14376b"
             borderRadius="10px"
@@ -294,11 +292,11 @@ const CompanySettingsPage = () => {
           >
             <FaArrowLeftLong color="black" />
           </Button>
-          <Box mb={6}>
-            <Text fontSize="2xl" fontWeight="700" color="gray.800">
+          <Box>
+            <Text fontSize="1.3rem" fontWeight="700" color="gray.800">
               Paramètres de l'entreprise
             </Text>
-            <PageSubtitle mt={1}>
+            <PageSubtitle>
               Gérez les informations générales et le logo de votre entreprise.
             </PageSubtitle>
           </Box>

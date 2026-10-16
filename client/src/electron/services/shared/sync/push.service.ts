@@ -1,7 +1,16 @@
+import { employeeDocumentUploadBytes } from "../employeeDocumentStorage.service.js";
+import { employeePhotoUploadBytes } from "../employeePhoto.service.js";
+import { getCompanyFilesRoot } from "../../../storage/companyStorage.js";
 import axios from "axios";
-import { recoverStockOperations, acknowledgeStockOperation } from "../../../database/repositories/modules/inventory/inventoryPostingSync.repository.js";
+import {
+  recoverStockOperations,
+  acknowledgeStockOperation,
+} from "../../../database/repositories/modules/inventory/inventoryPostingSync.repository.js";
 import { isInventorySyncEntity } from "../../../../common/types/inventory/InventorySync.js";
-import { acknowledgeInventorySnapshot, recoverInventoryAcknowledgement } from "../../../database/repositories/modules/inventory/inventorySync.repository.js";
+import {
+  acknowledgeInventorySnapshot,
+  recoverInventoryAcknowledgement,
+} from "../../../database/repositories/modules/inventory/inventorySync.repository.js";
 import { app } from "electron";
 import FormData from "form-data";
 import fs from "fs";
@@ -24,7 +33,10 @@ import { markEmployeePhotoSynced } from "../../../database/repositories/modules/
 import { markEmployeeDocumentSynced } from "../../../database/repositories/modules/hr/employeesDocuments.repository.js";
 
 import { markPayrollComponentSynced } from "../../../database/repositories/modules/hr/payrollComponents.repository.js";
-import { acknowledgePayrollProfile, recoverPayrollProfileRevision } from "../../../database/repositories/modules/hr/payrollProfile.repository.js";
+import {
+  acknowledgePayrollProfile,
+  recoverPayrollProfileRevision,
+} from "../../../database/repositories/modules/hr/payrollProfile.repository.js";
 
 import {
   markPayrollItemSynced,
@@ -33,11 +45,6 @@ import {
 } from "../../../database/repositories/modules/hr/payrollRun.repository.js";
 
 import { markPayrollSettingsSynced } from "../../../database/repositories/modules/hr/payrollSettings.repository.js";
-
-import {
-  getEmployeeDocumentsDir,
-  getEmployeePhotoDir,
-} from "../../../storage/directories.js";
 
 // IMPORTANT:
 // Use the employee document repository to check whether the
@@ -60,6 +67,7 @@ const API_URL = app.isPackaged
 interface PushPendingChangesResult {
   pendingChanges: number;
   syncedCount: number;
+  failures?: string[];
 }
 
 export async function pushPendingChanges(
@@ -78,7 +86,7 @@ export async function pushPendingChanges(
    * ---------------------------------------------------------
    */
 
-  const token = await getToken();
+  const token = await getToken(companyId);
 
   if (!token) {
     throw new Error("PUSH SYNC: authentication token is missing");
@@ -91,7 +99,17 @@ export async function pushPendingChanges(
    */
 
   let pending = await getUnsyncedItems(companyId);
-  if (pending.some(item => ["inventory_transaction", "inventory_document", "inventory_document_line", "inventory_movement", "inventory_balance"].includes(item.entity))) {
+  if (
+    pending.some((item) =>
+      [
+        "inventory_transaction",
+        "inventory_document",
+        "inventory_document_line",
+        "inventory_movement",
+        "inventory_balance",
+      ].includes(item.entity)
+    )
+  ) {
     await recoverStockOperations(companyId);
     pending = await getUnsyncedItems(companyId);
   }
@@ -160,8 +178,14 @@ export async function pushPendingChanges(
       if (payrollProfiles.has(item.entityId)) continue;
       payrollProfiles.add(item.entityId);
     }
-    if (["inventory_balance", "inventory_movement", "inventory_document_line"].includes(item.entity) ||
-        (item.entity === "inventory_document" && snapshot.status === "POSTED")) {
+    if (
+      [
+        "inventory_balance",
+        "inventory_movement",
+        "inventory_document_line",
+      ].includes(item.entity) ||
+      (item.entity === "inventory_document" && snapshot.status === "POSTED")
+    ) {
       // Complete operations have been recovered above. Keep incomplete legacy
       // snapshots locally for reconciliation; the server cannot accept them.
       legacyStockSnapshots++;
@@ -234,7 +258,9 @@ export async function pushPendingChanges(
 
   if (!validPending.length) {
     if (legacyStockSnapshots > 0) {
-      throw new Error(`${legacyStockSnapshots} enregistrement(s) de stock incomplet(s) nécessitent une réconciliation. Les données locales sont conservées.`);
+      throw new Error(
+        `${legacyStockSnapshots} enregistrement(s) de stock incomplet(s) nécessitent une réconciliation. Les données locales sont conservées.`
+      );
     }
     const remainingPending = await getUnsyncedItems(companyId);
 
@@ -260,6 +286,11 @@ export async function pushPendingChanges(
 
   const items = validPending.map((item) => {
     const data = JSON.parse(item.payload);
+    if (item.entity === "employee_document" && item.operation !== "delete") {
+      // Different employees can now both have NATIONAL_ID.pdf. The server
+      // already supports attachmentKey to identify each multipart snapshot.
+      data.attachmentKey = `document-${item._id}${path.extname(data.fileName)}`;
+    }
 
     return {
       queueId: item._id,
@@ -267,10 +298,12 @@ export async function pushPendingChanges(
       entity: item.entity,
       // Older clients queued first-time document uploads as updates. Repair
       // those snapshots on send without dropping the durable queue entry.
-      operation: item.entity === "employee_document" &&
-        item.operation === "update" && (data.serverVersion ?? 0) === 0
-        ? "create"
-        : item.operation,
+      operation:
+        item.entity === "employee_document" &&
+        item.operation === "update" &&
+        (data.serverVersion ?? 0) === 0
+          ? "create"
+          : item.operation,
       data,
     };
   });
@@ -309,7 +342,7 @@ export async function pushPendingChanges(
           break;
         }
 
-        const logoPath = path.join(app.getPath("userData"), data.logoPath);
+        const logoPath = path.join(getCompanyFilesRoot(), data.logoPath);
 
         console.log("STARTING SYNC FOR COMPANY LOGO:", {
           queueId: item._id,
@@ -344,20 +377,15 @@ export async function pushPendingChanges(
        */
 
       case "employee_photo": {
-        const photoPath = path.join(getEmployeePhotoDir(), data.photo_path);
-
-        if (fs.existsSync(photoPath)) {
-          form.append("employees_photos", fs.createReadStream(photoPath), {
-            filename: data.photo_filename,
-            contentType: data.photo_mime_type,
-          });
-        } else {
-          console.error("PHOTO FILE MISSING:", {
-            companyId,
-            employeeId: data.employeeId,
-            photoPath,
-          });
-        }
+        const bytes = await employeePhotoUploadBytes(
+          companyId,
+          data.photo_path,
+          data.photo_hash
+        );
+        form.append("employees_photos", bytes, {
+          filename: data.photo_filename,
+          contentType: data.photo_mime_type,
+        });
 
         break;
       }
@@ -369,37 +397,15 @@ export async function pushPendingChanges(
        */
 
       case "employee_document": {
-        const documentPath = path.join(
-          getEmployeeDocumentsDir(),
-          data.localPath
-        );
-
-        console.log("STARTING SYNC FOR EMPLOYEE DOCUMENT:", {
-          companyId,
-          employeeId: data.employeeId,
-          documentId: data._id,
-          localPath: data.localPath,
-          resolvedPath: documentPath,
-          exists: fs.existsSync(documentPath),
-          fileName: data.fileName,
-          mimeType: data.mimeType,
-        });
-
-        if (fs.existsSync(documentPath)) {
-          form.append(
-            "employees_documents",
-            fs.createReadStream(documentPath),
-            {
-              filename: data.fileName,
-              contentType: data.mimeType,
-            }
-          );
-        } else {
-          console.error("DOCUMENT FILE MISSING:", {
+        if (item.operation !== "delete") {
+          const bytes = await employeeDocumentUploadBytes(
             companyId,
-            employeeId: data.employeeId,
-            documentId: data._id,
-            localPath: data.localPath,
+            data.localPath,
+            data.hash
+          );
+          form.append("employees_documents", bytes, {
+            filename: `document-${item._id}${path.extname(data.fileName)}`,
+            contentType: data.mimeType,
           });
         }
 
@@ -444,10 +450,15 @@ export async function pushPendingChanges(
   for (const item of validPending) {
     if (item.entity !== "payroll_profile") continue;
     const failure = (response.data.failed ?? []).find(
-      (entry: { queueId: string; code: string }) => entry.queueId === item._id && entry.code === "REVISION_CONFLICT"
+      (entry: { queueId: string; code: string }) =>
+        entry.queueId === item._id && entry.code === "REVISION_CONFLICT"
     );
     if (failure?.details?.remote) {
-      await recoverPayrollProfileRevision(companyId, JSON.parse(item.payload), failure.details.remote);
+      await recoverPayrollProfileRevision(
+        companyId,
+        JSON.parse(item.payload),
+        failure.details.remote
+      );
     }
   }
   for (const failure of response.data.failed ?? []) {
@@ -462,10 +473,17 @@ export async function pushPendingChanges(
   }
   for (const item of validPending) {
     if (!isInventorySyncEntity(item.entity)) continue;
-    const failure = (response.data.failed ?? []).find((entry: { queueId: string; code: string }) =>
-      entry.queueId === item._id && entry.code === "REVISION_CONFLICT");
+    const failure = (response.data.failed ?? []).find(
+      (entry: { queueId: string; code: string }) =>
+        entry.queueId === item._id && entry.code === "REVISION_CONFLICT"
+    );
     if (failure?.details?.remote) {
-      await recoverInventoryAcknowledgement(companyId, item.entity, JSON.parse(item.payload), failure.details.remote);
+      await recoverInventoryAcknowledgement(
+        companyId,
+        item.entity,
+        JSON.parse(item.payload),
+        failure.details.remote
+      );
     }
   }
   // Retire older photo snapshots only when the replacement was accepted.
@@ -494,7 +512,12 @@ export async function pushPendingChanges(
     // An acknowledgement applies to the sent queue entry, not edits made
     // while the network request was in flight.
     if (item.entity === "payroll_profile") {
-      await acknowledgePayrollProfile(companyId, data, item._id, response.data.versions?.[item._id]);
+      await acknowledgePayrollProfile(
+        companyId,
+        data,
+        item._id,
+        response.data.versions?.[item._id]
+      );
       successfullyProcessedQueueIds.push(item._id);
       continue;
     }
@@ -504,7 +527,13 @@ export async function pushPendingChanges(
       continue;
     }
     if (isInventorySyncEntity(item.entity)) {
-      await acknowledgeInventorySnapshot(companyId, item.entity, data, item._id, response.data.versions?.[item._id]);
+      await acknowledgeInventorySnapshot(
+        companyId,
+        item.entity,
+        data,
+        item._id,
+        response.data.versions?.[item._id]
+      );
       successfullyProcessedQueueIds.push(item._id);
       continue;
     }
@@ -541,7 +570,12 @@ export async function pushPendingChanges(
         break;
 
       case "employee_document":
-        await markEmployeeDocumentSynced(companyId, data._id);
+        await markEmployeeDocumentSynced(
+          companyId,
+          data._id,
+          data.hash,
+          data.updatedAt
+        );
         break;
 
       case "attendance":
@@ -721,6 +755,20 @@ export async function pushPendingChanges(
   const remainingPending = await getUnsyncedItems(companyId);
 
   const pendingChanges = remainingPending.length;
+  const failures: string[] = [];
+  const rejected: unknown = response.data.failed;
+  if (Array.isArray(rejected)) {
+    for (const failure of rejected) {
+      if (typeof failure !== "object" || failure === null) continue;
+      const item = remainingPending.find((entry) => String(entry._id) === String(failure.queueId));
+      if (!item) continue;
+      const message = `${item.entity} ${item.entityId}, queue ${item._id}: ` +
+        `${typeof failure.code === "string" ? failure.code + ": " : ""}` +
+        `${typeof failure.message === "string" ? failure.message : "Server rejected the change"}`;
+      console.error("SYNC PUSH REJECTED:", message);
+      if (failures.length < 10) failures.push(message);
+    }
+  }
 
   const totalSynced =
     successfullyProcessedQueueIds.length + obsoleteQueueIds.length;
@@ -737,5 +785,6 @@ export async function pushPendingChanges(
   return {
     pendingChanges,
     syncedCount: totalSynced,
+    failures,
   };
 }

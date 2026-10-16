@@ -1,63 +1,18 @@
-import { ipcMain, app } from "electron";
+import { ipcMain } from "../companyIpc.js";
+import { app } from "electron";
 import { NetworkService } from "../../services/shared/sync/network.service.js";
 import axios from "axios";
-import { clearToken, saveToken } from "../../auth.js";
-
 import {
-  getCompanyById,
-  upsertCompanyId,
-} from "../../database/repositories/shared/companies.repository.js";
+  establishCompanySession,
+  endCompanySession,
+  initializeAuthenticatedCompany,
+  loginCredentialsSchema,
+} from "../../services/shared/companySession.service.js";
+import { SignUpCredentials } from "../../../common/types/shared/Credentials.js";
 
 const API_URL = app.isPackaged
   ? "https://leather-works.onrender.com"
   : process.env.VITE_API_URL;
-
-// =========================================================
-// INITIALIZE / VERIFY LOCAL COMPANY
-// =========================================================
-
-async function initializeLocalCompany(company: any): Promise<void> {
-  if (!company) {
-    throw new Error(
-      "AUTHENTICATION SUCCEEDED BUT COMPANY DATA WAS NOT RETURNED BY SERVER"
-    );
-  }
-
-  if (!company.companyId) {
-    throw new Error("AUTHENTICATION SUCCEEDED BUT COMPANY HAS NO COMPANY ID");
-  }
-
-  const localCompany = await getCompanyById(company.companyId);
-
-  // ---------------------------------------------------------
-  // FIRST LOGIN / FIRST SIGNUP ON THIS INSTALLATION
-  // ---------------------------------------------------------
-  if (!localCompany) {
-    console.log(
-      `NO LOCAL COMPANY FOUND WITH GIVEN COMPANY ID. INITIALIZING COMPANY: ${company.companyId}`
-    );
-
-    await upsertCompanyId(company);
-
-    console.log(`LOCAL COMPANY INITIALIZED SUCCESSFULLY: ${company.companyId}`);
-
-    return;
-  }
-
-  // ---------------------------------------------------------
-  // EXISTING INSTALLATION
-  // ---------------------------------------------------------
-
-  console.log(`LOCAL COMPANY FOUND: ${localCompany.companyId}`);
-
-  if (localCompany.companyId !== company.companyId) {
-    throw new Error(
-      `THIS INSTALLATION IS ALREADY ASSOCIATED WITH COMPANY ${localCompany.companyId}`
-    );
-  }
-
-  console.log("COMPANY ID VERIFIED.");
-}
 
 export function registerAuthIPC() {
   console.log("REGISTERING AUTH IPC");
@@ -83,12 +38,14 @@ export function registerAuthIPC() {
       };
     }
 
-    const { email, password } = credentials;
+    const { email, password, companyId } =
+      loginCredentialsSchema.parse(credentials);
 
     try {
       const res = await axios.post(`${API_URL}/auth`, {
         email,
         password,
+        ...(companyId ? { companyId } : {}),
       });
 
       // ---------------------------------------------------------
@@ -101,8 +58,6 @@ export function registerAuthIPC() {
         throw new Error("LOGIN SUCCEEDED BUT NO AUTH TOKEN WAS RETURNED");
       }
 
-      await saveToken(token);
-
       console.log("ONLINE LOGIN:", res.data);
 
       // ---------------------------------------------------------
@@ -111,7 +66,11 @@ export function registerAuthIPC() {
 
       const company = res.data?.company;
 
-      await initializeLocalCompany(company);
+      await initializeAuthenticatedCompany(company, companyId);
+      await establishCompanySession(
+        { ...res.data.admin, companyId: company.companyId },
+        token
+      );
 
       return res.data;
     } catch (error) {
@@ -128,7 +87,7 @@ export function registerAuthIPC() {
     console.log("LOGOUT IPC RECEIVED");
 
     try {
-      await clearToken();
+      await endCompanySession();
 
       return true;
     } catch (error) {
@@ -141,7 +100,7 @@ export function registerAuthIPC() {
   // SIGNUP
   // =========================================================
 
-  ipcMain.handle("auth:signup", async (_, credentials) => {
+  ipcMain.handle("auth:signup", async (_, credentials: SignUpCredentials) => {
     console.log("SIGN UP IPC RECEIVED", credentials);
 
     if (!credentials) {
@@ -189,8 +148,6 @@ export function registerAuthIPC() {
         throw new Error("SIGNUP SUCCEEDED BUT NO AUTH TOKEN WAS RETURNED");
       }
 
-      await saveToken(token);
-
       console.log("USER SIGN UP:", res.data);
 
       // ---------------------------------------------------------
@@ -199,7 +156,11 @@ export function registerAuthIPC() {
 
       const company = res.data?.company;
 
-      await initializeLocalCompany(company);
+      await initializeAuthenticatedCompany(company);
+      await establishCompanySession(
+        { ...res.data.admin, companyId: company.companyId },
+        token
+      );
 
       console.log(
         `SIGNUP COMPANY INITIALIZATION COMPLETE: ${company.companyId}`

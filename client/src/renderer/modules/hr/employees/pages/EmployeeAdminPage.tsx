@@ -10,6 +10,7 @@ import {
   useDisclosure,
 } from "@chakra-ui/react";
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { FaBell } from "react-icons/fa";
 import { IoReloadOutline } from "react-icons/io5";
 
@@ -28,10 +29,10 @@ import ReminderModal from "../../../../components/common/ReminderModal";
 import EmployeeDashboard from "../components/EmployeeDashboard";
 import QuickActions from "../components/EmployeeQuickActions";
 import TaskSubmissionModal from "../../../../components/tasks/TaskSubmissionModal";
-import TaskDetailsDrawer from "../../../../components/tasks/TaskDetailsDrawer";
 import TaskCard from "../../../../components/tasks/TaskCard";
 
 const EmployeeAdminPage = () => {
+  const navigate = useNavigate();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [attendances, setAttendances] = useState<Attendance[]>([]);
   const [leaves, setLeaves] = useState<Leave[]>([]);
@@ -61,18 +62,10 @@ const EmployeeAdminPage = () => {
   } = useDisclosure();
 
   const {
-    isOpen: isDetailsOpen,
-    onOpen: onDetailsOpen,
-    onClose: onDetailsClose,
-  } = useDisclosure();
-
-  const {
     isOpen: isReminderOpen,
     onOpen: onReminderOpen,
     onClose: onReminderClose,
   } = useDisclosure();
-
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   const lateCount = attendances.filter(
     (attendance) => attendance.status === "RETARD"
@@ -203,13 +196,7 @@ const EmployeeAdminPage = () => {
   };
 
   const handleTaskClick = (task: Task) => {
-    setSelectedTask(task);
-    onDetailsOpen();
-  };
-
-  const handleTaskClosed = () => {
-    setSelectedTask(null);
-    onDetailsClose();
+    navigate(`/hr/tasks/details/${task._id}`);
   };
 
   const handleTaskDelete = (_id: string) => dismiss(scope, _id);
@@ -412,13 +399,6 @@ const EmployeeAdminPage = () => {
             onRefresh={handleTaskRefresh}
             adminUsersList={adminUsersList}
             author={user!}
-          />
-
-          <TaskDetailsDrawer
-            task={selectedTask}
-            isOpen={isDetailsOpen}
-            onClose={handleTaskClosed}
-            onRefresh={handleTaskRefresh}
           />
 
           {tasks.map((task) => (

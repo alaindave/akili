@@ -6,8 +6,10 @@ import { all, get, run, afterCommit } from "../../../db.js";
 import { notifyPendingChanges } from "../../shared/sync.repository.js";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
+import { customFieldValuesSchema } from "../../../../../common/types/inventory/customFieldValidation.js";
 
 const createSchema = z.object({
+  customFields: customFieldValuesSchema.optional(),
   code: z
     .string()
     .trim()
@@ -122,8 +124,8 @@ export class InventoryWarehouseRepository {
       try {
       await run(
         `INSERT INTO inventory_warehouses
-        (_id, companyId, code, name, description, address, type, isActive, createdAt, updatedAt)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        (_id, companyId, code, name, description, address, type, isActive, createdAt, updatedAt, customFields)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           warehouse._id,
           companyId,
@@ -135,6 +137,7 @@ export class InventoryWarehouseRepository {
           data.isActive ? 1 : 0,
           now,
           now,
+          data.customFields ? JSON.stringify(data.customFields) : null,
         ]
       );
     } catch (error) {

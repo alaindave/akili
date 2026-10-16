@@ -1,13 +1,13 @@
-import { ipcMain } from "electron";
+import { ipcMain } from "../companyIpc.js";
+import { listConfiguredCompanies, getCurrentCompanyId, getCurrentUnsyncedCompany, getCompanyBranding } from "../../services/shared/company.service.js";
+import { validateCompanyId } from "../../storage/companyStorage.js";
 
 import {
   upsertCompany,
   upsertCompanyId,
-  getCompanyId,
   updateCompany,
   getCompanyById,
   markCompanySynced,
-  getUnsyncedCompany,
   deleteCompany,
   restoreCompany,
   getLogoUrl,
@@ -20,6 +20,11 @@ import type Company from "../../../common/types/shared/Company.js";
 ========================================================= */
 
 export function registerCompanyIpc(): void {
+  ipcMain.handle("company:getBranding", (_, companyId: string) => {
+    validateCompanyId(companyId);
+    return getCompanyBranding(companyId);
+  });
+  ipcMain.handle("company:listConfigured", () => listConfiguredCompanies());
   ipcMain.handle(
     "company:upsert",
     async (_, company: Company): Promise<void> => {
@@ -98,11 +103,11 @@ export function registerCompanyIpc(): void {
   /* =======================================================
      GET CURRENT COMPANY ID
      
-     One installation = one company.
+     Returns the authenticated company on this installation.
   ======================================================= */
 
   ipcMain.handle("company:getId", async (): Promise<string | null> => {
-    return await getCompanyId();
+    return await getCurrentCompanyId();
   });
 
   /* =======================================================
@@ -150,7 +155,7 @@ export function registerCompanyIpc(): void {
   ======================================================= */
 
   ipcMain.handle("company:getUnsynced", async (): Promise<Company | null> => {
-    return await getUnsyncedCompany();
+    return await getCurrentUnsyncedCompany();
   });
 
   /* =======================================================

@@ -1,4 +1,5 @@
 import InventoryCategory from "./inventoryCategory.model.js";
+import InventoryCustomField from "./inventoryCustomField.model.js";
 import InventoryUnit from "./inventoryUnit.model.js";
 import InventoryItem from "./inventoryItem.model.js";
 import InventoryWarehouse from "./inventoryWarehouse.model.js";
@@ -10,6 +11,7 @@ import InventoryBalance from "./inventoryBalance.model.js";
 import InventorySkuSettings from "./inventorySkuSettings.model.js";
 
 export const inventorySyncModels = {
+  inventory_custom_field: InventoryCustomField,
   inventory_category: InventoryCategory,
   inventory_unit: InventoryUnit,
   inventory_item: InventoryItem,

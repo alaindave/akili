@@ -7,6 +7,7 @@ import {
 import { NetworkService } from "../sync/network.service.js";
 import { sendNotificationEmail } from "./email.service.js";
 import { calculateNotificationRetryTime } from "./notificationRetry.service.js";
+import { getActiveCompanyId } from "../../../auth.js";
 
 /*
  * Prevent multiple notification queue processors from
@@ -54,7 +55,9 @@ export async function processNotificationQueue(): Promise<void> {
      * -----------------------------------------------------
      */
 
-    const notifications = await getPendingNotifications(20);
+    const companyId = await getActiveCompanyId();
+    if (!companyId) return;
+    const notifications = await getPendingNotifications(20, companyId);
 
     if (notifications.length === 0) {
       return;
@@ -71,6 +74,7 @@ export async function processNotificationQueue(): Promise<void> {
      */
 
     for (const notification of notifications) {
+      if (await getActiveCompanyId() !== companyId) break;
       try {
         /*
          * Mark as PROCESSING before sending.

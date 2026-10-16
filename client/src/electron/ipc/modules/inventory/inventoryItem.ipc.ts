@@ -1,6 +1,6 @@
 import type { CreateInventoryUnitInput } from "../../../../common/types/inventory/InventoryUnit.js";
-import { ipcMain } from "electron";
-import { getToken } from "../../../auth.js";
+import { ipcMain } from "../../companyIpc.js";
+import { requireLocalIdentity } from "../../../auth.js";
 
 import type {
   InventoryCostingMethod,
@@ -57,45 +57,7 @@ interface ListInventoryItemsRequest {
 export async function requireAuthenticatedCompanyId(
   companyId: string
 ): Promise<string> {
-  if (typeof companyId !== "string" || !companyId.trim()) {
-    throw new Error("Company ID is required.");
-  }
-
-  const token = await getToken();
-  if (!token) {
-    throw new Error("Authentication required.");
-  }
-
-  let payload: { companyId?: unknown; exp?: unknown };
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 3 || parts.some((part) => !part)) {
-      throw new Error("Invalid token.");
-    }
-    payload = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8"));
-    if (!payload || typeof payload !== "object") {
-      throw new Error("Invalid token payload.");
-    }
-  } catch {
-    throw new Error("Invalid authentication token.");
-  }
-
-  if (typeof payload.companyId !== "string" || !payload.companyId.trim()) {
-    throw new Error("Authenticated company is missing.");
-  }
-  if (
-    payload.exp !== undefined &&
-    (typeof payload.exp !== "number" ||
-      !Number.isFinite(payload.exp) ||
-      payload.exp <= Date.now() / 1000)
-  ) {
-    throw new Error("Authentication expired. Please sign in again.");
-  }
-  if (payload.companyId !== companyId.trim()) {
-    throw new Error("Access denied for this company.");
-  }
-
-  return payload.companyId;
+  return (await requireLocalIdentity(companyId)).companyId;
 }
 
 export function registerInventoryItemIpc(): void {

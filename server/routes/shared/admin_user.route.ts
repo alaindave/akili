@@ -66,7 +66,7 @@ router.post("/", async (req: Request, res: Response) => {
     /*
      * Check whether this email is already registered.
      */
-    let adminUser = await getAdminUserByEmail(req.body.email);
+    let adminUser = await getAdminUserByEmail(req.body.email, company.companyId);
 
     if (adminUser) {
       console.log("USER ALREADY REGISTERED:", adminUser);

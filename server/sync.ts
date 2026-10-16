@@ -109,6 +109,10 @@ export async function syncInventory(
   for (let attempt = 0; attempt < 10; attempt++) {
     const existing = await model.findOne({ _id, companyId }).lean();
     if (isOpening(existing)) throw new SyncConflict("OPENING_STOCK_IMMUTABLE", "Le document de stock initial validé ne peut pas être modifié.");
+    if (entity === "inventory_custom_field" && existing &&
+        ["key", "entity"].some(field => fields[field] !== undefined && fields[field] !== existing[field])) {
+      throw new SyncConflict("CUSTOM_FIELD_KEY_IMMUTABLE", "La clé et l’entité d’un champ personnalisé existant ne peuvent pas être modifiées.");
+    }
     if (
       existing &&
       sameSnapshot(model, existing, fields)

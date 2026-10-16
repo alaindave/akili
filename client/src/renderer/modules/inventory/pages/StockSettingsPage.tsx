@@ -45,7 +45,6 @@ import {
   useToast,
 } from "@chakra-ui/react";
 import { Link } from "react-router-dom";
-import { StockInitializationSettings } from "./StockInitializationPage";
 import { FiArrowLeft, FiCheck, FiEdit2, FiPlus } from "react-icons/fi";
 import useAdminUser from "../../../../store/auth.store";
 import type {
@@ -54,10 +53,11 @@ import type {
   StockSettingsData,
   StockUnitInput,
 } from "../../../../common/types/inventory/StockSettings";
-import {
-  inventoryError,
-  primaryButton,
-} from "../../inventory/components/InventoryItemForm";
+import { inventoryError, primaryButton } from "../components/InventoryItemForm";
+import { StockInitializationSettings } from "./StockInitializationPage";
+
+import InventoryCustomFieldSettings from "../components/InventoryCustomFieldSettings";
+import InventoryCustomFields from "../components/InventoryCustomFields";
 
 const emptyCategory: StockCategoryInput = {
   code: "",
@@ -217,24 +217,24 @@ function CompanyStockSettings({ companyId }: { companyId: string }) {
       }}
     >
       <Box maxW="1200px" mx="auto">
-        <Button
-          as={Link}
-          to="/admin/settings"
-          variant="ghost"
-          leftIcon={<FiArrowLeft />}
-          size="sm"
-          mb={6}
-          px={0}
-          color="#737373"
-        >
-          Paramètres
-        </Button>
-        <Heading fontSize="28px" fontWeight="650" letterSpacing="-0.7px">
-          Paramètres de stocks
-        </Heading>
+        <HStack>
+          <Button
+            as={Link}
+            to="/admin/settings"
+            variant="outline"
+            size="md"
+            px={0}
+            color="gray.700"
+          >
+            <FiArrowLeft />
+          </Button>
+          <Heading fontSize="1.3rem" fontWeight="650" letterSpacing="-0.7px">
+            Paramètres de stocks
+          </Heading>
+        </HStack>
         <Text mt={2} mb={8} color="#737373" fontSize="sm">
-          Organisez votre catalogue et définissez la numérotation de vos
-          articles.
+          Configuration des catégories, unités de mesure, numérotation et champs
+          personnalisés.
         </Text>
         {loadError ? (
           <Stack {...card}>
@@ -279,6 +279,7 @@ function CompanyStockSettings({ companyId }: { companyId: string }) {
                   </Badge>
                 </Tab>
                 <Tab isDisabled={busy}>Numérotation</Tab>
+                <Tab isDisabled={busy}>Champs personnalisés</Tab>
               </TabList>
               <TabPanels>
                 <TabPanel p={0}>
@@ -439,6 +440,18 @@ function CompanyStockSettings({ companyId }: { companyId: string }) {
                           >
                             Catégorie active
                           </Checkbox>
+                          {!category.id && (
+                            <InventoryCustomFields
+                              width="300px"
+                              fields={data.customFields}
+                              entity="CATEGORY"
+                              values={category.customFields ?? {}}
+                              disabled={busy}
+                              onChange={(customFields) =>
+                                setCategory({ ...category, customFields })
+                              }
+                            />
+                          )}
                         </Stack>
                       </ModalBody>
                       <ModalFooter gap={3}>
@@ -766,6 +779,12 @@ function CompanyStockSettings({ companyId }: { companyId: string }) {
                       </Button>
                     </Stack>
                   </Box>
+                </TabPanel>
+                <TabPanel p={0}>
+                  <InventoryCustomFieldSettings
+                    companyId={companyId}
+                    onCreated={() => setRetry((value) => value + 1)}
+                  />
                 </TabPanel>
               </TabPanels>
             </Tabs>

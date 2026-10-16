@@ -1,9 +1,23 @@
-import { get, run } from "../../db.js";
+import { all, get, run } from "../../db.js";
+import type { CompanySummary } from "../../../../common/types/shared/Company.js";
 import { addToSyncQueue } from "./sync.repository.js";
 import Company from "../../../../common/types/shared/Company.js";
-import { app } from "electron";
+import { getCompanyFilesRoot, validateStorageCompany } from "../../../storage/companyStorage.js";
 import path from "path";
 import fs from "fs";
+
+function localLogoPath(company: Company): string | null {
+  const value = company.logoPath?.replace(/\\/g, "/") ?? null;
+  const legacyPrefix = `company_logo/${company.companyId}/`;
+  return value?.startsWith(legacyPrefix) ? `company_logo/${value.slice(legacyPrefix.length)}` : value;
+}
+
+export async function getConfiguredCompanies(): Promise<CompanySummary[]> {
+  return all<CompanySummary>(
+    `SELECT companyId, name, address, city, country FROM companies
+     WHERE isDeleted = 0 ORDER BY name COLLATE NOCASE, companyId`
+  );
+}
 
 /* =========================================================
    UPSERT
@@ -17,21 +31,11 @@ export async function upsertCompany(company: Company): Promise<void> {
     `
     SELECT *
     FROM companies
+    WHERE companyId = ?
     LIMIT 1
-    `
+    `,
+    [company.companyId]
   );
-
-  /*
-   * This installation can only belong to one company.
-   *
-   * If a company already exists and it is a different company,
-   * refuse to overwrite it.
-   */
-  if (existing && existing.companyId !== company.companyId) {
-    throw new Error(
-      `This installation is already associated with company ${existing.companyId}`
-    );
-  }
 
   // Server-owned initialization state must reconcile even with pending profile edits.
   await reconcileCompanyInventory(company);
@@ -98,7 +102,7 @@ export async function upsertCompany(company: Company): Promise<void> {
       company.companyId,
       company.name,
       company.legalName ?? null,
-      company.logoPath ?? null,
+      localLogoPath(company),
       company.address ?? null,
       company.city ?? null,
       company.country ?? null,
@@ -137,7 +141,7 @@ export async function getLogoUrl(logoPath: string): Promise<string | null> {
   }
 
   try {
-    const userDataPath = app.getPath("userData");
+    const userDataPath = getCompanyFilesRoot();
 
     const fullPath = path.join(userDataPath, logoPath);
 
@@ -178,6 +182,7 @@ export async function updateLogo(
   mimeType: string,
   data: ArrayBuffer
 ): Promise<string> {
+  validateStorageCompany(companyId);
   if (!companyId) {
     throw new Error("companyId est obligatoire.");
   }
@@ -192,12 +197,11 @@ export async function updateLogo(
     throw new Error("Format de logo non supporté. Utilisez JPG, PNG ou WEBP.");
   }
 
-  const userDataPath = app.getPath("userData");
+  const userDataPath = getCompanyFilesRoot();
 
   const companyLogoDirectory = path.join(
     userDataPath,
-    "company_logo",
-    companyId
+    "company_logo"
   );
 
   await fs.promises.mkdir(companyLogoDirectory, {
@@ -236,7 +240,7 @@ export async function updateLogo(
 
   await fs.promises.writeFile(fullPath, buffer);
 
-  const relativeLogoPath = path.join("company_logo", companyId, newFileName);
+  const relativeLogoPath = path.posix.join("company_logo", newFileName);
 
   const now = new Date().toISOString();
 
@@ -287,8 +291,10 @@ export async function upsertCompanyId(company: Company): Promise<void> {
     `
     SELECT *
     FROM companies
+    WHERE companyId = ?
     LIMIT 1
-    `
+    `,
+    [company.companyId]
   );
 
   const now = new Date().toISOString();
@@ -323,7 +329,7 @@ export async function upsertCompanyId(company: Company): Promise<void> {
         company.companyId,
         company.name,
         company.legalName ?? null,
-        company.logoPath ?? null,
+        localLogoPath(company),
         company.address ?? null,
         company.city ?? null,
         company.country ?? null,
@@ -347,14 +353,7 @@ export async function upsertCompanyId(company: Company): Promise<void> {
     return;
   }
 
-  if (existing.companyId === company.companyId) {
-    await reconcileCompanyInventory(company);
-    return;
-  }
-
-  throw new Error(
-    `This installation is already associated with company ${existing.companyId}`
-  );
+  await reconcileCompanyInventory(company);
 }
 
 /* =========================================================
@@ -362,16 +361,17 @@ export async function upsertCompanyId(company: Company): Promise<void> {
 ========================================================= */
 
 /**
- * One local installation per company.
+ * The authenticated company is the active company for this installation.
  */
-export async function getCompanyId(): Promise<string | null> {
+export async function getCompanyId(activeCompanyId: string): Promise<string | null> {
   const company = await get<{ companyId: string }>(
     `
     SELECT companyId
     FROM companies
-    WHERE isDeleted = 0
+    WHERE isDeleted = 0 AND companyId = ?
     LIMIT 1
-    `
+    `,
+    [activeCompanyId]
   );
 
   return company?.companyId ?? null;
@@ -404,7 +404,7 @@ export async function updateCompany(company: Company): Promise<void> {
     [
       company.name,
       company.legalName,
-      company.logoPath ?? null,
+      localLogoPath(company),
       company.address ?? null,
       company.city ?? null,
       company.country ?? null,
@@ -489,15 +489,17 @@ export async function markCompanySynced(
    GET UNSYNCED COMPANY
 ========================================================= */
 
-export async function getUnsyncedCompany(): Promise<Company | null> {
+export async function getUnsyncedCompany(companyId: string): Promise<Company | null> {
   return await get<Company>(
     `
     SELECT *
     FROM companies
     WHERE synced = 0
       AND isDeleted = 0
+      AND companyId = ?
     LIMIT 1
-    `
+    `,
+    [companyId]
   );
 }
 

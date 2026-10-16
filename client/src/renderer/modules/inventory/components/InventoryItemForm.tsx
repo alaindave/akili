@@ -1,4 +1,8 @@
 import { itemTypeSkuPrefix } from "../../../../common/types/inventory/sku";
+import InventoryCustomFields, {
+  CustomFieldsLoadStatus,
+  useInventoryCustomFields,
+} from "./InventoryCustomFields";
 import type { SkuNumberingSettings } from "../../../../common/types/inventory/StockSettings";
 import { useRef, useState, type FormEvent } from "react";
 import {
@@ -93,6 +97,8 @@ export default function InventoryItemForm({
   const [reorderPoint, setReorderPoint] = useState("");
   const [reorderQuantity, setReorderQuantity] = useState("");
   const [isActive, setIsActive] = useState(true);
+  const customFieldState = useInventoryCustomFields(companyId);
+  const [customFields, setCustomFields] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const initialFocusRef = useRef<HTMLInputElement>(null);
@@ -102,7 +108,12 @@ export default function InventoryItemForm({
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (submitting.current) return;
+    if (
+      submitting.current ||
+      customFieldState.loading ||
+      customFieldState.error
+    )
+      return;
     setError("");
     if ((!autoGenerateSku && !sku.trim()) || !name.trim() || !baseUnitId) {
       setError("Entrez la référence, le nom et l’unité de base.");
@@ -124,6 +135,7 @@ export default function InventoryItemForm({
     setSaving(true);
     try {
       const item = await window.electron.inventory.items.create(companyId, {
+        customFields,
         sku,
         autoGenerateSku,
         name,
@@ -409,6 +421,26 @@ export default function InventoryItemForm({
                 </Checkbox>
               </Stack>
             </Box>
+            <Stack spacing={4}>
+              <Divider borderColor="#EAEAEA" my={1} />
+              <Text
+                fontSize="xs"
+                letterSpacing="0.12em"
+                fontWeight="700"
+                color="#737373"
+              >
+                INFORMATIONS SUPPLÉMENTAIRES
+              </Text>
+              <CustomFieldsLoadStatus state={customFieldState} />
+              <InventoryCustomFields
+                fields={customFieldState.fields}
+                entity="ITEM"
+                values={customFields}
+                onChange={setCustomFields}
+                disabled={saving}
+                width="300px"
+              />
+            </Stack>
           </Stack>
         </ModalBody>
         <ModalFooter

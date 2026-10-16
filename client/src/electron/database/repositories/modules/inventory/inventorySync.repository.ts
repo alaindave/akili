@@ -106,6 +106,10 @@ export async function applyInventoryBatch(companyId: string, entity: InventorySy
       }
       if (existing?.synced === 0) throw new Error("Inventory pull would overwrite a local edit");
       if (existing && Number(existing.serverVersion) >= item.serverVersion) continue;
+      if (entity === "inventory_custom_field" && existing &&
+          (item.key !== existing.key || item.entity !== existing.entity)) {
+        throw new Error("La clé et l’entité d’un champ personnalisé existant ne peuvent pas être modifiées.");
+      }
       const values = columns.map(column => {
         if (column === "synced") return 1;
         const value = item[column];

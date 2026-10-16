@@ -2,7 +2,7 @@
 
 ## 1. Project principles
 
-- Akili is an offline-first desktop ERP built with Electron, React, TypeScript, Chakra UI, and SQLite.
+- Akili is an offline-first desktop ERP built with Electron, React, TypeScript, Chakra UI, and SQLite. It connects to a Node/Express backend with access to a MongoDB cloud database.
 - Local SQLite data is the primary source for normal offline workflows.
 - Preserve existing functionality unless the task explicitly requires changing it.
 - Follow existing project conventions and patterns before introducing new abstractions.
@@ -54,13 +54,14 @@ Rules:
 
 ## 5. Implementation workflow
 
-Before coding:
+Important:Before implementing any changes,always tell me your design approach and ask for approval.
 
 1. Inspect the relevant files and existing implementations.
 2. Identify the layers and files that need to change.
 3. Explain the proposed implementation and data flow.
 4. Identify risks to offline behavior, synchronization, database integrity, and existing features.
 5. Ask for clarification if a significant architectural decision is ambiguous.
+6. Never use external CSS files for styling. Use chakra UI classnames or inline styles directly on the components or elements.
 
 During coding:
 

@@ -3,8 +3,15 @@ type Company = import("../../../common/types/shared/Company", {
 }).default;
 
 import { invoke } from "../../ipc/ipc.cjs";
+type CompanySummary = import("../../../common/types/shared/Company", {
+  with: { "resolution-mode": "require" },
+}).CompanySummary;
 
 export const companyApi = {
+  getBranding: (companyId: string) => invoke<import("../../../common/types/shared/Company", {
+    with: { "resolution-mode": "require" },
+  }).CompanyBranding | null>("company:getBranding", companyId),
+  listConfigured: () => invoke<CompanySummary[]>("company:listConfigured"),
   adminUsers: {
     getAll: (companyId: string) => invoke("adminUsers:getAll", companyId),
   },

@@ -4,7 +4,9 @@ import { app, BrowserWindow } from "electron";
 import path from "path";
 import { fileURLToPath } from "url";
 
-import { initializeDatabase } from "./database/schemas/shared/initializeDatabase.js";
+import { initializeCompanyDatabases } from "./services/shared/companyDatabase.service.js";
+import { initializeUserDataPath, findCompanyStorage, setActiveCompanyStorage, currentCompanyStorage } from "./storage/companyStorage.js";
+import { getActiveCompanyId } from "./auth.js";
 import { getPreloadPath } from "./pathResolver.js";
 import { registerIPCHandlers } from "./registerIPCHandlers.js";
 
@@ -23,8 +25,7 @@ import {
 import { createSocket } from "./socket.js";
 import { ensureStorageDirectories } from "./storage/directories.js";
 import { isDev } from "./util/env.util.js";
-import { getCompanyId } from "./database/repositories/shared/companies.repository.js";
-import { getInstallationId } from "./util/installationId.js";
+import { getCurrentCompanyId as getCompanyId } from "./services/shared/company.service.js";
 import { processNotificationQueue } from "./services/shared/email/notificationQueue.service.js";
 
 /* =========================================================
@@ -42,23 +43,8 @@ const DEV = isDev();
 
 const environment = DEV ? "Development" : "Production";
 
-/*
- * =========================================================
- * INSTALLATION ID
- * =========================================================
- */
-
-const installationId = getInstallationId();
-
-console.log("INSTALLATION ID:", installationId);
-
-/*
- * Each installation gets its own Electron userData directory.
- */
-app.setPath(
-  "userData",
-  path.join(app.getPath("appData"), "Akili", installationId)
-);
+// One application root per computer; company folders contain the business data.
+initializeUserDataPath();
 
 const API_URL = app.isPackaged
   ? "https://leather-works.onrender.com"
@@ -313,7 +299,9 @@ async function createMainWindow(): Promise<BrowserWindow> {
 
 async function initializeAppDatabase(): Promise<void> {
   console.log("INITIALIZING DATABASE...");
-  await initializeDatabase();
+  await initializeCompanyDatabases();
+  const savedCompanyId = await getActiveCompanyId();
+  setActiveCompanyStorage(savedCompanyId ? findCompanyStorage(savedCompanyId) ?? null : null);
   console.log("DATABASE INITIALIZED.");
 
   /*
@@ -339,7 +327,7 @@ async function initializeAppDatabase(): Promise<void> {
 async function initializeLocalStorage(): Promise<void> {
   console.log("INITIALIZING STORAGE DIRECTORIES...");
 
-  await ensureStorageDirectories();
+  if (currentCompanyStorage()) await ensureStorageDirectories();
 
   console.log("STORAGE DIRECTORIES READY.");
 }
@@ -637,4 +625,12 @@ process.on("unhandledRejection", (reason) => {
    START APPLICATION
 ========================================================= */
 
-bootstrap();
+if (app.requestSingleInstanceLock()) {
+  app.on("second-instance", () => {
+    if (mainWindow?.isMinimized()) mainWindow.restore();
+    mainWindow?.focus();
+  });
+  void bootstrap();
+} else {
+  app.quit();
+}

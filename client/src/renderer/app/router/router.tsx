@@ -1,5 +1,5 @@
-import StockSettingsPage from "../../modules/auth/pages/StockSettingsPage";
-import StockInitializationPage from "../../modules/auth/pages/StockInitializationPage";
+import StockSettingsPage from "../../modules/inventory/pages/StockSettingsPage";
+import StockInitializationPage from "../../modules/inventory/pages/StockInitializationPage";
 import { createHashRouter } from "react-router-dom";
 import App from "../App";
 import AdminPage from "../../modules/auth/pages/AdminPage";
@@ -24,8 +24,16 @@ const router = createHashRouter([
   // Inventory
   inventoryRoutes,
 
-  { path: "/admin/settings/stock", element: <StockSettingsPage />, errorElement: <PageErrorFallback /> },
-  { path: "/admin/settings/stock/initialization", element: <StockInitializationPage />, errorElement: <PageErrorFallback /> },
+  {
+    path: "/admin/settings/stock",
+    element: <StockSettingsPage />,
+    errorElement: <PageErrorFallback />,
+  },
+  {
+    path: "/admin/settings/stock/initialization",
+    element: <StockInitializationPage />,
+    errorElement: <PageErrorFallback />,
+  },
 
   // Administration
   {

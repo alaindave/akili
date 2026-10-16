@@ -1,16 +1,10 @@
 import { transaction } from "../../../db.js";
 import { all, get, run } from "../../../db.js";
-import fs from "fs/promises";
-import path from "path";
-import crypto from "crypto";
-import { randomUUID } from "crypto";
 
-import { getEmployeeDocumentsDir } from "../../../../storage/directories.js";
 
 import {
   EmployeeDocument,
   EmployeeDocumentType,
-  UploadedEmployeeDocument,
 } from "../../../../../common/types/hr/employees/EmployeeDocuments.js";
 
 import { addToSyncQueue } from "../../shared/sync.repository.js";
@@ -19,140 +13,6 @@ import { addToSyncQueue } from "../../shared/sync.repository.js";
 // Helpers
 // ============================================================
 
-function sanitizeFilePart(value: string): string {
-  return value
-    .replace(/[<>:"/\\|?*\x00-\x1F]/g, "")
-    .replace(/\s+/g, "_")
-    .trim();
-}
-
-/**
- * Relative path stored in SQLite.
- *
- * Example:
- * companyId/employeeId/John_Doe_NATIONAL_ID.png
- */
-function buildRelativeDocumentPath(
-  companyId: string,
-  employeeId: string,
-  fileName: string
-): string {
-  return path.posix.join(companyId, employeeId, fileName);
-}
-
-/**
- * Convert stored relative path into the actual
- * installation-specific filesystem path.
- */
-function resolveLocalDocumentPath(relativePath: string): string {
-  const documentsRoot = path.resolve(getEmployeeDocumentsDir());
-
-  const normalizedRelativePath = relativePath
-    .replace(/\\/g, "/")
-    .replace(/^\/+/, "");
-
-  const absolutePath = path.resolve(documentsRoot, normalizedRelativePath);
-
-  const relativeToRoot = path.relative(documentsRoot, absolutePath);
-
-  if (relativeToRoot.startsWith("..") || path.isAbsolute(relativeToRoot)) {
-    throw new Error("EMPLOYEE DOCUMENT PATH ESCAPES EMPLOYEE DOCUMENT STORAGE");
-  }
-
-  return absolutePath;
-}
-
-// ============================================================
-// Upload employee document
-// ============================================================
-
-export async function uploadEmployeeDocument(
-  file: UploadedEmployeeDocument
-): Promise<EmployeeDocument> {
-  const companyId = file.companyId;
-
-  if (!companyId) {
-    throw new Error("Cannot upload employee document without companyId");
-  }
-
-  const existing = await getEmployeeDocument(
-    companyId,
-    file.employeeId,
-    file.documentType
-  );
-
-  const hash = crypto.createHash("sha256").update(file.buffer).digest("hex");
-
-  // Installation-specific root directory.
-  // This is NEVER stored in the database.
-  const employeeDocumentsDir = getEmployeeDocumentsDir();
-
-  // Company folder -> Employee folder -> Document type
-  const employeeFolder = path.join(
-    employeeDocumentsDir,
-    companyId,
-    file.employeeId
-  );
-
-  await fs.mkdir(employeeFolder, {
-    recursive: true,
-  });
-
-  const extension = path.extname(file.name);
-
-  let _id: string = randomUUID();
-  let createdAt = new Date().toISOString();
-
-  if (existing) {
-    _id = existing._id;
-    createdAt = existing.createdAt;
-
-    // Keep the old immutable file until the replacement is durable.
-  }
-
-  const fileName = `${_id}-${hash}${extension}`;
-
-  // Actual filesystem path.
-  const absolutePath = path.join(employeeFolder, fileName);
-
-  // Relative path stored in SQLite.
-  const localPath = buildRelativeDocumentPath(
-    companyId,
-    file.employeeId,
-    fileName
-  );
-
-  await fs.writeFile(absolutePath, file.buffer);
-
-  const now = new Date().toISOString();
-
-  const document: EmployeeDocument = {
-    companyId,
-    _id,
-    employeeId: file.employeeId,
-    uploadedBy: file.uploadedBy,
-    documentType: file.documentType,
-    originalName: file.name,
-    fileName,
-    localPath,
-    mimeType: file.mimeType || "application/octet-stream",
-    fileSize: file.buffer.length,
-    hash,
-    serverVersion: existing?.serverVersion ?? file.serverVersion ?? 0,
-    needsUpload: 1,
-    isDeleted: 0,
-    createdAt,
-    updatedAt: now,
-  };
-
-  await upsertEmployeeDocument(document);
-
-  return document;
-}
-
-// ============================================================
-// Upsert employee document
-// ============================================================
 export async function upsertEmployeeDocument(
   document: EmployeeDocument
 ): Promise<void> {
@@ -204,11 +64,10 @@ export async function upsertEmployeeDocument(
       return;
     }
 
-    const normalizedLocalPath = buildRelativeDocumentPath(
-      companyId,
-      document.employeeId,
-      sanitizeFilePart(path.basename(document.fileName))
-    );
+    const normalizedLocalPath = document.localPath;
+    if (!normalizedLocalPath || normalizedLocalPath.startsWith("/") || normalizedLocalPath.includes("\\") || normalizedLocalPath.split("/").some(part => part === ".." || part === ".")) {
+      throw new Error("Invalid employee document local path");
+    }
 
     await run(
       `
@@ -468,14 +327,6 @@ export async function deleteEmployeeDocument(companyId: string, _id: string) {
       return false;
     }
 
-    // Delete the physical file using the relative path.
-    try {
-      const absolutePath = resolveLocalDocumentPath(document.localPath);
-
-      await fs.unlink(absolutePath);
-    } catch {
-      // File doesn't exist. Continue with soft delete.
-    }
 
     await run(
       `
@@ -579,7 +430,9 @@ export async function markEmployeeDocumentNeedsUpload(
 
 export async function markEmployeeDocumentSynced(
   companyId: string,
-  _id: string
+  _id: string,
+  hash?: string,
+  updatedAt?: string
 ) {
   return transaction(async () => {
     await run(
@@ -590,8 +443,10 @@ export async function markEmployeeDocumentSynced(
         lastSyncedAt = CURRENT_TIMESTAMP
       WHERE companyId = ?
         AND _id = ?
+        AND (? IS NULL OR hash = ?)
+        AND (? IS NULL OR updatedAt = ?)
     `,
-      [companyId, _id]
+      [companyId, _id, hash ?? null, hash ?? null, updatedAt ?? null, updatedAt ?? null]
     );
 
     return true;

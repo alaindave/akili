@@ -1,10 +1,24 @@
-import { InventoryBase } from "./InventoryBase.js";
+import type { InventoryBase } from "./InventoryBase.js";
+
+export const inventoryCustomFieldEntities = {
+  ITEM: "Article", CATEGORY: "Catégorie", WAREHOUSE: "Entrepôt",
+  LOCATION: "Emplacement", DOCUMENT: "Document", DOCUMENT_LINE: "Ligne de document",
+} as const;
+
+export type InventoryCustomFieldEntity = keyof typeof inventoryCustomFieldEntities;
+export interface UpdateInventoryCustomFieldInput {
+  id: string;
+  label: string;
+}
+export interface CreateInventoryCustomFieldInput {
+  entity: InventoryCustomFieldEntity;
+  label: string;
+}
 
 export type InventoryCustomFieldType =
   | "TEXT"
   | "NUMBER"
   | "DECIMAL"
-  | "BOOLEAN"
   | "DATE"
   | "SELECT"
   | "MULTI_SELECT";
@@ -20,12 +34,12 @@ export interface InventoryCustomField extends InventoryBase {
   key: string;
   label: string;
   type: InventoryCustomFieldType;
-  required: boolean;
+  required: number;
   defaultValue?: unknown;
   options?: Array<{
     value: string;
     label: string;
   }>;
   sortOrder: number;
-  isActive: boolean;
+  isActive: number;
 }

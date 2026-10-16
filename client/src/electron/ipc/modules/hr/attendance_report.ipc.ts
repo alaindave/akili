@@ -2,7 +2,7 @@ import { getLateAttendanceReport } from "../../../database/repositories/modules/
 import { saveLateAttendanceReport } from "../../../services/modules/hr/attendance/lateAttendanceReport.service.js";
 import { getWeeklyAttendanceReport } from "../../../database/repositories/modules/hr/weeklyAttendanceReport.repository.js";
 import { saveWeeklyAttendanceReport } from "../../../services/modules/hr/attendance/weeklyAttendanceReport.service.js";
-import { ipcMain } from "electron";
+import { ipcMain } from "../../companyIpc.js";
 import { getAttendanceReportData, saveAttendanceReport } from "../../../services/modules/hr/attendance/attendance_report.service.js";
 
 export function registerAttendanceReportIPC() {

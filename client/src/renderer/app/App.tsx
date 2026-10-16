@@ -1,10 +1,14 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { initializeRendererSync } from "../services/syncManager.service";
 import "../styles/App.css";
 import { Box, Flex } from "@chakra-ui/react";
 import LoginPage from "../modules/auth/pages/LoginPage";
+import CompanySelectionPage from "../modules/auth/pages/CompanySelectionPage";
+import type { CompanySummary } from "../../common/types/shared/Company";
 
 function App() {
+  const [selectedCompany, setSelectedCompany] = useState<CompanySummary | null>(null);
+  const [showLogin, setShowLogin] = useState(false);
   useEffect(() => {
     initializeRendererSync();
   }, []);
@@ -22,7 +26,17 @@ function App() {
       overflow="auto"
     >
       <Box w="100%" maxW="1400px" minW={0}>
-        <LoginPage />
+        {showLogin ? (
+          <LoginPage selectedCompany={selectedCompany} onBack={() => {
+            setShowLogin(false);
+            setSelectedCompany(null);
+          }} />
+        ) : (
+          <CompanySelectionPage onSelect={(company) => {
+            setSelectedCompany(company);
+            setShowLogin(true);
+          }} onLogin={() => setShowLogin(true)} />
+        )}
       </Box>
     </Flex>
   );

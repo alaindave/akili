@@ -1,12 +1,19 @@
 import { InventoryBase } from "./InventoryBase.js";
 
 export const INVENTORY_REFERENCE_TYPES = [
-  "PURCHASE_ORDER", "SUPPLIER_DELIVERY", "SALES_ORDER", "SALES_RETURN",
-  "PRODUCTION_ORDER", "STOCK_COUNT", "INVENTORY_ADJUSTMENT",
-  "STOCK_TRANSFER_REQUEST", "OPENING_STOCK", "MANUAL",
+  "PURCHASE_ORDER",
+  "SUPPLIER_DELIVERY",
+  "SALES_ORDER",
+  "SALES_RETURN",
+  "PRODUCTION_ORDER",
+  "STOCK_COUNT",
+  "INVENTORY_ADJUSTMENT",
+  "STOCK_TRANSFER_REQUEST",
+  "OPENING_STOCK",
+  "MANUAL",
 ] as const;
 
-export type InventoryReferenceType = typeof INVENTORY_REFERENCE_TYPES[number];
+export type InventoryReferenceType = (typeof INVENTORY_REFERENCE_TYPES)[number];
 
 export type InventoryDocumentType =
   | "RECEIPT"

@@ -8,6 +8,7 @@ const router = express.Router();
 interface LoginRequest {
   email: string;
   password: string;
+  companyId?: string;
 }
 
 // Authenticate user
@@ -21,7 +22,7 @@ router.post("/", async (req: Request<{}, {}, LoginRequest>, res: Response) => {
   }
 
   try {
-    const adminUser = await getAdminUserByEmail(req.body.email);
+    const adminUser = await getAdminUserByEmail(req.body.email, req.body.companyId);
 
     if (!adminUser) {
       return res.status(400).send("Invalid email or password.");
@@ -46,7 +47,7 @@ router.post("/", async (req: Request<{}, {}, LoginRequest>, res: Response) => {
 
     const company = await getCompanyById(adminUser.companyId);
 
-    if (!company) {
+    if (!company || company.isDeleted) {
       return res.status(404).send("Company not found.");
     }
 
@@ -104,6 +105,7 @@ function validate(body: LoginRequest) {
   const schema = Joi.object({
     email: Joi.string().min(5).max(255).required().email(),
     password: Joi.string().min(6).max(255).required(),
+    companyId: Joi.string().trim().max(255).optional(),
   });
 
   return schema.validate(body);

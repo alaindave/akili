@@ -1,4 +1,5 @@
-import { app, ipcMain } from "electron";
+import { ipcMain } from "../companyIpc.js";
+import { app } from "electron";
 
 export function registerAppIPC() {
   console.log("REGISTERING APP IPC");

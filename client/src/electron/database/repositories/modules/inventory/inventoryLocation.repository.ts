@@ -1,9 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
+import { customFieldValuesSchema } from "../../../../../common/types/inventory/customFieldValidation.js";
 import type { SaveInventoryLocationInput } from "../../../../../common/types/inventory/InventoryWarehouse.js";
 import { InventoryWarehouseRepository } from "./inventoryWarehouse.repository.js";
 
 const locationSchema = z.object({
+  customFields: customFieldValuesSchema.optional(),
   warehouseId: z.string().trim().min(1),
   parentId: z.string().trim().min(1).nullable().optional(),
   code: z.string().trim().min(1).max(100).transform(value => value.toUpperCase()),
@@ -26,7 +28,8 @@ export interface InventoryLocationListOptions {
   offset?: number;
 }
 
-type LocationRow = Omit<InventoryLocation, "isActive" | "synced" | "isDeleted" | "parentId"> & {
+type LocationRow = Omit<InventoryLocation, "isActive" | "synced" | "isDeleted" | "parentId" | "customFields"> & {
+  customFields: string | null;
   isActive: number;
   synced: number;
   isDeleted: number;
@@ -36,6 +39,7 @@ type LocationRow = Omit<InventoryLocation, "isActive" | "synced" | "isDeleted" |
 function mapRow(row: LocationRow): InventoryLocation {
   return {
     _id: row._id,
+    customFields: row.customFields ? JSON.parse(row.customFields) : undefined,
     companyId: row.companyId,
     warehouseId: row.warehouseId,
     parentId: row.parentId ?? undefined,
@@ -118,9 +122,9 @@ export class InventoryLocationRepository {
           WHERE companyId = ? AND _id = ? AND warehouseId = ? AND isDeleted = 0`,
           [data.code, data.name, data.locationType, data.parentId ?? null, data.isActive ? 1 : 0, now, companyId, id, data.warehouseId]);
       } else {
-        await run(`INSERT INTO inventory_locations (_id, companyId, warehouseId, parentId, code, name, locationType, isActive, createdAt, updatedAt)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [locationId, companyId, data.warehouseId, data.parentId ?? null, data.code, data.name, data.locationType, data.isActive ? 1 : 0, now, now]);
+        await run(`INSERT INTO inventory_locations (_id, companyId, warehouseId, parentId, code, name, locationType, isActive, createdAt, updatedAt, customFields)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [locationId, companyId, data.warehouseId, data.parentId ?? null, data.code, data.name, data.locationType, data.isActive ? 1 : 0, now, now, data.customFields ? JSON.stringify(data.customFields) : null]);
       }
     } catch (error) {
       if ((error as { code?: string }).code === "SQLITE_CONSTRAINT" && await this.codeExists(companyId, data.warehouseId, data.code, id)) {

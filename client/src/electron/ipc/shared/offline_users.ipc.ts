@@ -1,5 +1,6 @@
-import { ipcMain } from "electron";
+import { ipcMain } from "../companyIpc.js";
 import bcrypt from "bcrypt";
+import { establishCompanySession, findOfflineCompanyUser, loginCredentialsSchema } from "../../services/shared/companySession.service.js";
 
 import {
   createOrUpdateOfflineUser,
@@ -60,20 +61,23 @@ export function registerOfflineUsersIPC() {
       credentials: {
         email: string;
         password: string;
+        companyId?: string;
       }
     ) => {
-      const user = await getOfflineUserByEmail(credentials.email);
+      const parsed = loginCredentialsSchema.parse(credentials);
+      const user = await findOfflineCompanyUser(parsed.email, parsed.companyId);
 
       if (!user) {
         throw new Error("No offline account found.");
       }
 
-      const valid = await bcrypt.compare(credentials.password, user.password);
+      const valid = await bcrypt.compare(parsed.password, user.password);
 
       if (!valid) {
         throw new Error("Invalid credentials.");
       }
 
+      await establishCompanySession(user);
       return user;
     }
   );

@@ -103,7 +103,13 @@ const EmployeeNavBar = () => {
           pb={{ base: "8px", md: "14px" }}
           flexShrink={0}
         >
-          <Logo text="Gestion de personnel" />
+          <Logo
+            text="Gestion de personnel"
+            companyId={user.companyId}
+            showCompanyName
+            width="5rem"
+            height="5rem"
+          />
         </Box>
 
         {/* =================================================
@@ -578,19 +584,46 @@ const EmployeeNavBar = () => {
         {/* =================================================
       LEFT: COMPANY NAME
   ================================================= */}
-        <Text
-          justifySelf="start"
-          fontSize={{ base: "0.96rem", md: "1rem" }}
-          fontWeight="700"
-          fontStyle="revert-layer"
-          whiteSpace="nowrap"
-          overflow="hidden"
-          textOverflow="ellipsis"
-          minWidth={0}
-          fontFamily="heading"
-        >
-          AKILI
-        </Text>
+        <HStack>
+          <Text
+            fontSize="1.1rem"
+            fontWeight="700"
+            fontStyle="revert-layer"
+            whiteSpace="nowrap"
+            overflow="hidden"
+            textOverflow="ellipsis"
+            minWidth={0}
+            fontFamily="heading"
+            color="#1d2883"
+          >
+            AKILI
+          </Text>
+          <Box
+            width="0.45rem"
+            height="0.45rem"
+            borderRadius="full"
+            bg="#000080"
+            position="relative"
+            top="0.2rem"
+            right="0.23rem"
+          />
+          <Text
+            fontSize="0.65rem"
+            fontWeight="700"
+            fontStyle="revert-layer"
+            whiteSpace="nowrap"
+            overflow="hidden"
+            textOverflow="ellipsis"
+            minWidth={0}
+            fontFamily="heading"
+            color="#1d2883"
+            position="relative"
+            top="0.2rem"
+            right="0.4rem"
+          >
+            V1.0.0
+          </Text>
+        </HStack>
 
         {/* =================================================
       CENTER: SYNC STATUS
@@ -613,19 +646,19 @@ const EmployeeNavBar = () => {
         >
           {/* Date */}
           <Flex align="center" gap={1} whiteSpace="nowrap">
-            <CiCalendarDate color="#0078D4" size={22} />
+            <CiCalendarDate color="blue" size={22} />
 
-            <Text color="gray.900" fontSize={{ base: "0.75rem", md: "0.9rem" }}>
+            <Text color="gray.800" fontSize={{ base: "0.75rem", md: "0.9rem" }}>
               {time.toLocaleDateString("fr-FR")}
             </Text>
           </Flex>
 
           {/* Time */}
           <Flex align="center" gap={1} whiteSpace="nowrap">
-            <CiClock2 color="#0078D4" size={22} />
+            <CiClock2 color="blue" size={22} />
 
             <Text
-              color="gray.900"
+              color="gray.800"
               fontSize={{ base: "0.85rem", md: "0.95rem" }}
             >
               {String(time.getHours()).padStart(2, "0")}:

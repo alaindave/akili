@@ -1,4 +1,4 @@
-import { ipcMain } from "electron";
+import { ipcMain } from "../companyIpc.js";
 import sync from "../../services/shared/sync/sync.service.js";
 import { getUnsyncedItems } from "../../database/repositories/shared/sync.repository.js";
 

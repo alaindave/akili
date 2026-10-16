@@ -21,20 +21,29 @@ import { FaEye, FaEyeSlash, FaUnlockAlt } from "react-icons/fa";
 import { IoIosMail } from "react-icons/io";
 import { z } from "zod";
 import useAdminUser from "../../../../store/auth.store";
-import logo from "../../../assets/afritan_logo.png";
 import SignUp from "./SignUp";
 import "../../../styles/App.css";
 import { checkOnline } from "../../../services/connectivity_check.service";
 import useTaskStore from "../../../../store/task.store";
+import type { CompanySummary } from "../../../../common/types/shared/Company";
+import { queryClient } from "../../../lib/queryClient";
+import Logo from "../../../components/common/Logo";
 
 const schema = z.object({
   email: z.string(),
   password: z.string(),
+  companyId: z.string().optional(),
 });
 
 type AuthData = z.infer<typeof schema>;
 
-const LoginPage = () => {
+const LoginPage = ({
+  selectedCompany,
+  onBack,
+}: {
+  selectedCompany: CompanySummary | null;
+  onBack?: () => void;
+}) => {
   const [errorMessage, setErrorMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
@@ -48,24 +57,43 @@ const LoginPage = () => {
 
   const handleLogin = async (credentials: AuthData) => {
     setIsLoggingIn(true);
+    setErrorMessage("");
     await clearTasks();
 
     try {
+      const loginCredentials = {
+        ...credentials,
+        companyId:
+          selectedCompany?.companyId ||
+          credentials.companyId?.trim() ||
+          undefined,
+      };
       const online = await checkOnline();
       console.log("ONLINE:", online);
 
       if (!online) {
         const offlineUser = await window.electron.auth.offlineUsers.login({
-          email: credentials.email,
-          password: credentials.password,
+          ...loginCredentials,
         });
 
         if (!offlineUser) {
           throw new Error("OFFLINE LOGIN FAILED");
         }
 
+        if (
+          selectedCompany &&
+          offlineUser.companyId !== selectedCompany.companyId
+        ) {
+          await window.electron.auth.auth.logout();
+          setErrorMessage(
+            "Ce compte ne correspond pas à l’entreprise sélectionnée."
+          );
+          return;
+        }
+
         console.log("OFFLINE LOGIN SUCCESS: ", offlineUser);
 
+        queryClient.clear();
         setLogIn({
           companyId: offlineUser.companyId,
           _id: offlineUser._id,
@@ -82,13 +110,23 @@ const LoginPage = () => {
         return;
       }
 
-      const adminUser = await window.electron.auth.auth.login(credentials);
+      const adminUser = await window.electron.auth.auth.login(loginCredentials);
 
       console.log("ADMIN USER AFTER LOGIN", adminUser);
 
       console.log("CREDS:", credentials);
 
       if (adminUser) {
+        if (
+          selectedCompany &&
+          adminUser.company.companyId !== selectedCompany.companyId
+        ) {
+          await window.electron.auth.auth.logout();
+          setErrorMessage(
+            "Ce compte ne correspond pas à l’entreprise sélectionnée."
+          );
+          return;
+        }
         const offlineUser = await window.electron.auth.offlineUsers.save(
           adminUser.company.companyId,
           {
@@ -105,6 +143,7 @@ const LoginPage = () => {
 
         console.log("OFFLINE USER SUCCESSFULLY SAVED: ", offlineUser);
 
+        queryClient.clear();
         setLogIn({
           companyId: adminUser.company.companyId,
           _id: adminUser.admin._id,
@@ -115,7 +154,11 @@ const LoginPage = () => {
           notes: adminUser.admin.notes,
         });
 
-        await loadTopTasks(adminUser.company.companyId, adminUser.admin._id, "HR");
+        await loadTopTasks(
+          adminUser.company.companyId,
+          adminUser.admin._id,
+          "HR"
+        );
         navigate("/admin", { replace: true });
       }
     } catch (error) {
@@ -140,6 +183,7 @@ const LoginPage = () => {
       py={{ base: 4, md: 6 }}
     >
       <Box
+        position="relative"
         w="100%"
         maxW="460px"
         bg="white"
@@ -167,18 +211,16 @@ const LoginPage = () => {
               sm: 5,
               md: 6,
             }}
-            align="stretch"
+            align="center"
           >
-            <Image
-              src={logo}
-              boxSize={{
-                base: "5.5rem",
-                sm: "6.5rem",
-                md: "7.3rem",
-              }}
-              objectFit="contain"
-              mx="auto"
-            />
+            <Box>
+              <Logo
+                companyId={selectedCompany?.companyId}
+                showCompanyName={false}
+                width="8rem"
+                height="8rem"
+              />
+            </Box>
 
             <Text
               textAlign="center"
@@ -272,7 +314,11 @@ const LoginPage = () => {
                 <InputRightElement w="48px" h={{ base: "48px", md: "52px" }}>
                   <IconButton
                     type="button"
-                    aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                    aria-label={
+                      showPassword
+                        ? "Masquer le mot de passe"
+                        : "Afficher le mot de passe"
+                    }
                     icon={showPassword ? <FaEyeSlash /> : <FaEye />}
                     variant="ghost"
                     size="sm"
@@ -347,6 +393,20 @@ const LoginPage = () => {
             </Flex>
           </VStack>
         </form>
+        {selectedCompany && (
+          <Text
+            onClick={onBack}
+            cursor="pointer"
+            position="absolute"
+            bottom="0.5rem"
+            right="1rem"
+            fontSize="0.85rem"
+            color="#1E3A5F"
+            fontWeight="semibold"
+          >
+            {selectedCompany.name}
+          </Text>
+        )}
       </Box>
     </Flex>
   );

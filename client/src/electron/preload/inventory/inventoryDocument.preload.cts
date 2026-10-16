@@ -4,6 +4,9 @@ type Repository = import("../../database/repositories/modules/inventory/inventor
 type InventoryDocumentListOptions = import("../../database/repositories/modules/inventory/inventoryDocument.repository.js", {
   with: { "resolution-mode": "require" },
 }).InventoryDocumentListOptions;
+type StockMovementReportData = import("../../../common/types/inventory/StockMovementReport.js", {
+  with: { "resolution-mode": "require" },
+}).StockMovementReportData;
 
 import { invoke } from "../../ipc/ipc.cjs";
 
@@ -38,4 +41,16 @@ export const inventoryDocumentApi = {
     options?: Omit<InventoryDocumentListOptions, "limit" | "offset">
   ): ReturnType<Repository["count"]> =>
     invoke("inventory:document:count", companyId, options),
+
+  getStockMovementDocument: (
+    companyId: string,
+    id: string
+  ): Promise<StockMovementReportData> =>
+    invoke("inventory:document:getStockMovementDocument", companyId, id),
+
+  saveStockMovementReport: (
+    companyId: string,
+    id: string
+  ): Promise<{ canceled: boolean; filePath?: string }> =>
+    invoke("inventory:document:saveStockMovementReport", companyId, id),
 };

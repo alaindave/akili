@@ -1,5 +1,5 @@
 import { getAttendanceClockIn, saveAttendanceClockIn } from "../../../database/repositories/modules/hr/attendanceSettings.repository.js";
-import { ipcMain } from "electron";
+import { ipcMain } from "../../companyIpc.js";
 
 import type { AttendanceDailyCheckPreparationInput } from "../../../../common/types/hr/attendance/AttendanceDailyCheck.js";
 import {

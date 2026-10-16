@@ -18,6 +18,7 @@ export interface InventoryWarehouse extends InventoryBase {
 }
 
 export interface InventoryLocation extends InventoryBase {
+  customFields?: Record<string, unknown>;
   warehouseId: string;
   parentId?: string;
   code: string;
@@ -37,6 +38,7 @@ export interface CreateInventoryWarehouseInput {
 }
 
 export interface SaveInventoryLocationInput {
+  customFields?: Record<string, string>;
   warehouseId: string;
   parentId?: string | null;
   code: string;

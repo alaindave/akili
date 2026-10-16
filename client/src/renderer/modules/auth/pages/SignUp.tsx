@@ -27,8 +27,10 @@ import { MdAlternateEmail, MdPerson2, MdBusiness } from "react-icons/md";
 import { FaSave } from "react-icons/fa";
 import { RxCrossCircled } from "react-icons/rx";
 import { RiLockPasswordFill } from "react-icons/ri";
-import logo from "../../../assets/afritan_logo.png";
+import logo from "../../../assets/AkiliLogo.png";
 import { useState } from "react";
+import { queryClient } from "../../../lib/queryClient";
+import useTaskStore from "../../../../store/task.store";
 
 const schema = z
   .object({
@@ -81,7 +83,7 @@ const inputStyle = {
   },
 };
 
-const SignUp = () => {
+const SignUp = ({ companySetup = false }: { companySetup?: boolean }) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const navigate = useNavigate();
 
@@ -115,6 +117,13 @@ const SignUp = () => {
 
       console.log("USER SIGN UP SUCCESS: ", res);
 
+      await window.electron.auth.offlineUsers.save(res.company.companyId, {
+        ...res.admin,
+        companyId: res.company.companyId,
+        password: data.password,
+      });
+      await useTaskStore.getState().clearTasks();
+      queryClient.clear();
       setAuth({
         _id: res.admin._id,
         companyId: res.company.companyId,
@@ -138,18 +147,21 @@ const SignUp = () => {
     <>
       <Button
         variant="outline"
-        borderColor="#0078D4"
-        color="#0078D4"
+        borderColor={companySetup ? "#D49F00" : "#0078D4"}
+        bg={companySetup ? "#F2B705" : undefined}
+        color={companySetup ? "#08162b" : "#0078D4"}
         size="md"
         fontWeight="600"
         onClick={onOpen}
         _hover={{
-          bg: "#F3F9FF",
+          bg: companySetup ? "#DFA900" : "#F3F9FF",
           borderColor: "#106EBE",
           color: "#106EBE",
         }}
       >
-        <Text fontSize="1rem">Créer un compte</Text>
+        <Text fontSize="1rem">
+          {companySetup ? "Ajouter une entreprise" : "Créer un compte"}
+        </Text>
       </Button>
 
       <Modal
@@ -232,7 +244,9 @@ const SignUp = () => {
                     fontWeight="600"
                     lineHeight="1.3"
                   >
-                    Créer un compte admin
+                    {companySetup
+                      ? "Ajouter une entreprise"
+                      : "Créer un compte admin"}
                   </Text>
 
                   <Text
@@ -243,7 +257,9 @@ const SignUp = () => {
                     }}
                     mt={1}
                   >
-                    Remplissez le formulaire
+                    {companySetup
+                      ? "Utilisez le code d’accès de votre entreprise pour la configurer sur cet appareil."
+                      : "Remplissez le formulaire"}
                   </Text>
                 </VStack>
               </HStack>

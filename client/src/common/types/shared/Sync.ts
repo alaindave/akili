@@ -59,6 +59,7 @@ export interface SyncQueueItem {
 }
 
 export interface SyncStatusEvent {
+  companyId?: string;
   status: "IDLE" | "SYNCING" | "OFFLINE" | "ERROR";
   timestamp: string;
   pendingChanges?: number;

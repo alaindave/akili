@@ -185,7 +185,14 @@ const EmployeeDetailsPage = () => {
                 borderRadius="0.4rem"
                 padding="0.4rem"
               >
-                <FaRegClock size="1.2rem" color="blue" />
+                <Box
+                  borderRadius="0.25rem"
+                  borderWidth="0.1rem"
+                  borderColor="blue"
+                  h="0.5rem"
+                  w="0.5rem"
+                  bg="#ffffff"
+                />
 
                 <Text color="gray.900">Présence</Text>
               </HStack>
@@ -210,7 +217,14 @@ const EmployeeDetailsPage = () => {
                 borderRadius="0.4rem"
                 padding="0.4rem"
               >
-                <IoCalendarNumberSharp size="1.2rem" color="blue" />
+                <Box
+                  borderRadius="0.25rem"
+                  borderWidth="0.1rem"
+                  borderColor="blue"
+                  h="0.5rem"
+                  w="0.5rem"
+                  bg="#ffffff"
+                />{" "}
                 <Text>Congés</Text>
               </HStack>
             </Link>
@@ -234,8 +248,14 @@ const EmployeeDetailsPage = () => {
                 borderRadius="0.4rem"
                 padding="0.4rem"
               >
-                <FaDollarSign size="1.1rem" color="blue" />
-
+                <Box
+                  borderRadius="0.25rem"
+                  borderWidth="0.1rem"
+                  borderColor="blue"
+                  h="0.5rem"
+                  w="0.5rem"
+                  bg="#ffffff"
+                />
                 <Text>Fiche de paye</Text>
               </HStack>
             </Link>

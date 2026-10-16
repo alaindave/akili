@@ -15,7 +15,7 @@ import {
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { FaArrowLeftLong } from "react-icons/fa6";
-import { Link, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import type Task from "../../../common/types/task/Task";
 import useAdminUser from "../../../store/auth.store";
 import useSyncStore from "../../../store/sync.store";
@@ -23,6 +23,7 @@ import useTaskStore from "../../../store/task.store";
 import TaskResolutionPopover from "./TaskResolutionPopover";
 
 export default function TaskDetailsPage() {
+  const navigate = useNavigate();
   const { module } = useModule();
   const { _id } = useParams();
   const [loadedTask, setTask] = useState<Task | null>(null);
@@ -169,15 +170,14 @@ export default function TaskDetailsPage() {
         flexShrink={0}
       >
         <Button
-          as={Link}
-          to={`/${module.toLowerCase()}/tasks`}
+          onClick={() => navigate(-1)}
           leftIcon={<FaArrowLeftLong />}
           variant="ghost"
           color="#404040"
           size="sm"
           _hover={{ bg: "#e5e5e5" }}
         >
-          Toutes les tâches
+          Retour
         </Button>
         {task && !task.isResolved && (
           <TaskResolutionPopover onSubmit={handleResolution} />

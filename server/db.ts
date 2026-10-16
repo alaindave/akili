@@ -94,10 +94,12 @@ export const getAdminUserByID = async (id: string) => {
   });
 };
 
-export const getAdminUserByEmail = async (email: string) => {
-  return AdminUser.findOne({
+export const getAdminUserByEmail = async (email: string, companyId?: string) => {
+  const matches = await AdminUser.find({
     email,
-  });
+    ...(companyId ? { companyId } : {}),
+  }).limit(2);
+  return matches.length === 1 ? matches[0] : null;
 };
 
 export const updateAdminUser = async (

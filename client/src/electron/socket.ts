@@ -11,6 +11,7 @@ export async function createSocket(
   mainWindow: BrowserWindow
 ): Promise<Socket | null> {
   try {
+    socket?.disconnect();
     const token = await getToken();
 
     if (!token) {

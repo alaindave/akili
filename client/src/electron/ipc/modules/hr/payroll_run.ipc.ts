@@ -3,7 +3,7 @@ import {
   savePayslipReport,
 } from "../../../services/modules/hr/payroll/payslipReport.service.js";
 import { PayrollPaymentFilter } from "../../../../common/types/hr/payroll/payrollPayment.js";
-import { ipcMain } from "electron";
+import { ipcMain } from "../../companyIpc.js";
 import { saveMonthlyPayrollReport } from "../../../services/modules/hr/payroll/monthlyPayrollReport.service.js";
 import AdminUser from "../../../../common/types/shared/AdminUser.js";
 import { getAllEmployeePayrollInputs } from "../../../database/repositories/modules/hr/payrollProfile.repository.js";

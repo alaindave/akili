@@ -1,6 +1,8 @@
 import { itemTypeSkuPrefix } from "../../../../../common/types/inventory/sku.js";
 import { randomInt, randomUUID } from "node:crypto";
 import { z } from "zod";
+import { customFieldValuesSchema } from "../../../../../common/types/inventory/customFieldValidation.js";
+import { getInventoryCustomFields } from "./inventoryCustomField.repository.js";
 import { all, get, getDirect, runDirect, transaction, afterCommit } from "../../../db.js";
 import { notifyPendingChanges } from "../../shared/sync.repository.js";
 import type { InventoryCategory } from "../../../../../common/types/inventory/InventoryCategory.js";
@@ -15,6 +17,7 @@ import type {
 const companySchema = z.string().trim().min(1);
 const idSchema = z.string().uuid();
 const categorySchema = z.object({
+  customFields: customFieldValuesSchema.optional(),
   id: idSchema.optional(),
   code: z
     .string()
@@ -80,6 +83,7 @@ export async function getStockSettings(
       isDeleted: false,
     })),
     numbering,
+    customFields: await getInventoryCustomFields(company),
   };
 }
 export async function saveSkuNumbering(
@@ -188,7 +192,7 @@ export async function saveStockCategory(
       );
     else
       await runDirect(
-        "INSERT INTO inventory_categories (_id, companyId, code, name, isActive, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO inventory_categories (_id, companyId, code, name, isActive, createdAt, updatedAt, customFields) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         [
           randomUUID(),
           company,
@@ -197,6 +201,7 @@ export async function saveStockCategory(
           Number(data.isActive),
           now,
           now,
+          data.customFields ? JSON.stringify(data.customFields) : null,
         ]
       );
     afterCommit(() => { void notifyPendingChanges(company); });

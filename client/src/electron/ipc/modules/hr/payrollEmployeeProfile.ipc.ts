@@ -1,4 +1,5 @@
-import { IpcMainInvokeEvent, ipcMain } from "electron";
+import { ipcMain } from "../../companyIpc.js";
+import { IpcMainInvokeEvent } from "electron";
 
 import EmployeePayrollProfile, {
   CreatePayrollProfileDto,

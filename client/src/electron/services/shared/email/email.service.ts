@@ -53,7 +53,7 @@ async function postEmailNotification(
     throw new Error("VITE_API_URL is not configured");
   }
 
-  const token = await getToken();
+  const token = await getToken(notification.companyId);
 
   if (!token) {
     throw new Error("You must be signed in to send email notifications.");

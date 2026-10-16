@@ -53,6 +53,8 @@ function load(file, resolve, expose = "") {
   pending = pending.filter((entry) => entry._id !== 'invalid');
   let result = await push.pushPendingChanges('a');
   assert.equal(result.pendingChanges, 2);
+  assert.match(result.failures.join('\n'), /payroll_result bad, queue conflict: Parent mismatch/);
+  assert.match(result.failures.join('\n'), /queue later: Earlier update failed/);
   assert.deepEqual(acknowledged, ['slip']);
   pending.push(item('newer', 'bad', { _id: 'bad' }));
   result = await push.pushPendingChanges('a');
@@ -64,7 +66,7 @@ function load(file, resolve, expose = "") {
   let pullError;
   const cursors = new Map();
   const pull = load('../src/electron/services/shared/sync/pull.service.ts', (name) => {
-    if (name.endsWith('/sync.repository.js')) return { getUnsyncedItems: async () => [] };
+    if (name.endsWith('/sync.repository.js')) return { getPendingSyncItems: async () => [] };
     if (name === 'electron') return { app: { isPackaged: false } };
     if (name.endsWith('/auth.js')) return { getToken: async () => 'token' };
     if (name.endsWith('/db.js')) return {
