@@ -14,17 +14,15 @@ import {
   VStack,
 } from "@chakra-ui/react";
 import { FiArrowRight, FiMapPin } from "react-icons/fi";
-import { MdBusiness } from "react-icons/md";
 import type { CompanySummary } from "../../../../common/types/shared/Company";
 import SignUp from "./SignUp";
 import Logo from "../../../components/common/Logo";
 
 interface Props {
   onSelect: (company: CompanySummary) => void;
-  onLogin: () => void;
 }
 
-export default function CompanySelectionPage({ onSelect, onLogin }: Props) {
+export default function CompanySelectionPage({ onSelect }: Props) {
   const [companies, setCompanies] = useState<CompanySummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -60,7 +58,7 @@ export default function CompanySelectionPage({ onSelect, onLogin }: Props) {
       <Box h="5px" bg="#F2B705" />
       <VStack align="stretch" spacing={8} p={{ base: 6, md: 10 }}>
         <VStack spacing={3} textAlign="center">
-          <Logo width="5rem" height="5rem" showCompanyName={false} />
+          <Logo width="5rem" height="5rem" showCompanyName={false} isDisabled />
           <Heading
             as="h1"
             fontSize={{ base: "1.2rem", md: "1.3rem" }}

@@ -171,8 +171,8 @@ const AdminPage = () => {
           <Logo
             text="Gestion d'entreprise"
             companyId={user.companyId}
-            width="6rem"
-            height="6rem"
+            width="4.2rem"
+            height="4.2rem"
             showCompanyName
           />
         </Box>

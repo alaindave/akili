@@ -217,8 +217,8 @@ const LoginPage = ({
               <Logo
                 companyId={selectedCompany?.companyId}
                 showCompanyName={false}
-                width="8rem"
-                height="8rem"
+                width="6.5rem"
+                height="6.5rem"
                 isDisabled
               />
             </Box>
@@ -390,7 +390,7 @@ const LoginPage = ({
             </Text>
 
             <Flex justify="center">
-              <SignUp />
+              <SignUp selectedCompany={selectedCompany?.companyId} />
             </Flex>
           </VStack>
         </form>

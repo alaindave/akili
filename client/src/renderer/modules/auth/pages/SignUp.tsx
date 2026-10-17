@@ -30,10 +30,10 @@ import { MdAlternateEmail, MdPerson2, MdBusiness } from "react-icons/md";
 import { FaSave, FaEye, FaEyeSlash } from "react-icons/fa";
 import { RxCrossCircled } from "react-icons/rx";
 import { RiLockPasswordFill } from "react-icons/ri";
-import logo from "../../../assets/AkiliLogo.png";
 import { useState } from "react";
 import { queryClient } from "../../../lib/queryClient";
 import useTaskStore from "../../../../store/task.store";
+import Logo from "../../../components/common/Logo";
 
 const createSchema = (companySetup: boolean) =>
   z
@@ -116,7 +116,13 @@ const inputStyle = {
   },
 };
 
-const SignUp = ({ companySetup = false }: { companySetup?: boolean }) => {
+const SignUp = ({
+  companySetup = false,
+  selectedCompany,
+}: {
+  companySetup?: boolean;
+  selectedCompany?: string;
+}) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const navigate = useNavigate();
 
@@ -267,15 +273,12 @@ const SignUp = ({ companySetup = false }: { companySetup?: boolean }) => {
                 }}
                 pr={8}
               >
-                <Image
-                  src={logo}
-                  boxSize={{
-                    base: "3.8rem",
-                    md: "4.8rem",
-                  }}
-                  objectFit="contain"
-                  borderRadius="12px"
-                  flexShrink={0}
+                <Logo
+                  companyId={selectedCompany ?? undefined}
+                  width="4.2rem"
+                  height="4.2rem"
+                  showCompanyName={false}
+                  isDisabled
                 />
 
                 <VStack align="start" spacing={0}>
@@ -411,13 +414,24 @@ const SignUp = ({ companySetup = false }: { companySetup?: boolean }) => {
                         {...inputStyle}
                         pr="48px"
                         type={showPassword ? "text" : "password"}
-                        placeholder={companySetup ? "" : "Min. 8 car. avec 1 chiffre et 1 lettre maj"}
+                        placeholder={
+                          companySetup
+                            ? ""
+                            : "Min. 8 car. avec 1 chiffre et 1 lettre maj"
+                        }
                         {...register("password")}
                       />
-                      <InputRightElement w="48px" h={{ base: "46px", md: "48px" }}>
+                      <InputRightElement
+                        w="48px"
+                        h={{ base: "46px", md: "48px" }}
+                      >
                         <IconButton
                           type="button"
-                          aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                          aria-label={
+                            showPassword
+                              ? "Masquer le mot de passe"
+                              : "Afficher le mot de passe"
+                          }
                           aria-pressed={showPassword}
                           icon={showPassword ? <FaEyeSlash /> : <FaEye />}
                           variant="ghost"
@@ -440,25 +454,39 @@ const SignUp = ({ companySetup = false }: { companySetup?: boolean }) => {
                         {...inputStyle}
                         pr="48px"
                         type={showConfirmPassword ? "text" : "password"}
-                        placeholder={companySetup ? "" : "Min. 8 car. avec 1 chiffre et 1 lettre maj"}
+                        placeholder={
+                          companySetup
+                            ? ""
+                            : "Min. 8 car. avec 1 chiffre et 1 lettre maj"
+                        }
                         {...register("confirmPassword")}
                       />
-                      <InputRightElement w="48px" h={{ base: "46px", md: "48px" }}>
+                      <InputRightElement
+                        w="48px"
+                        h={{ base: "46px", md: "48px" }}
+                      >
                         <IconButton
                           type="button"
-                          aria-label={showConfirmPassword ? "Masquer la confirmation du mot de passe" : "Afficher la confirmation du mot de passe"}
+                          aria-label={
+                            showConfirmPassword
+                              ? "Masquer la confirmation du mot de passe"
+                              : "Afficher la confirmation du mot de passe"
+                          }
                           aria-pressed={showConfirmPassword}
-                          icon={showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+                          icon={
+                            showConfirmPassword ? <FaEyeSlash /> : <FaEye />
+                          }
                           variant="ghost"
                           size="sm"
                           color="#5B6472"
                           onMouseDown={(event) => event.preventDefault()}
-                          onClick={() => setShowConfirmPassword((visible) => !visible)}
+                          onClick={() =>
+                            setShowConfirmPassword((visible) => !visible)
+                          }
                         />
                       </InputRightElement>
                     </InputGroup>
                   </FormField>
-
                 </SimpleGrid>
 
                 {errorMessage && (

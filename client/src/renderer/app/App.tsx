@@ -7,7 +7,9 @@ import CompanySelectionPage from "../modules/auth/pages/CompanySelectionPage";
 import type { CompanySummary } from "../../common/types/shared/Company";
 
 function App() {
-  const [selectedCompany, setSelectedCompany] = useState<CompanySummary | null>(null);
+  const [selectedCompany, setSelectedCompany] = useState<CompanySummary | null>(
+    null
+  );
   const [showLogin, setShowLogin] = useState(false);
   useEffect(() => {
     initializeRendererSync();
@@ -27,15 +29,20 @@ function App() {
     >
       <Box w="100%" maxW="1400px" minW={0}>
         {showLogin ? (
-          <LoginPage selectedCompany={selectedCompany} onBack={() => {
-            setShowLogin(false);
-            setSelectedCompany(null);
-          }} />
+          <LoginPage
+            selectedCompany={selectedCompany}
+            onBack={() => {
+              setShowLogin(false);
+              setSelectedCompany(null);
+            }}
+          />
         ) : (
-          <CompanySelectionPage onSelect={(company) => {
-            setSelectedCompany(company);
-            setShowLogin(true);
-          }} onLogin={() => setShowLogin(true)} />
+          <CompanySelectionPage
+            onSelect={(company) => {
+              setSelectedCompany(company);
+              setShowLogin(true);
+            }}
+          />
         )}
       </Box>
     </Flex>

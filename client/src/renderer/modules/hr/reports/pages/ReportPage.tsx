@@ -2,6 +2,7 @@ import PageSubtitle from "../../../../components/common/PageSubtitle";
 import { Box, Flex, Grid, Text, VStack } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
 import { ReactNode } from "react";
+import useAdminUser from "../../../../../store/auth.store";
 
 const BLUE = "#03143B";
 const GOLD = "#F2B705";
@@ -108,6 +109,7 @@ function ReportItem({ title, description, onClick }: ReportItemProps) {
 
 export default function ReportsPage() {
   const navigate = useNavigate();
+  const user = useAdminUser((store) => store.adminUser);
 
   return (
     <Box minH="100vh" bg="#F5F6F8" p={4}>
@@ -166,32 +168,24 @@ export default function ReportsPage() {
               <ReportItem
                 title="Rapport de présence quotidien"
                 description="Choisir une journée et télécharger le rapport de présence."
-                onClick={() =>
-                  navigate("/hr/reports/daily_attendance")
-                }
+                onClick={() => navigate("/hr/reports/daily_attendance")}
               />
 
               <ReportItem
                 title="Rapport de présence hebdomadaire"
                 description="Heures d’arrivée, absences et congés du lundi au vendredi."
-                onClick={() =>
-                  navigate("/hr/reports/weekly_attendance")
-                }
+                onClick={() => navigate("/hr/reports/weekly_attendance")}
               />
 
               <ReportItem
                 title="Frais de déplacement"
                 description="Calculer et consulter le rapport de frais de déplacement."
-                onClick={() =>
-                  navigate("/hr/reports/transport_allowance")
-                }
+                onClick={() => navigate("/hr/reports/transport_allowance")}
               />
 
               <ReportItem
                 title="Rapport des retards"
-                onClick={() =>
-                  navigate("/hr/reports/late_attendance")
-                }
+                onClick={() => navigate("/hr/reports/late_attendance")}
                 description="Consulter les retards enregistrés des employés."
               />
 

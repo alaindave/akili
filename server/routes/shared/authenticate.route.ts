@@ -110,6 +110,7 @@ router.post(
             companyId: company.companyId,
             name: company.name,
             legalName: company.legalName,
+            logoPath: company.logoPath,
             address: company.address,
             city: company.city,
             country: company.country,
