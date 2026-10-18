@@ -73,7 +73,13 @@ const TaskPage = () => {
   };
 
   return (
-    <Flex bg="#F8FAFC" direction="column" height="100%" width="100%">
+    <Flex
+      bg="#F8FAFC"
+      direction="column"
+      height="100%"
+      width="100%"
+      overflow="hidden"
+    >
       <Flex width="100%" justify="space-between">
         <Box>
           <HStack>
@@ -105,8 +111,9 @@ const TaskPage = () => {
           </PageSubtitle>
         </Box>
         <Button
+          fontSize={{ base: "0.5rem", md: "0.9rem" }}
           mt="1.2rem"
-          mr="4rem"
+          mr="2rem"
           colorScheme="yellow"
           onClick={() => onCreateOpen()}
         >
@@ -120,14 +127,14 @@ const TaskPage = () => {
             onSearch={setSearchText}
           />
         </Flex>
-        <Flex width="200px" mt="3rem" mr="4rem" wrap="wrap">
+        <Flex width="200px" mt="3rem" ml="1rem" mr="3rem" wrap="wrap">
           <TaskPriorityFilter onFilterClicked={setPriorityFilter} />
         </Flex>
-        <Flex width="200px" mt="3rem" mr="4rem" wrap="wrap">
+        <Flex width="200px" mt="3rem" mr="2rem" wrap="wrap">
           <TaskStatusFilter onFilterClicked={setStatusFilter} />
         </Flex>
       </Grid>
-      <Box mt="2.5rem" ml="1rem">
+      <Box mt="2.5rem" ml="0.5rem" mr="0.5rem">
         <TaskTable
           tasks={tasks.filter(
             (task) =>

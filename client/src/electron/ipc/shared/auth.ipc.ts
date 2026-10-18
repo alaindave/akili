@@ -1,5 +1,8 @@
-import { setupCompany, companySetupCredentialsSchema } from "../../services/shared/companySetup.service.js";
-import { ipcMain } from "../companyIpc.js";
+import {
+  setupCompany,
+  companySetupCredentialsSchema,
+} from "../../services/shared/companySetup.service.js";
+import { ipcMain } from "./companyIpc.js";
 import { app } from "electron";
 import { NetworkService } from "../../services/shared/sync/network.service.js";
 import axios from "axios";
@@ -16,14 +19,12 @@ const API_URL = app.isPackaged
   : process.env.VITE_API_URL;
 
 export function registerAuthIPC() {
-  ipcMain.handle("auth:setup-company", (_, credentials: unknown) =>
-    setupCompany(companySetupCredentialsSchema.parse(credentials)));
   console.log("REGISTERING AUTH IPC");
   console.log("AUTH API URL:", API_URL);
 
-  // =========================================================
-  // LOGIN
-  // =========================================================
+  ipcMain.handle("auth:setup-company", (_, credentials: unknown) =>
+    setupCompany(companySetupCredentialsSchema.parse(credentials))
+  );
 
   ipcMain.handle("auth:login", async (_, credentials) => {
     console.log("LOGIN IPC RECEIVED", credentials);
@@ -82,10 +83,6 @@ export function registerAuthIPC() {
     }
   });
 
-  // =========================================================
-  // LOGOUT
-  // =========================================================
-
   ipcMain.handle("auth:logout", async () => {
     console.log("LOGOUT IPC RECEIVED");
 
@@ -98,10 +95,6 @@ export function registerAuthIPC() {
       throw error;
     }
   });
-
-  // =========================================================
-  // SIGNUP
-  // =========================================================
 
   ipcMain.handle("auth:signup", async (_, credentials: SignUpCredentials) => {
     console.log("SIGN UP IPC RECEIVED", credentials);

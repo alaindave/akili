@@ -3,7 +3,6 @@ import {
   Button,
   Flex,
   FormControl,
-  Image,
   IconButton,
   Input,
   InputGroup,
@@ -46,11 +45,13 @@ const LoginPage = ({
 }) => {
   const [errorMessage, setErrorMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
   const navigate = useNavigate();
   const setLogIn = useAdminUser((store) => store.login);
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const clearTasks = useTaskStore((store) => store.clearTasks);
   const loadTopTasks = useTaskStore((store) => store.loadTopTasks);
+
   const { register, handleSubmit } = useForm<AuthData>({
     resolver: zodResolver(schema),
   });
@@ -58,9 +59,10 @@ const LoginPage = ({
   const handleLogin = async (credentials: AuthData) => {
     setIsLoggingIn(true);
     setErrorMessage("");
-    await clearTasks();
 
     try {
+      await clearTasks();
+
       const loginCredentials = {
         ...credentials,
         companyId:
@@ -68,6 +70,7 @@ const LoginPage = ({
           credentials.companyId?.trim() ||
           undefined,
       };
+
       const online = await checkOnline();
       console.log("ONLINE:", online);
 
@@ -91,9 +94,8 @@ const LoginPage = ({
           return;
         }
 
-        console.log("OFFLINE LOGIN SUCCESS: ", offlineUser);
-
         queryClient.clear();
+
         setLogIn({
           companyId: offlineUser.companyId,
           _id: offlineUser._id,
@@ -105,16 +107,12 @@ const LoginPage = ({
         });
 
         await loadTopTasks(offlineUser.companyId, offlineUser._id, "HR");
-        navigate("/admin", { replace: true });
 
+        navigate("/admin", { replace: true });
         return;
       }
 
       const adminUser = await window.electron.auth.auth.login(loginCredentials);
-
-      console.log("ADMIN USER AFTER LOGIN", adminUser);
-
-      console.log("CREDS:", credentials);
 
       if (adminUser) {
         if (
@@ -127,7 +125,8 @@ const LoginPage = ({
           );
           return;
         }
-        const offlineUser = await window.electron.auth.offlineUsers.save(
+
+        await window.electron.auth.offlineUsers.save(
           adminUser.company.companyId,
           {
             companyId: adminUser.company.companyId,
@@ -141,9 +140,8 @@ const LoginPage = ({
           }
         );
 
-        console.log("OFFLINE USER SUCCESSFULLY SAVED: ", offlineUser);
-
         queryClient.clear();
+
         setLogIn({
           companyId: adminUser.company.companyId,
           _id: adminUser.admin._id,
@@ -159,10 +157,11 @@ const LoginPage = ({
           adminUser.admin._id,
           "HR"
         );
+
         navigate("/admin", { replace: true });
       }
     } catch (error) {
-      console.log("LOGIN FAILED: ", error);
+      console.error("LOGIN FAILED:", error);
       setErrorMessage("Email et/ou mot de passe incorrect.");
     } finally {
       setIsLoggingIn(false);
@@ -176,29 +175,32 @@ const LoginPage = ({
   return (
     <Flex
       w="100%"
-      minH="100%"
-      justify="center"
+      h="100vh"
+      height="100dvh"
+      minH={0}
+      minW={0}
       align="center"
-      px={{ base: 4, sm: 6, md: 8 }}
-      py={{ base: 4, md: 6 }}
+      justify="center"
+      overflow="hidden"
+      boxSizing="border-box"
+      px={{ base: 3, sm: 4, md: 8 }}
+      py="1.5rem"
     >
       <Box
         position="relative"
+        flex="0 1 460px"
         w="100%"
+        minW={0}
         maxW="460px"
+        maxH="calc(100dvh - 3rem)"
+        overflow="hidden"
+        boxSizing="border-box"
         bg="white"
         border="1px solid"
         borderColor="#D1D5DB"
-        borderRadius={{
-          base: "14px",
-          md: "18px",
-        }}
+        borderRadius={{ base: "14px", md: "18px" }}
         boxShadow="0 6px 20px rgba(0,0,0,0.12)"
-        p={{
-          base: 6,
-          sm: 8,
-          md: 10,
-        }}
+        p="clamp(1rem, 4vh, 2.5rem)"
       >
         <form
           noValidate
@@ -206,44 +208,36 @@ const LoginPage = ({
           onChange={handleChange}
         >
           <VStack
-            spacing={{
-              base: 4,
-              sm: 5,
-              md: 6,
-            }}
             align="center"
+            w="100%"
+            spacing="clamp(0.5rem, 2.5vh, 1.5rem)"
           >
-            <Box>
+            <Box flexShrink={0} lineHeight={0}>
               <Logo
                 companyId={selectedCompany?.companyId}
                 showCompanyName={false}
-                width="6.5rem"
-                height="6.5rem"
+                width="clamp(3.5rem, 13vh, 6.5rem)"
+                height="clamp(3.5rem, 13vh, 6.5rem)"
                 isDisabled
               />
             </Box>
 
             <Text
               textAlign="center"
-              fontSize={{
-                base: "1.4rem",
-                sm: "1.5rem",
-                md: "1.6rem",
-              }}
+              fontSize="clamp(1.2rem, 3.2vh, 1.6rem)"
               fontWeight="700"
+              lineHeight="1.2"
               color="#1F2937"
             >
               Connexion
             </Text>
 
-            <FormControl>
+            <FormControl w="100%">
               <InputGroup>
                 <InputLeftElement
                   pointerEvents="none"
-                  h={{
-                    base: "48px",
-                    md: "52px",
-                  }}
+                  h="clamp(44px, 6vh, 52px)"
+                  w="42px"
                 >
                   <IoIosMail size="20px" color="#5B6472" />
                 </InputLeftElement>
@@ -251,21 +245,15 @@ const LoginPage = ({
                 <Input
                   type="email"
                   placeholder="Email"
-                  h={{
-                    base: "48px",
-                    md: "52px",
-                  }}
+                  autoComplete="username"
+                  h="clamp(44px, 6vh, 52px)"
                   pl="42px"
                   bg="#F9FAFB"
                   border="1px solid"
                   borderColor="#B8C2CC"
                   color="#1F2937"
-                  _placeholder={{
-                    color: "#6B7280",
-                  }}
-                  _hover={{
-                    borderColor: "#0078D4",
-                  }}
+                  _placeholder={{ color: "#6B7280" }}
+                  _hover={{ borderColor: "#0078D4" }}
                   _focus={{
                     borderColor: "#0078D4",
                     boxShadow: "0 0 0 1px #0078D4",
@@ -275,44 +263,37 @@ const LoginPage = ({
               </InputGroup>
             </FormControl>
 
-            <FormControl>
+            <FormControl w="100%">
               <InputGroup>
                 <InputLeftElement
                   pointerEvents="none"
-                  h={{
-                    base: "48px",
-                    md: "52px",
-                  }}
+                  h="clamp(44px, 6vh, 52px)"
+                  w="42px"
                 >
                   <FaUnlockAlt size="16px" color="#5B6472" />
                 </InputLeftElement>
 
                 <Input
                   type={showPassword ? "text" : "password"}
-                  pr="48px"
                   placeholder="Mot de passe"
-                  h={{
-                    base: "48px",
-                    md: "52px",
-                  }}
+                  autoComplete="current-password"
+                  h="clamp(44px, 6vh, 52px)"
                   pl="42px"
+                  pr="48px"
                   bg="#F9FAFB"
                   border="1px solid"
                   borderColor="#B8C2CC"
                   color="#1F2937"
-                  _placeholder={{
-                    color: "#6B7280",
-                  }}
-                  _hover={{
-                    borderColor: "#B8C2CC",
-                  }}
+                  _placeholder={{ color: "#6B7280" }}
+                  _hover={{ borderColor: "#B8C2CC" }}
                   _focus={{
                     borderColor: "#0078D4",
                     boxShadow: "0 0 0 1px #0078D4",
                   }}
                   {...register("password")}
                 />
-                <InputRightElement w="48px" h={{ base: "48px", md: "52px" }}>
+
+                <InputRightElement w="48px" h="clamp(44px, 6vh, 52px)">
                   <IconButton
                     type="button"
                     aria-label={
@@ -332,14 +313,13 @@ const LoginPage = ({
 
               {errorMessage && (
                 <Text
-                  mt={3}
+                  mt="0.5rem"
                   color="#D13438"
-                  fontSize={{
-                    base: "0.875rem",
-                    md: "1rem",
-                  }}
+                  fontSize="clamp(0.75rem, 1.7vh, 1rem)"
                   fontWeight="500"
                   textAlign="center"
+                  lineHeight="1.3"
+                  overflowWrap="anywhere"
                 >
                   {errorMessage}
                 </Text>
@@ -349,61 +329,51 @@ const LoginPage = ({
             <Button
               type="submit"
               w="100%"
-              h={{
-                base: "50px",
-                md: "56px",
-              }}
+              minW={0}
+              h="clamp(44px, 6.5vh, 56px)"
+              minH="44px"
+              flexShrink={0}
               bg="#0078D4"
-              mt={{
-                base: 2,
-                md: 4,
-              }}
               color="white"
-              fontSize={{
-                base: "1rem",
-                md: "1.1rem",
-              }}
+              fontSize="clamp(0.9rem, 2.2vh, 1.1rem)"
               fontWeight="600"
               leftIcon={<CiLock size={22} />}
               isLoading={isLoggingIn}
               loadingText="Connexion..."
               isDisabled={isLoggingIn}
-              _hover={{
-                bg: "#106EBE",
-              }}
-              _active={{
-                bg: "#005A9E",
-              }}
+              _hover={{ bg: "#106EBE" }}
+              _active={{ bg: "#005A9E" }}
             >
               Se connecter
             </Button>
 
             <Text
-              fontSize={{
-                base: "1rem",
-                md: "1.1rem",
-              }}
+              fontSize="clamp(0.85rem, 2.2vh, 1.1rem)"
+              lineHeight="1.2"
               textAlign="center"
               color="#1F2937"
             >
               ou
             </Text>
 
-            <Flex justify="center">
+            <Flex w="100%" justify="center" minW={0} flexShrink={0}>
               <SignUp selectedCompany={selectedCompany?.companyId} />
             </Flex>
           </VStack>
         </form>
+
         {selectedCompany && (
           <Text
             onClick={onBack}
-            cursor="pointer"
+            cursor={onBack ? "pointer" : "default"}
             position="absolute"
             bottom="0.5rem"
             right="1rem"
-            fontSize="0.85rem"
+            maxW="calc(100% - 2rem)"
+            fontSize="clamp(0.7rem, 1.6vh, 0.85rem)"
             color="#1E3A5F"
             fontWeight="semibold"
+            noOfLines={1}
           >
             {selectedCompany.name}
           </Text>

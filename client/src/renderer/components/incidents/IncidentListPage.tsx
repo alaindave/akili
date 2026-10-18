@@ -137,7 +137,11 @@ function CompanyIncidents({
               Déclarez un incident et consultez les rapports précédents.
             </PageSubtitle>
           </Box>
-          <Button colorScheme="yellow" onClick={() => setCreating(true)}>
+          <Button
+            fontSize={{ base: "0.5rem", md: "0.9rem" }}
+            colorScheme="yellow"
+            onClick={() => setCreating(true)}
+          >
             Déclarer un incident
           </Button>
         </Flex>
@@ -248,8 +252,13 @@ function CompanyIncidents({
               <Tbody>
                 {incidents.map((incident) => (
                   <Tr key={incident._id}>
-                    <Td fontWeight="600">{incident.incidentNumber}</Td>
-                    <Td>
+                    <Td
+                      fontWeight="600"
+                      fontSize={{ base: "0.5rem", md: "0.9rem" }}
+                    >
+                      {incident.incidentNumber}
+                    </Td>
+                    <Td fontSize={{ base: "0.5rem", md: "0.9rem" }}>
                       {new Date(incident.occurredAt).toLocaleDateString(
                         "fr-FR"
                       )}{" "}
@@ -262,14 +271,23 @@ function CompanyIncidents({
                         }
                       )}
                     </Td>
-                    <Td maxW="220px">
+                    <Td
+                      maxW="220px"
+                      fontSize={{ base: "0.5rem", md: "0.9rem" }}
+                    >
                       <Text isTruncated>{incident.reporterName}</Text>
                     </Td>
-                    <Td maxW="220px">
+                    <Td
+                      maxW="220px"
+                      fontSize={{ base: "0.5rem", md: "0.9rem" }}
+                    >
                       <Text isTruncated>{incident.location}</Text>
                     </Td>
                     <Td maxW="280px">
-                      <Text isTruncated>
+                      <Text
+                        isTruncated
+                        fontSize={{ base: "0.5rem", md: "0.9rem" }}
+                      >
                         {splitIncidentContent(incident.notes).description}
                       </Text>
                     </Td>

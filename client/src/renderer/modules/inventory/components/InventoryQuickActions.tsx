@@ -34,7 +34,7 @@ export default function InventoryQuickActions({ companyId, onSaved }: { companyI
     <Box as="nav" aria-label="Actions rapides" bg="linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))"
       border="1px solid rgba(255,255,255,0.12)" boxShadow="0 2px 8px rgba(0,0,0,0.5)" borderRadius="md"
       minH="50px" maxW="1050px" w="100%" mx="auto" p={2}>
-      <SimpleGrid columns={{ base: 2, lg: 4 }} spacing={{ base: 2, lg: 4 }}>
+      <SimpleGrid templateColumns="repeat(auto-fit, minmax(min(100%, 220px), 1fr))" spacing={2}>
         {actions.map(({ label, icon: Icon, color, onClick }, index) => (
           <Button key={label} fontWeight="600" fontSize="0.95rem" bg="transparent" h="auto" minH="34px"
             py={1} px={2} justifyContent="start" whiteSpace="normal" _hover={{ bg: "blackAlpha.100" }}

@@ -1,4 +1,4 @@
-import { ipcMain } from "../../companyIpc.js";
+import { ipcMain } from "../../shared/companyIpc.js";
 
 import {
   createEmployee,
@@ -8,7 +8,11 @@ import {
   searchEmployees,
 } from "../../../database/repositories/modules/hr/employees.repository.js";
 
-import { uploadEmployeePhoto, updateEmployeeWithPhoto, readEmployeePhoto } from "../../../services/shared/employeePhoto.service.js";
+import {
+  uploadEmployeePhoto,
+  updateEmployeeWithPhoto,
+  readEmployeePhoto,
+} from "../../../services/shared/employeePhoto.service.js";
 
 export function registerEmployeeIPC() {
   console.log("REGISTERING EMPLOYEES IPC");
@@ -52,7 +56,9 @@ export function registerEmployeeIPC() {
   });
 
   // Get employee photo
-  ipcMain.handle("photos:getUrl", (_, relativePath: string) => readEmployeePhoto(relativePath));
+  ipcMain.handle("photos:getUrl", (_, relativePath: string) =>
+    readEmployeePhoto(relativePath)
+  );
 
   // Update employee
   ipcMain.handle(

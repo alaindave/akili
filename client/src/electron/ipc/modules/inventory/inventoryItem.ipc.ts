@@ -1,5 +1,5 @@
 import type { CreateInventoryUnitInput } from "../../../../common/types/inventory/InventoryUnit.js";
-import { ipcMain } from "../../companyIpc.js";
+import { ipcMain } from "../../shared/companyIpc.js";
 import { requireLocalIdentity } from "../../../auth.js";
 
 import type {
@@ -61,12 +61,23 @@ export async function requireAuthenticatedCompanyId(
 }
 
 export function registerInventoryItemIpc(): void {
-  ipcMain.handle("inventory:item:getCatalogOptions", async (_, companyId: string) => {
-    return inventoryItemService.getCatalogOptions(await requireAuthenticatedCompanyId(companyId));
-  });
-  ipcMain.handle("inventory:item:createUnit", async (_, companyId: string, input: CreateInventoryUnitInput) => {
-    return inventoryItemService.createUnit(await requireAuthenticatedCompanyId(companyId), input);
-  });
+  ipcMain.handle(
+    "inventory:item:getCatalogOptions",
+    async (_, companyId: string) => {
+      return inventoryItemService.getCatalogOptions(
+        await requireAuthenticatedCompanyId(companyId)
+      );
+    }
+  );
+  ipcMain.handle(
+    "inventory:item:createUnit",
+    async (_, companyId: string, input: CreateInventoryUnitInput) => {
+      return inventoryItemService.createUnit(
+        await requireAuthenticatedCompanyId(companyId),
+        input
+      );
+    }
+  );
   ipcMain.handle(
     "inventory:item:getById",
     async (_, companyId: string, id: string) => {

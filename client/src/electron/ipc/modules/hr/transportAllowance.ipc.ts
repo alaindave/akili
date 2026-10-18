@@ -1,4 +1,4 @@
-import { ipcMain } from "../../companyIpc.js";
+import { ipcMain } from "../../shared/companyIpc.js";
 
 import {
   createWeeklyTransportAllowanceReport,

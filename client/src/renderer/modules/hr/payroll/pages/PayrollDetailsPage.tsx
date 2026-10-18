@@ -131,131 +131,151 @@ const PayrollDetailsPage = () => {
     <Flex
       bg="#ffffff"
       width="100%"
-      height="93vh"
+      height="93dvh"
+      minW={0}
+      minH={0}
+      overflow="hidden"
+      p={{ base: 3, md: 6 }}
+      gap={4}
       direction="column"
-      justify="space-between"
     >
       {/* Header */}
-      <Flex>
+      <Flex align="center" gap={{ base: 2, md: 4 }} flexShrink={0} minW={0}>
         <Link
           to={{
             pathname: `/hr/payroll/`,
           }}
+          aria-label="Retour à la liste des paies"
+          style={{ flexShrink: 0 }}
         >
-          <Box
-            position="absolute"
-            top="1.5rem"
-            ml="0.2rem"
-            mr="2rem"
-            p={2}
-            border="1px solid #14376b"
-            borderRadius="10px"
-          >
+          <Box p={2} border="1px solid #14376b" borderRadius="10px">
             <FaArrowLeftLong color="black" />
           </Box>
         </Link>
-        <Box ml="2rem">
-          <HStack>
-            <Text mt="1.5rem" ml="1rem" fontSize="1.4rem" fontWeight="600">
-              Fiches de paye
-            </Text>
+        <HStack
+          flex="1"
+          minW={0}
+          overflowX="auto"
+          whiteSpace="nowrap"
+          spacing={{ base: 1, md: 2 }}
+        >
+          <Text
+            fontSize={{ base: "sm", md: "1.1rem" }}
+            fontWeight="600"
+            flexShrink={0}
+          >
+            Fiches de paye
+          </Text>
 
-            <Box mt="1.5rem">
-              <MdOutlineChevronRight fontSize="1.3rem" />
-            </Box>
-
-            <Text mt="1.5rem" fontWeight="600" color="gray.700">
-              Periode du{" "}
-              {payrollRun?.month && payrollRun?.year
-                ? getPayrollPeriod(payrollRun.month, payrollRun.year)
-                : ""}
-            </Text>
-          </HStack>
-
-          <Box mt="3rem">
-            <Flex mb={4} justify="space-between" flexWrap="wrap">
-              {/* Filters and download button */}
-              <Flex width="78vw" justify="space-between">
-                <FormControl maxW="280px">
-                  <FormLabel htmlFor="payroll-department" fontSize="sm">
-                    Département
-                  </FormLabel>
-                  <Select
-                    id="payroll-department"
-                    isDisabled={isDownloading}
-                    value={
-                      department === null ? "" : JSON.stringify(department)
-                    }
-                    onChange={(event) =>
-                      setDepartment(
-                        event.target.value === ""
-                          ? null
-                          : JSON.parse(event.target.value)
-                      )
-                    }
-                    bg="white"
-                  >
-                    <option value="">Tous les départements</option>
-                    {departments.map((name) => (
-                      <option key={name} value={JSON.stringify(name)}>
-                        {name || "Sans département"}
-                      </option>
-                    ))}
-                  </Select>
-                </FormControl>
-                <HStack>
-                  <FormControl maxW="280px">
-                    <FormLabel htmlFor="payroll-payment-method" fontSize="sm">
-                      Mode de paiement
-                    </FormLabel>
-                    <Select
-                      id="payroll-payment-method"
-                      value={paymentMethod}
-                      onChange={(event) =>
-                        setPaymentMethod(
-                          event.target.value as PayrollPaymentFilter
-                        )
-                      }
-                      isDisabled={isDownloading}
-                      bg="white"
-                    >
-                      {Object.entries(payrollPaymentLabels).map(
-                        ([value, label]) => (
-                          <option key={value} value={value}>
-                            {label}
-                          </option>
-                        )
-                      )}
-                    </Select>
-                  </FormControl>
-                  <Box mt="1.3rem">
-                    <IconButton
-                      aria-label="Télécharger le rapport mensuel de paie"
-                      title="Télécharger le rapport mensuel de paie"
-                      icon={<DownloadIcon />}
-                      onClick={downloadReport}
-                      isLoading={isDownloading}
-                      isDisabled={
-                        !payrollRun?._id || filteredResults.length === 0
-                      }
-                      variant="outline"
-                      colorScheme="blue"
-                    />
-                  </Box>
-                </HStack>
-              </Flex>
-            </Flex>
-            <Box mt="2rem">
-              <PayrollResultsTable payrollResults={filteredResults} />
-            </Box>
-            {filteredResults.length === 0 && (
-              <Text mt={4} color="gray.500" textAlign="center">
-                Aucun résultat.
-              </Text>
-            )}
+          <Box flexShrink={0}>
+            <MdOutlineChevronRight fontSize="1.3rem" />
           </Box>
-        </Box>
+
+          <Text
+            fontSize={{ base: "xs", md: "md" }}
+            fontWeight="600"
+            color="gray.700"
+            flexShrink={0}
+          >
+            Periode du{" "}
+            {payrollRun?.month && payrollRun?.year
+              ? getPayrollPeriod(payrollRun.month, payrollRun.year)
+              : ""}
+          </Text>
+        </HStack>
         <PayrollAuditPopover payrollRun={payrollRun} />
+      </Flex>
+
+      <Flex mt="0.5rem" direction="column" flex="1" minH={0} minW={0} gap={4}>
+        <Flex flexShrink={0}>
+          {/* Filters and download button */}
+          <Flex
+            width="100%"
+            justify="space-between"
+            gap={3}
+            flexWrap="wrap"
+            align="end"
+          >
+            <FormControl
+              flex="1 1 200px"
+              maxW={{ base: "100%", md: "280px" }}
+              minW={0}
+            >
+              <FormLabel htmlFor="payroll-department" fontSize="sm">
+                Département
+              </FormLabel>
+              <Select
+                id="payroll-department"
+                isDisabled={isDownloading}
+                value={department === null ? "" : JSON.stringify(department)}
+                onChange={(event) =>
+                  setDepartment(
+                    event.target.value === ""
+                      ? null
+                      : JSON.parse(event.target.value)
+                  )
+                }
+                bg="white"
+              >
+                <option value="">Tous les départements</option>
+                {departments.map((name) => (
+                  <option key={name} value={JSON.stringify(name)}>
+                    {name || "Sans département"}
+                  </option>
+                ))}
+              </Select>
+            </FormControl>
+            <HStack
+              flex="1 1 240px"
+              maxW={{ base: "100%", md: "330px" }}
+              minW={0}
+              align="end"
+            >
+              <FormControl minW={0}>
+                <FormLabel htmlFor="payroll-payment-method" fontSize="sm">
+                  Mode de paiement
+                </FormLabel>
+                <Select
+                  id="payroll-payment-method"
+                  value={paymentMethod}
+                  onChange={(event) =>
+                    setPaymentMethod(event.target.value as PayrollPaymentFilter)
+                  }
+                  isDisabled={isDownloading}
+                  bg="white"
+                >
+                  {Object.entries(payrollPaymentLabels).map(
+                    ([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    )
+                  )}
+                </Select>
+              </FormControl>
+              <Box flexShrink={0}>
+                <IconButton
+                  aria-label="Télécharger le rapport mensuel de paie"
+                  title="Télécharger le rapport mensuel de paie"
+                  icon={<DownloadIcon />}
+                  onClick={downloadReport}
+                  isLoading={isDownloading}
+                  isDisabled={!payrollRun?._id || filteredResults.length === 0}
+                  variant="outline"
+                  colorScheme="blue"
+                />
+              </Box>
+            </HStack>
+          </Flex>
+        </Flex>
+        <Box mt="0.5rem" flex="1" minH={0} minW={0}>
+          <PayrollResultsTable payrollResults={filteredResults} />
+        </Box>
+        {filteredResults.length === 0 && (
+          <Text flexShrink={0} color="gray.500" textAlign="center">
+            Aucun résultat.
+          </Text>
+        )}
       </Flex>
     </Flex>
   );

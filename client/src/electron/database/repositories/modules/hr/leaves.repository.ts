@@ -1,5 +1,6 @@
 import { transaction } from "../../../db.js";
 import type Leave from "../../../../../common/types/hr/leave/Leave.js";
+import type { SyncQueueItem } from "../../../../../common/types/shared/Sync.js";
 import { randomUUID } from "crypto";
 import { all, get, run } from "../../../db.js";
 import { getEmployeeById } from "./employees.repository.js";
@@ -687,18 +688,106 @@ export async function upsertLeave(leave: Leave) {
 
 export async function markLeaveSynced(companyId: string, _id: string) {
   return transaction(async () => {
-  await run(
-    `
-    UPDATE leaves
-    SET
-      synced = 1
-    WHERE _id = ?
-      AND companyId = ?
-    `,
-    [_id, companyId]
-  );
+    await run(
+      "UPDATE leaves SET synced = 1 WHERE _id = ? AND companyId = ?",
+      [_id, companyId]
+    );
+    return true;
+  });
+}
 
-  return true;
+type LeaveSnapshot = Pick<Leave, "companyId" | "_id" | "serverVersion" | "updatedAt">;
+
+export async function acknowledgeLeave(
+  companyId: string,
+  snapshot: LeaveSnapshot,
+  queueId: string,
+  serverVersion: number
+): Promise<void> {
+  if (snapshot.companyId !== companyId ||
+      !Number.isSafeInteger(serverVersion) || serverVersion <= 0 ||
+      serverVersion < (snapshot.serverVersion ?? 0)) {
+    throw new Error("Leave acknowledgement has an invalid company or server version");
+  }
+  await transaction(async () => {
+    const pending = await all<SyncQueueItem>(
+      `SELECT * FROM sync_queue WHERE companyId = ? AND entity = 'leave'
+       AND entityId = ? AND synced = 0 AND _id != ?`,
+      [companyId, snapshot._id, queueId]
+    );
+    for (const item of pending) {
+      const payload = JSON.parse(item.payload) as LeaveSnapshot;
+      if ((payload.serverVersion ?? 0) !== (snapshot.serverVersion ?? 0)) continue;
+      await run(
+        "UPDATE sync_queue SET payload = ? WHERE companyId = ? AND _id = ? AND synced = 0",
+        [JSON.stringify({ ...payload, serverVersion }), companyId, item._id]
+      );
+    }
+    await run(
+      `UPDATE leaves SET serverVersion = ?,
+       synced = CASE WHEN updatedAt = ? AND ? = 0 THEN 1 ELSE 0 END
+       WHERE companyId = ? AND _id = ? AND serverVersion = ?`,
+      [serverVersion, snapshot.updatedAt, pending.length, companyId,
+        snapshot._id, snapshot.serverVersion ?? 0]
+    );
+    await run(
+      `UPDATE sync_queue SET synced = 1 WHERE companyId = ? AND _id = ?
+       AND entity = 'leave' AND entityId = ?`,
+      [companyId, queueId, snapshot._id]
+    );
+  });
+}
+
+export async function recoverLeaveRevision(
+  companyId: string,
+  snapshot: LeaveSnapshot,
+  remote: Leave
+): Promise<boolean> {
+  if (snapshot.companyId !== companyId || remote.companyId !== companyId ||
+      remote._id !== snapshot._id || !Number.isSafeInteger(remote.serverVersion) ||
+      remote.serverVersion <= (snapshot.serverVersion ?? 0)) return false;
+  return transaction(async () => {
+    const history = await all<SyncQueueItem>(
+      `SELECT * FROM sync_queue WHERE companyId = ? AND entity = 'leave'
+       AND entityId = ? AND synced = 1 ORDER BY _id ASC`,
+      [companyId, snapshot._id]
+    );
+    // Cancellation payloads are partial. Reconstruct the accepted history;
+    // never infer unchanged fields from the pending deletion or remote record.
+    const accepted: Record<string, unknown> = {};
+    for (const item of history) {
+      Object.assign(accepted, JSON.parse(item.payload));
+      if (item.operation === "create") {
+        accepted.additionalNotes ??= "";
+        accepted.isDeleted ??= 0;
+      }
+      if (item.operation === "delete") accepted.isDeleted = 1;
+    }
+    const fields = ["companyId", "_id", "employeeId", "submittedMonth",
+      "startDate", "endDate", "subject", "notes", "additionalNotes", "status", "isDeleted"] as const;
+    if (!fields.every((key) => accepted[key] !== undefined && accepted[key] === remote[key])) return false;
+    for (const key of ["submittedAt", "createdAt", "updatedAt"] as const) {
+      if (typeof accepted[key] !== "string" || !remote[key] ||
+          Date.parse(accepted[key]) !== Date.parse(remote[key])) return false;
+    }
+    const pending = await all<SyncQueueItem>(
+      `SELECT * FROM sync_queue WHERE companyId = ? AND entity = 'leave'
+       AND entityId = ? AND synced = 0`,
+      [companyId, snapshot._id]
+    );
+    for (const item of pending) {
+      const payload = JSON.parse(item.payload) as LeaveSnapshot;
+      if ((payload.serverVersion ?? 0) !== (snapshot.serverVersion ?? 0)) continue;
+      await run(
+        "UPDATE sync_queue SET payload = ? WHERE companyId = ? AND _id = ? AND synced = 0",
+        [JSON.stringify({ ...payload, serverVersion: remote.serverVersion }), companyId, item._id]
+      );
+    }
+    await run(
+      `UPDATE leaves SET serverVersion = ? WHERE companyId = ? AND _id = ? AND serverVersion = ?`,
+      [remote.serverVersion, companyId, snapshot._id, snapshot.serverVersion ?? 0]
+    );
+    return true;
   });
 }
 

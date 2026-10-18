@@ -294,300 +294,414 @@ function CompanyStocks({ companyId }: { companyId: string }) {
       display="flex"
       flexDirection="column"
       overflow="hidden"
+      minW={0}
       bg="#F8FAFC"
-      p={{ base: 3, md: 6 }}
+      p={4}
       pb={6}
     >
-      <Heading as="h1" fontSize="1.4rem" color="#03143B" flexShrink={0}>
+      <Heading
+        as="h1"
+        fontSize={{ base: "1.1rem", md: "1.rem" }}
+        color="#03143B"
+        flexShrink={0}
+      >
         Stocks
       </Heading>
       <Text color="gray.600" fontSize="1rem" flexShrink={0}>
         Consultez les quantités disponibles.
       </Text>
-      <SimpleGrid
-        columns={{ base: 2, xl: 4 }}
-        spacing={6}
-        mt={10}
-        mb={8}
-        flexShrink={0}
-      >
-        {metrics.map(({ label, value, icon: Icon, color }) => (
-          <Box
-            key={label}
-            bg="linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))"
-            border="1px solid rgba(255,255,255,0.12)"
-            boxShadow="0 2px 8px rgba(0,0,0,0.5)"
-            borderRadius="0.4rem"
-            p={5}
-            minH="8rem"
-          >
-            <HStack spacing={3}>
-              <Flex
-                bg={color}
-                color="white"
-                borderRadius="15px"
-                boxSize="36px"
-                align="center"
-                justify="center"
-                flexShrink={0}
-              >
-                <Icon aria-hidden="true" />
-              </Flex>
-              <Text color="gray.700" fontWeight="700" fontSize="1.1rem">
-                {label}
-              </Text>
-            </HStack>
-            <Text
-              color="black"
-              fontSize="1.5rem"
-              fontWeight="700"
-              textAlign="right"
-              mt={3}
-            >
-              {data ? formatNumber(value) : "—"}
-            </Text>
-          </Box>
-        ))}
-      </SimpleGrid>
-      <Box
-        bg="white"
-        border="1px solid #E5E5E5"
-        borderRadius="12px"
-        overflow="hidden"
-        display="flex"
-        flexDirection="column"
+      <Flex
+        direction="column"
         flex="1"
         minH={0}
+        minW={0}
+        overflowY="auto"
+        overflowX="hidden"
       >
-        <Flex
-          p={5}
-          gap={3}
-          wrap="wrap"
-          borderBottom="1px solid #EAEAEA"
+        <SimpleGrid
+          minChildWidth="min(14rem, calc((100% - 1rem) / 2))"
+          spacing={4}
+          mt={10}
+          mb={8}
           flexShrink={0}
         >
-          <InputGroup flex="1" minW="200px">
-            <InputLeftElement pointerEvents="none" color="gray.500">
-              <FiSearch />
-            </InputLeftElement>
-            <Input
-              aria-label="Rechercher un article"
-              placeholder="Rechercher par nom ou référence…"
-              value={search}
+          {metrics.map(({ label, value, icon: Icon, color }) => (
+            <Box
+              key={label}
+              bg="linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))"
+              border="1px solid rgba(255,255,255,0.12)"
+              boxShadow="0 2px 8px rgba(0,0,0,0.5)"
+              borderRadius="0.4rem"
+              p={3}
+              minH="6rem"
+              minW={0}
+              overflowWrap="anywhere"
+            >
+              <HStack
+                spacing={{ base: 2, md: 3 }}
+                align="center"
+                flexWrap="nowrap"
+              >
+                <Flex
+                  bg={color}
+                  color="white"
+                  borderRadius="15px"
+                  boxSize="36px"
+                  align="center"
+                  justify="center"
+                  flexShrink={0}
+                >
+                  <Icon aria-hidden="true" />
+                </Flex>
+                <Text
+                  minW={0}
+                  flex="1"
+                  color="gray.700"
+                  fontWeight="700"
+                  fontSize="1.1rem"
+                >
+                  {label}
+                </Text>
+              </HStack>
+              <Text
+                color="black"
+                fontSize="1.5rem"
+                fontWeight="700"
+                textAlign="right"
+                mt={3}
+              >
+                {data ? formatNumber(value) : "—"}
+              </Text>
+            </Box>
+          ))}
+        </SimpleGrid>
+        <Box
+          bg="white"
+          border="1px solid #E5E5E5"
+          borderRadius="12px"
+          overflow="hidden"
+          display="flex"
+          flexDirection="column"
+          flex="1"
+          minH="20rem"
+          minW={0}
+        >
+          <Flex
+            p={{ base: 2, md: 4 }}
+            gap={{ base: 1, md: 2 }}
+            wrap="nowrap"
+            overflowX="auto"
+            sx={{
+              "& > .chakra-select__wrapper": {
+                flex: "1 1 0",
+                minWidth: "7rem",
+              },
+            }}
+            borderBottom="1px solid #EAEAEA"
+            flexShrink={0}
+          >
+            <InputGroup flex="2 1 0" minW="9rem">
+              <InputLeftElement pointerEvents="none" color="gray.500">
+                <FiSearch />
+              </InputLeftElement>
+              <Input
+                aria-label="Rechercher un article"
+                placeholder="Rechercher par nom ou référence…"
+                value={search}
+                onChange={(event) => {
+                  setSearch(event.target.value);
+                  setPage(0);
+                }}
+                fontSize="sm"
+              />
+            </InputGroup>
+            <Select
+              aria-label="Filtrer par entrepôt"
+              w="100%"
+              value={warehouse}
               onChange={(event) => {
-                setSearch(event.target.value);
+                setWarehouse(event.target.value);
+                setLocation("");
                 setPage(0);
               }}
               fontSize="sm"
-            />
-          </InputGroup>
-          <Select
-            aria-label="Filtrer par entrepôt"
-            w={{ base: "100%", sm: "190px" }}
-            value={warehouse}
-            onChange={(event) => {
-              setWarehouse(event.target.value);
-              setLocation("");
-              setPage(0);
-            }}
-            fontSize="sm"
-          >
-            <option value="">Tous les entrepôts</option>
-            {data?.warehouses.map((entry) => (
-              <option key={entry._id} value={entry._id}>
-                {entry.name}
-              </option>
-            ))}
-          </Select>
-          <Select
-            aria-label="Filtrer par emplacement"
-            isDisabled={!warehouse}
-            w={{ base: "100%", sm: "190px" }}
-            value={location}
-            onChange={(event) => {
-              setLocation(event.target.value);
-              setPage(0);
-            }}
-            fontSize="sm"
-          >
-            <option value="">
-              {warehouse ? "Tous les emplacements" : "Sélectionnez un entrepôt"}
-            </option>
-            {locationOptions.map(({ entry, depth }) => (
-              <option key={entry._id} value={entry._id}>
-                {depth > 0 ? `${"\u00a0\u00a0".repeat(depth)}↳ ` : ""}
-                {entry.name}
-              </option>
-            ))}
-          </Select>
-          <Select
-            aria-label="Filtrer par statut"
-            w={{ base: "100%", sm: "160px" }}
-            value={status}
-            onChange={(event) => {
-              setStatus(event.target.value);
-              setPage(0);
-            }}
-            fontSize="sm"
-          >
-            <option value="">Tous les statuts</option>
-            {Object.entries(statuses).map(([key, entry]) => (
-              <option key={key} value={key}>
-                {entry.label}
-              </option>
-            ))}
-          </Select>
-          {(search || warehouse || location || status) && (
-            <Button variant="ghost" onClick={reset}>
-              Réinitialiser
-            </Button>
-          )}
-        </Flex>
-        <Box flex="1" minH={0} overflow="auto">
-          {error ? (
-            <Stack p={6} align="start">
-              <Text role="alert">{error}</Text>
-              <Button onClick={() => setRefresh((value) => value + 1)}>
-                Réessayer
-              </Button>
-            </Stack>
-          ) : loading ? (
-            <Stack
-              p={6}
-              spacing={5}
-              role="status"
-              aria-label="Chargement des stocks"
             >
-              {[0, 1, 2, 3, 4].map((value) => (
-                <Skeleton key={value} h="36px" />
+              <option value="">Tous les entrepôts</option>
+              {data?.warehouses.map((entry) => (
+                <option key={entry._id} value={entry._id}>
+                  {entry.name}
+                </option>
               ))}
-            </Stack>
-          ) : (
-            <Box whiteSpace="nowrap">
-              <Table
-                size="md"
-                sx={{
-                  th: {
-                    position: "sticky",
-                    top: 0,
-                    zIndex: 1,
-                    bg: "#FAFAFA",
-                    color: "#737373",
-                    fontSize: "10px",
-                    letterSpacing: "0.08em",
-                    py: 3.5,
-                  },
-                  td: { py: 4, fontSize: "sm", borderColor: "#F0F0F0" },
-                }}
+            </Select>
+            <Select
+              aria-label="Filtrer par emplacement"
+              isDisabled={!warehouse}
+              w="100%"
+              value={location}
+              onChange={(event) => {
+                setLocation(event.target.value);
+                setPage(0);
+              }}
+              fontSize="sm"
+            >
+              <option value="">
+                {warehouse
+                  ? "Tous les emplacements"
+                  : "Sélectionnez un entrepôt"}
+              </option>
+              {locationOptions.map(({ entry, depth }) => (
+                <option key={entry._id} value={entry._id}>
+                  {depth > 0 ? `${"\u00a0\u00a0".repeat(depth)}↳ ` : ""}
+                  {entry.name}
+                </option>
+              ))}
+            </Select>
+            <Select
+              aria-label="Filtrer par statut"
+              w="100%"
+              value={status}
+              onChange={(event) => {
+                setStatus(event.target.value);
+                setPage(0);
+              }}
+              fontSize="sm"
+            >
+              <option value="">Tous les statuts</option>
+              {Object.entries(statuses).map(([key, entry]) => (
+                <option key={key} value={key}>
+                  {entry.label}
+                </option>
+              ))}
+            </Select>
+            {(search || warehouse || location || status) && (
+              <Button variant="ghost" flexShrink={0} onClick={reset}>
+                Réinitialiser
+              </Button>
+            )}
+          </Flex>
+          <Box
+            flex="1"
+            minH={0}
+            overflow="auto"
+            tabIndex={0}
+            role="region"
+            aria-label="Tableau des stocks"
+          >
+            {error ? (
+              <Stack p={6} align="start">
+                <Text role="alert">{error}</Text>
+                <Button onClick={() => setRefresh((value) => value + 1)}>
+                  Réessayer
+                </Button>
+              </Stack>
+            ) : loading ? (
+              <Stack
+                p={6}
+                spacing={5}
+                role="status"
+                aria-label="Chargement des stocks"
               >
-                <Thead>
-                  <Tr>
-                    <Th>Article</Th>
-                    <Th>Entrepôt</Th>
-                    <Th>Emplacement</Th>
-                    <Th isNumeric>Disponible</Th>
-                    <Th isNumeric>Réservé</Th>
-                    <Th>Statut</Th>
-                  </Tr>
-                </Thead>
-                <Tbody>
-                  {filteredRows
-                    .slice(
-                      currentPage * PAGE_SIZE,
-                      (currentPage + 1) * PAGE_SIZE
-                    )
-                    .map((row) => {
-                      const state =
-                        statuses[stockStatus(row.available, row.item)];
-                      return (
-                        <Tr key={row.key} _hover={{ bg: "#FCFCFC" }}>
-                          <Td>
-                            <Text fontWeight="600">{row.item.name}</Text>
-                            <Text
-                              color="gray.500"
-                              fontSize="xs"
-                              fontFamily="mono"
-                              mt={1}
-                            >
-                              {row.item.sku}
-                            </Text>
-                          </Td>
-                          <Td>{warehouses.get(row.warehouseId) ?? "—"}</Td>
-                          <Td>{locations.get(row.locationId) ?? "—"}</Td>
-                          <Td isNumeric>{formatNumber(row.available)}</Td>
-                          <Td isNumeric>{formatNumber(row.reserved)}</Td>
-                          <Td>
-                            <Badge
-                              colorScheme={state.color}
-                              textTransform="none"
-                              borderRadius="full"
-                              px={2.5}
-                              py={0.5}
-                            >
-                              {state.label}
-                            </Badge>
-                          </Td>
-                        </Tr>
-                      );
-                    })}
-                  {!filteredRows.length && (
+                {[0, 1, 2, 3, 4].map((value) => (
+                  <Skeleton key={value} h="36px" />
+                ))}
+              </Stack>
+            ) : (
+              <Box>
+                <Table
+                  size="md"
+                  w="100%"
+                  minW="40rem"
+                  sx={{
+                    tableLayout: "fixed",
+                    "th, td": {
+                      px: { base: 2, md: 3, xl: 4 },
+                      whiteSpace: "normal",
+                      overflowWrap: "anywhere",
+                    },
+                    th: {
+                      position: "sticky",
+                      top: 0,
+                      zIndex: 1,
+                      bg: "#FAFAFA",
+                      color: "#737373",
+                      fontSize: "10px",
+                      letterSpacing: "0.08em",
+                      py: 3.5,
+                      whiteSpace: "nowrap",
+                      overflowWrap: "normal",
+                      verticalAlign: "middle",
+                    },
+                    "th:nth-of-type(4), th:nth-of-type(5), td:nth-of-type(4), td:nth-of-type(5)":
+                      {
+                        px: 1,
+                      },
+                    td: {
+                      py: 3,
+                      fontSize: "sm",
+                      borderColor: "#F0F0F0",
+                      verticalAlign: "middle",
+                    },
+                  }}
+                >
+                  <colgroup>
+                    <col style={{ width: "27%" }} />
+                    <col style={{ width: "16%" }} />
+                    <col style={{ width: "20%" }} />
+                    <col style={{ width: "13%" }} />
+                    <col style={{ width: "11%" }} />
+                    <col style={{ width: "13%" }} />
+                  </colgroup>
+                  <Thead>
                     <Tr>
-                      <Td colSpan={6} textAlign="center">
-                        <Text py={8}>Aucun stock à afficher.</Text>
-                      </Td>
+                      <Th>Article</Th>
+                      <Th>Entrepôt</Th>
+                      <Th>Emplacement</Th>
+                      <Th isNumeric>Disponible</Th>
+                      <Th isNumeric>Réservé</Th>
+                      <Th>Statut</Th>
                     </Tr>
-                  )}
-                </Tbody>
-              </Table>
-            </Box>
-          )}
+                  </Thead>
+                  <Tbody>
+                    {filteredRows
+                      .slice(
+                        currentPage * PAGE_SIZE,
+                        (currentPage + 1) * PAGE_SIZE
+                      )
+                      .map((row) => {
+                        const state =
+                          statuses[stockStatus(row.available, row.item)];
+                        return (
+                          <Tr key={row.key} _hover={{ bg: "#FCFCFC" }}>
+                            <Td>
+                              <Text
+                                fontWeight="600"
+                                noOfLines={2}
+                                title={row.item.name}
+                              >
+                                {row.item.name}
+                              </Text>
+                              <Text
+                                color="gray.500"
+                                fontSize="xs"
+                                fontFamily="mono"
+                                mt={1}
+                                noOfLines={1}
+                                title={row.item.sku}
+                              >
+                                {row.item.sku}
+                              </Text>
+                            </Td>
+                            <Td>
+                              <Text
+                                noOfLines={3}
+                                title={warehouses.get(row.warehouseId)}
+                              >
+                                {warehouses.get(row.warehouseId) ?? "—"}
+                              </Text>
+                            </Td>
+                            <Td>
+                              <Text
+                                noOfLines={3}
+                                title={locations.get(row.locationId)}
+                              >
+                                {(locations.get(row.locationId) ?? "—")
+                                  .split(">")
+                                  .join(" > ")}
+                              </Text>
+                            </Td>
+                            <Td isNumeric>
+                              <Text
+                                noOfLines={3}
+                                title={formatNumber(row.available)}
+                              >
+                                {formatNumber(row.available)}
+                              </Text>
+                            </Td>
+                            <Td isNumeric>
+                              <Text
+                                noOfLines={3}
+                                title={formatNumber(row.reserved)}
+                              >
+                                {formatNumber(row.reserved)}
+                              </Text>
+                            </Td>
+                            <Td>
+                              <Badge
+                                colorScheme={state.color}
+                                textTransform="none"
+                                borderRadius="full"
+                                px={2.5}
+                                py={0.5}
+                                maxW="100%"
+                                whiteSpace="normal"
+                              >
+                                <Text as="span" noOfLines={3}>
+                                  {state.label}
+                                </Text>
+                              </Badge>
+                            </Td>
+                          </Tr>
+                        );
+                      })}
+                    {!filteredRows.length && (
+                      <Tr>
+                        <Td colSpan={6} textAlign="center">
+                          <Text py={8}>Aucun stock à afficher.</Text>
+                        </Td>
+                      </Tr>
+                    )}
+                  </Tbody>
+                </Table>
+              </Box>
+            )}
+          </Box>
+          <Flex
+            flexShrink={0}
+            px={5}
+            py={4}
+            borderTop="1px solid #EAEAEA"
+            justify="space-between"
+            align="center"
+            gap={3}
+            wrap="wrap"
+          >
+            <Text fontSize="xs" color="gray.500" aria-live="polite">
+              {loading
+                ? "Chargement…"
+                : error
+                ? "Stocks indisponibles"
+                : filteredRows.length
+                ? `${currentPage * PAGE_SIZE + 1}–${Math.min(
+                    (currentPage + 1) * PAGE_SIZE,
+                    filteredRows.length
+                  )} sur ${filteredRows.length}`
+                : "0 résultat"}
+            </Text>
+            <HStack>
+              <Button
+                size="sm"
+                variant="outline"
+                isDisabled={loading || !!error || currentPage === 0}
+                onClick={() => setPage(currentPage - 1)}
+              >
+                Précédent
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                isDisabled={
+                  loading ||
+                  !!error ||
+                  (currentPage + 1) * PAGE_SIZE >= filteredRows.length
+                }
+                onClick={() => setPage(currentPage + 1)}
+              >
+                Suivant
+              </Button>
+            </HStack>
+          </Flex>
         </Box>
-        <Flex
-          flexShrink={0}
-          px={5}
-          py={4}
-          borderTop="1px solid #EAEAEA"
-          justify="space-between"
-          align="center"
-          gap={3}
-          wrap="wrap"
-        >
-          <Text fontSize="xs" color="gray.500" aria-live="polite">
-            {loading
-              ? "Chargement…"
-              : error
-              ? "Stocks indisponibles"
-              : filteredRows.length
-              ? `${currentPage * PAGE_SIZE + 1}–${Math.min(
-                  (currentPage + 1) * PAGE_SIZE,
-                  filteredRows.length
-                )} sur ${filteredRows.length}`
-              : "0 résultat"}
-          </Text>
-          <HStack>
-            <Button
-              size="sm"
-              variant="outline"
-              isDisabled={loading || !!error || currentPage === 0}
-              onClick={() => setPage(currentPage - 1)}
-            >
-              Précédent
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              isDisabled={
-                loading ||
-                !!error ||
-                (currentPage + 1) * PAGE_SIZE >= filteredRows.length
-              }
-              onClick={() => setPage(currentPage + 1)}
-            >
-              Suivant
-            </Button>
-          </HStack>
-        </Flex>
-      </Box>
+      </Flex>
     </Box>
   );
 }

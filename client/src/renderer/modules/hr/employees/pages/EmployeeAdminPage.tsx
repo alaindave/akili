@@ -226,13 +226,15 @@ const EmployeeAdminPage = () => {
   return (
     <Flex
       direction="column"
-      ml="0.01rem"
       w="100%"
-      minH="95vh"
+      minW={0}
+      h="100%"
+      minH={0}
       bg="#F8FAFC"
       border="none"
       overflow="hidden"
       p={{ base: 3, md: 6 }}
+      pb={{ base: "calc(46px + 1rem)", md: "calc(52px + 1rem)" }}
       position="relative"
     >
       {/* =====================================================
@@ -240,6 +242,7 @@ const EmployeeAdminPage = () => {
       ====================================================== */}
 
       <Flex
+        flexShrink={0}
         justify="space-between"
         align={{
           base: "flex-start",
@@ -280,153 +283,165 @@ const EmployeeAdminPage = () => {
         </Button>
       </Flex>
 
-      {/* =====================================================
-          DASHBOARD
-      ====================================================== */}
+      <Box flex="1" minH={0} minW={0} overflowY="auto" overflowX="hidden">
+        <Flex direction="column" minH="100%" minW={0} px={2} pb={2}>
+          {/* =====================================================
+              DASHBOARD
+          ====================================================== */}
 
-      <Box mt="3rem">
-        <EmployeeDashboard
-          employeeCount={employees.length}
-          attendanceCount={dailyAttendance.length}
-          leaveCount={leaves.length}
-          lateCount={lateCount.length}
-        />
+          <Box mt="3rem" flexShrink={0}>
+            <EmployeeDashboard
+              employeeCount={employees.length}
+              attendanceCount={dailyAttendance.length}
+              leaveCount={leaves.length}
+              lateCount={lateCount.length}
+            />
+          </Box>
+
+          {/* =====================================================
+              MAIN GRID
+          ====================================================== */}
+
+          <Grid
+            templateColumns={{
+              base: "minmax(0, 1fr)",
+              xl: tasks.length ? "minmax(0, 1.2fr) minmax(0, 1fr)" : "minmax(0, 1fr)",
+            }}
+            templateAreas={{
+              base: tasks.length ? '"tasks" "notes"' : '"notes"',
+              xl: tasks.length ? '"notes tasks"' : '"notes"',
+            }}
+            alignItems="start"
+            columnGap={6}
+            rowGap="3rem"
+            flexShrink={0}
+            pt={{ base: 6, xl: 12 }}
+          >
+            {/* ===================================================
+                NOTES
+            ==================================================== */}
+
+            <Box
+              border="1px solid rgba(255,255,255,0.12)"
+              boxShadow="0 2px 8px rgba(0,0,0,0.2)"
+              borderRadius="5px"
+              bg="#F8FAFC"
+              p={5}
+              display="flex"
+              flexDir="column"
+              gridArea="notes"
+              minW={0}
+              w="100%"
+              maxW={tasks.length ? undefined : "42rem"}
+              justifySelf="center"
+              h="18rem"
+              position="relative"
+            >
+              <Flex align="center" gap={2} mb={3}>
+                <Text
+                  color="#1F2937"
+                  fontSize="clamp(1.3rem, 1vw + 0.8rem, 1.3rem)"
+                  fontWeight="600"
+                >
+                  Notes
+                </Text>
+              </Flex>
+
+              <Textarea
+                placeholder={
+                  "Bienvenue sur LeatherWorks.\nÉcrivez vos notes ici..."
+                }
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                bg="#091735"
+                border="1px solid rgba(255,255,255,0.1)"
+                _hover={{
+                  borderColor: "yellow.300",
+                }}
+                _focus={{
+                  borderColor: "yellow.400",
+                  boxShadow: "0 0 0 1px #F4C20D",
+                }}
+                flex="1"
+                minH={0}
+                resize="none"
+                color="#ffffff"
+                fontSize={{ base: "1rem", sm: "1rem", md: "1.1rem" }}
+                fontWeight="500"
+                fontFamily="body"
+                _placeholder={{
+                  color: "#6B7280",
+                }}
+              />
+
+              <Button
+                position="absolute"
+                top="0.5rem"
+                right="1.3rem"
+                colorScheme="blue"
+                width="6rem"
+                height="3rem"
+                onClick={handleOpenReminder}
+                isDisabled={!notes?.trim()}
+              >
+                <Box mr="0.4rem">
+                  <FaBell />
+                </Box>
+                Rappel
+              </Button>
+            </Box>
+
+            {/* ===================================================
+                TASKS
+            ==================================================== */}
+
+            <Box
+              gridArea="tasks"
+              h="auto"
+              maxH="42vh"
+              overflowY="auto"
+              overflowX="hidden"
+              overscrollBehaviorY="contain"
+              display={tasks.length ? "flex" : "none"}
+              flexDir="column"
+              minH={0}
+              minW={0}
+            >
+              {tasks.map((task) => (
+                <Box
+                  key={task._id}
+                  flexShrink={0}
+                  mt="0.1rem"
+                  ml={{
+                    base: 0,
+                    xl: 8,
+                  }}
+                >
+                  <TaskCard
+                    task={task}
+                    onTaskClick={handleTaskClick}
+                    onTaskDelete={handleTaskDelete}
+                  />
+                </Box>
+              ))}
+            </Box>
+          </Grid>
+
+        </Flex>
       </Box>
 
-      {/* =====================================================
-          MAIN GRID
-      ====================================================== */}
-
-      <Grid
-        templateColumns={{
-          base: "1fr",
-          xl: "1.2fr 1fr",
-        }}
-        gap={6}
-        flex="1"
-        minH={0}
-        overflow="hidden"
-        mt={4}
-      >
-        {/* ===================================================
-            NOTES
-        ==================================================== */}
-
-        <Box
-          border="1px solid rgba(255,255,255,0.12)"
-          boxShadow="0 2px 8px rgba(0,0,0,0.2)"
-          borderRadius="5px"
-          bg="#F8FAFC"
-          p={5}
-          display="flex"
-          flexDir="column"
-          flex={1}
-          minH="15rem"
-          maxH="18rem"
-          mt="4rem"
-          overflowY="auto"
-          position="relative"
-          left={tasks.length === 0 ? "15rem" : "0.5rem"}
-        >
-          <Flex align="center" gap={2} mb={3}>
-            <Text
-              color="#1F2937"
-              fontSize="clamp(1.3rem, 1vw + 0.8rem, 1.3rem)"
-              fontWeight="600"
-            >
-              Notes
-            </Text>
-          </Flex>
-
-          <Textarea
-            placeholder={
-              "Bienvenue sur LeatherWorks.\nÉcrivez vos notes ici..."
-            }
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            bg="#091735"
-            border="1px solid rgba(255,255,255,0.1)"
-            _hover={{
-              borderColor: "yellow.300",
-            }}
-            _focus={{
-              borderColor: "yellow.400",
-              boxShadow: "0 0 0 1px #F4C20D",
-            }}
-            flex="1"
-            resize="none"
-            color="#ffffff"
-            fontSize={{ base: "1rem", sm: "1rem", md: "1.1rem" }}
-            fontWeight="500"
-            fontFamily="body"
-            _placeholder={{
-              color: "#6B7280",
-            }}
-          />
-
-          <Button
-            position="absolute"
-            top="0.5rem"
-            right="1.3rem"
-            colorScheme="blue"
-            width="6rem"
-            height="3rem"
-            onClick={handleOpenReminder}
-            isDisabled={!notes?.trim()}
-          >
-            <Box mr="0.4rem">
-              <FaBell />
-            </Box>
-            Rappel
-          </Button>
-        </Box>
-
-        {/* ===================================================
-            TASKS
-        ==================================================== */}
-
-        <Box
-          maxH="42vh"
-          display="flex"
-          flexDir="column"
-          overflowY="auto"
-          minH={0}
-          mt="4rem"
-        >
-          <TaskSubmissionModal
-            isOpen={isCreateOpen}
-            onClose={onCreateClose}
-            onRefresh={handleTaskRefresh}
-            adminUsersList={adminUsersList}
-            author={user!}
-          />
-
-          {tasks.map((task) => (
-            <Box
-              key={task._id}
-              mt="0.1rem"
-              ml={{
-                base: 0,
-                xl: 8,
-              }}
-            >
-              <TaskCard
-                task={task}
-                onTaskClick={handleTaskClick}
-                onTaskDelete={handleTaskDelete}
-              />
-            </Box>
-          ))}
-        </Box>
-      </Grid>
-
-      {/* =====================================================
-          QUICK ACTIONS
-      ====================================================== */}
-
-      <Box>
+      {/* Quick actions stay above the fixed lower application bar. */}
+      <Box pt={4} px={2} flexShrink={0} minW={0}>
         <QuickActions onTaskCreate={handleTaskCreate} employees={employees} />
       </Box>
+
+      <TaskSubmissionModal
+        isOpen={isCreateOpen}
+        onClose={onCreateClose}
+        onRefresh={handleTaskRefresh}
+        adminUsersList={adminUsersList}
+        author={user!}
+      />
 
       {/* =====================================================
           REMINDER

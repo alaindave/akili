@@ -1,4 +1,4 @@
-import { ipcMain } from "../../companyIpc.js";
+import { ipcMain } from "../../shared/companyIpc.js";
 import {
   InventoryDocumentLineRepository,
   type InventoryDocumentLineListOptions,
@@ -38,7 +38,12 @@ export function registerInventoryDocumentLinesIpc(): void {
 
   ipcMain.handle(
     "inventory:documentLine:getByDocument",
-    async (_, companyId: string, documentId: string, includeDeleted?: boolean) => {
+    async (
+      _,
+      companyId: string,
+      documentId: string,
+      includeDeleted?: boolean
+    ) => {
       const authenticatedCompanyId = await requireAuthenticatedCompanyId(
         companyId
       );
@@ -66,7 +71,12 @@ export function registerInventoryDocumentLinesIpc(): void {
 
   ipcMain.handle(
     "inventory:documentLine:getByWarehouse",
-    async (_, companyId: string, warehouseId: string, includeDeleted?: boolean) => {
+    async (
+      _,
+      companyId: string,
+      warehouseId: string,
+      includeDeleted?: boolean
+    ) => {
       const authenticatedCompanyId = await requireAuthenticatedCompanyId(
         companyId
       );
@@ -94,7 +104,12 @@ export function registerInventoryDocumentLinesIpc(): void {
 
   ipcMain.handle(
     "inventory:documentLine:getBySerialNumber",
-    async (_, companyId: string, serialNumber: string, includeDeleted?: boolean) => {
+    async (
+      _,
+      companyId: string,
+      serialNumber: string,
+      includeDeleted?: boolean
+    ) => {
       const authenticatedCompanyId = await requireAuthenticatedCompanyId(
         companyId
       );
@@ -147,12 +162,7 @@ export function registerInventoryDocumentLinesIpc(): void {
 
   ipcMain.handle(
     "inventory:documentLine:getByDocumentAndLineNumber",
-    async (
-      _,
-      companyId: string,
-      documentId: string,
-      lineNumber: number
-    ) => {
+    async (_, companyId: string, documentId: string, lineNumber: number) => {
       const authenticatedCompanyId = await requireAuthenticatedCompanyId(
         companyId
       );
@@ -180,14 +190,20 @@ export function registerInventoryDocumentLinesIpc(): void {
         authenticatedCompanyId,
         requireId(documentId, "Document ID"),
         requireLineNumber(lineNumber),
-        excludeId === undefined ? undefined : requireId(excludeId, "Document line ID")
+        excludeId === undefined
+          ? undefined
+          : requireId(excludeId, "Document line ID")
       );
     }
   );
 
   ipcMain.handle(
     "inventory:documentLine:list",
-    async (_, companyId: string, options: InventoryDocumentLineListOptions = {}) => {
+    async (
+      _,
+      companyId: string,
+      options: InventoryDocumentLineListOptions = {}
+    ) => {
       const authenticatedCompanyId = await requireAuthenticatedCompanyId(
         companyId
       );

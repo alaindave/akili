@@ -1,7 +1,10 @@
-import { updateStoredEmployeeDocument, deleteStoredEmployeeDocument } from "../../../services/shared/employeeDocumentStorage.service.js";
+import {
+  updateStoredEmployeeDocument,
+  deleteStoredEmployeeDocument,
+} from "../../../services/shared/employeeDocumentStorage.service.js";
 import { resolveEmployeeDocumentPath } from "../../../services/shared/mediaFile.service.js";
 import { uploadValidatedEmployeeDocument } from "../../../services/modules/hr/employeeDocuments.service.js";
-import { ipcMain } from "../../companyIpc.js";
+import { ipcMain } from "../../shared/companyIpc.js";
 import { shell, dialog } from "electron";
 import fs from "fs";
 import fsPromises from "fs/promises";

@@ -195,498 +195,522 @@ const TaskSubmissionModal = ({
       <ModalOverlay backdropFilter="auto" backdropBlur="0.5rem" />
 
       <ModalContent
+        as="form"
+        onSubmit={handleSubmit(onSubmit, (formErrors) => {
+          console.error("FORM ERRORS:", formErrors);
+        })}
         bg="gray.100"
-        maxH={{ base: "100vh", md: "90vh" }}
+        display="flex"
+        flexDirection="column"
+        minH={{ base: "100dvh", sm: 0 }}
+        maxH={{ base: "100dvh", sm: "calc(100dvh - 2rem)", md: "90dvh" }}
+        my={{ base: 0, sm: 4 }}
+        minW={0}
         overflow="hidden"
       >
-        <form
-          onSubmit={handleSubmit(onSubmit, (formErrors) => {
-            console.error("FORM ERRORS:", formErrors);
-          })}
+        {/* =====================================================
+            HEADER
+        ===================================================== */}
+
+        <ModalHeader
+          px={{ base: 4, md: 6 }}
+          py={{ base: 3, md: 5 }}
+          position="sticky"
+          top={0}
+          zIndex={1}
+          bg="gray.100"
+          flexShrink={0}
         >
-          {/* =====================================================
-              HEADER
-          ===================================================== */}
+          <Flex
+            direction={{ base: "column", md: "row" }}
+            justify="space-between"
+            align={{ base: "stretch", md: "center" }}
+            gap={{ base: 4, md: 6 }}
+            pr={{ base: 8, md: 10 }}
+          >
+            {/* TITLE */}
 
-          <ModalHeader px={{ base: 4, md: 6 }} py={{ base: 4, md: 5 }}>
-            <Flex
-              direction={{ base: "column", md: "row" }}
-              justify="space-between"
-              align={{ base: "stretch", md: "center" }}
-              gap={{ base: 4, md: 6 }}
-              pr={{ base: 8, md: 10 }}
-            >
-              {/* TITLE */}
-
-              <Box minW={0}>
-                <HStack spacing={2} align="center">
-                  <Box
-                    color="blue.700"
-                    fontSize={{
-                      base: "1.35rem",
-                      md: "1.6rem",
-                    }}
-                    flexShrink={0}
-                  >
-                    <MdTask />
-                  </Box>
-
-                  <Text
-                    color="blue.700"
-                    fontFamily="heading"
-                    fontSize={{
-                      base: "1.3rem",
-                      md: "1.6rem",
-                    }}
-                    fontWeight="700"
-                  >
-                    Nouvelle tâche
-                  </Text>
-                </HStack>
+            <Box minW={0}>
+              <HStack spacing={2} align="center">
+                <Box
+                  color="blue.700"
+                  fontSize={{
+                    base: "1.35rem",
+                    md: "1.6rem",
+                  }}
+                  flexShrink={0}
+                >
+                  <MdTask />
+                </Box>
 
                 <Text
-                  ml={{ base: 0, md: "2rem" }}
-                  color="gray.500"
+                  color="blue.700"
+                  fontFamily="heading"
                   fontSize={{
-                    base: "0.85rem",
-                    md: "1rem",
+                    base: "1.3rem",
+                    md: "1.6rem",
                   }}
-                  position="relative"
-                  bottom="0.4rem"
+                  fontWeight="700"
                 >
-                  Créer une nouvelle tâche
+                  Nouvelle tâche
                 </Text>
-              </Box>
+              </HStack>
 
-              {/* =================================================
-                  RECIPIENT SELECTOR
-              ================================================= */}
-
-              <Flex
-                direction={{ base: "column", sm: "row" }}
-                align={{ base: "stretch", sm: "center" }}
-                gap={2}
-                width={{ base: "100%", md: "auto" }}
-              >
-                <Menu>
-                  <MenuButton
-                    as={Button}
-                    variant="outline"
-                    bg="white"
-                    borderColor="gray.300"
-                    color={recipient?._id ? "blue.600" : "gray.600"}
-                    width={{
-                      base: "100%",
-                      sm: "auto",
-                    }}
-                    maxW={{ base: "100%", md: "280px" }}
-                    overflow="hidden"
-                    textOverflow="ellipsis"
-                    whiteSpace="nowrap"
-                    onClick={() => setErrorMessage("")}
-                    _hover={{
-                      bg: "gray.50",
-                    }}
-                  >
-                    {recipient?._id
-                      ? `${recipient.firstName} ${recipient.lastName}`
-                      : "Choisissez un destinataire"}
-                  </MenuButton>
-
-                  <MenuList
-                    maxH="300px"
-                    overflowY="auto"
-                    maxW={{
-                      base: "calc(100vw - 32px)",
-                      md: "320px",
-                    }}
-                  >
-                    {adminUsersList?.map((adminUser: AdminUser) => (
-                      <MenuItem
-                        key={adminUser._id}
-                        onClick={() => setRecipient(adminUser)}
-                        color="gray.800"
-                        _hover={{
-                          bg: "gray.100",
-                        }}
-                      >
-                        {adminUser.firstName} {adminUser.lastName}
-                      </MenuItem>
-                    ))}
-                  </MenuList>
-                </Menu>
-
-                <Button
-                  type="button"
-                  isDisabled={!recipient?._id}
-                  onClick={handleSelectRecipients}
-                  bg="transparent"
-                  color="green.500"
-                  minW="40px"
-                  px={2}
-                  _hover={{
-                    bg: "green.50",
-                  }}
-                  _disabled={{
-                    opacity: 0.4,
-                  }}
-                >
-                  <IoIosCheckmarkCircle size="1.4rem" />
-                </Button>
-              </Flex>
-            </Flex>
-          </ModalHeader>
-
-          <ModalCloseButton onClick={handleFormClose} />
-
-          {/* =====================================================
-              BODY
-          ===================================================== */}
-
-          <ModalBody
-            bg="white"
-            px={{ base: 4, md: 6 }}
-            py={{ base: 4, md: 5 }}
-            overflowY="auto"
-          >
-            <VStack align="stretch" spacing={{ base: 4, md: 5 }}>
-              {/* =================================================
-                  SUBJECT / DEADLINE / PRIORITY
-              ================================================= */}
-
-              <SimpleGrid
-                columns={{
-                  base: 1,
-                  sm: 2,
-                  lg: 3,
+              <Text
+                ml={{ base: 0, md: "2rem" }}
+                color="gray.500"
+                fontSize={{
+                  base: "0.85rem",
+                  md: "1rem",
                 }}
-                spacing={4}
+                position="relative"
+                bottom="0.4rem"
               >
-                {/* SUBJECT */}
+                Créer une nouvelle tâche
+              </Text>
+            </Box>
 
-                <FormControl isInvalid={!!errors.subject}>
-                  <FormLabel mb={1} fontWeight="600" fontSize="0.95rem">
-                    Sujet
-                  </FormLabel>
+            {/* =================================================
+                RECIPIENT SELECTOR
+            ================================================= */}
 
-                  <Input
-                    {...register("subject")}
-                    color="gray.800"
-                    fontWeight="600"
-                    fontSize={{
-                      base: "1rem",
-                      md: "1.1rem",
-                    }}
-                    height="42px"
-                    bg="white"
-                    borderColor="gray.300"
-                    placeholder="Ex: Préparer rapport de caisse"
-                    _placeholder={{
-                      fontSize: "0.95rem",
-                      fontWeight: "400",
-                      color: "gray.400",
-                    }}
-                    _hover={{
-                      borderColor: "gray.400",
-                    }}
-                    _focus={{
-                      borderColor: "blue.400",
-                      boxShadow: "0 0 0 1px #63B3ED",
-                    }}
-                  />
-
-                  {errors.subject && (
-                    <Text mt={1} color="red.500" fontSize="0.8rem">
-                      {errors.subject.message}
-                    </Text>
-                  )}
-                </FormControl>
-
-                {/* DEADLINE */}
-
-                <FormControl isInvalid={!!errors.deadline}>
-                  <FormLabel mb={1} fontWeight="600" fontSize="0.95rem">
-                    Date limite
-                  </FormLabel>
-
-                  <Controller
-                    control={control}
-                    name="deadline"
-                    render={({ field }) => (
-                      <DatePicker
-                        selected={field.value ? new Date(field.value) : null}
-                        onChange={(date: Date | null) => {
-                          if (!date) {
-                            field.onChange("");
-                            return;
-                          }
-
-                          const year = date.getFullYear();
-
-                          const month = String(date.getMonth() + 1).padStart(
-                            2,
-                            "0"
-                          );
-
-                          const day = String(date.getDate()).padStart(2, "0");
-
-                          field.onChange(`${year}-${month}-${day}`);
-                        }}
-                        locale="fr"
-                        dateFormat="dd/MM/yyyy"
-                        showYearDropdown
-                        scrollableYearDropdown
-                        yearDropdownItemNumber={80}
-                        customInput={
-                          <Input
-                            color="gray.800"
-                            fontWeight="600"
-                            fontSize={{
-                              base: "1rem",
-                              md: "1.1rem",
-                            }}
-                            width="100%"
-                            height="42px"
-                            bg="white"
-                            borderColor="gray.300"
-                            placeholder="Sélectionner une date"
-                            _placeholder={{
-                              fontSize: "0.95rem",
-                              fontWeight: "400",
-                              color: "gray.400",
-                            }}
-                          />
-                        }
-                      />
-                    )}
-                  />
-
-                  {errors.deadline && (
-                    <Text mt={1} color="red.500" fontSize="0.8rem">
-                      {errors.deadline.message}
-                    </Text>
-                  )}
-                </FormControl>
-
-                {/* PRIORITY */}
-
-                <FormControl>
-                  <FormLabel mb={1} fontWeight="600" fontSize="0.95rem">
-                    Priorité
-                  </FormLabel>
-
-                  <Menu>
-                    <MenuButton
-                      as={Button}
-                      width="100%"
-                      height="42px"
-                      bg="white"
-                      border="1px solid"
-                      borderColor="gray.300"
-                      textAlign="left"
-                      fontWeight="600"
-                      color="gray.800"
-                      _hover={{
-                        bg: "gray.50",
-                      }}
-                    >
-                      {priority === "HAUTE"
-                        ? "Haute"
-                        : priority === "MOYENNE"
-                        ? "Moyenne"
-                        : "Basse"}
-                    </MenuButton>
-
-                    <MenuList>
-                      <MenuItem onClick={() => setPriority("HAUTE")}>
-                        Haute
-                      </MenuItem>
-
-                      <MenuItem onClick={() => setPriority("MOYENNE")}>
-                        Moyenne
-                      </MenuItem>
-
-                      <MenuItem onClick={() => setPriority("BASSE")}>
-                        Basse
-                      </MenuItem>
-                    </MenuList>
-                  </Menu>
-                </FormControl>
-              </SimpleGrid>
-
-              {/* =================================================
-                  DESCRIPTION
-              ================================================= */}
-
-              <FormControl isInvalid={!!errors.message}>
-                <FormLabel mb={1} fontWeight="600" fontSize="0.95rem">
-                  Description de la tâche
-                </FormLabel>
-
-                <Textarea
-                  {...register("message")}
-                  minH={{
-                    base: "180px",
-                    sm: "220px",
-                    md: "280px",
-                    lg: "320px",
-                  }}
-                  height={{
-                    base: "180px",
-                    sm: "220px",
-                    md: "280px",
-                    lg: "320px",
-                  }}
-                  resize="vertical"
+            <Flex
+              direction="row"
+              align="center"
+              minW={0}
+              gap={2}
+              width={{ base: "100%", md: "auto" }}
+            >
+              <Menu>
+                <MenuButton
+                  as={Button}
+                  variant="outline"
                   bg="white"
                   borderColor="gray.300"
+                  color={recipient?._id ? "blue.600" : "gray.600"}
+                  width={{
+                    base: "100%",
+                    sm: "auto",
+                  }}
+                  minW={0}
+                  flex={{ base: 1, md: "initial" }}
+                  maxW={{ base: "100%", md: "280px" }}
+                  overflow="hidden"
+                  textOverflow="ellipsis"
+                  whiteSpace="nowrap"
+                  onClick={() => setErrorMessage("")}
+                  _hover={{
+                    bg: "gray.50",
+                  }}
+                >
+                  {recipient?._id
+                    ? `${recipient.firstName} ${recipient.lastName}`
+                    : "Choisissez un destinataire"}
+                </MenuButton>
+
+                <MenuList
+                  maxH="300px"
+                  overflowY="auto"
+                  maxW={{
+                    base: "calc(100vw - 32px)",
+                    md: "320px",
+                  }}
+                >
+                  {adminUsersList?.map((adminUser: AdminUser) => (
+                    <MenuItem
+                      key={adminUser._id}
+                      onClick={() => setRecipient(adminUser)}
+                      color="gray.800"
+                      _hover={{
+                        bg: "gray.100",
+                      }}
+                    >
+                      {adminUser.firstName} {adminUser.lastName}
+                    </MenuItem>
+                  ))}
+                </MenuList>
+              </Menu>
+
+              <Button
+                type="button"
+                isDisabled={!recipient?._id}
+                onClick={handleSelectRecipients}
+                bg="transparent"
+                color="green.500"
+                minW="40px"
+                flexShrink={0}
+                px={2}
+                _hover={{
+                  bg: "green.50",
+                }}
+                _disabled={{
+                  opacity: 0.4,
+                }}
+              >
+                <IoIosCheckmarkCircle size="1.4rem" />
+              </Button>
+            </Flex>
+          </Flex>
+        </ModalHeader>
+
+        <ModalCloseButton zIndex={2} onClick={handleFormClose} />
+
+        {/* =====================================================
+            BODY
+        ===================================================== */}
+
+        <ModalBody
+          bg="white"
+          px={{ base: 4, md: 6 }}
+          py={{ base: 4, md: 5 }}
+          flex="1"
+          minH={0}
+          minW={0}
+          overflowY="auto"
+          overflowX="hidden"
+          overscrollBehaviorY="contain"
+          sx={{ ".react-datepicker-wrapper": { width: "100%" } }}
+        >
+          <VStack align="stretch" spacing={{ base: 4, md: 5 }}>
+            {/* =================================================
+                SUBJECT / DEADLINE / PRIORITY
+            ================================================= */}
+
+            <SimpleGrid
+              columns={{
+                base: 1,
+                sm: 2,
+                lg: 3,
+              }}
+              spacing={4}
+            >
+              {/* SUBJECT */}
+
+              <FormControl isInvalid={!!errors.subject}>
+                <FormLabel mb={1} fontWeight="600" fontSize="0.95rem">
+                  Sujet
+                </FormLabel>
+
+                <Input
+                  {...register("subject")}
                   color="gray.800"
-                  fontWeight="500"
+                  fontWeight="600"
                   fontSize={{
                     base: "1rem",
                     md: "1.1rem",
                   }}
-                  placeholder="Décrivez la tâche en détail..."
+                  height="42px"
+                  bg="white"
+                  borderColor="gray.300"
+                  placeholder="Ex: Préparer rapport de caisse"
                   _placeholder={{
-                    color: "gray.400",
+                    fontSize: "0.95rem",
                     fontWeight: "400",
+                    color: "gray.400",
                   }}
                   _hover={{
                     borderColor: "gray.400",
                   }}
                   _focus={{
-                    borderColor: "yellow.400",
-                    boxShadow: "0 0 0 1px #F4C20D",
+                    borderColor: "blue.400",
+                    boxShadow: "0 0 0 1px #63B3ED",
                   }}
                 />
-                <Flex
-                  mt="0.5rem"
-                  width="100%"
-                  direction={{
-                    base: "column",
-                    sm: "row",
-                  }}
-                  justify="flex-end"
-                  align={{
-                    base: "stretch",
-                    sm: "center",
-                  }}
-                  gap={3}
-                >
-                  {/* CREATE */}
-                  <Button
-                    type="submit"
-                    borderRadius="8px"
-                    bg="#F2B705"
-                    color="black"
-                    borderWidth="1px"
-                    borderColor="#D9A000"
-                    isLoading={isSubmitting}
-                    loadingText="Patientez..."
-                    spinnerPlacement="start"
-                    isDisabled={isSubmitting}
-                    leftIcon={<FaSave />}
-                    width={{
-                      base: "100%",
-                      sm: "auto",
-                    }}
-                    minW={{ sm: "120px" }}
-                    _hover={{
-                      bg: "#E5AA00",
-                    }}
-                  >
-                    Créer
-                  </Button>
-                  {/* CANCEL */}
 
-                  <Button
-                    type="button"
-                    borderColor="#08162b"
-                    borderRadius="8px"
-                    bg="#08162b"
-                    color="white"
-                    borderWidth="1px"
-                    onClick={handleFormClose}
-                    leftIcon={<RxCrossCircled color="white" size="18px" />}
-                    width={{
-                      base: "100%",
-                      sm: "auto",
-                    }}
-                    minW={{ sm: "120px" }}
-                    _hover={{
-                      bg: "#12233d",
-                    }}
-                  >
-                    Annuler
-                  </Button>
-                </Flex>
-
-                {errors.message && (
+                {errors.subject && (
                   <Text mt={1} color="red.500" fontSize="0.8rem">
-                    {errors.message.message}
+                    {errors.subject.message}
                   </Text>
                 )}
               </FormControl>
 
-              {/* =================================================
-                  SELECTED RECIPIENTS
-              ================================================= */}
+              {/* DEADLINE */}
 
-              {taskRecipients.length > 0 && (
-                <Box>
-                  <Text
-                    mb={2}
-                    fontSize="0.9rem"
-                    fontWeight="600"
-                    color="gray.600"
-                  >
-                    Destinataires sélectionnés
-                  </Text>
+              <FormControl isInvalid={!!errors.deadline}>
+                <FormLabel mb={1} fontWeight="600" fontSize="0.95rem">
+                  Date limite
+                </FormLabel>
 
-                  <Flex wrap="wrap" gap={2}>
-                    {taskRecipients.map((selectedRecipient) => (
-                      <Tag
-                        key={selectedRecipient._id}
-                        size={{
-                          base: "md",
-                          md: "lg",
-                        }}
-                        borderRadius="md"
-                        colorScheme="blue"
-                      >
-                        <TagLabel>
-                          {selectedRecipient.firstName}{" "}
-                          {selectedRecipient.lastName}
-                        </TagLabel>
+                <Controller
+                  control={control}
+                  name="deadline"
+                  render={({ field }) => (
+                    <DatePicker
+                      selected={field.value ? new Date(field.value) : null}
+                      onChange={(date: Date | null) => {
+                        if (!date) {
+                          field.onChange("");
+                          return;
+                        }
 
-                        <TagCloseButton
-                          onClick={() =>
-                            handleRecipientDelete(selectedRecipient._id)
-                          }
+                        const year = date.getFullYear();
+
+                        const month = String(date.getMonth() + 1).padStart(
+                          2,
+                          "0"
+                        );
+
+                        const day = String(date.getDate()).padStart(2, "0");
+
+                        field.onChange(`${year}-${month}-${day}`);
+                      }}
+                      locale="fr"
+                      dateFormat="dd/MM/yyyy"
+                      showYearDropdown
+                      scrollableYearDropdown
+                      yearDropdownItemNumber={80}
+                      customInput={
+                        <Input
+                          color="gray.800"
+                          fontWeight="600"
+                          fontSize={{
+                            base: "1rem",
+                            md: "1.1rem",
+                          }}
+                          width="100%"
+                          height="42px"
+                          bg="white"
+                          borderColor="gray.300"
+                          placeholder="Sélectionner une date"
+                          _placeholder={{
+                            fontSize: "0.95rem",
+                            fontWeight: "400",
+                            color: "gray.400",
+                          }}
                         />
-                      </Tag>
-                    ))}
-                  </Flex>
-                </Box>
-              )}
+                      }
+                    />
+                  )}
+                />
 
-              {/* GENERAL ERROR */}
+                {errors.deadline && (
+                  <Text mt={1} color="red.500" fontSize="0.8rem">
+                    {errors.deadline.message}
+                  </Text>
+                )}
+              </FormControl>
 
-              {errorMessage && (
-                <Text
-                  color="red.500"
-                  fontSize={{
-                    base: "0.85rem",
-                    md: "0.95rem",
+              {/* PRIORITY */}
+
+              <FormControl>
+                <FormLabel mb={1} fontWeight="600" fontSize="0.95rem">
+                  Priorité
+                </FormLabel>
+
+                <Menu>
+                  <MenuButton
+                    as={Button}
+                    width="100%"
+                    height="42px"
+                    bg="white"
+                    border="1px solid"
+                    borderColor="gray.300"
+                    textAlign="left"
+                    fontWeight="600"
+                    color="gray.800"
+                    _hover={{
+                      bg: "gray.50",
+                    }}
+                  >
+                    {priority === "HAUTE"
+                      ? "Haute"
+                      : priority === "MOYENNE"
+                      ? "Moyenne"
+                      : "Basse"}
+                  </MenuButton>
+
+                  <MenuList>
+                    <MenuItem onClick={() => setPriority("HAUTE")}>
+                      Haute
+                    </MenuItem>
+
+                    <MenuItem onClick={() => setPriority("MOYENNE")}>
+                      Moyenne
+                    </MenuItem>
+
+                    <MenuItem onClick={() => setPriority("BASSE")}>
+                      Basse
+                    </MenuItem>
+                  </MenuList>
+                </Menu>
+              </FormControl>
+            </SimpleGrid>
+
+            {/* =================================================
+                DESCRIPTION
+            ================================================= */}
+
+            <FormControl isInvalid={!!errors.message}>
+              <FormLabel mb={1} fontWeight="600" fontSize="0.95rem">
+                Description de la tâche
+              </FormLabel>
+
+              <Textarea
+                {...register("message")}
+                minH={{
+                  base: "180px",
+                  sm: "220px",
+                  md: "280px",
+                  lg: "320px",
+                }}
+                height={{
+                  base: "180px",
+                  sm: "220px",
+                  md: "280px",
+                  lg: "320px",
+                }}
+                resize="vertical"
+                bg="white"
+                borderColor="gray.300"
+                color="gray.800"
+                fontWeight="500"
+                fontSize={{
+                  base: "1rem",
+                  md: "1.1rem",
+                }}
+                placeholder="Décrivez la tâche en détail..."
+                _placeholder={{
+                  color: "gray.400",
+                  fontWeight: "400",
+                }}
+                _hover={{
+                  borderColor: "gray.400",
+                }}
+                _focus={{
+                  borderColor: "yellow.400",
+                  boxShadow: "0 0 0 1px #F4C20D",
+                }}
+              />
+              <Flex
+                mt="0.5rem"
+                width="100%"
+                direction={{
+                  base: "column",
+                  sm: "row",
+                }}
+                justify="flex-end"
+                align={{
+                  base: "stretch",
+                  sm: "center",
+                }}
+                gap={3}
+              >
+                {/* =================================================
+                    SELECTED RECIPIENTS
+                ================================================= */}
+
+                {taskRecipients.length > 0 && (
+                  <Box flex="1" minW={0}>
+                    <Text
+                      mb={2}
+                      fontSize="0.9rem"
+                      fontWeight="600"
+                      color="gray.600"
+                    >
+                      Destinataires sélectionnés
+                    </Text>
+
+                    <Flex wrap="wrap" gap={2}>
+                      {taskRecipients.map((selectedRecipient) => (
+                        <Tag
+                          key={selectedRecipient._id}
+                          size={{
+                            base: "md",
+                            md: "lg",
+                          }}
+                          borderRadius="md"
+                          colorScheme="blue"
+                          maxW="100%"
+                        >
+                          <TagLabel>
+                            {selectedRecipient.firstName}{" "}
+                            {selectedRecipient.lastName}
+                          </TagLabel>
+
+                          <TagCloseButton
+                            onClick={() =>
+                              handleRecipientDelete(selectedRecipient._id)
+                            }
+                          />
+                        </Tag>
+                      ))}
+                    </Flex>
+                  </Box>
+                )}
+
+                {/* CREATE */}
+                <Button
+                  type="submit"
+                  borderRadius="8px"
+                  bg="#F2B705"
+                  color="black"
+                  borderWidth="1px"
+                  borderColor="#D9A000"
+                  isLoading={isSubmitting}
+                  loadingText="Patientez..."
+                  spinnerPlacement="start"
+                  isDisabled={isSubmitting}
+                  leftIcon={<FaSave />}
+                  width={{
+                    base: "100%",
+                    sm: "auto",
                   }}
-                  fontWeight="500"
+                  minW={{ sm: "120px" }}
+                  flexShrink={0}
+                  _hover={{
+                    bg: "#E5AA00",
+                  }}
                 >
-                  {errorMessage}
+                  Créer
+                </Button>
+                {/* CANCEL */}
+
+                <Button
+                  type="button"
+                  borderColor="#08162b"
+                  borderRadius="8px"
+                  bg="#08162b"
+                  color="white"
+                  borderWidth="1px"
+                  onClick={handleFormClose}
+                  leftIcon={<RxCrossCircled color="white" size="18px" />}
+                  width={{
+                    base: "100%",
+                    sm: "auto",
+                  }}
+                  minW={{ sm: "120px" }}
+                  flexShrink={0}
+                  _hover={{
+                    bg: "#12233d",
+                  }}
+                >
+                  Annuler
+                </Button>
+              </Flex>
+
+              {errors.message && (
+                <Text mt={1} color="red.500" fontSize="0.8rem">
+                  {errors.message.message}
                 </Text>
               )}
-            </VStack>
-          </ModalBody>
-        </form>
+            </FormControl>
+
+            {/* GENERAL ERROR */}
+
+            {errorMessage && (
+              <Text
+                color="red.500"
+                fontSize={{
+                  base: "0.85rem",
+                  md: "0.95rem",
+                }}
+                fontWeight="500"
+              >
+                {errorMessage}
+              </Text>
+            )}
+          </VStack>
+        </ModalBody>
       </ModalContent>
     </Modal>
   );

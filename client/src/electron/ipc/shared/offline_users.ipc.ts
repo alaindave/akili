@@ -1,6 +1,10 @@
-import { ipcMain } from "../companyIpc.js";
+import { ipcMain } from "./companyIpc.js";
 import bcrypt from "bcrypt";
-import { establishCompanySession, findOfflineCompanyUser, loginCredentialsSchema } from "../../services/shared/companySession.service.js";
+import {
+  establishCompanySession,
+  findOfflineCompanyUser,
+  loginCredentialsSchema,
+} from "../../services/shared/companySession.service.js";
 
 import {
   createOrUpdateOfflineUser,

@@ -5,7 +5,6 @@ import {
   Flex,
   Grid,
   HStack,
-  Spacer,
   Text,
   VStack,
   useDisclosure,
@@ -123,298 +122,244 @@ const EmployeeLeavePage = () => {
   };
 
   console.log("LEAVES ARRAY", leaves);
-  /* =========================================================
-     LOADING UI
-  ========================================================= */
-
-  if (isLoading) {
-    return (
-      <>
-        <Box as="style">{shimmerKeyframes}</Box>
-
-        <VStack>
-          {/* HEADER */}
-          <Box
-            position="relative"
-            top="0.5rem"
-            ml="3px"
-            bg="gray.300"
-            height="200px"
-            width="80vw"
-            borderRadius="20px"
-            p={4}
-          >
-            <Shimmer width="200px" height="28px" />
-
-            <Box mt={2}>
-              <Shimmer width="320px" height="16px" />
-            </Box>
-
-            <Box position="absolute" right="8px" top="8px">
-              <Shimmer width="220px" height="40px" />
-            </Box>
-          </Box>
-
-          {/* TABLE HEADER */}
-          <Grid
-            templateColumns={gridTemplate}
-            bg="gray.300"
-            mt="0.5rem"
-            ml="0.3rem"
-            mr="0.3rem"
-            height="66px"
-            width="80vw"
-            borderRadius="12px"
-            px={6}
-            alignItems="center"
-          >
-            {[...Array(7)].map((_, i) => (
-              <Shimmer key={i} width="90%" height="18px" />
-            ))}
-          </Grid>
-
-          {/* ROWS */}
-          <Box height="90vh" width="80vw" overflow="hidden">
-            {[...Array(6)].map((_, i) => (
-              <Grid
-                key={i}
-                templateColumns={gridTemplate}
-                bg="gray.300"
-                borderBottom="1px solid #1E355A"
-                alignItems="center"
-                px={6}
-                py={4}
-              >
-                <Shimmer width="140px" />
-                <Shimmer width="120px" />
-                <Shimmer width="120px" />
-                <Shimmer width="120px" />
-                <Shimmer width="90px" />
-                <Shimmer width="80px" />
-
-                <HStack>
-                  <Shimmer width="30px" height="30px" />
-                  <Shimmer width="30px" height="30px" />
-                </HStack>
-              </Grid>
-            ))}
-          </Box>
-
-          {/* FOOTER */}
-          <Box bg="gray.300" height="80px" width="80vw" mb="1rem" />
-        </VStack>
-      </>
-    );
-  }
+  const filteredLeaves = leaves
+    .filter((leave) =>
+      `${leave.firstName} ${leave.lastName}`
+        .toLowerCase()
+        .includes(searchText.toLowerCase())
+    )
+    .filter((leave) => !filter || leave.department === filter)
+    .filter((leave) => !statusFilter || leave.status === statusFilter);
 
   return (
     <Flex
-      position="relative"
       direction="column"
       bg="#F8FAFC"
-      width="100%"
-      height="100%"
+      w="100%"
+      h="100%"
+      minW={0}
+      minH={0}
       overflow="hidden"
+      p="1rem"
+      pb={{ base: "calc(46px + 1rem)", md: "calc(52px + 1rem)" }}
     >
-      {/* =====================================================
-            HEADER
-        ===================================================== */}
-      <Flex ml="0.05rem" width="80vw">
-        <Box>
-          <HStack>
+      <Grid
+        templateColumns="repeat(2, minmax(0, 1fr))"
+        templateAreas={'"heading submit" "department search"'}
+        columnGap={{ base: 2, md: 3 }}
+        rowGap={3}
+        alignItems="start"
+        pr="2rem"
+        mb={4}
+        flexShrink={0}
+      >
+        <Box gridArea="heading" minW={0}>
+          <HStack spacing={1}>
             <Text
               color="#03143B"
-              fontSize="clamp(1.3rem, 1vw + 0.8rem, 1.4rem)"
+              fontSize={{ base: "1.1rem", md: "1.4rem" }}
               fontWeight="700"
-              ml="1rem"
-              mt="1.3rem"
             >
               Congés
             </Text>
-
             <Button
-              bg="transparent"
+              aria-label="Actualiser les congés"
+              variant="ghost"
+              size="sm"
+              minW={6}
+              px={1}
               isLoading={isFetching}
-              color="gray.800"
-              _hover={{ bg: "transparent" }}
-              fontSize="1rem"
-              position="relative"
-              top="0.7rem"
-              right="1rem"
               onClick={() => refetch()}
             >
               <FaSyncAlt />
             </Button>
           </HStack>
-
-          <PageSubtitle position="relative" left="1rem">
+          <PageSubtitle fontSize={{ base: "0.75rem", md: "1rem" }}>
             Gérez les demandes de congés
           </PageSubtitle>
-          <Box mt="2rem" ml="1rem">
-            <EmployeeFilterMenu onFilterClicked={setFilter} />
-          </Box>
         </Box>
-
-        <Spacer />
-        <Box mt="1.5rem">
-          <Button
-            position="absolute"
-            right="3rem"
-            colorScheme="yellow"
-            size="md"
-            onClick={onOpen}
-            _hover={{
-              backgroundColor: "#4F46E5",
-            }}
-          >
-            <Box mr="0.5rem">
-              <FaCirclePlus size="1.2rem" />
-            </Box>
-
-            <Text>Soumettre une demande</Text>
-          </Button>
-          <Box mt="5rem">
-            <SearchBar
-              placeholderText="Rechercher un employé"
-              onSearch={setSearchText}
-            />
-          </Box>
-        </Box>
-      </Flex>
-
-      {/* =====================================================
-            MAIN AREA
-        ===================================================== */}
-
-      {leaves.length === 0 ? (
-        <Flex
-          ml="1rem"
-          mt="6rem"
-          width="80vw"
-          minHeight={{
-            base: "180px",
-            md: "220px",
-          }}
-          align="center"
-          justify="center"
-          bg="#ffffff"
-          border="1px solid #A0AEC0"
-          borderRadius="8px"
-          px="20px"
-          flexShrink={0}
+        <Button
+          gridArea="submit"
+          justifySelf="end"
+          w="100%"
+          maxW="22rem"
+          minW={0}
+          colorScheme="yellow"
+          onClick={onOpen}
+          leftIcon={<FaCirclePlus />}
+          minH={{ base: "36px", md: "40px" }}
+          h="auto"
+          py={2}
+          px={{ base: 2, md: 3 }}
+          fontSize={{ base: "0.75rem", md: "0.875rem" }}
+          whiteSpace="normal"
         >
-          <VStack spacing="6px">
-            <Text
-              fontSize={{
-                base: "1rem",
-                md: "1.1rem",
-              }}
-              fontWeight="500"
-              color="gray.500"
-              textAlign="center"
+          Soumettre une demande
+        </Button>
+        <Box
+          gridArea="department"
+          minW={0}
+          maxW="22rem"
+          sx={{
+            ".chakra-menu__menu-button": {
+              width: "100%",
+              minWidth: 0,
+              height: { base: "36px", md: "40px" },
+              paddingInline: { base: 2, md: 4 },
+              fontSize: { base: "0.75rem", md: "0.875rem" },
+            },
+            ".chakra-menu__menu-button p": {
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            },
+            ".chakra-menu__menu-list": {
+              marginLeft: 0,
+              left: "auto",
+              bottom: "auto",
+              maxWidth: "calc(100vw - 2rem)",
+            },
+          }}
+        >
+          <EmployeeFilterMenu onFilterClicked={setFilter} />
+        </Box>
+        <Box
+          gridArea="search"
+          justifySelf="end"
+          w="100%"
+          maxW="22rem"
+          minW={0}
+          sx={{
+            input: {
+              minWidth: 0,
+              height: { base: "36px", md: "40px" },
+              fontSize: { base: "0.75rem", md: "0.875rem" },
+              paddingLeft: { base: "2rem", md: "2.5rem" },
+            },
+            "input::placeholder": {
+              fontSize: { base: "0.7rem", md: "0.85rem" },
+            },
+            ".chakra-input__left-element": {
+              height: { base: "36px", md: "40px" },
+              width: { base: "2rem", md: "2.5rem" },
+            },
+          }}
+        >
+          <SearchBar
+            placeholderText="Rechercher un employé"
+            onSearch={setSearchText}
+          />
+        </Box>
+      </Grid>
+
+      {/* One scroll container keeps the column headings aligned with the rows. */}
+      <Box
+        flex="1"
+        minH={0}
+        minW={0}
+        overflow="auto"
+        overscrollBehavior="contain"
+        borderRadius="md"
+      >
+        <Box minW={isLoading || leaves.length ? "1000px" : 0}>
+          {(isLoading || leaves.length > 0) && (
+            <Grid
+              templateColumns={gridTemplate}
+              position="sticky"
+              top={0}
+              zIndex={1}
+              alignItems="center"
+              px={3}
+              minH="3.5rem"
+              fontWeight="600"
+              color="gray.800"
+              bg="#F8F9FB"
+              border="1px solid #E2E8F0"
+              boxShadow="0 2px 10px rgba(15,23,42,.06)"
             >
-              Aucune demande de congé retrouvée
-            </Text>
-          </VStack>
-        </Flex>
-      ) : (
-        <>
-          {/* TABLE HEADER */}
-
-          <Grid
-            templateColumns={gridTemplate}
-            fontWeight="600"
-            bg="#F8F9FB"
-            borderWidth="0.3px"
-            border="1px solid #E2E8F0"
-            boxShadow="0 2px 10px rgba(15,23,42,.06)"
-            height="3.5rem"
-            width="80vw"
-            overflowY="hidden"
-            overflowX="hidden"
-            mt="2.1rem"
-            ml="1rem"
-          >
-            <Text color="gray.800" fontSize="1rem" ml={8} mt={4}>
-              Employé
-            </Text>
-
-            <Text color="gray.800" fontSize="1rem" mt={4}>
-              Debut de congé
-            </Text>
-
-            <Text color="gray.800" fontSize="1rem" mt={4}>
-              Fin de congé
-            </Text>
-
-            <Text mt={4} ml={2} color="gray.800" fontSize="1rem">
-              Motif
-            </Text>
-
-            <Text color="gray.800" fontSize="1rem" mt={4}>
-              Statut
-            </Text>
-
-            <Box mt="0.4rem" position="relative" right="1rem">
-              <Text color="gray.800" fontSize="1rem">
-                Congés
-              </Text>
-
-              <Text color="gray.800" fontSize="1rem">
-                restants
-              </Text>
-            </Box>
-
-            <Text color="gray.800" fontSize="1rem" mt={4}>
-              Actions
-            </Text>
-          </Grid>
-
-          {/* =================================================
-                LEAVE ROWS
-            ================================================= */}
-
-          <Box height="61vh" overflowX="hidden" overflowY="auto">
-            {leaves
-              .filter((l) =>
-                `${l.firstName} ${l.lastName}`
-                  .toLowerCase()
-                  .includes(searchText.toLowerCase())
-              )
-              .filter((l) => !filter || l.department === filter)
-              .filter((l) => !statusFilter || l.status === statusFilter)
-              .map((leave: LeaveWithEmployee) => (
-                <EmployeeLeaveCard
-                  key={leave._id}
-                  leave={leave}
-                  gridTemplate={gridTemplate}
-                  onDelete={() => handleDeleteConfirmation(leave)}
-                />
+              <Text fontSize="0.99rem">Employé</Text>
+              <Text fontSize="0.99rem">Début de congé</Text>
+              <Text fontSize="0.99rem">Fin de congé</Text>
+              <Text fontSize="0.99rem">Motif</Text>
+              <Text fontSize="0.99rem">Statut</Text>
+              <Text fontSize="0.99rem">Congés restants</Text>
+              <Text fontSize="0.99rem">Actions</Text>
+            </Grid>
+          )}
+          {isLoading ? (
+            <VStack
+              align="stretch"
+              spacing={3}
+              py={3}
+              role="status"
+              aria-label="Chargement des congés"
+            >
+              <Box as="style">{shimmerKeyframes}</Box>
+              {Array.from({ length: 6 }, (_, index) => (
+                <Shimmer key={index} height="72px" />
               ))}
-          </Box>
-        </>
-      )}
-
-      {/* =====================================================
-            FOOTER
-        ===================================================== */}
+            </VStack>
+          ) : filteredLeaves.length === 0 ? (
+            <Flex
+              minH="12rem"
+              align="center"
+              justify="center"
+              bg="white"
+              border="1px solid #E2E8F0"
+              p={4}
+            >
+              <Text color="gray.500" textAlign="center">
+                Aucune demande de congé retrouvée
+              </Text>
+            </Flex>
+          ) : (
+            filteredLeaves.map((leave: LeaveWithEmployee) => (
+              <EmployeeLeaveCard
+                key={leave._id}
+                leave={leave}
+                gridTemplate={gridTemplate}
+                onDelete={() => handleDeleteConfirmation(leave)}
+              />
+            ))
+          )}
+        </Box>
+      </Box>
 
       <Flex
-        position="absolute"
-        bottom="2.3rem"
-        height="4rem"
-        width="80vw"
-        justify="space-around"
+        flexShrink={0}
+        mt={4}
+        gap={3}
+        wrap="wrap"
+        align="center"
+        justify="space-between"
+        minW={0}
       >
         <Box
-          ml="1rem"
-          fontSize="1.1rem"
-          fontFamily="monospace"
+          flex="1 1 180px"
+          maxW={{ base: "100%", md: "22rem" }}
+          minW={0}
+          fontSize="0.875rem"
           fontWeight="600"
         >
-          <MonthDropDown onChange={(month) => setSubmissionMonth(month)} />
+          <MonthDropDown onChange={setSubmissionMonth} />
         </Box>
-        <Box ml="2rem">
+        <Box
+          flex="1 1 180px"
+          maxW={{ base: "100%", md: "22rem" }}
+          minW={0}
+          sx={{
+            ".chakra-menu__menu-button": {
+              width: "100%",
+              minWidth: 0,
+              fontSize: "0.875rem",
+            },
+            ".chakra-menu__menu-button p": {
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            },
+          }}
+        >
           <LeaveStatusFilter onFilterClicked={setStatusFilter} />
         </Box>
       </Flex>

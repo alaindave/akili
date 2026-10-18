@@ -1,4 +1,4 @@
-import { ipcMain } from "../companyIpc.js";
+import { ipcMain } from "./companyIpc.js";
 import { app } from "electron";
 import {
   createTask,

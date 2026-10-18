@@ -158,11 +158,9 @@ export default function PayrollAuditPopover({ payrollRun }: Props) {
       <PopoverTrigger>
         {/* Status badge */}
         <Badge
-          position="absolute"
-          top="1.5rem"
-          right="2rem"
+          flexShrink={0}
           {...(payrollRun.status ? statusStyles[payrollRun.status] : {})}
-          fontSize="1rem"
+          fontSize={{ base: "sm", md: "0.9rem" }}
           _hover={{ cursor: "pointer" }}
         >
           {statusLabel}
@@ -171,6 +169,7 @@ export default function PayrollAuditPopover({ payrollRun }: Props) {
 
       <PopoverContent
         width="390px"
+        maxW="calc(100vw - 24px)"
         borderColor="gray.200"
         boxShadow="lg"
         borderRadius="md"

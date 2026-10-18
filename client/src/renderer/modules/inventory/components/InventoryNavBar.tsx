@@ -42,7 +42,10 @@ const navigationItems = [
   { label: "Tâches", to: "/inventory/tasks", icon: FaTasks },
 ];
 
-const InventoryNavBar = () => {
+const InventoryNavBar = ({
+  showSidebar = true,
+  showBottomBar = true,
+}: { showSidebar?: boolean; showBottomBar?: boolean }) => {
   const user = useAdminUser((store) => store.adminUser);
   const setLogOut = useAdminUser((store) => store.logout);
   const clearTasks = useTaskStore((store) => store.clearTasks);
@@ -90,6 +93,7 @@ const InventoryNavBar = () => {
       {/* =====================================================
           SIDEBAR
       ===================================================== */}
+      {showSidebar && (
       <Flex
         direction="column"
         height={sidebarHeight}
@@ -285,10 +289,12 @@ const InventoryNavBar = () => {
           </Flex>
         </Box>
       </Flex>
+      )}
 
       {/* =====================================================
     LOWER APPLICATION BAR
 ===================================================== */}
+      {showBottomBar && (
       <Flex
         position="fixed"
         bottom="0"
@@ -391,6 +397,7 @@ const InventoryNavBar = () => {
           </Flex>
         </HStack>
       </Flex>
+      )}
     </>
   );
 };

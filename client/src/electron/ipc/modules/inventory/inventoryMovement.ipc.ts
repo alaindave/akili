@@ -1,4 +1,4 @@
-import { ipcMain } from "../../companyIpc.js";
+import { ipcMain } from "../../shared/companyIpc.js";
 import { z } from "zod";
 import { requireLocalIdentity } from "../../../auth.js";
 import { inventoryTransactionService } from "../../../services/modules/inventory/inventoryTransaction.service.js";
@@ -30,20 +30,19 @@ function pagination(limit = 100, offset = 0): [number, number] {
 
 // Movement writes belong to stock operations that also update balances.
 export function registerInventoryMovementIpc(): void {
-  ipcMain.handle("inventory:movement:postTransaction", async (_, companyId: string, input: InventoryTransactionInput) => {
-    const company = await requireAuthenticatedCompanyId(companyId);
-    const user = await requireLocalIdentity(company);
-    z.enum(["ADMIN", "MANAGER"]).parse(user.role);
-    return inventoryTransactionService.post(company, user._id, input);
-  });
+  ipcMain.handle(
+    "inventory:movement:postTransaction",
+    async (_, companyId: string, input: InventoryTransactionInput) => {
+      const company = await requireAuthenticatedCompanyId(companyId);
+      const user = await requireLocalIdentity(company);
+      z.enum(["ADMIN", "MANAGER"]).parse(user.role);
+      return inventoryTransactionService.post(company, user._id, input);
+    }
+  );
 
   ipcMain.handle(
     "inventory:movement:getById",
-    async (
-      _,
-      companyId: string,
-      id: string
-    ) => {
+    async (_, companyId: string, id: string) => {
       const authenticatedCompanyId = await requireAuthenticatedCompanyId(
         companyId
       );
@@ -56,11 +55,7 @@ export function registerInventoryMovementIpc(): void {
 
   ipcMain.handle(
     "inventory:movement:getByMovementId",
-    async (
-      _,
-      companyId: string,
-      movementId: string
-    ) => {
+    async (_, companyId: string, movementId: string) => {
       const authenticatedCompanyId = await requireAuthenticatedCompanyId(
         companyId
       );
@@ -73,11 +68,7 @@ export function registerInventoryMovementIpc(): void {
 
   ipcMain.handle(
     "inventory:movement:getByDocument",
-    async (
-      _,
-      companyId: string,
-      documentId: string
-    ) => {
+    async (_, companyId: string, documentId: string) => {
       const authenticatedCompanyId = await requireAuthenticatedCompanyId(
         companyId
       );
@@ -90,11 +81,7 @@ export function registerInventoryMovementIpc(): void {
 
   ipcMain.handle(
     "inventory:movement:getByDocumentLine",
-    async (
-      _,
-      companyId: string,
-      documentLineId: string
-    ) => {
+    async (_, companyId: string, documentLineId: string) => {
       const authenticatedCompanyId = await requireAuthenticatedCompanyId(
         companyId
       );
@@ -169,12 +156,7 @@ export function registerInventoryMovementIpc(): void {
 
   ipcMain.handle(
     "inventory:movement:getSerialHistory",
-    async (
-      _,
-      companyId: string,
-      itemId: string,
-      serialNumber: string
-    ) => {
+    async (_, companyId: string, itemId: string, serialNumber: string) => {
       const authenticatedCompanyId = await requireAuthenticatedCompanyId(
         companyId
       );
@@ -188,12 +170,20 @@ export function registerInventoryMovementIpc(): void {
 
   ipcMain.handle(
     "inventory:movement:list",
-    async (_, companyId: string, options: InventoryMovementListOptions = {}) => {
+    async (
+      _,
+      companyId: string,
+      options: InventoryMovementListOptions = {}
+    ) => {
       const authenticatedCompanyId = await requireAuthenticatedCompanyId(
         companyId
       );
       const [limit, offset] = pagination(options.limit, options.offset);
-      return repository.list(authenticatedCompanyId, { ...options, limit, offset });
+      return repository.list(authenticatedCompanyId, {
+        ...options,
+        limit,
+        offset,
+      });
     }
   );
 

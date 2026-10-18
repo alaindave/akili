@@ -25,7 +25,10 @@ import {
 
 import { markCompanySynced } from "../../../database/repositories/shared/companies.repository.js";
 import { markEmployeeSynced } from "../../../database/repositories/modules/hr/employees.repository.js";
-import { markLeaveSynced } from "../../../database/repositories/modules/hr/leaves.repository.js";
+import {
+  acknowledgeLeave,
+  recoverLeaveRevision,
+} from "../../../database/repositories/modules/hr/leaves.repository.js";
 import { markTaskSynced } from "../../../database/repositories/shared/tasks.repository.js";
 import { markIncidentSynced } from "../../../database/repositories/shared/incidents.repository.js";
 import { markTaskCommentsSynced } from "../../../database/repositories/shared/tasks_comments.repository.js";
@@ -164,6 +167,7 @@ export async function pushPendingChanges(
   let legacyStockSnapshots = 0;
   const inventoryRecords = new Set<string>();
   const payrollProfiles = new Set<string>();
+  const leaveRecords = new Set<string>();
   const latestPhotos = new Map<string, string>();
   const supersededPhotos = new Map<string, string[]>();
   for (const item of pending) {
@@ -173,6 +177,10 @@ export async function pushPendingChanges(
 
   for (const item of pending) {
     const snapshot = JSON.parse(item.payload);
+    if (item.entity === "leave") {
+      if (leaveRecords.has(item.entityId)) continue;
+      leaveRecords.add(item.entityId);
+    }
     // Later edits need the server revision acknowledged by this snapshot.
     if (item.entity === "payroll_profile") {
       if (payrollProfiles.has(item.entityId)) continue;
@@ -448,6 +456,16 @@ export async function pushPendingChanges(
 
   const syncedIds: string[] = response.data.synced ?? [];
   for (const item of validPending) {
+    if (item.entity !== "leave") continue;
+    const failure = (response.data.failed ?? []).find(
+      (entry: { queueId: string; code: string }) =>
+        entry.queueId === item._id && entry.code === "REVISION_CONFLICT"
+    );
+    if (failure?.details?.remote) {
+      await recoverLeaveRevision(companyId, JSON.parse(item.payload), failure.details.remote);
+    }
+  }
+  for (const item of validPending) {
     if (item.entity !== "payroll_profile") continue;
     const failure = (response.data.failed ?? []).find(
       (entry: { queueId: string; code: string }) =>
@@ -539,6 +557,7 @@ export async function pushPendingChanges(
     }
 
     if (
+      item.entity !== "leave" &&
       stillPending.some(
         (entry) =>
           entry.entity === item.entity && entry.entityId === item.entityId
@@ -597,7 +616,8 @@ export async function pushPendingChanges(
       case "leave": {
         if (
           item.operation === "create" &&
-          data.status === "ATTENTE_APPROBATION"
+          data.status === "ATTENTE_APPROBATION" &&
+          !stillPending.some((entry) => entry.entity === "leave" && entry.entityId === item.entityId)
         ) {
           if (!data.managerEmail) {
             throw new Error(
@@ -637,7 +657,7 @@ export async function pushPendingChanges(
           });
         }
 
-        await markLeaveSynced(companyId, data._id);
+        await acknowledgeLeave(companyId, data, item._id, response.data.versions?.[item._id]);
 
         break;
       }

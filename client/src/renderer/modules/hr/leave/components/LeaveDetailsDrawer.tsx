@@ -11,6 +11,7 @@ import {
   DrawerFooter,
   DrawerHeader,
   DrawerOverlay,
+  Flex,
   FormControl,
   FormLabel,
   HStack,
@@ -38,13 +39,31 @@ const statuses = {
   ATTENTE_APPROBATION: { label: "Attente approbation", color: "yellow" },
   APPROUVÉ: { label: "Approuvé", color: "green" },
   REFUSÉ: { label: "Refusé", color: "red" },
-  ANNULÉ: { label: "Annulé", color: "gray" },
+  ANNULÉ: { label: "Annulé", color: "blue" },
 };
 
 function formatDate(value?: string) {
   if (!value) return "—";
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? "—" : date.toLocaleDateString("fr-FR");
+}
+
+function parseNotes(value?: string) {
+  // Only split at saved author/date headers, preserving paragraphs within notes.
+  return (value ?? "")
+    .trim()
+    .split(/\r?\n\r?\n(?=[^\r\n]+ — \d{2}\/\d{2}\/\d{4} \d{2}:\d{2}\r?\n)/)
+    .filter(Boolean)
+    .map((entry) => {
+      const header = entry.match(
+        /^([^\r\n]+) — (\d{2}\/\d{2}\/\d{4} \d{2}:\d{2})\r?\n/
+      );
+      return {
+        author: header?.[1],
+        date: header?.[2],
+        text: header ? entry.slice(header[0].length) : entry,
+      };
+    });
 }
 
 export default function LeaveDetailsDrawer({
@@ -62,6 +81,7 @@ export default function LeaveDetailsDrawer({
   const [isSaving, setIsSaving] = useState(false);
   const toast = useToast();
   const currentLeave = savedLeave ?? leave;
+  const notes = parseNotes(currentLeave.additionalNotes);
   const canAddNotes = user.role === "ADMIN" || user.role === "MANAGER";
   const status = statuses[currentLeave.status as keyof typeof statuses];
   const start = Date.parse(currentLeave.startDate.slice(0, 10));
@@ -208,13 +228,51 @@ export default function LeaveDetailsDrawer({
               <Text fontWeight="bold" mb={3}>
                 Notes
               </Text>
-              <Text
-                whiteSpace="pre-wrap"
-                overflowWrap="anywhere"
-                color={currentLeave.additionalNotes ? "gray.700" : "gray.500"}
-              >
-                {currentLeave.additionalNotes || "Aucune note pour le moment."}
-              </Text>
+              <VStack align="stretch" spacing={6}>
+                {notes.length ? (
+                  notes.map((entry, index) => (
+                    <HStack key={index} align="start" spacing={3}>
+                      <Avatar
+                        size="sm"
+                        bg="#f5f5f5"
+                        color="#525252"
+                        border="1px solid #dedede"
+                        name={entry.author}
+                      />
+                      <Box flex="1" minW={0}>
+                        <Flex
+                          justify="space-between"
+                          gap={2}
+                          wrap="wrap"
+                          mb={2}
+                        >
+                          <Text fontSize="sm" fontWeight="600" color="gray.700">
+                            {entry.author || "Utilisateur"}
+                          </Text>
+                          {entry.date && (
+                            <Text fontSize="xs" color="#737373">
+                              {entry.date}
+                            </Text>
+                          )}
+                        </Flex>
+                        <Text
+                          fontSize="sm"
+                          lineHeight="1.8"
+                          whiteSpace="pre-wrap"
+                          overflowWrap="anywhere"
+                          color="gray.700"
+                        >
+                          {entry.text}
+                        </Text>
+                      </Box>
+                    </HStack>
+                  ))
+                ) : (
+                  <Text fontSize="sm" color="#737373">
+                    Aucune note pour le moment.
+                  </Text>
+                )}
+              </VStack>
             </Box>
           </VStack>
         </DrawerBody>

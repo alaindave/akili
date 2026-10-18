@@ -1,4 +1,4 @@
-import { ipcMain } from "../../companyIpc.js";
+import { ipcMain } from "../../shared/companyIpc.js";
 
 import { AttendanceWithEmployee } from "../../../../common/types/hr/attendance/Attendance.js";
 import { markEmployeesAbsent } from "../../../services/modules/hr/attendance/markEmployeesAbsent.service.js";

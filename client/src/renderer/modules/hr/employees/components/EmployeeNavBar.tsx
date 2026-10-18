@@ -33,7 +33,10 @@ import SyncStatus from "../../../../components/common/SyncStatus";
 import "../../../../styles/App.css";
 import Logo from "../../../../components/common/Logo";
 
-const EmployeeNavBar = () => {
+const EmployeeNavBar = ({
+  showSidebar = true,
+  showBottomBar = true,
+}: { showSidebar?: boolean; showBottomBar?: boolean }) => {
   const user = useAdminUser((store) => store.adminUser);
   const setLogOut = useAdminUser((store) => store.logout);
   const clearTasks = useTaskStore((store) => store.clearTasks);
@@ -81,6 +84,7 @@ const EmployeeNavBar = () => {
       {/* =====================================================
           SIDEBAR
       ===================================================== */}
+      {showSidebar && (
       <Flex
         direction="column"
         height={sidebarHeight}
@@ -563,9 +567,12 @@ const EmployeeNavBar = () => {
         </Box>
       </Flex>
 
+      )}
+
       {/* =====================================================
     LOWER APPLICATION BAR
 ===================================================== */}
+      {showBottomBar && (
       <Flex
         position="fixed"
         bottom="0"
@@ -667,6 +674,7 @@ const EmployeeNavBar = () => {
           </Flex>
         </HStack>
       </Flex>
+      )}
     </>
   );
 };

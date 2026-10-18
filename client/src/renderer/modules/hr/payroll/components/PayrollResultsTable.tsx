@@ -45,15 +45,24 @@ export default function PayrollResultsTable({ payrollResults }: Props) {
 
   return (
     <TableContainer
-      maxH="70vh"
-      maxW="80vw"
+      h="100%"
+      w="100%"
+      minH={0}
+      minW={0}
       borderWidth="1px"
       borderRadius="lg"
       overflowY="auto"
-      overflowX="hidden"
-      mr="1rem"
+      overflowX="auto"
+      tabIndex={0}
+      role="region"
+      aria-label="Résultats de paie, tableau défilant"
     >
-      <Table variant="simple" size="sm">
+      <Table
+        variant="simple"
+        size="sm"
+        minW="1000px"
+        sx={{ borderCollapse: "separate", borderSpacing: 0 }}
+      >
         <Thead bg="gray.50">
           <Tr>
             <Th position="sticky" bg="white" top={0} zIndex={1}>

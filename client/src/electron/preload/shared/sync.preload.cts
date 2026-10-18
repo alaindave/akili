@@ -5,6 +5,7 @@ type SyncStatusEvent = import("../../../common/types/shared/Sync", {
 }).SyncStatusEvent;
 
 export const syncApi = {
+  getApiUrl: (API_URL: string) => invoke<string>("sync:get-api-url",API_URL),
   getPendingCount: (companyId: string) =>
     invoke<number>("sync:pending-count", companyId),
   sync: (companyId: string) => invoke("sync:run", companyId),

@@ -1,6 +1,7 @@
-import { Box, Flex, HStack, Text, VStack } from "@chakra-ui/react";
+import { Box, Flex, HStack, Text } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import LeaveHistoryTable from "../components/LeaveHistoryTable";
+import LeaveDetailsDrawer from "../components/LeaveDetailsDrawer";
 import { Link, useLocation } from "react-router-dom";
 import Employee from "../../../../../common/types/hr/employees/Employee";
 import Leave from "../../../../../common/types/hr/leave/Leave";
@@ -26,6 +27,7 @@ const EmployeeLeaveReport = () => {
   const { photo_url } = (location.state as PhotoState) || "";
   const [statusFilter, setStatusFilter] = useState("");
   const [leaves, setLeaves] = useState<Leave[]>([]);
+  const [selectedLeave, setSelectedLeave] = useState<Leave | null>(null);
   const user = useAdminUser((store) => store.adminUser);
 
   const [dateRange, setDateRange] = useState<DateRange>({
@@ -109,7 +111,7 @@ const EmployeeLeaveReport = () => {
         </HStack>
         {leaves.length != 0 ? (
           <Box ml="2rem" mt="3rem">
-            <LeaveHistoryTable leaves={leaves} />
+            <LeaveHistoryTable leaves={leaves} onSelectLeave={setSelectedLeave} />
           </Box>
         ) : (
           <Flex
@@ -150,6 +152,23 @@ const EmployeeLeaveReport = () => {
           <LeaveStatusFilter onFilterClicked={setStatusFilter} />
         </Box>
       </Flex>
+      {selectedLeave && employee && (
+        <LeaveDetailsDrawer
+          key={selectedLeave._id}
+          leave={{
+            ...selectedLeave,
+            firstName: employee.firstName,
+            lastName: employee.lastName,
+            department: employee.department,
+            role: employee.role,
+            remainingLeave: employee.remainingLeave,
+          }}
+          photoUrl={photo_url || ""}
+          remainingLeave={employee.remainingLeave}
+          isOpen={true}
+          onClose={() => setSelectedLeave(null)}
+        />
+      )}
     </Flex>
   );
 };

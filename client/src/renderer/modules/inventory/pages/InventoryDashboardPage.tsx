@@ -5,6 +5,13 @@ import {
   Box,
   Button,
   Flex,
+  Drawer,
+  DrawerBody,
+  DrawerCloseButton,
+  DrawerContent,
+  DrawerOverlay,
+  useBreakpointValue,
+  useDisclosure,
   Grid,
   Heading,
   HStack,
@@ -56,6 +63,8 @@ const stockValue = (balance: InventoryBalance) =>
   balance.totalValue ?? balance.quantityOnHand * (balance.averageCost ?? 0);
 
 export default function InventoryDashboardPage() {
+  const navigation = useDisclosure();
+  const isMobile = useBreakpointValue({ base: true, md: false });
   const [tasksEmpty, setTasksEmpty] = useState(false);
   const companyId = useAdminUser((store) => store.adminUser.companyId);
   const userId = useAdminUser((store) => store.adminUser._id);
@@ -95,6 +104,10 @@ export default function InventoryDashboardPage() {
       cancelled = true;
     };
   }, [companyId, syncVersion, refresh]);
+
+  useEffect(() => {
+    navigation.onClose();
+  }, [isMobile, navigation.onClose]);
 
   const quantities = new Map<string, number>();
   data?.balances.forEach((balance) => {
@@ -148,11 +161,33 @@ export default function InventoryDashboardPage() {
   return (
     <Flex
       direction={{ base: "column", md: "row" }}
-      h="100vh"
+      h="100dvh"
       bg="#F8FAFC"
       overflow="hidden"
     >
-      <InventoryNavBar />
+      {isMobile ? (
+        <>
+          <Box flexShrink={0} px={4} py={2} borderBottom="1px solid" borderColor="gray.200">
+            <Button size="sm" variant="outline" onClick={navigation.onOpen} aria-label="Ouvrir la navigation du stock">
+              Menu
+            </Button>
+          </Box>
+          <Drawer isOpen={navigation.isOpen} placement="left" onClose={navigation.onClose} size="xs">
+            <DrawerOverlay />
+            <DrawerContent>
+              <DrawerCloseButton zIndex={1} />
+              <DrawerBody p={0}>
+                <InventoryNavBar showBottomBar={false} />
+              </DrawerBody>
+            </DrawerContent>
+          </Drawer>
+          <InventoryNavBar showSidebar={false} />
+        </>
+      ) : (
+        <Box flexShrink={0} width={{ md: "210px", lg: "225px", xl: "240px" }} maxW="240px" overflow="hidden">
+          <InventoryNavBar />
+        </Box>
+      )}
       <Box
         as="main"
         flex="1"
@@ -160,9 +195,9 @@ export default function InventoryDashboardPage() {
         minH={0}
         display="flex"
         flexDir="column"
-        h={{ base: "calc(100vh - 46px)", md: "calc(100vh - 52px)" }}
         overflow="hidden"
-        p={{ base: 3, md: 6 }}
+        p={4}
+        pb={{ base: "calc(46px + 1rem)", md: "calc(52px + 1rem)" }}
       >
         <Flex justify="space-between" align={{ base: "flex-start", md: "center" }} flexDir={{ base: "column", md: "row" }} gap={3} flexShrink={0}>
           <Box>
@@ -187,7 +222,9 @@ export default function InventoryDashboardPage() {
           </Button>
         </Flex>
 
-        <SimpleGrid columns={{ base: 2, xl: 4 }} spacing={6} mt="3rem" flexShrink={0}>
+        <Box flex="1" minH={0} minW={0} overflowY="auto" overflowX="hidden">
+          <Flex direction="column" minH="100%" minW={0} px={2} pb={2}>
+        <SimpleGrid minChildWidth="min(14rem, calc((100% - 1rem) / 2))" spacing={4} mt="3rem" flexShrink={0}>
           {metrics.map(({ label, value, icon: Icon, color }) => (
             <Box
               key={label}
@@ -195,10 +232,12 @@ export default function InventoryDashboardPage() {
               border="1px solid rgba(255,255,255,0.12)"
               boxShadow="0 2px 8px rgba(0,0,0,0.5)"
               borderRadius="0.4rem"
-              p={5}
-              minH="8rem"
+              p={3}
+              minH="6rem"
+              minW={0}
+              overflowWrap="anywhere"
             >
-              <HStack spacing={3}>
+              <HStack spacing={{ base: 2, md: 3 }} align="center" flexWrap="nowrap">
                 <Flex
                   bg={color}
                   color="white"
@@ -210,7 +249,7 @@ export default function InventoryDashboardPage() {
                 >
                   <Icon aria-hidden="true" />
                 </Flex>
-                <Text color="gray.700" fontWeight="700" fontSize="1.1rem">
+                <Text minW={0} flex="1" color="gray.700" fontWeight="700" fontSize="1.1rem">
                   {label}
                 </Text>
               </HStack>
@@ -242,28 +281,26 @@ export default function InventoryDashboardPage() {
         {companyId && userId && (
           <Grid
             templateColumns={{
-              base: "1fr",
-              xl: tasksEmpty ? "1fr" : "1.2fr 1fr",
+              base: "minmax(0, 1fr)",
+              xl: tasksEmpty ? "minmax(0, 1fr)" : "minmax(0, 1.2fr) minmax(0, 1fr)",
             }}
-            gap={6}
-            mt={4}
-            flex="1"
-            minH={0}
-            overflow="hidden"
-            templateRows={{ base: tasksEmpty ? "minmax(0, 1fr)" : "repeat(2, minmax(0, 1fr))", xl: "minmax(0, 1fr)" }}
-            alignItems="stretch"
+            templateAreas={{
+              base: tasksEmpty ? '"notes"' : '"tasks" "notes"',
+              xl: tasksEmpty ? '"notes"' : '"notes tasks"',
+            }}
+            alignItems="start"
+            columnGap={6}
+            rowGap="3rem"
+            flexShrink={0}
+            pt={{ base: 6, xl: 12 }}
           >
             <Box
+              gridArea="notes"
               w="100%"
-              maxW={{
-                base: "100%",
-                xl: tasksEmpty ? "calc((100% - 24px) * 6 / 11)" : "100%",
-              }}
-              mx="auto"
+              maxW={tasksEmpty ? "42rem" : undefined}
+              justifySelf="center"
               minW={0}
-              minH={0}
-              mt="4rem"
-              maxH="18rem"
+              h="18rem"
             >
               <InventoryDashboardNotes
                 key={`notes-${companyId}-${userId}`}
@@ -272,16 +309,14 @@ export default function InventoryDashboardPage() {
               />
             </Box>
             <Box
-              w="100%"
-              maxW={{
-                base: "100%",
-                xl: tasksEmpty ? "calc((100% - 24px) * 6 / 11)" : "100%",
-              }}
-              mx="auto"
+              gridArea="tasks"
+              h="auto"
+              maxH="42vh"
+              overflowY="auto"
+              overflowX="hidden"
+              overscrollBehaviorY="contain"
               minW={0}
               minH={0}
-              mt="4rem"
-              maxH="42vh"
               pl={{ base: 0, xl: 8 }}
               display={tasksEmpty ? "none" : "block"}
             >
@@ -295,14 +330,9 @@ export default function InventoryDashboardPage() {
             </Box>
           </Grid>
         )}
-        <Box
-          mt="auto"
-          position="sticky"
-          bottom="0"
-          bg="#F8FAFC"
-          zIndex={1}
-          flexShrink={0}
-        >
+        </Flex>
+        </Box>
+        <Box pt={4} px={2} flexShrink={0} minW={0}>
           <InventoryQuickActions
             key={companyId}
             companyId={companyId}

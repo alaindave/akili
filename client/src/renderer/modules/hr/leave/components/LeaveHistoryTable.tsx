@@ -20,7 +20,7 @@ const statusColor = (status: string) => {
     case "ATTENTE_APPROBATION":
       return "orange";
     case "ANNULÉ":
-      return "blue";
+      return "#3399ff";
     default:
       return "gray";
   }
@@ -28,9 +28,10 @@ const statusColor = (status: string) => {
 
 interface Props {
   leaves: Leave[];
+  onSelectLeave: (leave: Leave) => void;
 }
 
-export default function LeaveHistoryTable({ leaves }: Props) {
+export default function LeaveHistoryTable({ leaves, onSelectLeave }: Props) {
   return (
     <TableContainer
       borderWidth="1px"
@@ -55,7 +56,22 @@ export default function LeaveHistoryTable({ leaves }: Props) {
 
         <Tbody>
           {leaves.map((leave) => (
-            <Tr key={leave._id} h="4.5rem">
+            <Tr
+              key={leave._id}
+              h="4.5rem"
+              tabIndex={0}
+              cursor="pointer"
+              _hover={{ bg: "gray.50" }}
+              _focusVisible={{ outline: "2px solid", outlineColor: "gray.500" }}
+              aria-label={`Voir les détails du congé : ${leave.subject}`}
+              onClick={() => onSelectLeave(leave)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  onSelectLeave(leave);
+                }
+              }}
+            >
               <Td fontSize="1rem">
                 {new Date(leave.submittedAt).toLocaleDateString("fr-FR")}
               </Td>
@@ -73,7 +89,12 @@ export default function LeaveHistoryTable({ leaves }: Props) {
               </Td>
 
               <Td fontSize="1rem" maxW="15rem" py="1rem">
-                <Text whiteSpace="normal" noOfLines={3}>
+                <Text
+                  whiteSpace="normal"
+                  noOfLines={3}
+                  lineHeight="1.5"
+                  overflowWrap="anywhere"
+                >
                   {leave.notes}
                 </Text>
               </Td>

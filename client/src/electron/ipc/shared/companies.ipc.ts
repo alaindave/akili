@@ -1,5 +1,10 @@
-import { ipcMain } from "../companyIpc.js";
-import { listConfiguredCompanies, getCurrentCompanyId, getCurrentUnsyncedCompany, getCompanyBranding } from "../../services/shared/company.service.js";
+import { ipcMain } from "./companyIpc.js";
+import {
+  listConfiguredCompanies,
+  getCurrentCompanyId,
+  getCurrentUnsyncedCompany,
+  getCompanyBranding,
+} from "../../services/shared/company.service.js";
 import { validateCompanyId } from "../../storage/companyStorage.js";
 
 import {

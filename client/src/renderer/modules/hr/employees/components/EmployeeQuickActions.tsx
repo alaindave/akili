@@ -2,6 +2,7 @@ import {
   Box,
   Button,
   Center,
+  Grid,
   HStack,
   Text,
   useDisclosure,
@@ -34,21 +35,31 @@ const QuickActions = ({ onTaskCreate, employees }: Props) => {
       border="1px solid rgba(255,255,255,0.12)"
       boxShadow="0 2px 8px rgba(0,0,0,0.5)"
       borderRadius="md"
-      h="50px"
+      minH="50px"
+      w="100%"
       maxW="1050px"
       mx="auto"
       p={2}
     >
-      <HStack spacing={4} align="center" h="full">
+      <Grid
+        templateColumns="repeat(auto-fit, minmax(min(100%, 220px), 1fr))"
+        gap={2}
+        alignItems="stretch"
+      >
         {/* CREATE TASK */}
         <Button
+          h="auto"
+          minH="40px"
+          minW={0}
+          px={0}
           fontWeight="600"
           fontSize="0.95rem"
-          whiteSpace={{ base: "normal", lg: "nowrap" }}
+          whiteSpace="normal"
           overflow="hidden"
           textOverflow="ellipsis"
           bg="transparent"
-          _hover={{ bg: "transparent" }}
+          cursor="pointer"
+          _hover={{ bg: "blackAlpha.100", borderRadius: "md" }}
         >
           <HStack
             flex="1"
@@ -74,13 +85,18 @@ const QuickActions = ({ onTaskCreate, employees }: Props) => {
 
         {/* SEARCH EMPLOYEE */}
         <Button
+          h="auto"
+          minH="40px"
+          minW={0}
+          px={0}
           fontWeight="600"
           fontSize="0.95rem"
-          whiteSpace={{ base: "normal", lg: "nowrap" }}
+          whiteSpace="normal"
           overflow="hidden"
           textOverflow="ellipsis"
+          cursor="pointer"
           bg="transparent"
-          _hover={{ bg: "transparent" }}
+          _hover={{ bg: "blackAlpha.100", borderRadius: "md" }}
         >
           <HStack flex="1" spacing={3} px={2} py={2} cursor="pointer">
             <Center
@@ -98,14 +114,19 @@ const QuickActions = ({ onTaskCreate, employees }: Props) => {
 
         {/* LEAVE */}
         <Button
+          h="auto"
+          minH="40px"
+          minW={0}
+          px={0}
           fontWeight="600"
           fontSize="0.95rem"
-          whiteSpace={{ base: "normal", lg: "nowrap" }}
+          whiteSpace="normal"
           overflow="hidden"
           textOverflow="ellipsis"
           bg="transparent"
-          _hover={{ bg: "transparent" }}
           onClick={() => onLeaveOpen()}
+          cursor="pointer"
+          _hover={{ bg: "blackAlpha.100", borderRadius: "md" }}
         >
           <HStack flex="1" spacing={3} px={2} py={2} cursor="pointer">
             <Center
@@ -143,7 +164,7 @@ const QuickActions = ({ onTaskCreate, employees }: Props) => {
           <Text
             fontWeight="600"
             fontSize="0.95rem"
-            whiteSpace={{ base: "normal", lg: "nowrap" }}
+            whiteSpace="normal"
             overflow="hidden"
             textOverflow="ellipsis"
             onClick={() => navigate("/hr/reports")}
@@ -151,7 +172,7 @@ const QuickActions = ({ onTaskCreate, employees }: Props) => {
             Générer un rapport
           </Text>
         </HStack>
-      </HStack>
+      </Grid>
       <LeaveSubmissionModal
         isOpen={isLeaveOpen}
         onClose={onLeaveClose}

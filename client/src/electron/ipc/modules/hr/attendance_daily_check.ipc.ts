@@ -1,5 +1,8 @@
-import { getAttendanceClockIn, saveAttendanceClockIn } from "../../../database/repositories/modules/hr/attendanceSettings.repository.js";
-import { ipcMain } from "../../companyIpc.js";
+import {
+  getAttendanceClockIn,
+  saveAttendanceClockIn,
+} from "../../../database/repositories/modules/hr/attendanceSettings.repository.js";
+import { ipcMain } from "../../shared/companyIpc.js";
 
 import type { AttendanceDailyCheckPreparationInput } from "../../../../common/types/hr/attendance/AttendanceDailyCheck.js";
 import {
@@ -20,9 +23,19 @@ import {
 } from "../../../database/repositories/modules/hr/attendanceDailyCheck.repository.js";
 
 export function registerAttendanceDailyCheckIPC() {
-  ipcMain.handle("attendanceDailyCheck:reopen", (_, companyId: string, date: string, userId: string) => reopenAttendanceDailyCheck(companyId, date, userId));
-  ipcMain.handle("attendanceSettings:getClockIn", (_, companyId: string) => getAttendanceClockIn(companyId));
-  ipcMain.handle("attendanceSettings:saveClockIn", (_, companyId: string, userId: string, time: string) => saveAttendanceClockIn(companyId, userId, time));
+  ipcMain.handle(
+    "attendanceDailyCheck:reopen",
+    (_, companyId: string, date: string, userId: string) =>
+      reopenAttendanceDailyCheck(companyId, date, userId)
+  );
+  ipcMain.handle("attendanceSettings:getClockIn", (_, companyId: string) =>
+    getAttendanceClockIn(companyId)
+  );
+  ipcMain.handle(
+    "attendanceSettings:saveClockIn",
+    (_, companyId: string, userId: string, time: string) =>
+      saveAttendanceClockIn(companyId, userId, time)
+  );
   ipcMain.handle(
     "attendanceDailyCheck:create",
     async (_, input: AttendanceDailyCheckPreparationInput) => {

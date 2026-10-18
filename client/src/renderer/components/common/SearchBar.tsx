@@ -9,34 +9,52 @@ interface Props {
 
 const SearchBar = ({ placeholderText, onSearch }: Props) => {
   const ref = useRef<HTMLInputElement>(null);
+
   return (
     <form
+      style={{ width: "100%", minWidth: 0, margin: 0 }}
       onChange={(e) => {
         e.preventDefault();
-        if (ref.current) onSearch(ref.current?.value);
+
+        if (ref.current) {
+          onSearch(ref.current.value);
+        }
       }}
     >
-      <InputGroup>
+      <InputGroup width="100%">
         <InputLeftElement
-          mt="0.2rem"
+          pointerEvents="none"
+          height="40px"
           children={<SlMagnifier size="1.2rem" color="gray" />}
         />
+
         <Input
           ref={ref}
+          width="100%"
+          minWidth="150px"
+          maxWidth="100%"
           borderRadius="5px"
-          borderWidth="0.3px"
           border="1px solid #A0AEC0"
           boxShadow="0 2px 10px rgba(15,23,42,.06)"
           bg="#FFFFFF"
           placeholder={placeholderText}
-          _placeholder={{ color: "gray", fontSize: "1rem", fontWeight: "500" }}
+          pl="2.5rem"
+          _placeholder={{
+            color: "gray",
+            fontSize: "0.85rem",
+            fontWeight: "500",
+          }}
           variant="filled"
-          minW="20vw"
-          maxW="30vw"
           height="40px"
-          textColor="black"
-          _focus={{ bg: "#FFFFFF" }}
-          _hover={{ bg: "#FFFFFF", borderColor: "gray.600" }}
+          color="black"
+          _focus={{
+            bg: "#FFFFFF",
+            borderColor: "#718096",
+          }}
+          _hover={{
+            bg: "#FFFFFF",
+            borderColor: "gray.600",
+          }}
         />
       </InputGroup>
     </form>

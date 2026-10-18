@@ -6,7 +6,6 @@ import {
   Flex,
   Grid,
   HStack,
-  Spacer,
   Switch,
   Text,
   useDisclosure,
@@ -518,225 +517,251 @@ const EmployeeAttendancePage = () => {
     <Flex
       position="relative"
       direction="column"
-      ml="0.02rem"
-      w="100vw"
-      h="93vh"
+      w="100%"
+      minW={0}
+      h="100%"
+      minH={0}
+      overflow="hidden"
+      p="1rem"
+      pb={{ base: "calc(46px + 1rem)", md: "calc(52px + 1rem)" }}
       bg="#F8FAFC"
     >
       {/* =====================================================
           HEADER
       ===================================================== */}
-      <Box>
-        <Flex
-          ml="0.5rem"
-          direction="column"
-          bg="#F8F9FB"
-          height="10rem"
-          width="80vw"
-        >
-          <Flex>
-            <Box>
-              <HStack>
-                <Text
-                  color="#03143B"
-                  fontSize="clamp(1.3rem, 1vw + 0.8rem, 1.4rem)"
-                  fontWeight="700"
-                  ml="1rem"
-                  mt="1.3rem"
-                >
+      <Flex direction="column" flex="1" minW={0} minH={0}>
+        <Flex direction="column" gap={4} mb={4} flexShrink={0}>
+          <Flex justify="space-between" align="flex-start" gap={3}>
+            <Box minW={0}>
+              <HStack spacing={1}>
+                <Text color="#03143B" fontSize="1.4rem" fontWeight="700">
                   Présences
                 </Text>
                 <Button
-                  bg="transparent"
-                  color="gray.800"
-                  _hover={{
-                    bg: "transparent",
-                  }}
-                  fontSize="1rem"
-                  right="1rem"
+                  aria-label="Actualiser les présences"
+                  variant="ghost"
+                  size="sm"
+                  minW={8}
+                  px={2}
                   onClick={loadData}
                   isLoading={loading}
-                  position="relative"
-                  top="0.8rem"
                 >
                   <FaSyncAlt />
                 </Button>
               </HStack>
-              <PageSubtitle position="relative" left="0.45rem" ml="0.5rem">
-                Gérez la liste de présence
-              </PageSubtitle>
+              <PageSubtitle>Gérez la liste de présence</PageSubtitle>
             </Box>
-            <Spacer />
-
-            <Spacer />
-            {/* LOCKED ATTENDANCE  */}
-            {dailyCheck?.status === "LOCKED" && (
-              <Box mt="1.3rem" mr="0.5rem">
-                <FaLock size="2rem" color="#D4A017" />
-              </Box>
-            )}
-            {/* ADD EMPLOYEE */}
-            <Box>
-              {dailyCheck?.status !== "LOCKED" ? (
+            <Box flexShrink={0}>
+              {dailyCheck?.status === "LOCKED" ? (
+                <Flex
+                  role="img"
+                  aria-label="Présences verrouillées"
+                  title="Présences verrouillées"
+                  align="center"
+                  justify="center"
+                  boxSize="40px"
+                  color="#D4A017"
+                >
+                  <FaLock size="1.6rem" />
+                </Flex>
+              ) : (
                 <Button
                   colorScheme="blue"
-                  size="md"
+                  size="sm"
+                  h="40px"
+                  px={3}
+                  leftIcon={<MdPunchClock size="1.2rem" />}
                   onClick={onAddAttendanceOpen}
-                  zIndex="1"
-                  mt="1.2rem"
-                  mr="1rem"
-                  _hover={{
-                    backgroundColor: "#4F46E5",
-                  }}
+                  _hover={{ backgroundColor: "#4F46E5" }}
                 >
-                  <Box mr="0.5rem">
-                    <MdPunchClock size="1.2rem" />
-                  </Box>
-                  <Text>Pointer</Text>
+                  Pointer
                 </Button>
-              ) : null}
+              )}
             </Box>
           </Flex>
-          {/* ===================================================
-              FILTER + SEARCH
-          =================================================== */}
-          <Flex mr="1rem" mt="1rem" justify="space-between">
-            <Box ml="0.5rem" mt="1rem">
+          <Grid
+            templateColumns="repeat(auto-fit, minmax(min(100%, 220px), 1fr))"
+            gap={3}
+            sx={{
+              ".chakra-menu__menu-button": {
+                width: "100%",
+                minWidth: 0,
+                fontSize: "0.875rem",
+                paddingInline: 3,
+              },
+              ".chakra-menu__menu-button p": {
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              },
+              ".chakra-menu__menu-list": {
+                marginLeft: 0,
+                left: "auto",
+                bottom: "auto",
+                maxWidth: "calc(100vw - 2rem)",
+              },
+            }}
+          >
+            <Box minW={0}>
               <SearchBar
                 placeholderText="Rechercher un employé"
                 onSearch={setSearchText}
               />
             </Box>
-            <Box mt="1rem" ml="0.5rem">
+            <Box minW={0}>
               <EmployeeFilterMenu onFilterClicked={setFilter} />
             </Box>
-            <Box mt="1rem" ml="1rem">
+            <Box minW={0}>
               <AttendanceStatusFilter onFilterClicked={setStatusFilter} />
             </Box>
-          </Flex>
+          </Grid>
         </Flex>
-        {/* =====================================================
+        <Box
+          flex="1"
+          minH={0}
+          overflow="auto"
+          maxW="100%"
+          borderRadius="md"
+          overscrollBehavior="contain"
+        >
+          <Box minW={attendances.length ? "960px" : 0}>
+            {/* =====================================================
             TABLE HEADER
         ===================================================== */}
-        {attendances.length !== 0 && (
-          <Grid
-            templateColumns={gridTemplate}
-            px={10}
-            fontWeight="600"
-            bg="#F8F9FB"
-            borderWidth="0.3px"
-            border="1px solid #E2E8F0"
-            boxShadow="0 2px 10px rgba(15,23,42,.06)"
-            height="3.5rem"
-            width="78.5vw"
-            overflowY="hidden"
-            overflowX="hidden"
-            mt="1rem"
-            ml="1rem"
-          >
-            <Text color="gray.800" fontSize="1rem" mt="0.7rem">
-              Employé
-            </Text>
-            <Text color="gray.800" fontSize="1rem" mt="0.7rem">
-              ID
-            </Text>
-            <Text color="gray.800" fontSize="1rem" mt="0.7rem">
-              Poste
-            </Text>
-            <Text color="gray.800" fontSize="1rem" mt="0.7rem">
-              Departement
-            </Text>
-            <Text color="gray.800" fontSize="1rem" mt="0.7rem">
-              Arrivée
-            </Text>
-            <Text color="gray.800" fontSize="1rem" mt="0.7rem">
-              Départ
-            </Text>
-            <Text color="gray.800" fontSize="1rem" mt="0.7rem">
-              Actions
-            </Text>
-          </Grid>
-        )}
-        {/* =====================================================
+            {attendances.length !== 0 && (
+              <Grid
+                templateColumns={gridTemplate}
+                px={2}
+                fontWeight="600"
+                bg="#F8F9FB"
+                borderWidth="0.3px"
+                border="1px solid #E2E8F0"
+                boxShadow="0 2px 10px rgba(15,23,42,.06)"
+                height="3.5rem"
+                width="100%"
+                overflowY="hidden"
+                overflowX="hidden"
+                position="sticky"
+                top={0}
+                zIndex={1}
+              >
+                <Text color="gray.800" fontSize="0.99rem" mt="0.7rem">
+                  Employé
+                </Text>
+                <Text color="gray.800" fontSize="1rem" mt="0.7rem">
+                  ID
+                </Text>
+                <Text color="gray.800" fontSize="0.99rem" mt="0.7rem">
+                  Poste
+                </Text>
+                <Text color="gray.800" fontSize="0.99rem" mt="0.7rem">
+                  Departement
+                </Text>
+                <Text color="gray.800" fontSize="0.99rem" mt="0.7rem">
+                  Arrivée
+                </Text>
+                <Text color="gray.800" fontSize="0.99rem" mt="0.7rem">
+                  Départ
+                </Text>
+                <Text color="gray.800" fontSize="0.99rem" mt="0.7rem">
+                  Actions
+                </Text>
+              </Grid>
+            )}
+            {/* =====================================================
             BODY
         ===================================================== */}
-        <Box height="62vh" overflowY="auto" overflowX="hidden">
-          {attendanceLoading ? (
-            <>
-              <Box as="style">{shimmerKeyframes}</Box>
-              <VStack spacing={3}>
-                {[...Array(6)].map((_, i) => (
-                  <Shimmer key={i} height="40px" />
-                ))}
-              </VStack>
-            </>
-          ) : attendances.length === 0 ? (
-            <Flex
-              ml="1rem"
-              mt="3rem"
-              width="78vw"
-              minHeight={{
-                base: "200px",
-                md: "300px",
-              }}
-              align="center"
-              justify="center"
-              bg="#ffffff"
-              border="1px solid #A0AEC0"
-              borderRadius="8px"
-              px="20px"
-              flexShrink={0}
-            >
-              <VStack spacing="6px">
-                <Text
-                  fontSize={{
-                    base: "1rem",
-                    md: "1.1rem",
+            <Box>
+              {attendanceLoading ? (
+                <>
+                  <Box as="style">{shimmerKeyframes}</Box>
+                  <VStack spacing={3}>
+                    {[...Array(6)].map((_, i) => (
+                      <Shimmer key={i} height="40px" />
+                    ))}
+                  </VStack>
+                </>
+              ) : attendances.length === 0 ? (
+                <Flex
+                  mt={3}
+                  width="100%"
+                  minHeight={{
+                    base: "200px",
+                    md: "300px",
                   }}
-                  fontWeight="500"
-                  color="gray.500"
-                  textAlign="center"
+                  align="center"
+                  justify="center"
+                  bg="#ffffff"
+                  border="1px solid #A0AEC0"
+                  borderRadius="8px"
+                  px="20px"
+                  flexShrink={0}
                 >
-                  Pas de présence enregistrée
-                </Text>
-              </VStack>
-            </Flex>
-          ) : (
-            attendances
-              .filter((a) => !filter || a.department === filter)
-              .filter((a) => !statusFilter || a.status === statusFilter)
-              .filter((a) =>
-                `${a.firstName} ${a.lastName}`
-                  .toLowerCase()
-                  .includes(searchText.toLowerCase())
-              )
-              .map((attendance) => (
-                <EmployeeAttendanceCard
-                  key={attendance._id}
-                  attendance={attendance}
-                  selectedDate={selectedDate}
-                  gridTemplate={gridTemplate}
-                  onDelete={() => {
-                    setAttendance(attendance);
-                    onOpen();
-                  }}
-                  isUnlocked={unlocked}
-                  toggleOff={() => setUnlocked(false)}
-                />
-              ))
-          )}
+                  <VStack spacing="6px">
+                    <Text
+                      fontSize={{
+                        base: "1rem",
+                        md: "1.1rem",
+                      }}
+                      fontWeight="500"
+                      color="gray.500"
+                      textAlign="center"
+                    >
+                      Pas de présence enregistrée
+                    </Text>
+                  </VStack>
+                </Flex>
+              ) : (
+                attendances
+                  .filter((a) => !filter || a.department === filter)
+                  .filter((a) => !statusFilter || a.status === statusFilter)
+                  .filter((a) =>
+                    `${a.firstName} ${a.lastName}`
+                      .toLowerCase()
+                      .includes(searchText.toLowerCase())
+                  )
+                  .map((attendance) => (
+                    <EmployeeAttendanceCard
+                      key={attendance._id}
+                      attendance={attendance}
+                      selectedDate={selectedDate}
+                      gridTemplate={gridTemplate}
+                      onDelete={() => {
+                        setAttendance(attendance);
+                        onOpen();
+                      }}
+                      isUnlocked={unlocked}
+                      toggleOff={() => setUnlocked(false)}
+                    />
+                  ))
+              )}
+            </Box>
+          </Box>
         </Box>
-      </Box>
+      </Flex>
       {/* =====================================================
           FOOTER
       ===================================================== */}
       <Flex
-        mb="0.3rem"
-        position="absolute"
-        bottom="0.2rem"
-        width="80vw"
-        height="2rem"
-        justify="space-evenly"
+        flexShrink={0}
+        bg="#F8FAFC"
+        mt={4}
+        gap={3}
+        wrap="wrap"
+        align="center"
+        width="100%"
+        minW={0}
+        sx={{
+          "& > button": {
+            minHeight: "38px",
+            height: "auto",
+            padding: "8px 12px",
+            fontSize: "0.875rem",
+            whiteSpace: "normal",
+            maxWidth: "100%",
+            marginRight: 0,
+          },
+        }}
       >
         {/* VERIFY */}
 
@@ -812,11 +837,36 @@ const EmployeeAttendancePage = () => {
           </Button>
         )}
 
-        <Box>
+        <Box
+          flex="1 1 280px"
+          minW={0}
+          maxW="100%"
+          sx={{
+            ".chakra-form-control": {
+              minWidth: 0,
+              flex: "1 1 110px",
+              width: "auto",
+            },
+            ".react-datepicker-wrapper": { width: "100%" },
+            ".date-range-picker-input": {
+              width: "100%",
+              height: "38px",
+              fontSize: "0.875rem",
+              paddingLeft: 2,
+              paddingRight: 6,
+            },
+          }}
+        >
           <DateRangePicker value={dateRange} onChange={setDateRange} />
         </Box>
 
-        <Box fontSize="1.1rem" fontFamily="monospace" fontWeight="600">
+        <Box
+          flex="1 1 190px"
+          minW={0}
+          maxW="100%"
+          fontSize="0.875rem"
+          fontWeight="600"
+        >
           <DateDropdown
             startDate={dateRange.startDate}
             endDate={dateRange.endDate}
@@ -826,7 +876,7 @@ const EmployeeAttendancePage = () => {
 
         {dailyCheck?.status === "MANAGER_NOTIFIED" ||
         dailyCheck?.status === "LOCKED" ? null : (
-          <Box mt="0.2rem" color="red">
+          <Box color="red" flexShrink={0} p={1}>
             <Switch
               colorScheme="red"
               sx={{
@@ -834,7 +884,8 @@ const EmployeeAttendancePage = () => {
                   backgroundColor: "gray.800",
                 },
               }}
-              size="lg"
+              aria-label="Autoriser la modification des présences"
+              size="md"
               isChecked={unlocked}
               onChange={(e) => setUnlocked(e.target.checked)}
             />

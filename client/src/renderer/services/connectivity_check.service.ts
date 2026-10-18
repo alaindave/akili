@@ -1,16 +1,12 @@
+const RETRY_WINDOW = 60_000;
+const RETRY_INTERVAL = 5_000;
+const REQUEST_TIMEOUT = 10_000;
 const API_URL = import.meta.env.VITE_API_URL;
-const RETRY_WINDOW = 60_000; // 60 seconds
-const RETRY_INTERVAL = 5_000; // retry every 5 seconds
-const REQUEST_TIMEOUT = 10_000; // individual backend request timeout
+
+const API_URL_PROMISE = window.electron.sync.getApiUrl(API_URL);
 
 const hasInternetAccess = async (): Promise<boolean> => {
-  if (navigator.onLine) {
-    console.log("THE BROWSER REPORTS BEING ONLINE.");
-    return true;
-  } else {
-    console.log("THE BROWSER REPORTS BEING OFFLINE.");
-    return false;
-  }
+  return navigator.onLine;
 };
 
 export const checkOnline = async (): Promise<boolean> => {
@@ -18,10 +14,10 @@ export const checkOnline = async (): Promise<boolean> => {
 
   if (!hasInternet) {
     console.log("NO INTERNET CONNECTION. BACKEND CHECK SKIPPED.");
-
     return false;
   }
 
+  const API_URL = await API_URL_PROMISE;
   const startTime = Date.now();
 
   console.log(`CHECKING BACKEND: ${API_URL}/health`);
@@ -30,9 +26,7 @@ export const checkOnline = async (): Promise<boolean> => {
     try {
       const controller = new AbortController();
 
-      const timeout = setTimeout(() => {
-        controller.abort();
-      }, REQUEST_TIMEOUT);
+      const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
 
       try {
         const response = await fetch(`${API_URL}/health`, {
@@ -43,7 +37,6 @@ export const checkOnline = async (): Promise<boolean> => {
 
         if (response.ok) {
           console.log("BACKEND AVAILABLE.");
-
           return true;
         }
 
@@ -65,6 +58,5 @@ export const checkOnline = async (): Promise<boolean> => {
   }
 
   console.error("BACKEND COULD NOT BE REACHED AFTER 60 SECONDS.");
-
   return false;
 };

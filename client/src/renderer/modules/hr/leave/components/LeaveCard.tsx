@@ -1,4 +1,5 @@
 import {
+  Badge,
   Image,
   Button,
   Box,
@@ -442,7 +443,6 @@ const EmployeeLeaveCard = ({ leave, onDelete, gridTemplate }: Props) => {
     <Grid
       templateColumns={gridTemplate}
       alignItems="center"
-      ml="1rem"
       px={3}
       py={3}
       bg="#ffffff"
@@ -450,7 +450,7 @@ const EmployeeLeaveCard = ({ leave, onDelete, gridTemplate }: Props) => {
       borderWidth="0.3px"
       boxShadow="0 2px 10px rgba(15,23,42,.06)"
       maxH="5.5rem"
-      width="80vw"
+      width="100%"
       marginBottom="0.8px"
     >
       {/* ===================================================
@@ -480,7 +480,7 @@ const EmployeeLeaveCard = ({ leave, onDelete, gridTemplate }: Props) => {
           <Text
             color="gray.800"
             fontWeight="500"
-            fontSize="1.05rem"
+            fontSize="0.99rem"
             whiteSpace="normal"
             wordBreak="break-word"
             maxW="7rem"
@@ -496,7 +496,7 @@ const EmployeeLeaveCard = ({ leave, onDelete, gridTemplate }: Props) => {
       =================================================== */}
 
       <Box>
-        <Text ml="0.5rem" color="gray.600" fontWeight="500" fontSize="1.05rem">
+        <Text ml="0.5rem" color="gray.600" fontWeight="500" fontSize="0.99rem">
           {new Date(startDate).toLocaleDateString("fr-FR")}
         </Text>
       </Box>
@@ -506,7 +506,7 @@ const EmployeeLeaveCard = ({ leave, onDelete, gridTemplate }: Props) => {
       =================================================== */}
 
       <Box>
-        <Text color="gray.600" fontWeight="500" fontSize="1.05rem">
+        <Text color="gray.600" fontWeight="500" fontSize="0.99rem">
           {new Date(endDate).toLocaleDateString("fr-FR")}
         </Text>
       </Box>
@@ -515,40 +515,43 @@ const EmployeeLeaveCard = ({ leave, onDelete, gridTemplate }: Props) => {
           NOTES
       =================================================== */}
 
-      <Box>{subject}</Box>
+      <Box
+        fontSize="0.99rem"
+        whiteSpace="normal"
+        wordBreak="break-word"
+        maxW="7rem"
+        noOfLines={2}
+      >
+        {subject}
+      </Box>
 
       {/* ===================================================
           STATUS
       =================================================== */}
 
-      <Box width="7rem">
-        {status === "ATTENTE_APPROBATION" ? (
-          <Text
-            color="yellow.600"
-            fontWeight="600"
-            fontSize="1rem"
-            whiteSpace="normal"
-            wordBreak="break-word"
-          >
-            Attente approbation
-          </Text>
-        ) : (
-          <Text
-            color={
-              status === "APPROUVÉ"
-                ? "green.700"
-                : status === "REFUSÉ"
-                ? "#FC8181"
-                : "yellow.500"
-            }
-            fontWeight="600"
-            fontSize="1rem"
-            whiteSpace="normal"
-            wordBreak="break-word"
-          >
-            {status}
-          </Text>
-        )}
+      <Box minW={0} pr={2}>
+        <Badge
+          colorScheme={
+            status === "APPROUVÉ"
+              ? "green"
+              : status === "REFUSÉ"
+              ? "red"
+              : status === "ATTENTE_APPROBATION"
+              ? "yellow"
+              : "gray"
+          }
+          variant="subtle"
+          px={2}
+          py={1}
+          borderRadius="md"
+          fontSize="0.75rem"
+          textTransform="none"
+          whiteSpace="normal"
+          overflowWrap="anywhere"
+          maxW="100%"
+        >
+          {status === "ATTENTE_APPROBATION" ? "Attente approbation" : status}
+        </Badge>
       </Box>
 
       {/* ===================================================

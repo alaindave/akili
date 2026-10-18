@@ -21,7 +21,7 @@ const AttendanceNotesPopover = ({ attendance }: Props) => {
     PONCTUEL: "green",
     RETARD: "orange",
     ABSENT: "red",
-    CONGÉ: "blue",
+    CONGÉ: "#3399ff",
   } as const;
 
   if (!attendance.status) return;

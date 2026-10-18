@@ -131,9 +131,9 @@ const Logo = ({
           <Text
             color="#1F2937"
             fontSize={{
-              base: "20px",
-              sm: "22px",
-              md: "25px",
+              base: "1.4rem",
+              sm: "1.4rem",
+              md: "1.5rem",
             }}
             fontWeight="700"
             lineHeight="1.1"
@@ -153,10 +153,10 @@ const Logo = ({
             fontSize={{
               base: "0.7rem",
               sm: "0.8rem",
-              md: "0.85rem",
+              md: "0.9rem",
             }}
             lineHeight="1.3"
-            color="gray.800"
+            color="gray.600"
             fontWeight="400"
             whiteSpace="nowrap"
           >

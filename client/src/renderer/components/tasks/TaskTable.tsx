@@ -39,6 +39,7 @@ const TaskTable = ({
 }: TaskTableProps) => {
   const { module } = useModule();
   const navigate = useNavigate();
+
   const formatDeadline = (deadline: string | Date) => {
     const date = new Date(deadline);
 
@@ -66,35 +67,38 @@ const TaskTable = ({
     }
   };
 
-  const filteredTasks = tasks.filter((task) => {
-    const search = searchText.replace(/[\s-]/g, "").toLowerCase();
+  const normalizedSearch = searchText.replace(/[\s-]/g, "").toLowerCase();
 
-    if (!search) {
-      return true;
-    }
+  const filteredTasks = tasks
+    .filter((task) => {
+      if (!normalizedSearch) return true;
 
-    // Search by task number when search starts with "TACHE"
-    if (search.startsWith("TA".toLowerCase())) {
-      return task.taskNumber
-        ?.replace(/[\s-]/g, "")
-        .toLowerCase()
-        .includes(search);
-    }
+      if (normalizedSearch.startsWith("ta")) {
+        return (
+          task.taskNumber
+            ?.replace(/[\s-]/g, "")
+            .toLowerCase()
+            .includes(normalizedSearch) ?? false
+        );
+      }
 
-    // Otherwise search by subject or author
-    const subject = task.subject?.toLowerCase() ?? "";
+      const subject = task.subject?.toLowerCase() ?? "";
+      const authorName = `${task.author?.firstName ?? ""} ${
+        task.author?.lastName ?? ""
+      }`.toLowerCase();
 
-    const authorName = `${task.author?.firstName ?? ""} ${
-      task.author?.lastName ?? ""
-    }`.toLowerCase();
+      return (
+        subject.includes(normalizedSearch) ||
+        authorName.includes(normalizedSearch)
+      );
+    })
+    .filter((task) => !priorityFilter || task.priority === priorityFilter)
+    .filter((task) => {
+      if (!statusFilter) return true;
 
-    return subject.includes(search) || authorName.includes(search);
-  });
-
-  const statusMapping = (status: string): number => {
-    if (status === "RESOLVED") return 1;
-    return 0;
-  };
+      const isResolved = statusFilter === "RESOLVED" ? 1 : 0;
+      return task.isResolved === isResolved;
+    });
 
   return (
     <Box
@@ -103,144 +107,135 @@ const TaskTable = ({
       borderColor="gray.200"
       borderRadius="xl"
       boxShadow="sm"
-      maxW="78vw"
+      width="81vw"
+      maxWidth="100%"
+      minWidth={0}
+      overflow="hidden"
     >
       <TableContainer
-        maxW="78vw"
-        maxH="70vh"
-        borderWidth="1px"
-        borderRadius="lg"
+        width="100%"
+        maxHeight="calc(100vh - 240px)"
         overflowY="auto"
+        overflowX="auto"
+        sx={{
+          overscrollBehaviorY: "contain",
+          WebkitOverflowScrolling: "touch",
+          "&::-webkit-scrollbar": {
+            width: "8px",
+            height: "8px",
+          },
+          "&::-webkit-scrollbar-thumb": {
+            background: "#CBD5E0",
+            borderRadius: "8px",
+          },
+          "&::-webkit-scrollbar-thumb:hover": {
+            background: "#A0AEC0",
+          },
+        }}
       >
-        <Table variant="simple">
-          <Thead position="sticky" top={0} bg="gray.50" zIndex={1}>
+        <Table variant="simple" size="md">
+          <Thead position="sticky" top={0} zIndex={2} bg="gray.50">
             <Tr>
-              <Th>Numero de tache</Th>
+              <Th>Numéro de tâche</Th>
               <Th>Auteur</Th>
               <Th>Sujet</Th>
-              <Th>Priorite</Th>
+              <Th>Priorité</Th>
               <Th>Date limite</Th>
               <Th>Statut</Th>
             </Tr>
           </Thead>
 
           <Tbody>
-            {tasks.length === 0 ? (
+            {filteredTasks.length === 0 ? (
               <Tr>
                 <Td colSpan={6} textAlign="center" py={10}>
                   <Text color="gray.500" fontSize="sm">
-                    Pas de taches a afficher
+                    Aucune tâche à afficher
                   </Text>
                 </Td>
               </Tr>
             ) : (
-              filteredTasks
-                .filter(
-                  (task) => !priorityFilter || task.priority === priorityFilter
-                )
-                .filter(
-                  (task) =>
-                    !statusFilter ||
-                    task.isResolved === statusMapping(statusFilter)
-                )
-                .map((task) => (
-                  <Tr
-                    key={task._id}
-                    _hover={{
-                      bg: "gray.50",
-                    }}
-                    transition="background 0.15s ease"
-                  >
-                    {/* Task Number */}
-                    <Td>
-                      <Text
-                        maxW="200px"
-                        fontSize="md"
-                        fontWeight="600"
-                        color="blue.600"
-                        whiteSpace="normal"
-                        onClick={() =>
-                          navigate(`/${module.toLowerCase()}/tasks/details/${task._id}`)
-                        }
-                        style={{ cursor: "pointer" }}
-                      >
-                        {task.taskNumber}
-                      </Text>
-                    </Td>
+              filteredTasks.map((task) => (
+                <Tr
+                  key={task._id}
+                  _hover={{ bg: "gray.50" }}
+                  transition="background 0.15s ease"
+                >
+                  <Td>
+                    <Text
+                      maxW="200px"
+                      fontSize={{ base: "0.5rem", md: "0.9rem" }}
+                      fontWeight="600"
+                      color="blue.600"
+                      whiteSpace="normal"
+                      cursor="pointer"
+                      onClick={() =>
+                        navigate(
+                          `/${module.toLowerCase()}/tasks/details/${task._id}`
+                        )
+                      }
+                    >
+                      {task.taskNumber}
+                    </Text>
+                  </Td>
 
-                    {/* Author */}
-                    <Td>
-                      <Text fontSize="md" color="gray.700">
-                        {task.author.firstName}
-                        {""} {task.author.lastName}
-                      </Text>
-                    </Td>
+                  <Td>
+                    <Text fontSize="md" color="gray.700">
+                      {task.author?.firstName ?? ""}{" "}
+                      {task.author?.lastName ?? ""}
+                    </Text>
+                  </Td>
 
-                    {/* Subject */}
-                    <Td maxW="320px">
-                      <Text
-                        fontSize="md"
-                        fontWeight="600"
-                        color="gray.700"
-                        noOfLines={2}
-                        maxW="200px"
-                        whiteSpace="normal"
-                      >
-                        {task.subject}
-                      </Text>
-                    </Td>
+                  <Td maxW="320px">
+                    <Text
+                      fontSize="md"
+                      fontWeight="600"
+                      color="gray.700"
+                      noOfLines={2}
+                      maxW="200px"
+                      whiteSpace="normal"
+                    >
+                      {task.subject}
+                    </Text>
+                  </Td>
 
-                    {/* Priority */}
-                    <Td>
+                  <Td>
+                    <Badge
+                      colorScheme={getPriorityColor(task.priority)}
+                      borderRadius="full"
+                      px={2.5}
+                      py={1}
+                      fontSize="xs"
+                    >
+                      {task.priority}
+                    </Badge>
+                  </Td>
+
+                  <Td>
+                    <Text fontSize="md" color="gray.600">
+                      {formatDeadline(task.deadline)}
+                    </Text>
+                  </Td>
+
+                  <Td>
+                    <HStack spacing={2}>
                       <Badge
-                        colorScheme={getPriorityColor(task.priority)}
+                        colorScheme={task.isResolved ? "green" : "orange"}
                         borderRadius="full"
                         px={2.5}
                         py={1}
-                        fontSize="xs"
                       >
-                        {task.priority}
+                        {task.isResolved ? "Résolue" : "Ouverte"}
                       </Badge>
-                    </Td>
-
-                    {/* Deadline */}
-                    <Td>
-                      <Text fontSize="md" color="gray.600">
-                        {formatDeadline(task.deadline)}
-                      </Text>
-                    </Td>
-
-                    {/* Status */}
-                    <Td>
-                      {task.isResolved ? (
-                        <HStack spacing={2}>
-                          <Badge
-                            colorScheme="green"
-                            borderRadius="full"
-                            px={2.5}
-                            py={1}
-                          >
-                            Resolue
-                          </Badge>
-                        </HStack>
-                      ) : (
-                        <HStack spacing={2}>
-                          <Badge
-                            colorScheme="orange"
-                            borderRadius="full"
-                            px={2.5}
-                            py={1}
-                          >
-                            Ouverte
-                          </Badge>
-                        </HStack>
-                      )}
-                    </Td>
-                  </Tr>
-                ))
+                    </HStack>
+                  </Td>
+                </Tr>
+              ))
             )}
           </Tbody>
         </Table>
+        {/* Extra scroll space so the last row can move above the bottom edge. */}
+        <Box height="24px" aria-hidden="true" />
       </TableContainer>
     </Box>
   );

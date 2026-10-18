@@ -1,14 +1,11 @@
 import { Box, Flex, HStack, Stack, Text, VStack } from "@chakra-ui/react";
 import { ErrorBoundary } from "react-error-boundary";
-import { IoCalendarNumberSharp } from "react-icons/io5";
-import { FaDollarSign, FaRegClock } from "react-icons/fa";
 import { GoDotFill } from "react-icons/go";
 import { Link, useLocation, useParams } from "react-router-dom";
 import ComponentErrorFallback from "../../../../components/common/ComponentErrorFallback";
 import EmployeeDetailsTab from "./EmployeeDetailsTab";
 import EmployeePhotoUpload from "./EmployeePhotoUpload";
 import { useEmployee } from "../hooks/useEmployees";
-import useAdminUser from "../../../../../store/auth.store";
 
 type PhotoState = {
   photo_url?: string;
@@ -21,7 +18,6 @@ const EmployeeDetailsPage = () => {
 
   const { photo_url } = (location.state as PhotoState) || {};
 
-  const user = useAdminUser((store) => store.adminUser);
 
   /*
    * ---------------------------------------------------------
@@ -110,24 +106,32 @@ const EmployeeDetailsPage = () => {
       w="100%"
       maxW="1400px"
       mx="auto"
-      ml="0.01rem"
-      height="94vh"
+      minW={0}
+      h="100%"
+      minH={0}
+      overflow="hidden"
+      px={{ base: 4, md: 6 }}
+      pt={4}
+      pb={{ base: "calc(46px + 1rem)", md: "calc(52px + 1rem)" }}
     >
-      <VStack spacing={4} align="stretch">
+      <VStack spacing={4} align="stretch" h="100%" minH={0}>
         {/* =====================================================
             HEADER
         ====================================================== */}
 
         <Flex
-          direction={{ base: "column", md: "row" }}
+          flexShrink={0}
+          direction={{ base: "column", xl: "row" }}
+          gap={4}
+          minW={0}
           justify="space-between"
           align={{
             base: "flex-start",
             md: "center",
           }}
         >
-          <HStack>
-            <HStack ml="0.5rem" mt="0.7rem">
+          <HStack minW={0}>
+            <HStack minW={0} align="center">
               {/* Profile photo */}
 
               <EmployeePhotoUpload
@@ -138,17 +142,18 @@ const EmployeeDetailsPage = () => {
 
               {/* Name and role */}
 
-              <VStack spacing={3}>
+              <VStack spacing={2} minW={0}>
                 <Text
                   fontSize="1.2rem"
                   fontWeight="700"
                   color="gray.700"
                   textAlign="center"
+                  overflowWrap="anywhere"
                 >
                   {employee.firstName} {employee.lastName}
                 </Text>
 
-                <HStack position="relative" bottom="1rem">
+                <HStack flexWrap="wrap" justify="center" spacing={2}>
                   <Text>{employee.role}</Text>
 
                   <Box>
@@ -165,7 +170,7 @@ const EmployeeDetailsPage = () => {
               ATTENDANCE / LEAVES / PAYSLIPS
           ================================================== */}
 
-          <HStack mr="1rem" mb="1rem">
+          <HStack flexWrap="wrap" gap={2} spacing={0} minW={0}>
             {/* Attendance */}
 
             <Link
@@ -272,6 +277,11 @@ const EmployeeDetailsPage = () => {
             lg: "row",
           }}
           spacing={4}
+          flex="1"
+          minH={0}
+          minW={0}
+          w="100%"
+          pt={{ base: 2, md: 6, xl: 14 }}
         >
           {/* RIGHT PANEL */}
 
@@ -279,10 +289,12 @@ const EmployeeDetailsPage = () => {
             border="1px solid rgba(255,255,255,0.12)"
             boxShadow="0 2px 8px rgba(0,0,0,0.5)"
             borderRadius="0.4rem"
-            overflowY={user?.role === "MANAGER" ? "auto" : "hidden"}
-            height="70.6vh"
-            ml="15rem"
-            mt="1.5rem"
+            overflow="hidden"
+            flex="1"
+            minH={0}
+            w="100%"
+            minW={0}
+            mx="auto"
           >
             <ErrorBoundary FallbackComponent={ComponentErrorFallback}>
               <EmployeeDetailsTab employee={employee} />

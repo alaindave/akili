@@ -177,9 +177,11 @@ const EmployeeDetailsTab = ({ employee }: Props) => {
 
   return (
     <Box
-      w="47vw"
-      maxH={activeTabIndex === 3 ? "100%" : "90vh"}
-      h={activeTabIndex === 3 ? "100%" : "90vh"}
+      w="100%"
+      minW={0}
+      h="100%"
+      minH={0}
+      position="relative"
       display="flex"
       flexDirection="column"
     >
@@ -188,6 +190,7 @@ const EmployeeDetailsTab = ({ employee }: Props) => {
         onChange={setActiveTabIndex}
         variant="enclosed"
         flex="1"
+        minW={0}
         minH={0}
         display="flex"
         flexDirection="column"
@@ -202,7 +205,7 @@ const EmployeeDetailsTab = ({ employee }: Props) => {
           bg="white"
           borderBottomColor="rgba(255,255,255,0.08)"
           overflowX="auto"
-          overflowY="auto"
+          overflowY="hidden"
           whiteSpace="nowrap"
           sx={{
             "&::-webkit-scrollbar": {
@@ -213,9 +216,9 @@ const EmployeeDetailsTab = ({ employee }: Props) => {
           <Tab
             flexShrink={0}
             color="gray.600"
-            fontSize={{ base: "sm", md: "md", lg: "lg" }}
+            fontSize={{ base: "xs", sm: "sm", lg: "md" }}
             fontWeight="600"
-            px={{ base: 3, md: 5 }}
+            px={{ base: 3, md: 4 }}
             _selected={{
               color: "blue.600",
               bg: "transparent",
@@ -230,9 +233,9 @@ const EmployeeDetailsTab = ({ employee }: Props) => {
           <Tab
             flexShrink={0}
             color="gray.600"
-            fontSize={{ base: "sm", md: "md", lg: "lg" }}
+            fontSize={{ base: "xs", sm: "sm", lg: "md" }}
             fontWeight="600"
-            px={{ base: 3, md: 5 }}
+            px={{ base: 2, md: 4 }}
             _selected={{
               color: "blue.600",
               bg: "transparent",
@@ -247,9 +250,9 @@ const EmployeeDetailsTab = ({ employee }: Props) => {
           <Tab
             flexShrink={0}
             color="gray.600"
-            fontSize={{ base: "sm", md: "md", lg: "lg" }}
+            fontSize={{ base: "xs", sm: "sm", lg: "md" }}
             fontWeight="600"
-            px={{ base: 3, md: 5 }}
+            px={{ base: 2, md: 4 }}
             _selected={{
               color: "blue.600",
               bg: "transparent",
@@ -264,9 +267,9 @@ const EmployeeDetailsTab = ({ employee }: Props) => {
           <Tab
             flexShrink={0}
             color="gray.600"
-            fontSize={{ base: "sm", md: "md", lg: "lg" }}
+            fontSize={{ base: "xs", sm: "sm", lg: "md" }}
             fontWeight="600"
-            px={{ base: 3, md: 5 }}
+            px={{ base: 2, md: 4 }}
             _selected={{
               color: "blue.600",
               bg: "transparent",
@@ -284,7 +287,8 @@ const EmployeeDetailsTab = ({ employee }: Props) => {
         <TabPanels
           flex="1"
           minH={0}
-          overflowY={activeTabIndex === 3 ? "scroll" : "auto"}
+          overflowY="auto"
+          overscrollBehaviorY="contain"
           overflowX="hidden"
           px={{ base: 2, md: 4 }}
           py={4}
@@ -452,7 +456,13 @@ const EmployeeDetailsTab = ({ employee }: Props) => {
             w="100%"
             px={{ base: 2, md: 4 }}
             py={3}
-            spacing={3}
+            spacing={0}
+            gap={3}
+            flexWrap="wrap"
+            sx={{
+              "& > div": { minWidth: 0, maxWidth: "100%" },
+              "& button": { maxWidth: "100%" },
+            }}
             bg="white"
             borderTop="1px solid"
             borderColor="gray.200"
@@ -467,17 +477,7 @@ const EmployeeDetailsTab = ({ employee }: Props) => {
                   />
                 </Box>
               </ErrorBoundary>
-            ) : (
-              <Box>
-                <NotAuthorized
-                  buttonText="Modifier"
-                  icon={FaUserEdit}
-                  placement="left"
-                  width="13rem"
-                  color="#4F46E5"
-                />
-              </Box>
-            )}
+            ) : null}
 
             {user?.role === "MANAGER" ? (
               <Button
@@ -491,17 +491,7 @@ const EmployeeDetailsTab = ({ employee }: Props) => {
               >
                 Supprimer
               </Button>
-            ) : (
-              <Box>
-                <NotAuthorized
-                  buttonText="Supprimer"
-                  icon={FaRegTrashCan}
-                  placement="bottom"
-                  width="13rem"
-                  color="red"
-                />
-              </Box>
-            )}
+            ) : null}
           </HStack>
         )}
       </Tabs>
