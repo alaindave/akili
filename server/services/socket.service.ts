@@ -1,4 +1,5 @@
 import { Server } from "socket.io";
+import jwt from "jsonwebtoken";
 
 export type SocketEntity =
   | "EMPLOYEE"
@@ -31,8 +32,49 @@ let io: Server | null = null;
  */
 export function initializeSocketService(socketServer: Server) {
   io = socketServer;
+  io.use((socket, next) => {
+    try {
+      const token = socket.handshake.auth.token;
+      if (typeof token !== "string") throw new Error("Authentication required");
+      const identity = jwt.verify(token, process.env.JWT_PRIVATE_KEY!);
+      if (typeof identity === "string" || typeof identity._id !== "string" ||
+          typeof identity.companyId !== "string" || !identity.companyId) {
+        throw new Error("Invalid identity");
+      }
+      socket.data.companyId = identity.companyId;
+      socket.data.expiresAt = identity.exp;
+      next();
+    } catch {
+      next(new Error("Authentication required"));
+    }
+  });
+  io.on("connection", (socket) => {
+    void socket.join(`company:${socket.data.companyId}`);
+  });
 
   console.log("SOCKET SERVICE INITIALIZED");
+}
+
+export interface LateAttendanceEvent {
+  _id: string;
+  companyId: string;
+  attendanceId: string;
+  employeeName: string;
+  date: string;
+  clockIn?: string;
+  lateMinutes: number;
+  createdAt: string;
+}
+
+export function broadcastLateAttendance(event: LateAttendanceEvent) {
+  if (!io) return;
+  // Expired logins cannot receive alerts through a long-lived socket.
+  for (const socket of io.sockets.sockets.values()) {
+    if (socket.data.expiresAt && socket.data.expiresAt * 1000 <= Date.now()) {
+      socket.disconnect(true);
+    }
+  }
+  io.to(`company:${event.companyId}`).emit("attendance.late", event);
 }
 
 /**
