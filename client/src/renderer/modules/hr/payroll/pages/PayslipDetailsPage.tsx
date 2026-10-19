@@ -124,11 +124,21 @@ export default function EmployeePayslipDetails() {
       return;
     }
 
-    api
-      .getPayslipDocument(user.companyId, employeeId, payslipId)
-      .then((value) => {
+    Promise.all([
+      api.getPayslipDocument(user.companyId, employeeId, payslipId),
+      api.getPayrollRunById(user.companyId, payslipId),
+    ])
+      .then(([value, payrollRun]) => {
         if (active) {
-          setData(value);
+          setData({
+            ...value,
+            payroll: {
+              ...value.payroll,
+              generatedBy: payrollRun?.generatedBy || value.payroll.generatedBy,
+              generatedByName:
+                payrollRun?.generatedByName?.trim() || value.payroll.generatedByName,
+            },
+          });
         }
       })
       .catch((cause: unknown) => {

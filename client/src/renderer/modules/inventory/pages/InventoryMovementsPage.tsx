@@ -145,27 +145,40 @@ function CompanyMovements({ companyId }: { companyId: string }) {
       display="flex"
       flexDirection="column"
       overflow="hidden"
+      minW={0}
       bg="#FAFAFA"
       color="#262626"
       p={{ base: 3, md: 6 }}
-      pb="24px"
+      pb="0.1rem"
     >
       <Flex
         flexShrink={0}
         justify="space-between"
-        align="start"
-        gap={4}
-        wrap="wrap"
+        align="center"
+        gap={{ base: 2, md: 4 }}
+        wrap="nowrap"
       >
-        <Box>
-          <Heading as="h1" fontSize="1.4rem" color="#03143B">
+        <Box minW={0} flex="1">
+          <Heading
+            as="h1"
+            color="#1F2937"
+            fontSize={{ base: "1.4rem", sm: "1.4rem", md: "1.5rem" }}
+            fontWeight="700"
+            lineHeight="1.1"
+          >
             Mouvements de stocks
           </Heading>
-          <Text fontSize="1rem" color="gray.600">
+          <Text
+            fontSize={{ base: "0.7rem", sm: "0.8rem", md: "0.9rem" }}
+            lineHeight="1.3"
+            color="gray.600"
+            fontWeight="400"
+            mt={{ base: "1px", sm: "1px", md: "2px" }}
+          >
             Suivez les mouvements de stock sur vos entrepots.
           </Text>
         </Box>
-        <Flex gap={2} wrap="wrap" ml="auto" justify="flex-end">
+        <Flex gap={{ base: 1, md: 2 }} wrap="nowrap" flexShrink={0} ml="auto" justify="flex-end">
           {(
             [
               {
@@ -196,9 +209,12 @@ function CompanyMovements({ companyId }: { companyId: string }) {
           ).map(({ type: action, label, icon: Icon, color }) => (
             <Button
               key={action}
-              size="sm"
+              size={{ base: "xs", md: "sm" }}
+              minW={{ base: 7, md: 8 }}
+              px={{ base: 1, sm: 2, md: 3 }}
+              aria-label={label}
+              title={label}
               colorScheme={color}
-              leftIcon={<Icon />}
               isDisabled={
                 loading ||
                 Boolean(error) ||
@@ -206,16 +222,30 @@ function CompanyMovements({ companyId }: { companyId: string }) {
               }
               onClick={() => setTransactionType(action)}
             >
-              {label}
+              <Icon aria-hidden="true" />
+              <Box as="span" display={{ base: "none", sm: "inline" }} ml={1}>
+                {label}
+              </Box>
             </Button>
           ))}
         </Flex>
       </Flex>
+      <Flex
+        direction="column"
+        flex="1"
+        minH={0}
+        minW={0}
+        overflowY="auto"
+        overflowX="hidden"
+      >
       <SimpleGrid
-        columns={{ base: 2, xl: 4 }}
-        spacing={6}
-        mt={10}
-        mb={8}
+        minChildWidth={{
+          base: "min(14rem, calc((100% - 0.2rem) / 2))",
+          md: "min(14rem, calc((100% - 1rem) / 2))",
+        }}
+        spacing={{ base: "0.2rem", md: 4 }}
+        mt={{ base: 4, md: 6 }}
+        mb={0}
         flexShrink={0}
       >
         {metrics.map(({ key, label, icon: Icon, color }) => (
@@ -226,10 +256,13 @@ function CompanyMovements({ companyId }: { companyId: string }) {
             border="1px solid rgba(255,255,255,0.12)"
             boxShadow="0 2px 8px rgba(0,0,0,0.5)"
             borderRadius="0.4rem"
-            p={5}
-            minH="8rem"
+            p={3}
+            py={{ base: 1, md: 3 }}
+            minH={{ base: "5rem", md: "6rem" }}
+            minW={0}
+            overflowWrap="anywhere"
           >
-            <HStack spacing={3}>
+            <HStack spacing={{ base: 2, md: 3 }}>
               <Flex
                 bg={`${color}.500`}
                 color="white"
@@ -241,7 +274,7 @@ function CompanyMovements({ companyId }: { companyId: string }) {
               >
                 <Icon aria-hidden="true" />
               </Flex>
-              <Text fontWeight="700" color="gray.700" fontSize="1.1rem">
+              <Text minW={0} flex="1" fontWeight="700" color="gray.700" fontSize="1.1rem">
                 {label}
               </Text>
             </HStack>
@@ -280,8 +313,10 @@ function CompanyMovements({ companyId }: { companyId: string }) {
         overflow="hidden"
         display="flex"
         flexDirection="column"
-        flex="1"
-        minH={0}
+        flex="1 0 21rem"
+        minH="21rem"
+        mt="0.3rem"
+        mb="0.1rem"
         boxShadow="0 2px 6px rgba(0,0,0,0.02)"
       >
         <Flex
@@ -414,7 +449,7 @@ function CompanyMovements({ companyId }: { companyId: string }) {
             La date de fin doit être postérieure ou égale à la date de début.
           </Alert>
         )}
-        <Box flex="1" minH={0} overflow="auto">
+        <Box flex="1" minH="12rem" overflow="auto">
           {error ? (
             <Stack p={6} align="start">
               <Text role="alert">{error}</Text>
@@ -437,6 +472,7 @@ function CompanyMovements({ companyId }: { companyId: string }) {
             <Table
               size="sm"
               w="100%"
+              minW="60rem"
               whiteSpace="normal"
               sx={{
                 tableLayout: "fixed",
@@ -623,6 +659,7 @@ function CompanyMovements({ companyId }: { companyId: string }) {
           </HStack>
         </Flex>
       </Box>
+      </Flex>
     </Box>
   );
 }

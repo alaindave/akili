@@ -268,9 +268,9 @@ const PayrollDetailsPage = () => {
             </HStack>
           </Flex>
         </Flex>
-        <Box mt="0.5rem" flex="1" minH={0} minW={0}>
+        <Flex mt="0.5rem" direction="column" flex="0 1 auto" minH={0} minW={0}>
           <PayrollResultsTable payrollResults={filteredResults} />
-        </Box>
+        </Flex>
         {filteredResults.length === 0 && (
           <Text flexShrink={0} color="gray.500" textAlign="center">
             Aucun résultat.

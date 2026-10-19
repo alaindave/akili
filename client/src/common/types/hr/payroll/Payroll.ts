@@ -62,6 +62,7 @@ export interface PayrollResult {
   companyId: string;
   _id?: string;
   generatedBy: string;
+  generatedByName?: string;
   payrollRunId?: string;
   month: number;
   year: number;

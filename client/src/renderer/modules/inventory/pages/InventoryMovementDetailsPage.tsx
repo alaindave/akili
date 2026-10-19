@@ -344,17 +344,17 @@ function MovementDetails({
                   <HStack align="center" gap={3} flex="1" minW={0}>
                     <Heading
                       as="h1"
-                      size={paperDocument ? undefined : "md"}
+                      color={paperDocument ? undefined : "#1F2937"}
                       fontFamily={
                         paperDocument
                           ? 'Georgia, "Times New Roman", serif'
                           : undefined
                       }
                       fontSize={
-                        paperDocument ? "clamp(28px, 4vw, 38px)" : undefined
+                        paperDocument ? "clamp(28px, 4vw, 38px)" : { base: "1.4rem", sm: "1.4rem", md: "1.5rem" }
                       }
-                      fontWeight={paperDocument ? 400 : undefined}
-                      lineHeight="1.15"
+                      fontWeight={paperDocument ? 400 : 700}
+                      lineHeight={paperDocument ? "1.15" : "1.1"}
                       letterSpacing={paperDocument ? "-0.025em" : undefined}
                       overflowWrap="anywhere"
                     >
@@ -385,9 +385,12 @@ function MovementDetails({
                   )}
                 </HStack>
                 <Text
-                  mt={3}
+                  mt={paperDocument ? 3 : { base: "1px", sm: "1px", md: "2px" }}
                   fontFamily={paperDocument ? "mono" : undefined}
-                  fontSize={paperDocument ? "12px" : undefined}
+                  fontSize={paperDocument ? "12px" : { base: "0.7rem", sm: "0.8rem", md: "0.9rem" }}
+                  lineHeight={paperDocument ? undefined : "1.3"}
+                  color={paperDocument ? undefined : "gray.600"}
+                  fontWeight="400"
                   overflowWrap="anywhere"
                 >
                   {paperDocument

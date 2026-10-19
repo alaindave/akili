@@ -13,7 +13,6 @@ import { createSettingsTable } from "./settings.schema.js";
 import { createEmployeesDocumentsTable } from "../modules/hr/employees_documents.schema.js";
 import { createPayrollTables } from "../modules/hr/payroll.schema.js";
 import { createCompanyTable } from "./companies.schema.js";
-import { createAuditLogsTable } from "./audit_logs.schema.js";
 import { createNotificationTable } from "./notification_queue.schema.js";
 import { createInventoryWarehouseTable } from "../modules/inventory/inventory_warehouses.schema.js";
 import { createInventoryItemsTable } from "../modules/inventory/inventory_items.schema.js";
@@ -31,7 +30,6 @@ export async function initializeDatabase() {
   await createSyncTable();
   await queueExistingIncidents();
   await createSettingsTable();
-  await createAuditLogsTable();
   await createNotificationTable();
   // HR tables
   await createEmployeesTable();

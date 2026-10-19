@@ -1,15 +1,15 @@
 import { Server } from "socket.io";
 
 export type SocketEntity =
-  | "employee"
-  | "attendance"
-  | "leave"
-  | "incident"
-  | "task"
-  | "task_comment"
-  | "payroll"
-  | "payroll_result"
-  | "attendance_daily_check";
+  | "EMPLOYEE"
+  | "ATTENDANCE"
+  | "LEAVE"
+  | "INCIDENT"
+  | "TASK"
+  | "TASK_COMMENT"
+  | "PAYROLL"
+  | "PAYROLL_RESULT"
+  | "ATTENDANCE_DAILY_CHECK";
 
 export type SocketEvent = "CREATED" | "UPDATED" | "DELETED" | "CHANGED";
 

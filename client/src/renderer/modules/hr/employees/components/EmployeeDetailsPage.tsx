@@ -18,7 +18,6 @@ const EmployeeDetailsPage = () => {
 
   const { photo_url } = (location.state as PhotoState) || {};
 
-
   /*
    * ---------------------------------------------------------
    * EMPLOYEE
@@ -281,10 +280,8 @@ const EmployeeDetailsPage = () => {
           minH={0}
           minW={0}
           w="100%"
-          pt={{ base: 2, md: 6, xl: 14 }}
+          pt={{ base: "1rem", md: "2rem" }}
         >
-          {/* RIGHT PANEL */}
-
           <Box
             border="1px solid rgba(255,255,255,0.12)"
             boxShadow="0 2px 8px rgba(0,0,0,0.5)"

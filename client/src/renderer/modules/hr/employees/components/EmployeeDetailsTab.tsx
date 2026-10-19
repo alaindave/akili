@@ -216,7 +216,7 @@ const EmployeeDetailsTab = ({ employee }: Props) => {
           <Tab
             flexShrink={0}
             color="gray.600"
-            fontSize={{ base: "xs", sm: "sm", lg: "md" }}
+            fontSize={{ base: "1rem", md: "1.04rem" }}
             fontWeight="600"
             px={{ base: 3, md: 4 }}
             _selected={{
@@ -233,7 +233,7 @@ const EmployeeDetailsTab = ({ employee }: Props) => {
           <Tab
             flexShrink={0}
             color="gray.600"
-            fontSize={{ base: "xs", sm: "sm", lg: "md" }}
+            fontSize={{ base: "1rem", md: "1.04rem" }}
             fontWeight="600"
             px={{ base: 2, md: 4 }}
             _selected={{
@@ -250,7 +250,7 @@ const EmployeeDetailsTab = ({ employee }: Props) => {
           <Tab
             flexShrink={0}
             color="gray.600"
-            fontSize={{ base: "xs", sm: "sm", lg: "md" }}
+            fontSize={{ base: "1rem", md: "1.04rem" }}
             fontWeight="600"
             px={{ base: 2, md: 4 }}
             _selected={{
@@ -267,7 +267,7 @@ const EmployeeDetailsTab = ({ employee }: Props) => {
           <Tab
             flexShrink={0}
             color="gray.600"
-            fontSize={{ base: "xs", sm: "sm", lg: "md" }}
+            fontSize={{ base: "1rem", md: "1.04rem" }}
             fontWeight="600"
             px={{ base: 2, md: 4 }}
             _selected={{

@@ -21,7 +21,7 @@ import {
   addToSyncQueue,
   notifyPendingChanges,
 } from "../../shared/sync.repository.js";
-import { createAuditLog } from "../../shared/audit_log.repository.js";
+import { recordAuditLog } from "../../../../services/shared/audit.service.js";
 import { PayrollRunDto } from "../../../../preload/hr/payroll_run.preload.cjs";
 
 function getAdminName(
@@ -39,7 +39,7 @@ async function createPayrollStatusAudit(
   description: string,
   withinTransaction = false
 ): Promise<void> {
-  await createAuditLog(
+  await recordAuditLog(
     {
       companyId,
       userId: admin._id,
@@ -193,7 +193,7 @@ export async function createPayrollRun(
   });
   await notifyPendingChanges(payrollRun.companyId);
 
-  await createAuditLog({
+  await recordAuditLog({
     companyId: payrollRun.companyId,
     userId: payrollRunDto.admin._id,
     userName: getAdminName(payrollRunDto.admin),
@@ -245,7 +245,7 @@ export async function getPayrollRunById(companyId: string, _id: string) {
     SELECT
       pr.*,
 
-      gen.firstName || ' ' || gen.lastName
+      TRIM(COALESCE(gen.firstName, '') || ' ' || COALESCE(gen.lastName, ''))
         AS generatedByName,
 
       can.firstName || ' ' || can.lastName
@@ -1014,7 +1014,7 @@ async function cancelRun(
         true
       );
     }
-    await createAuditLog(
+    await recordAuditLog(
       {
         companyId,
         userId: admin._id,
@@ -1325,7 +1325,7 @@ async function transitionPayslip(
       true
     );
     await refreshPayrollRunStatus(companyId, payslip.payrollRunId);
-    await createAuditLog(
+    await recordAuditLog(
       {
         companyId,
         userId: admin._id,

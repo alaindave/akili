@@ -45,7 +45,9 @@ export default function PayrollResultsTable({ payrollResults }: Props) {
 
   return (
     <TableContainer
-      h="100%"
+      h="auto"
+      maxH="100%"
+      flex="0 1 auto"
       w="100%"
       minH={0}
       minW={0}
@@ -122,9 +124,7 @@ export default function PayrollResultsTable({ payrollResults }: Props) {
               </Td>
 
               <Td>
-                <Badge {...statusStyles[result.status]}>
-                  {result.status}
-                </Badge>
+                <Badge {...statusStyles[result.status]}>{result.status}</Badge>
               </Td>
 
               <Td>

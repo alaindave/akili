@@ -226,44 +226,73 @@ function CompanyWarehouses({ companyId }: { companyId: string }) {
       display="flex"
       flexDirection="column"
       overflow="hidden"
+      minW={0}
       bg="#FAFAFA"
       color="#262626"
       p={{ base: 3, md: 6 }}
-      pb={6}
+      pb="0.1rem"
     >
       <Flex
         justify="space-between"
-        align={{ base: "start", lg: "center" }}
-        gap={5}
-        wrap="wrap"
+        align="center"
+        gap={{ base: 2, md: 4 }}
+        wrap="nowrap"
         flexShrink={0}
       >
-        <Box>
-          <Heading as="h1" fontSize="1.4rem" color="#03143B">
+        <Box minW={0} flex="1">
+          <Heading
+            as="h1"
+            color="#1F2937"
+            fontSize={{ base: "1.4rem", sm: "1.4rem", md: "1.5rem" }}
+            fontWeight="700"
+            lineHeight="1.1"
+          >
             Entrepôts
           </Heading>
-          <Text fontSize="1rem" color="gray.600">
+          <Text
+            fontSize={{ base: "0.7rem", sm: "0.8rem", md: "0.9rem" }}
+            lineHeight="1.3"
+            color="gray.600"
+            fontWeight="400"
+            mt={{ base: "1px", sm: "1px", md: "2px" }}
+          >
             Gérez vos entrepôts et leurs emplacements de stockage
           </Text>
         </Box>
         <Button
           colorScheme="yellow"
-          leftIcon={<FiPlus />}
-          fontSize="sm"
-          h="42px"
-          px={5}
+          size={{ base: "xs", md: "sm" }}
+          minW={{ base: 7, md: 8 }}
+          px={{ base: 1, sm: 2, md: 3 }}
+          flexShrink={0}
+          aria-label="Nouvel entrepôt"
+          title="Nouvel entrepôt"
           borderRadius="8px"
           onClick={() => setCreating(true)}
         >
-          Nouvel entrepôt
+          <FiPlus aria-hidden="true" />
+          <Box as="span" display={{ base: "none", sm: "inline" }} ml={1}>
+            Nouvel entrepôt
+          </Box>
         </Button>
       </Flex>
 
+      <Flex
+        direction="column"
+        flex="1"
+        minH={0}
+        minW={0}
+        overflowY="auto"
+        overflowX="hidden"
+      >
       <SimpleGrid
-        columns={{ base: 2, xl: 4 }}
-        spacing={6}
-        mt={10}
-        mb={8}
+        minChildWidth={{
+          base: "min(14rem, calc((100% - 0.2rem) / 2))",
+          md: "min(14rem, calc((100% - 1rem) / 2))",
+        }}
+        spacing={{ base: "0.2rem", md: 4 }}
+        mt={{ base: 4, md: 6 }}
+        mb={0}
         flexShrink={0}
       >
         {metrics.map(({ label, value, icon: Icon, color, help }) => (
@@ -274,10 +303,13 @@ function CompanyWarehouses({ companyId }: { companyId: string }) {
             border="1px solid rgba(255,255,255,0.12)"
             boxShadow="0 2px 8px rgba(0,0,0,0.5)"
             borderRadius="0.4rem"
-            p={5}
-            minH="8rem"
+            p={3}
+            py={{ base: 1, md: 3 }}
+            minH={{ base: "5rem", md: "6rem" }}
+            minW={0}
+            overflowWrap="anywhere"
           >
-            <HStack spacing={3}>
+            <HStack spacing={{ base: 2, md: 3 }}>
               <Flex
                 bg={color}
                 color="white"
@@ -289,7 +321,7 @@ function CompanyWarehouses({ companyId }: { companyId: string }) {
               >
                 <Icon aria-hidden="true" />
               </Flex>
-              <Text fontWeight="700" color="gray.700" fontSize="1.1rem">
+              <Text minW={0} flex="1" fontWeight="700" color="gray.700" fontSize="1.1rem">
                 {label}
               </Text>
             </HStack>
@@ -314,18 +346,22 @@ function CompanyWarehouses({ companyId }: { companyId: string }) {
         overflow="hidden"
         display="flex"
         flexDirection="column"
-        flex="1"
-        minH={0}
+        flex="1 0 21rem"
+        minH="21rem"
+        mt="0.3rem"
+        mb="0.1rem"
         boxShadow="0 2px 6px rgba(0,0,0,0.02)"
       >
         <Flex
-          p={5}
-          gap={3}
-          wrap="wrap"
+          p={3}
+          gap={2}
+          align="center"
+          wrap="nowrap"
+          overflowX="auto"
           borderBottom="1px solid #EAEAEA"
           flexShrink={0}
         >
-          <InputGroup flex="1" minW="200px">
+          <InputGroup size="sm" flex="1" minW="150px">
             <InputLeftElement pointerEvents="none" color="#909090">
               <FiSearch />
             </InputLeftElement>
@@ -342,8 +378,10 @@ function CompanyWarehouses({ companyId }: { companyId: string }) {
             />
           </InputGroup>
           <Select
+            size="sm"
             aria-label="Filtrer par type"
-            w={{ base: "100%", sm: "210px" }}
+            flex="1"
+            minW="155px"
             fontSize="sm"
             value={type}
             onChange={(e) => {
@@ -359,8 +397,10 @@ function CompanyWarehouses({ companyId }: { companyId: string }) {
             ))}
           </Select>
           <Select
+            size="sm"
             aria-label="Filtrer par statut"
-            w={{ base: "100%", sm: "170px" }}
+            flex="1"
+            minW="140px"
             fontSize="sm"
             value={status}
             onChange={(e) => {
@@ -373,13 +413,13 @@ function CompanyWarehouses({ companyId }: { companyId: string }) {
             <option value="inactive">Inactifs</option>
           </Select>
           {hasFilters && (
-            <Button variant="ghost" fontSize="sm" onClick={reset}>
+            <Button size="sm" flexShrink={0} variant="ghost" fontSize="sm" onClick={reset}>
               Réinitialiser
             </Button>
           )}
         </Flex>
 
-        <Box flex="1" minH={0} overflow="auto">
+        <Box flex="1" minH="12rem" overflow="auto">
           {error ? (
             <Stack p={8} align="start">
               <Text role="alert">{error}</Text>
@@ -428,7 +468,11 @@ function CompanyWarehouses({ companyId }: { companyId: string }) {
           ) : (
             <Box whiteSpace="nowrap">
               <Table
+                size="sm"
+                w="100%"
+                minW="60rem"
                 sx={{
+                  "th, td": { px: 2, lineHeight: "short" },
                   th: {
                     position: "sticky",
                     top: 0,
@@ -437,9 +481,9 @@ function CompanyWarehouses({ companyId }: { companyId: string }) {
                     color: "#737373",
                     fontSize: "10px",
                     letterSpacing: "0.08em",
-                    py: 3.5,
+                    py: 2,
                   },
-                  td: { borderColor: "#F0F0F0", py: 4, fontSize: "sm" },
+                  td: { borderColor: "#F0F0F0", py: 2, fontSize: "sm" },
                 }}
               >
                 <Thead>
@@ -577,6 +621,7 @@ function CompanyWarehouses({ companyId }: { companyId: string }) {
           </HStack>
         </Flex>
       </Box>
+      </Flex>
       {creating && (
         <InventoryWarehouseForm
           companyId={companyId}

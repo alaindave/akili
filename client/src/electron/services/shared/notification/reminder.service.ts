@@ -1,6 +1,5 @@
-import { Notification } from "electron";
 import crypto from "crypto";
-import { emitNotification } from "../../../ipc/shared/notification_emitter.ipc.js";
+import { showAppNotification, closeAppNotification, closeAppNotifications } from "./appNotification.service.js";
 
 export interface Reminder {
   _id: string;
@@ -10,8 +9,6 @@ export interface Reminder {
 
 const reminders = new Map<string, NodeJS.Timeout>();
 
-// Keep native Electron notifications alive while they exist.
-const activeNotifications = new Map<string, Notification>();
 
 export function scheduleReminder(message: string, remindAt: Date): Reminder {
   if (!message.trim()) {
@@ -37,7 +34,7 @@ export function scheduleReminder(message: string, remindAt: Date): Reminder {
      * ---------------------------------------------------------
      */
 
-    emitNotification({
+    showAppNotification({
       _id,
       title: "Rappel",
       message: cleanMessage,
@@ -46,27 +43,6 @@ export function scheduleReminder(message: string, remindAt: Date): Reminder {
       remindAt: remindAt.toISOString(),
     });
 
-    /*
-     * ---------------------------------------------------------
-     * 2. SHOW NATIVE ELECTRON NOTIFICATION
-     * ---------------------------------------------------------
-     */
-
-    const notification = new Notification({
-      title: "Rappel - Akili",
-      body: cleanMessage,
-      silent: false,
-      urgency: "critical",
-      timeoutType: "never",
-    });
-
-    activeNotifications.set(_id, notification);
-
-    notification.on("close", () => {
-      activeNotifications.delete(_id);
-    });
-
-    notification.show();
   }, delay);
 
   reminders.set(_id, timeout);
@@ -94,16 +70,7 @@ export function cancelReminder(id: string): boolean {
   /*
    * Native notification is currently showing.
    */
-  const notification = activeNotifications.get(id);
-
-  if (notification) {
-    notification.close();
-    activeNotifications.delete(id);
-
-    return true;
-  }
-
-  return false;
+  return closeAppNotification(id);
 }
 
 export function cancelAllReminders(): void {
@@ -119,9 +86,5 @@ export function cancelAllReminders(): void {
   /*
    * Close native notifications.
    */
-  for (const notification of activeNotifications.values()) {
-    notification.close();
-  }
-
-  activeNotifications.clear();
+  closeAppNotifications("REMINDER");
 }

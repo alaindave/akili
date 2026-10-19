@@ -580,6 +580,7 @@ const EmployeeAttendancePage = () => {
             </Box>
           </Flex>
           <Grid
+            mt="1.5rem"
             templateColumns="repeat(auto-fit, minmax(min(100%, 220px), 1fr))"
             gap={3}
             sx={{
@@ -617,6 +618,7 @@ const EmployeeAttendancePage = () => {
           </Grid>
         </Flex>
         <Box
+          mt="2rem"
           flex="1"
           minH={0}
           overflow="auto"

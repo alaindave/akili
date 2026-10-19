@@ -20,6 +20,12 @@ export default function PayrollResultAuditPopover({
 }) {
   const events = [
     {
+      label: "Brouillon créé",
+      date: payroll.createdAt,
+      by: payroll.generatedBy,
+      user: payroll.generatedByName?.trim() || payroll.generatedBy || "Auteur non renseigné",
+    },
+    {
       label: "Vérifié",
       date: payroll.verifiedAt,
       by: payroll.verifiedBy,
@@ -71,8 +77,8 @@ export default function PayrollResultAuditPopover({
           </PopoverHeader>
           <PopoverBody>
             <VStack align="stretch" spacing={3}>
-              {events.map(({ label, date, by, user }) => {
-                if (!date || !by) return null;
+              {events.map(({ label, date, user }) => {
+                if (!date) return null;
 
                 return (
                   <Box key={label}>
@@ -88,9 +94,11 @@ export default function PayrollResultAuditPopover({
                         minute: "2-digit",
                       })}
                     </Text>
-                    <Text fontSize="xs" color="gray.500">
-                      Par : {user}
-                    </Text>
+                    {user && (
+                      <Text fontSize="xs" color="gray.500">
+                        Par : {user}
+                      </Text>
+                    )}
                   </Box>
                 );
               })}

@@ -1,4 +1,7 @@
-import { splitIncidentContent, formatIncidentCommentDate } from "./incidentContent";
+import {
+  splitIncidentContent,
+  formatIncidentCommentDate,
+} from "./incidentContent";
 import useAdminUser from "../../../store/auth.store";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import {
@@ -232,16 +235,7 @@ export default function IncidentDetails({ companyId, incidentId }: Props) {
                 {field("Lieu", incident.location)}
               </Grid>
               <Divider borderColor="#dedede" />
-              <Box as="section">
-                <Text as="h2" {...labelStyle} mb={4}>
-                  Actions préventives et correctives prises
-                </Text>
-                <Stack spacing={6}>
-                  {field("Actions préventives", incident.preventiveActions)}
-                  {field("Actions correctives", incident.remedialActions)}
-                </Stack>
-              </Box>
-              <Divider borderColor="#dedede" />
+
               <Box as="section">
                 <Text as="h2" {...labelStyle} mb={4}>
                   Description
@@ -256,26 +250,65 @@ export default function IncidentDetails({ companyId, incidentId }: Props) {
                 </Text>
               </Box>
               <Divider borderColor="#dedede" />
+              <Box as="section">
+                <Stack spacing={6}>
+                  {field("Actions préventives", incident.preventiveActions)}
+                  {field("Actions correctives", incident.remedialActions)}
+                </Stack>
+              </Box>
+              <Divider borderColor="#dedede" />
               <Box as="section" aria-labelledby="incident-comments-title">
-                <Text as="h2" id="incident-comments-title" {...labelStyle} mb={4}>
+                <Text
+                  as="h2"
+                  id="incident-comments-title"
+                  {...labelStyle}
+                  mb={4}
+                >
                   Commentaires
                 </Text>
                 <Stack spacing={4} mb={6}>
                   {comments.length === 0 ? (
-                    <Text fontSize="sm" color="#737373">Aucun commentaire pour le moment.</Text>
-                  ) : comments.map((entry, index) => (
-                    <Box key={`${entry.createdAt}:${index}`} border="1px solid #e5e5e5" borderRadius="md" p={4}>
-                      <Flex justify="space-between" align="baseline" gap={2} wrap="wrap" mb={2}>
-                        <Text fontSize="sm" fontWeight="600">{entry.author}</Text>
-                        <Text as="time" dateTime={entry.createdAt} fontSize="xs" color="#737373">
-                          {formatIncidentCommentDate(entry.createdAt)}
+                    <Text fontSize="sm" color="#737373">
+                      Aucun commentaire pour le moment.
+                    </Text>
+                  ) : (
+                    comments.map((entry, index) => (
+                      <Box
+                        key={`${entry.createdAt}:${index}`}
+                        border="1px solid #e5e5e5"
+                        borderRadius="md"
+                        p={4}
+                      >
+                        <Flex
+                          justify="space-between"
+                          align="baseline"
+                          gap={2}
+                          wrap="wrap"
+                          mb={2}
+                        >
+                          <Text fontSize="sm" fontWeight="600">
+                            {entry.author}
+                          </Text>
+                          <Text
+                            as="time"
+                            dateTime={entry.createdAt}
+                            fontSize="xs"
+                            color="#737373"
+                          >
+                            {formatIncidentCommentDate(entry.createdAt)}
+                          </Text>
+                        </Flex>
+                        <Text
+                          fontSize="sm"
+                          lineHeight="1.8"
+                          whiteSpace="pre-wrap"
+                          overflowWrap="anywhere"
+                        >
+                          {entry.text}
                         </Text>
-                      </Flex>
-                      <Text fontSize="sm" lineHeight="1.8" whiteSpace="pre-wrap" overflowWrap="anywhere">
-                        {entry.text}
-                      </Text>
-                    </Box>
-                  ))}
+                      </Box>
+                    ))
+                  )}
                 </Stack>
                 <Box
                   as="form"

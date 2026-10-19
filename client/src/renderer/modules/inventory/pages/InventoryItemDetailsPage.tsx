@@ -12,7 +12,6 @@ import {
   Button,
   Flex,
   FormControl,
-  FormHelperText,
   FormLabel,
   Heading,
   HStack,
@@ -25,7 +24,7 @@ import {
   useToast,
 } from "@chakra-ui/react";
 import { Link, useParams } from "react-router-dom";
-import { FiArrowLeft, FiEdit2 } from "react-icons/fi";
+import { FiEdit2 } from "react-icons/fi";
 import { FaArrowLeftLong } from "react-icons/fa6";
 import useAdminUser from "../../../../store/auth.store";
 import useSyncStore from "../../../../store/sync.store";
@@ -50,11 +49,13 @@ const costingLabels: Record<InventoryCostingMethod, string> = {
 
 function Detail({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <Box>
-      <Text fontSize="sm" color="gray.500" mb={1}>
+    <Box minW={0}>
+      <Text fontSize="xs" color="gray.600" mb={1}>
         {label}
       </Text>
-      <Box overflowWrap="anywhere">{children}</Box>
+      <Box fontSize="sm" color="gray.900" overflowWrap="anywhere">
+        {children}
+      </Box>
     </Box>
   );
 }
@@ -126,7 +127,7 @@ function CompanyItem({
   const unit = units.find((entry) => entry._id === item?.baseUnitId);
   const category = categories.find((entry) => entry._id === item?.categoryId);
   return (
-    <Box h="100%" overflowY="auto" bg="#FAFAFA" p={{ base: 3, md: 6 }}>
+    <Box h="100%" minH={0} overflow="hidden" bg="#FAFAFA" p={{ base: "0.3rem", md: 6 }}>
       {loading ? (
         <Stack role="status" aria-label="Chargement de l’article">
           <Skeleton h="40px" />
@@ -150,8 +151,8 @@ function CompanyItem({
           Cet article est introuvable ou a été supprimé.
         </Alert>
       ) : (
-        <Stack spacing={6}>
-          <Flex justify="space-between" align="start" gap={4} wrap="wrap">
+        <Stack h="100%" minH={0} spacing={{ base: "0.3rem", md: 6 }}>
+          <Flex flexShrink={0} justify="space-between" align="start" gap={4} wrap="wrap">
             <Box minW={0}>
               <HStack>
                 <Button as={Link} to="/inventory/items" variant="ghost" mb={5}>
@@ -160,13 +161,21 @@ function CompanyItem({
                 <Box>
                   <Heading
                     as="h1"
-                    fontSize="1.4rem"
-                    color="#03143B"
+                    color="#1F2937"
+                    fontSize={{ base: "1.2rem", sm: "1.2rem", md: "1.3rem" }}
+                    fontWeight="700"
+                    lineHeight="1.1"
                     overflowWrap="anywhere"
                   >
                     {item.name}
                   </Heading>
-                  <Text color="gray.500" mt={1}>
+                  <Text
+                    fontSize={{ base: "0.7rem", sm: "0.8rem", md: "0.9rem" }}
+                    lineHeight="1.3"
+                    color="gray.600"
+                    fontWeight="400"
+                    mt={{ base: "1px", sm: "1px", md: "2px" }}
+                  >
                     {item.sku}
                   </Text>
                   <Badge mt={2}>{item.isActive ? "Actif" : "Inactif"}</Badge>
@@ -183,13 +192,43 @@ function CompanyItem({
               </Button>
             )}
           </Flex>
+          <Flex flex="1" minH={0} minW={0} justify="center" align="center" overflow="hidden">
           <Box
+            as="article"
+            aria-label="Fiche article"
+            w="100%"
+            maxW="210mm"
+            maxH="100%"
+            minH={0}
+            display="flex"
+            flexDirection="column"
+            overflow="hidden"
+            mx="auto"
             bg="white"
-            border="1px solid #E5E5E5"
-            borderRadius="12px"
-            p={{ base: 4, md: 6 }}
+            color="gray.900"
+            border="1px solid"
+            borderColor="gray.300"
+            boxShadow="0 2px 8px rgba(0,0,0,0.06)"
+            p={{ base: 4, md: 8 }}
           >
-            <Heading as="h2" size="sm" mb={5}>
+            <Box flexShrink={0} borderBottom="2px solid" borderColor="gray.900" pb={{ base: 3, md: 5 }} mb={{ base: 4, md: 6 }}>
+              <Text
+                fontSize="xs"
+                letterSpacing="0.12em"
+                textTransform="uppercase"
+                color="gray.600"
+              >
+                Inventaire · Fiche article
+              </Text>
+              <Heading as="h2" fontSize="xl" mt={2} overflowWrap="anywhere">
+                {item.name}
+              </Heading>
+              <Text fontSize="sm" mt={2} overflowWrap="anywhere">
+                SKU : {item.sku}
+              </Text>
+            </Box>
+            <Box minH={0} overflowY="auto" overflowX="hidden" overscrollBehavior="contain">
+            <Heading as="h3" size="sm" mb={5}>
               Paramètres de l’article
             </Heading>
             {editing ? (
@@ -229,33 +268,30 @@ function CompanyItem({
                 </Detail>
               </SimpleGrid>
             )}
+            <Box borderTop="1px solid" borderColor="gray.300" mt={7} pt={6}>
+              <Heading as="h3" size="sm" mb={5}>
+                Informations complémentaires
+              </Heading>
+              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={5}>
+                <Detail label="Type">{itemTypeLabels[item.itemType]}</Detail>
+                <Detail label="Catégorie">
+                  {category?.name ?? item.categoryId ?? "Aucune"}
+                </Detail>
+                <Detail label="Unité de base">
+                  {unit ? `${unit.name} (${unit.code})` : item.baseUnitId}
+                </Detail>
+                <Detail label="Description">
+                  <Text whiteSpace="pre-wrap">
+                    {item.description || "Aucune description"}
+                  </Text>
+                </Detail>
+                <Detail label="Créé le">{dateLabel(item.createdAt)}</Detail>
+                <Detail label="Modifié le">{dateLabel(item.updatedAt)}</Detail>
+              </SimpleGrid>
+            </Box>
+            </Box>
           </Box>
-          <Box
-            bg="white"
-            border="1px solid #E5E5E5"
-            borderRadius="12px"
-            p={{ base: 4, md: 6 }}
-          >
-            <Heading as="h2" size="sm" mb={5}>
-              Informations complémentaires
-            </Heading>
-            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={5}>
-              <Detail label="Type">{itemTypeLabels[item.itemType]}</Detail>
-              <Detail label="Catégorie">
-                {category?.name ?? item.categoryId ?? "Aucune"}
-              </Detail>
-              <Detail label="Unité de base">
-                {unit ? `${unit.name} (${unit.code})` : item.baseUnitId}
-              </Detail>
-              <Detail label="Description">
-                <Text whiteSpace="pre-wrap">
-                  {item.description || "Aucune description"}
-                </Text>
-              </Detail>
-              <Detail label="Créé le">{dateLabel(item.createdAt)}</Detail>
-              <Detail label="Modifié le">{dateLabel(item.updatedAt)}</Detail>
-            </SimpleGrid>
-          </Box>
+          </Flex>
         </Stack>
       )}
     </Box>
@@ -411,7 +447,14 @@ function ItemEditor({
           <Button variant="outline" isDisabled={saving} onClick={onCancel}>
             Annuler
           </Button>
-          <Button type="submit" colorScheme="yellow" isLoading={saving}>
+          <Button
+            type="submit"
+            colorScheme="gray"
+            bg="gray.900"
+            color="white"
+            _hover={{ bg: "gray.700" }}
+            isLoading={saving}
+          >
             Enregistrer
           </Button>
         </HStack>

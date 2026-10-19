@@ -194,10 +194,22 @@ function WarehouseDetails({
             variant="outline"
           />
           <Box>
-            <Heading as="h1" fontSize="1.2rem" color="#03143B">
+            <Heading
+              as="h1"
+              color="#1F2937"
+              fontSize={{ base: "1.1rem", sm: "1.1rem", md: "1.1rem" }}
+              fontWeight="700"
+              lineHeight="1.1"
+            >
               {warehouse?.name ?? "Entrepôt"}
             </Heading>
-            <Text mt={1} color="gray.500" fontSize="1rem" fontFamily="mono">
+            <Text
+              fontSize={{ base: "0.7rem", sm: "0.8rem", md: "0.9rem" }}
+              lineHeight="1.3"
+              color="gray.600"
+              fontWeight="400"
+              mt={{ base: "1px", sm: "1px", md: "2px" }}
+            >
               {warehouse?.code}
             </Text>
           </Box>

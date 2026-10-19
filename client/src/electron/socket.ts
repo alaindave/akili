@@ -1,7 +1,16 @@
 import { BrowserWindow } from "electron";
 import { io, Socket } from "socket.io-client";
 import Task from "../common/types/task/Task.js";
-import { getToken } from "./auth.js";
+import { getToken, getActiveCompanyId } from "./auth.js";
+import { z } from "zod";
+import { showAppNotification } from "./services/shared/notification/appNotification.service.js";
+
+const lateAttendanceSchema = z.object({
+  _id: z.string().min(1), companyId: z.string().min(1),
+  attendanceId: z.string().min(1), employeeName: z.string().min(1),
+  date: z.string(), clockIn: z.string().datetime().optional(),
+  lateMinutes: z.number().finite().nonnegative(), createdAt: z.string().datetime(),
+});
 
 let socket: Socket | null = null;
 
@@ -23,6 +32,26 @@ export async function createSocket(
       auth: {
         token,
       },
+    });
+    const connection = socket;
+
+    connection.on("attendance.late", async (payload: unknown) => {
+      try {
+        const parsed = lateAttendanceSchema.safeParse(payload);
+        if (!parsed.success) return;
+        const event = parsed.data;
+        const companyId = await getActiveCompanyId();
+        if (socket !== connection || !connection.connected || companyId !== event.companyId) return;
+        const arrival = event.clockIn
+          ? ` à ${new Date(event.clockIn).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`
+          : "";
+        showAppNotification({
+          _id: event._id, title: "Retard", type: "WARNING", createdAt: event.createdAt,
+          message: `${event.employeeName} est arrivé${arrival}, avec ${event.lateMinutes} minutes de retard (${event.date}).`,
+        });
+      } catch (error) {
+        console.error("LATE ATTENDANCE NOTIFICATION FAILED:", error);
+      }
     });
 
     socket.on("connect", () => {

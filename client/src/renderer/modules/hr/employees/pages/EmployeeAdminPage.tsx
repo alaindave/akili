@@ -15,7 +15,6 @@ import { FaBell } from "react-icons/fa";
 import { IoReloadOutline } from "react-icons/io5";
 
 import type AdminUser from "../../../../../common/types/shared/AdminUser";
-import type { Attendance } from "../../../../../common/types/hr/attendance/Attendance";
 import type Employee from "../../../../../common/types/hr/employees/Employee";
 import type Leave from "../../../../../common/types/hr/leave/Leave";
 import type Task from "../../../../../common/types/task/Task";
@@ -30,17 +29,26 @@ import EmployeeDashboard from "../components/EmployeeDashboard";
 import QuickActions from "../components/EmployeeQuickActions";
 import TaskSubmissionModal from "../../../../components/tasks/TaskSubmissionModal";
 import TaskCard from "../../../../components/tasks/TaskCard";
+import { useAttendanceByDate } from "../../attendance/hooks/useAttendance";
+
+const attendanceDateFormatter = new Intl.DateTimeFormat("en-CA", {
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
 
 const EmployeeAdminPage = () => {
   const navigate = useNavigate();
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [attendances, setAttendances] = useState<Attendance[]>([]);
   const [leaves, setLeaves] = useState<Leave[]>([]);
   const [adminUsersList, setAdminUsersList] = useState<AdminUser[]>([]);
   const [time, setTime] = useState<Date>(new Date());
   const [loading, setLoading] = useState(false);
   const adminStore = useAdminUser();
   const user = useAdminUser((store) => store.adminUser);
+  const today = attendanceDateFormatter.format(time);
+  const { data: attendances = [], refetch: refetchAttendance } =
+    useAttendanceByDate(user.companyId, today);
   const [notes, setNotes] = useState(user.notes);
   const saveNotes = useAdminUser((store) => store.saveNotes);
   const loadTopTasks = useTaskStore((store) => store.loadTopTasks);
@@ -87,17 +95,6 @@ const EmployeeAdminPage = () => {
       setEmployees(employees);
 
       console.log("FETCHED SYNCED EMPLOYEES:", employees);
-
-      const today = new Date().toISOString().split("T")[0];
-
-      const attendances = await window.electron.hr.attendance.getByDate(
-        user.companyId,
-        today
-      );
-
-      setAttendances(attendances);
-
-      console.log("FETCHED ATTENDANCES:", attendances);
 
       const leaves = await window.electron.hr.leave.getOngoingLeaves(
         user.companyId,
@@ -149,6 +146,11 @@ const EmployeeAdminPage = () => {
       clearInterval(interval);
     };
   }, []);
+
+  // Sync writes directly to SQLite, so refresh the shared attendance cache too.
+  useEffect(() => {
+    void refetchAttendance();
+  }, [syncVersion, today, user.companyId, refetchAttendance]);
 
   useEffect(() => {
     if (previousSyncVersion.current === syncVersion) {

@@ -14,7 +14,7 @@ export default function SettingsPage() {
   return (
     <Box minH="100vh" bg="gray.50" p={{ base: 5, md: 10 }}>
       <HStack>
-        <Button fontSize="1rem" as={Link} to="/admin" variant="outline" mb={6}>
+        <Button fontSize="1rem" as={Link} to="/admin/administration" variant="outline" mb={6} aria-label="Retour à l’administration">
           <FaArrowLeftLong color="black" />
         </Button>
         <Heading fontSize="1rem" mb={5}>

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { clearToken, saveLocalSession, saveToken } from "../../auth.js";
 import { getCompanyById, upsertCompanyId } from "../../database/repositories/shared/companies.repository.js";
 import { createSocket, getSocket } from "../../socket.js";
+import { closeAppNotifications } from "./notification/appNotification.service.js";
 import { startBackgroundSync, stopBackgroundSync } from "./sync/backgroundSync.service.js";
 import { createCompanyStorage, findCompanyStorage, listCompanyStorage, setActiveCompanyStorage, withCompanyStorage } from "../../storage/companyStorage.js";
 import { ensureCompanyDatabase } from "./companyDatabase.service.js";
@@ -31,6 +32,7 @@ export async function establishCompanySession(identity: unknown, token?: string)
   if (!company || company.isDeleted) throw new Error("Entreprise indisponible.");
   stopBackgroundSync();
   getSocket()?.disconnect();
+  closeAppNotifications("WARNING");
   await clearToken();
   if (token) await saveToken(token);
   await saveLocalSession(session);
@@ -53,6 +55,7 @@ export async function initializeAuthenticatedCompany(company: Company, selectedC
 export async function endCompanySession(): Promise<void> {
   stopBackgroundSync();
   getSocket()?.disconnect();
+  closeAppNotifications("WARNING");
   await clearToken();
   setActiveCompanyStorage(null);
 }

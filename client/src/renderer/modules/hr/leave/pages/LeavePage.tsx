@@ -53,6 +53,19 @@ const gridTemplate = `
 1.8fr 1.6fr 1.6fr 1.5fr 1.5fr 1fr 1fr
 `;
 
+// All column headers occupy exactly two lines.
+// Explicit line breaks prevent wrapping from changing with screen size.
+const headerTextSx = {
+  whiteSpace: "pre-line",
+  overflowWrap: "anywhere",
+  wordBreak: "normal",
+  lineHeight: "1.15",
+  height: "2.3em",
+  minWidth: 0,
+  display: "flex",
+  alignItems: "center",
+} as const;
+
 const EmployeeLeavePage = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
 
@@ -61,10 +74,10 @@ const EmployeeLeavePage = () => {
     onOpen: onConfirmationOpen,
     onClose: onConfirmationClose,
   } = useDisclosure();
+
   const [searchText, setSearchText] = useState("");
   const [filter, setFilter] = useState("");
   const user = useAdminUser((store) => store.adminUser);
-
   const syncVersion = useSyncStore((store) => store.syncVersion);
 
   const [submissionMonth, setSubmissionMonth] = useState(
@@ -72,11 +85,11 @@ const EmployeeLeavePage = () => {
   );
 
   const [selectedLeave, setSelectedLeave] = useState<any | null>(null);
+  const [statusFilter, setStatusFilter] = useState("");
 
-  /* =========================================================
-     REACT QUERY
-  ========================================================= */
-
+  /*
+   * REACT QUERY
+   */
   const {
     data: leaves = [],
     isLoading,
@@ -85,26 +98,21 @@ const EmployeeLeavePage = () => {
   } = useLeavesByMonth(user.companyId, submissionMonth);
 
   const { data: employees = [] } = useEmployees();
-
   const deleteLeaveMutation = useDeleteLeave(user.companyId);
-
-  const [statusFilter, setStatusFilter] = useState("");
 
   useEffect(() => {
     if (syncVersion === undefined) return;
     refetch();
   }, [syncVersion, refetch, statusFilter]);
 
-  /* =========================================================
-     DELETE LEAVE
-  ========================================================= */
-
+  /*
+   * DELETE LEAVE
+   */
   const handleLeaveDelete = async () => {
     if (!selectedLeave?._id) return;
 
     try {
       await deleteLeaveMutation.mutateAsync(selectedLeave._id);
-
       onConfirmationClose();
       setSelectedLeave(null);
     } catch (error) {
@@ -112,16 +120,14 @@ const EmployeeLeavePage = () => {
     }
   };
 
-  /* =========================================================
-     DELETE CONFIRMATION
-  ========================================================= */
-
-  const handleDeleteConfirmation = (leave: any) => {
+  /*
+   * DELETE CONFIRMATION
+   */
+  const handleDeleteConfirmation = (leave: LeaveWithEmployee) => {
     setSelectedLeave(leave);
     onConfirmationOpen();
   };
 
-  console.log("LEAVES ARRAY", leaves);
   const filteredLeaves = leaves
     .filter((leave) =>
       `${leave.firstName} ${leave.lastName}`
@@ -162,6 +168,7 @@ const EmployeeLeavePage = () => {
             >
               Congés
             </Text>
+
             <Button
               aria-label="Actualiser les congés"
               variant="ghost"
@@ -174,10 +181,12 @@ const EmployeeLeavePage = () => {
               <FaSyncAlt />
             </Button>
           </HStack>
+
           <PageSubtitle fontSize={{ base: "0.75rem", md: "1rem" }}>
             Gérez les demandes de congés
           </PageSubtitle>
         </Box>
+
         <Button
           gridArea="submit"
           justifySelf="end"
@@ -196,7 +205,9 @@ const EmployeeLeavePage = () => {
         >
           Soumettre une demande
         </Button>
+
         <Box
+          mt="1.5rem"
           gridArea="department"
           minW={0}
           maxW="22rem"
@@ -223,7 +234,9 @@ const EmployeeLeavePage = () => {
         >
           <EmployeeFilterMenu onFilterClicked={setFilter} />
         </Box>
+
         <Box
+          mt="1.5rem"
           gridArea="search"
           justifySelf="end"
           w="100%"
@@ -260,6 +273,7 @@ const EmployeeLeavePage = () => {
         overflow="auto"
         overscrollBehavior="contain"
         borderRadius="md"
+        mt="2rem"
       >
         <Box minW={isLoading || leaves.length ? "1000px" : 0}>
           {(isLoading || leaves.length > 0) && (
@@ -277,15 +291,36 @@ const EmployeeLeavePage = () => {
               border="1px solid #E2E8F0"
               boxShadow="0 2px 10px rgba(15,23,42,.06)"
             >
-              <Text fontSize="0.99rem">Employé</Text>
-              <Text fontSize="0.99rem">Début de congé</Text>
-              <Text fontSize="0.99rem">Fin de congé</Text>
-              <Text fontSize="0.99rem">Motif</Text>
-              <Text fontSize="0.99rem">Statut</Text>
-              <Text fontSize="0.99rem">Congés restants</Text>
-              <Text fontSize="0.99rem">Actions</Text>
+              <Text fontSize="0.99rem" sx={headerTextSx}>
+                Employé
+              </Text>
+
+              <Text fontSize="0.99rem" sx={headerTextSx}>
+                {"Début de\ncongé"}
+              </Text>
+
+              <Text fontSize="0.99rem" sx={headerTextSx}>
+                {"Fin de\ncongé"}
+              </Text>
+
+              <Text fontSize="0.99rem" sx={headerTextSx}>
+                Motif
+              </Text>
+
+              <Text fontSize="0.99rem" sx={headerTextSx}>
+                Statut
+              </Text>
+
+              <Text fontSize="0.99rem" sx={headerTextSx}>
+                {"Congés\nrestants"}
+              </Text>
+
+              <Text fontSize="0.99rem" sx={headerTextSx}>
+                Actions
+              </Text>
             </Grid>
           )}
+
           {isLoading ? (
             <VStack
               align="stretch"
@@ -295,6 +330,7 @@ const EmployeeLeavePage = () => {
               aria-label="Chargement des congés"
             >
               <Box as="style">{shimmerKeyframes}</Box>
+
               {Array.from({ length: 6 }, (_, index) => (
                 <Shimmer key={index} height="72px" />
               ))}
@@ -343,6 +379,7 @@ const EmployeeLeavePage = () => {
         >
           <MonthDropDown onChange={setSubmissionMonth} />
         </Box>
+
         <Box
           flex="1 1 180px"
           maxW={{ base: "100%", md: "22rem" }}
@@ -364,10 +401,7 @@ const EmployeeLeavePage = () => {
         </Box>
       </Flex>
 
-      {/* =======================================================
-          LEAVE SUBMISSION
-      ======================================================= */}
-
+      {/* LEAVE SUBMISSION */}
       <LeaveSubmissionModal
         isOpen={isOpen}
         onClose={onClose}
@@ -375,10 +409,7 @@ const EmployeeLeavePage = () => {
         employees={employees}
       />
 
-      {/* =======================================================
-          DELETE CONFIRMATION
-      ======================================================= */}
-
+      {/* DELETE CONFIRMATION */}
       <DeletionDialog
         isOpen={isConfirmationOpen}
         onClose={onConfirmationClose}

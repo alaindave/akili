@@ -201,10 +201,22 @@ export default function InventoryDashboardPage() {
       >
         <Flex justify="space-between" align={{ base: "flex-start", md: "center" }} flexDir={{ base: "column", md: "row" }} gap={3} flexShrink={0}>
           <Box>
-            <Heading as="h1" fontSize="1.4rem" color="#03143B">
+            <Heading
+              as="h1"
+              color="#1F2937"
+              fontSize={{ base: "1.4rem", sm: "1.4rem", md: "1.5rem" }}
+              fontWeight="700"
+              lineHeight="1.1"
+            >
               Tableau de bord
             </Heading>
-            <Text color="gray.600" position="relative" bottom="0.3rem">
+            <Text
+              fontSize={{ base: "0.7rem", sm: "0.8rem", md: "0.9rem" }}
+              lineHeight="1.3"
+              color="gray.600"
+              fontWeight="400"
+              mt={{ base: "1px", sm: "1px", md: "2px" }}
+            >
               Vue d’ensemble de votre gestion de stock
             </Text>
           </Box>

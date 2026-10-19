@@ -206,6 +206,7 @@ export default function ReportsPage() {
 
       {/* CONTENT-SIZED REPORT SECTIONS */}
       <Grid
+        mt="2.5rem"
         flex="0 1 auto"
         minH={0}
         minW={0}

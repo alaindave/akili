@@ -58,7 +58,7 @@ Rules:
 
 ## 5. Implementation workflow
 
-**Before implementing any changes, explain the proposed design approach and ask for approval. Do not start implementation until approval is given.**
+**IMPORTANT:Before implementing any changes, explain the proposed design approach and ask for approval. Do not start implementation until approval is given.**
 
 1. Inspect the relevant files and existing implementations.
 2. Identify the layers and files that need to change.

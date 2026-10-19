@@ -8,6 +8,7 @@ import { getEmployeeById } from "../../../../database/repositories/modules/hr/em
 import {
   getEmployeePayrollResults,
   getPayrollItems,
+  getPayrollRunById,
 } from "../../../../database/repositories/modules/hr/payrollRun.repository.js";
 import { getPayrollSettings } from "../../../../database/repositories/modules/hr/payrollSettings.repository.js";
 import PayslipReportDocument from "../../../../reports/payroll/payslip-report.js";
@@ -24,11 +25,12 @@ export async function getPayslipDocumentData(
   ) {
     throw new Error("Paramètres du bulletin de paie invalides.");
   }
-  const [company, employee, payroll, settings] = await Promise.all([
+  const [company, employee, payroll, settings, payrollRun] = await Promise.all([
     getCompanyById(companyId),
     getEmployeeById(companyId, employeeId),
     getEmployeePayrollResults(companyId, employeeId, payrollRunId),
     getPayrollSettings(companyId),
+    getPayrollRunById(companyId, payrollRunId),
   ]);
   if (
     !company ||
@@ -43,7 +45,11 @@ export async function getPayslipDocumentData(
   return {
     company,
     employee,
-    payroll,
+    payroll: {
+      ...payroll,
+      generatedBy: payrollRun?.generatedBy ?? payroll.generatedBy,
+      generatedByName: payrollRun?.generatedByName ?? payroll.generatedByName,
+    },
     items,
     currency: settings?.currency ?? "BIF",
   };

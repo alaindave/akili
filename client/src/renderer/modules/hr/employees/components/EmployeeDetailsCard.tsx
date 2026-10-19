@@ -37,7 +37,7 @@ const EmployeeDetailsCard = ({ property, value, icon }: Props) => {
         <Text
           color="gray.700"
           fontWeight="700"
-          fontSize={{ base: "0.875rem", md: "0.99rem" }}
+          fontSize={{ base: "0.9rem", md: "0.99rem" }}
           overflowWrap="anywhere"
         >
           {property}
@@ -45,7 +45,7 @@ const EmployeeDetailsCard = ({ property, value, icon }: Props) => {
 
         <Text
           color="gray.600"
-          fontSize={{ base: "0.875rem", md: "0.99rem" }}
+          fontSize={{ base: "1rem", md: "1.04rem" }}
           wordBreak="break-word"
         >
           {value}

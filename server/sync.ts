@@ -1,4 +1,5 @@
 import Employee from "./models/modules/hr/employee.model.js";
+import { notifyLateAttendance } from "./services/lateAttendanceNotification.service.js";
 import {
   inventorySyncModels,
   type InventorySyncEntity,
@@ -889,6 +890,8 @@ export async function syncAttendance(operation: SyncOperation, data: SyncData) {
       serverVersion,
     });
 
+    await notifyLateAttendance(existingAttendance, attendance);
+
     return {
       success: true,
       _id: existingAttendance._id,
@@ -899,6 +902,7 @@ export async function syncAttendance(operation: SyncOperation, data: SyncData) {
     };
   }
 
+  const previousAttendance = await Attendance.findOne({ _id, companyId }).lean();
   await Attendance.updateOne(
     {
       _id,
@@ -928,6 +932,8 @@ export async function syncAttendance(operation: SyncOperation, data: SyncData) {
     companyId,
     serverVersion,
   });
+
+  await notifyLateAttendance(previousAttendance, attendance);
 
   return {
     success: true,

@@ -348,7 +348,7 @@ export default function PayrollPage() {
                 borderWidth="1px"
                 borderRadius="lg"
                 overflowY="auto"
-                mt="3rem"
+                mt="4rem"
               >
                 <Table mt="1rem" variant="simple" size="md">
                   <Thead position="sticky" top={0} zIndex={1} bg="gray.50">

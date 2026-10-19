@@ -3,6 +3,7 @@ import StockInitializationPage from "../../modules/inventory/pages/StockInitiali
 import { createHashRouter } from "react-router-dom";
 import App from "../App";
 import AdminPage from "../../modules/auth/pages/AdminPage";
+import AdministrationPage from "../../modules/auth/pages/AdministrationPage";
 import SettingsPage from "../../modules/auth/pages/SettingsPage";
 import PayrollAdminSettingsPage from "../../modules/auth/pages/PayrollAdminSettingsPage";
 import AttendanceSettingsPage from "../../modules/auth/pages/AttendanceSettingsPage";
@@ -39,6 +40,12 @@ const router = createHashRouter([
   {
     path: "/admin",
     element: <AdminPage />,
+    errorElement: <PageErrorFallback />,
+  },
+
+  {
+    path: "/admin/administration",
+    element: <AdministrationPage />,
     errorElement: <PageErrorFallback />,
   },
 

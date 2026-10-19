@@ -33,6 +33,8 @@ function load(file, resolve) {
     if (name.endsWith('/companies.repository.js')) return { getCompanyById: async (id) => id === 'company' ? { name: 'Entreprise Démonstration', address: 'Avenue du Commerce, 12', city: 'Bujumbura', country: 'Burundi', email: 'contact@example.com' } : null };
     if (name.endsWith('/employees.repository.js')) return { getEmployeeById: async (companyId, id) => companyId === 'company' && id === employee._id ? employee : null };
     if (name.endsWith('/payrollRun.repository.js')) return {
+      getPayrollRunById: async (companyId, id) => companyId === 'company' && id === 'run'
+        ? { generatedBy: 'batch-creator', generatedByName: 'Alice Manager' } : null,
       getEmployeePayrollResults: async (companyId, id, run) => companyId === 'company' && id === employee._id && run === 'run' && !missing ? payroll : null,
       getPayrollItems: async (companyId, resultId, employeeId) => {
         assert.equal(companyId, 'company'); assert.equal(resultId, 'payslip'); assert.equal(employeeId, 'employee'); return items;
@@ -52,6 +54,9 @@ function load(file, resolve) {
   });
   const data = await service.getPayslipDocumentData('company', 'employee', 'run');
   assert.equal(data.employee.matricule, 'EMP-0042');
+  assert.equal(data.payroll.generatedBy, 'batch-creator');
+  assert.equal(data.payroll.generatedByName, 'Alice Manager');
+  assert.equal(data.payroll.createdAt, payroll.createdAt);
   assert.equal(helpers.payslipRows(data).reduce((sum, row) => sum + (row.earning ?? 0), 0), payroll.grossSalary);
   assert.equal(helpers.payslipRows(data).reduce((sum, row) => sum + (row.deduction ?? 0), 0), payroll.totalDeductions);
   assert.equal(helpers.payslipRows(data)[2].label, 'IPR');

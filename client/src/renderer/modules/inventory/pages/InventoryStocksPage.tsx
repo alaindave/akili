@@ -297,19 +297,30 @@ function CompanyStocks({ companyId }: { companyId: string }) {
       minW={0}
       bg="#F8FAFC"
       p={4}
-      pb={6}
+      pb={{ base: 0, md: 4 }}
     >
-      <Heading
-        as="h1"
-        fontSize={{ base: "1.1rem", md: "1.rem" }}
-        color="#03143B"
-        flexShrink={0}
-      >
-        Stocks
-      </Heading>
-      <Text color="gray.600" fontSize="1rem" flexShrink={0}>
-        Consultez les quantités disponibles.
-      </Text>
+      <Box mt="0.rem">
+        <Heading
+          as="h1"
+          color="#1F2937"
+          fontSize={{ base: "1.4rem", sm: "1.4rem", md: "1.5rem" }}
+          fontWeight="700"
+          lineHeight="1.1"
+          flexShrink={0}
+        >
+          Stocks
+        </Heading>
+        <Text
+          fontSize={{ base: "0.7rem", sm: "0.8rem", md: "0.9rem" }}
+          lineHeight="1.3"
+          color="gray.600"
+          fontWeight="400"
+          mt={{ base: "1px", sm: "1px", md: "px" }}
+          flexShrink={0}
+        >
+          Consultez les quantités disponibles.
+        </Text>
+      </Box>
       <Flex
         direction="column"
         flex="1"
@@ -319,10 +330,13 @@ function CompanyStocks({ companyId }: { companyId: string }) {
         overflowX="hidden"
       >
         <SimpleGrid
-          minChildWidth="min(14rem, calc((100% - 1rem) / 2))"
-          spacing={4}
+          minChildWidth={{
+            base: "min(14rem, calc((100% - 0.2rem) / 2))",
+            md: "min(14rem, calc((100% - 1rem) / 2))",
+          }}
+          spacing={{ base: "0.2rem", md: 4 }}
           mt={10}
-          mb={8}
+          mb={{ base: 0, md: 8 }}
           flexShrink={0}
         >
           {metrics.map(({ label, value, icon: Icon, color }) => (
@@ -333,7 +347,8 @@ function CompanyStocks({ companyId }: { companyId: string }) {
               boxShadow="0 2px 8px rgba(0,0,0,0.5)"
               borderRadius="0.4rem"
               p={3}
-              minH="6rem"
+              py={{ base: 1, md: 3 }}
+              minH={{ base: "5rem", md: "6rem" }}
               minW={0}
               overflowWrap="anywhere"
             >
@@ -385,6 +400,7 @@ function CompanyStocks({ companyId }: { companyId: string }) {
           flex="1"
           minH="20rem"
           minW={0}
+          my={{ base: "0.1rem", md: 0 }}
         >
           <Flex
             p={{ base: 2, md: 4 }}

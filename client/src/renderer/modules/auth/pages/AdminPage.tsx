@@ -191,7 +191,8 @@ const AdminPage = () => {
           _active={{
             bg: "transparent",
           }}
-          onClick={() => navigate("/admin/settings")}
+          aria-label="Administration"
+          onClick={() => navigate("/admin/administration")}
         >
           <IoSettings />
         </Button>

@@ -4,17 +4,22 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const { DatabaseSync } = require('node:sqlite');
+const { AsyncLocalStorage } = require('node:async_hooks');
 const ts = require('typescript');
 const database = new DatabaseSync(':memory:');
 let queue = Promise.resolve();
+const transactionContext = new AsyncLocalStorage();
 let failQueue = false;
+let failAudit = false;
 let failQueueAfter = Infinity;
 function enqueue(fn) {
+  if (transactionContext.getStore()) return fn();
   const next = queue.catch(() => {}).then(fn);
   queue = next.catch(() => {});
   return next;
 }
 const runDirect = async (sql, params = []) => {
+  if (sql.includes('INSERT INTO audit_logs') && failAudit) throw new Error('audit failure');
   if (sql.includes('INSERT INTO sync_queue') && (failQueue || failQueueAfter-- === 0)) throw new Error('queue failure');
   const result = database.prepare(sql).run(...params);
   return { changes: Number(result.changes), lastID: Number(result.lastInsertRowid) };
@@ -26,9 +31,9 @@ const db = {
   run: (sql, params) => enqueue(() => runDirect(sql, params)),
   get: (sql, params) => enqueue(() => getDirect(sql, params)),
   all: (sql, params) => enqueue(() => allDirect(sql, params)),
-  transaction: (callback) => enqueue(async () => {
+  transaction: (callback) => transactionContext.getStore() ? callback() : enqueue(async () => {
     database.exec('BEGIN');
-    try { const result = await callback(); database.exec('COMMIT'); return result; }
+    try { const result = await transactionContext.run(true, callback); database.exec('COMMIT'); return result; }
     catch (error) { database.exec('ROLLBACK'); throw error; }
   }),
 };
@@ -47,7 +52,7 @@ function local(file) {
   if (cache.has(file)) return cache.get(file);
   const result = load(file, (name) => {
     if (name.endsWith('/db.js')) return db;
-    if (name === 'crypto') return require('node:crypto');
+    if (name === 'crypto' || name === 'node:crypto') return require('node:crypto');
     if (name === 'electron') return { BrowserWindow: { getAllWindows: () => [] } };
     return local(path.resolve(path.dirname(file), name.replace(/\.js$/, '.ts')));
   });
@@ -104,7 +109,25 @@ const countQueue = () => database.prepare('SELECT COUNT(*) AS n FROM sync_queue'
   assert.throws(() => database.exec("UPDATE payroll_results SET status = 'VERIFICATION'"), /CHECK/);
   database.exec("DELETE FROM payroll_items WHERE _id = 'migration-item'; DELETE FROM payroll_components WHERE _id = 'migration-component'; DELETE FROM sync_queue; PRAGMA foreign_keys = OFF");
   database.exec("UPDATE payroll_results SET status = 'BROUILLON'; UPDATE payroll_runs SET status = 'BROUILLON'");
+  const auditService = local(`${root}/services/shared/audit.service.ts`);
+  const auditInput = {
+    companyId: 'a', userId: admin._id, userName: 'A Manager', action: 'UPDATE',
+    entity: 'PAYROLL_RUN', entityId: 'run', description: 'Audit service validation',
+    changes: { password: { from: 'old-secret', to: 'new-secret' },
+      status: { from: 'BROUILLON', to: 'VERIFIÉ' } },
+  };
+  await assert.rejects(() => auditService.recordAuditLog({ ...auditInput, companyId: ' ' }), /companyId/);
+  await auditService.recordAuditLog(auditInput);
+  const serviceAudit = database.prepare('SELECT * FROM audit_logs').get();
+  assert.equal(serviceAudit.userName, 'A Manager');
+  assert.deepEqual(JSON.parse(serviceAudit.changes), {
+    password: { from: '[REDACTED]', to: '[REDACTED]' },
+    status: { from: 'BROUILLON', to: 'VERIFIÉ' },
+  });
+  assert.equal(auditInput.changes.password.to, 'new-secret');
+  database.exec('DELETE FROM audit_logs');
   await repo.verifyPayslip('a', 'one', { ...admin, role: 'ADMIN' });
+  assert.equal(database.prepare('SELECT userName FROM audit_logs').get().userName, 'A Manager');
   assert.equal(run().status, 'BROUILLON');
   assert.equal(row('two').status, 'BROUILLON');
   await repo.refreshPayrollRunStatuses('a');
@@ -119,6 +142,14 @@ const countQueue = () => database.prepare('SELECT COUNT(*) AS n FROM sync_queue'
   await assert.rejects(() => repo.approvePayslip('b', 'one', admin));
   await assert.rejects(() => repo.approvePayslip('a', 'missing', admin));
   assert.equal(countQueue(), 0);
+  const auditCount = database.prepare('SELECT COUNT(*) AS n FROM audit_logs').get().n;
+  failAudit = true;
+  await assert.rejects(() => repo.approvePayslip('a', 'one', admin), /audit failure/);
+  failAudit = false;
+  assert.equal(row('one').status, 'VERIFIÉ');
+  assert.equal(run().status, 'VERIFICATION');
+  assert.equal(countQueue(), 0);
+  assert.equal(database.prepare('SELECT COUNT(*) AS n FROM audit_logs').get().n, auditCount);
   failQueue = true;
   await assert.rejects(() => repo.approvePayslip('a', 'one', admin), /queue failure/);
   failQueue = false;
