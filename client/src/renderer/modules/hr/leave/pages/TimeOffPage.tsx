@@ -196,14 +196,21 @@ export default function TimeOffPage() {
                     {row.firstName} {row.lastName}
                   </Td>
                   <Td>
-                    {row.startDate} → {row.endDate}
+                    {new Date(row.startDate)
+                      .toLocaleDateString("fr-FR")
+                      .replace(/\//g, "-")}{" "}
+                    →{" "}
+                    {new Date(row.endDate)
+                      .toLocaleDateString("fr-FR")
+                      .replace(/\//g, "-")}
                     {row.isPartialDay
                       ? ` (${row.startTime ?? ""}–${row.endTime ?? ""})`
                       : ""}
                   </Td>
                   <Td>
-                    {policy?.label ?? "Ancien motif non vérifié"}
-                    {legacy && <Text color="orange.600">À vérifier</Text>}
+                    {row.motifId == null
+                      ? "Congé"
+                      : policy?.label ?? "Motif non vérifié"}
                   </Td>
                   <Td>
                     <Badge
@@ -220,43 +227,7 @@ export default function TimeOffPage() {
                   </Td>
                   <Td>
                     <Stack direction="row" wrap="wrap">
-                      {legacy && isManager ? (
-                        <>
-                          <Select
-                            aria-label="Motif pour ancienne demande"
-                            placeholder="Associer un motif"
-                            value={reviewMotif[row._id] ?? ""}
-                            onChange={(event) =>
-                              setReviewMotif((current) => ({
-                                ...current,
-                                [row._id]: event.target.value,
-                              }))
-                            }
-                            maxW="12rem"
-                          >
-                            {motifs
-                              .filter((item) => item.isActive)
-                              .map((item) => (
-                                <option key={item._id} value={item._id}>
-                                  {item.label}
-                                </option>
-                              ))}
-                          </Select>
-                          <Button
-                            size="xs"
-                            isLoading={reviewLegacy.isPending}
-                            isDisabled={!reviewMotif[row._id]}
-                            onClick={() =>
-                              reviewLegacy.mutate(
-                                { id: row._id, motifId: reviewMotif[row._id] },
-                                { onError: showError }
-                              )
-                            }
-                          >
-                            Examiner
-                          </Button>
-                        </>
-                      ) : !legacy && row.status === "PENDING" && isManager ? (
+                      {row.status === "PENDING" && isManager ? (
                         <>
                           <Button
                             size="xs"
@@ -274,8 +245,7 @@ export default function TimeOffPage() {
                           </Button>
                         </>
                       ) : null}
-                      {!legacy &&
-                        row.status !== "CANCELLED" &&
+                      {row.status !== "CANCELLED" &&
                         row.status !== "REJECTED" &&
                         (isManager || row.status === "PENDING") && (
                           <Button
@@ -285,9 +255,6 @@ export default function TimeOffPage() {
                             Annuler
                           </Button>
                         )}
-                      {!row.synced && (
-                        <Badge colorScheme="blue">En attente de sync</Badge>
-                      )}
                     </Stack>
                   </Td>
                 </Tr>
@@ -307,11 +274,6 @@ export default function TimeOffPage() {
           </Tbody>
         </Table>
       </Box>
-      <Text fontSize="xs" color="gray.500">
-        Les dossiers historiques et les paies finalisées ne sont pas recalculés
-        lors d’une modification de motif. Le taux de traitement « partiellement
-        payé » reste à définir par l’entreprise.
-      </Text>
     </Flex>
   );
 }

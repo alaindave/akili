@@ -38,7 +38,7 @@ const requestFields = {
   motifId: identifier, startDate: date, endDate: date, isPartialDay: Joi.boolean(),
   startTime: Joi.string().pattern(/^([01]\d|2[0-3]):[0-5]\d$/), endTime: Joi.string().pattern(/^([01]\d|2[0-3]):[0-5]\d$/),
   notes: Joi.string().max(10000).allow(""), additionalNotes: Joi.string().max(10000).allow(""),
-  supportingDocumentIds: Joi.array().items(identifier.required()).unique().max(20),
+  supportingDocumentIds: Joi.array().items(identifier).unique().max(20),
 };
 export const periodSchema = Joi.object({ startDate: date.required(), endDate: date.required(),
   isPartialDay: requestFields.isPartialDay, startTime: requestFields.startTime, endTime: requestFields.endTime }).unknown(false);

@@ -150,7 +150,8 @@ export async function updateTimeOff(companyId: string, id: string, changes: Part
 export async function transitionTimeOff(companyId: string, id: string, action: "approve" | "reject" | "cancel" | "delete", rejectionReason?: string) {
   const current = await getTimeOff(companyId,id);
   if (!current) throw new Error("TimeOff request not found");
-  if (current.legacyNeedsReview || !current.motifId) throw new Error("Legacy TimeOff requests require explicit motif review");
+  const legacy = current.legacyNeedsReview || !current.motifId;
+  if (action === "approve" && legacy) throw new Error("Legacy TimeOff requests require explicit motif review");
   if ((action === "approve" || action === "reject") && current.status !== "PENDING") throw new Error("Only pending requests can be decided");
   if (action === "cancel" && !["PENDING","APPROVED"].includes(current.status)) throw new Error("This request cannot be cancelled");
   if (action === "delete" && current.status === "APPROVED") throw new Error("Cancel an approved request before archiving it");

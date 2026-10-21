@@ -52,11 +52,21 @@ function snapshot(motif: TimeOffMotifRecord): TimeOffMotifSnapshot {
   return { code: motif.code, label: motif.label, category: motif.category, payrollTreatment: motif.payrollTreatment,
     deductFromLeaveBalance: motif.deductFromLeaveBalance };
 }
+function balanceWeekdays(startDate: string, endDate: string): number {
+  const start = new Date(`${startDate}T00:00:00Z`);
+  const totalDays = (Date.parse(`${endDate}T00:00:00Z`) - start.getTime()) / 86400000 + 1;
+  let days = Math.floor(totalDays / 7) * 5;
+  for (let offset = 0; offset < totalDays % 7; offset++) {
+    const weekday = (start.getUTCDay() + offset) % 7;
+    if (weekday !== 0 && weekday !== 6) days++;
+  }
+  return days;
+}
 async function approval(actor: TimeOffActor, row: RequestFields & { employeeId: string }, motif: TimeOffMotifRecord, session: ClientSession) {
   let days = 0;
   if (motif.deductFromLeaveBalance) {
     if (row.isPartialDay) throw new TimeOffError(409, "PARTIAL_BALANCE_RULE_UNDEFINED", "La règle de déduction du solde pour une journée partielle doit être définie avant approbation.");
-    days = (Date.parse(`${row.endDate}T00:00:00Z`) - Date.parse(`${row.startDate}T00:00:00Z`)) / 86400000 + 1;
+    days = balanceWeekdays(row.startDate, row.endDate);
     await repo.adjustBalance(actor.companyId, row.employeeId, -days, session);
   }
   return { status: TimeOffStatus.APPROVED, motifSnapshot: snapshot(motif), approvedBy: actor._id,
@@ -168,12 +178,19 @@ export async function cancelRequest(actor: TimeOffActor, id: string, body: unkno
   return repo.transaction(async session => {
     const row = await current(actor, id, input.serverVersion, session);
     if (![TimeOffStatus.PENDING, TimeOffStatus.APPROVED].includes(row.status)) throw new TimeOffError(409, "INVALID_TRANSITION", "Cette demande ne peut plus être annulée.");
+    const changes: Partial<TimeOffRecord> = { status: TimeOffStatus.CANCELLED };
     if (row.status === TimeOffStatus.APPROVED) {
       writer(actor, true);
-      if (row.legacyNeedsReview || row.balanceDaysDeducted === undefined) unresolved();
-      if (row.balanceDaysDeducted > 0) await repo.adjustBalance(actor.companyId, row.employeeId, row.balanceDaysDeducted, session);
+      let days = row.balanceDaysDeducted;
+      if (row.legacyNeedsReview || !row.motifId) {
+        dates({ motifId: row.motifId ?? "", startDate: row.startDate, endDate: row.endDate });
+        days = balanceWeekdays(row.startDate, row.endDate);
+        changes.balanceDaysDeducted = days;
+      }
+      if (days === undefined) unresolved();
+      if (days > 0) await repo.adjustBalance(actor.companyId, row.employeeId, days, session);
     }
-    return save(row, { status: TimeOffStatus.CANCELLED }, session);
+    return save(row, changes, session);
   });
 }
 export async function deleteRequest(actor: TimeOffActor, id: string, body: unknown) {

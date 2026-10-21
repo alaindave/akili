@@ -39,7 +39,7 @@ try {
   const db = client.db('timeoff_backend');
   const now = new Date('2026-10-20T10:00:00Z');
   const legacyId = new ObjectId();
-  const legacy = { _id: legacyId, companyId: 'a', employeeId: 'e-a', motif: 'Historical reason', startDate: '2026-01-01', endDate: '2026-01-02',
+  const legacy = { _id: legacyId, companyId: 'a', employeeId: 'e-a', motif: 'Historical reason', startDate: '2026-01-02', endDate: '2026-01-05',
     submittedAt: new Date('2025-12-01'), status: 'APPROUVÉ', notes: 'Original history', serverVersion: 50, isDeleted: 0, createdAt: now, updatedAt: now };
   await db.collection('leaves').insertMany([legacy, { ...legacy, _id: 'legacy-pending', submittedAt: '2025-12-01', status: 'ATTENTE_APPROBATION', serverVersion: 51 },
     { ...legacy, _id: 'legacy-b', companyId: 'b', employeeId: 'e-b', serverVersion: 52 }]);
@@ -102,9 +102,10 @@ try {
     isSystemDefault: true, isDeleted: 0, serverVersion: 999 });
   await call('PATCH', '/time-off/motifs/system', { serverVersion: 999, label: 'Overwrite system' }, 'manager-a', 403);
   await call('DELETE', '/time-off/motifs/system', { serverVersion: 999 }, 'manager-a', 403);
-  const input = { employeeId: 'e-a', motifId: 'm-a', startDate: '2026-11-01', endDate: '2026-11-02', notes: 'Family event' };
+  const input = { employeeId: 'e-a', motifId: 'm-a', startDate: '2026-11-01', endDate: '2026-11-02', notes: 'Family event', supportingDocumentIds: [] };
   for (const patch of [{ companyId: 'b' }, { status: 'APPROVED' }, { motifSnapshot: {} }, { approvedBy: 'attacker' }, { serverVersion: 999 },
-    { balanceDaysDeducted: 9 }, { startDate: '2026-02-30' }, { endDate: '2026-01-01' }, { notes: '  ' }]) {
+    { balanceDaysDeducted: 9 }, { startDate: '2026-02-30' }, { endDate: '2026-01-01' }, { notes: '  ' },
+    { supportingDocumentIds: [''] }, { supportingDocumentIds: [null] }, { supportingDocumentIds: ['doc-a', 'doc-a'] }]) {
     await call('POST', '/time-off', { ...input, ...patch }, 'admin-a', 400);
   }
   await call('POST', '/time-off', { ...input, employeeId: 'e-b' }, 'admin-a', 404);
@@ -121,7 +122,7 @@ try {
   request = await call('POST', `/time-off/${request._id}/approve`, { serverVersion: oldVersion });
   assert(request.serverVersion > oldVersion);
   assert.equal(request.status, 'APPROVED'); assert.equal(request.approvedBy, 'manager-a');
-  assert.equal(request.motifSnapshot.payrollTreatment, 'PAID'); assert.equal(await balance(), 18);
+  assert.equal(request.motifSnapshot.payrollTreatment, 'PAID'); assert.equal(request.balanceDaysDeducted, 1); assert.equal(await balance(), 19);
   await call('POST', `/time-off/${request._id}/approve`, { serverVersion: oldVersion }, 'manager-a', 409);
   await call('PATCH', `/time-off/${request._id}`, { serverVersion: request.serverVersion, notes: 'Rewrite' }, 'manager-a', 409);
   await call('DELETE', `/time-off/${request._id}`, { serverVersion: request.serverVersion }, 'manager-a', 409);
@@ -148,7 +149,20 @@ try {
       headers: { 'content-type': 'application/json', 'x-auth-token': token }, body: JSON.stringify({ serverVersion: concurrent.serverVersion }) });
     await response.json(); return response.status;
   }));
-  assert.deepEqual(statuses.sort(), [200, 409]); assert.equal(await balance(), 18);
+  assert.deepEqual(statuses.sort(), [200, 409]); assert.equal(await balance(), 19);
+  // Inclusive weekday counts: weekends, a full week, and a DST boundary.
+  for (const [startDate, endDate, expectedDays] of [
+    ['2026-11-07', '2026-11-08', 0],
+    ['2026-11-02', '2026-11-08', 5],
+    ['2026-10-23', '2026-10-26', 2],
+  ]) {
+    let weekdayRequest = await call('POST', '/time-off', { ...input, startDate, endDate }, 'admin-a', 201);
+    weekdayRequest = await call('POST', `/time-off/${weekdayRequest._id}/approve`, { serverVersion: weekdayRequest.serverVersion });
+    assert.equal(weekdayRequest.balanceDaysDeducted, expectedDays);
+    assert.equal(await balance(), 19 - expectedDays);
+    await call('POST', `/time-off/${weekdayRequest._id}/cancel`, { serverVersion: weekdayRequest.serverVersion });
+    assert.equal(await balance(), 19);
+  }
   // Explicit deactivation preserves references; inactive policies reject new use.
   motif = await call('DELETE', '/time-off/motifs/m-a', { serverVersion: motif.serverVersion });
   assert.equal(motif.isActive, false);
@@ -159,7 +173,7 @@ try {
     requiresApproval: false, deductFromLeaveBalance: false, requiresJustification: false }, 'manager-a', 201);
   const partial = await call('POST', '/time-off', { ...input, motifId: automatic._id, endDate: input.startDate,
     isPartialDay: true, startTime: '10:00', endTime: '11:00', notes: '' }, 'admin-a', 201);
-  assert.equal(partial.status, 'APPROVED'); assert.equal(partial.balanceDaysDeducted, 0); assert.equal(await balance(), 18);
+  assert.equal(partial.status, 'APPROVED'); assert.equal(partial.balanceDaysDeducted, 0); assert.equal(await balance(), 19);
   await call('POST', '/time-off', { ...input, motifId: automatic._id, isPartialDay: true, startTime: '10:00', endTime: '11:00' }, 'admin-a', 400);
   let partialPending = await call('POST', '/time-off', { ...input, endDate: input.startDate, isPartialDay: true, startTime: '10:00', endTime: '11:00' }, 'admin-a', 201);
   await call('POST', `/time-off/${partialPending._id}/approve`, { serverVersion: partialPending.serverVersion }, 'manager-a', 409);
@@ -178,7 +192,17 @@ try {
   let old = await call('GET', `/time-off/${legacyId}`);
   assert.equal(old.legacyNeedsReview, true); assert.equal(old.motifId, null);
   await call('POST', `/time-off/${legacyId}/review-legacy`, { serverVersion: old.serverVersion, motifId: 'm-a' }, 'manager-a', 409);
+  await call('POST', `/time-off/${legacyId}/cancel`, { serverVersion: old.serverVersion }, 'admin-a', 403);
+  const legacyBalance = await balance();
+  const legacyVersion = old.serverVersion;
+  old = await call('POST', `/time-off/${legacyId}/cancel`, { serverVersion: legacyVersion });
+  assert.equal(old.status, 'CANCELLED');
+  assert.equal(old.balanceDaysDeducted, 2);
+  assert.equal(old.motifId, null);
+  assert.equal(await balance(), legacyBalance + 2);
+  await call('POST', `/time-off/${legacyId}/cancel`, { serverVersion: legacyVersion }, 'manager-a', 409);
   await call('POST', `/time-off/${legacyId}/cancel`, { serverVersion: old.serverVersion }, 'manager-a', 409);
+  assert.equal(await balance(), legacyBalance + 2);
   old = await call('PATCH', `/time-off/${legacyId}/notes`, { serverVersion: old.serverVersion, additionalNotes: 'Historical note' });
   assert.equal((await db.collection('time_off').findOne({ _id: legacyId }))._id._bsontype, 'ObjectId');
   assert.equal(old.legacyData.notes, 'Original history');
@@ -194,7 +218,7 @@ try {
   await call('POST', '/time-off', { ...input, _id: 'insufficient', motifId: 'auto-balance', endDate: '2026-12-30' }, 'admin-a', 409);
   assert.equal(await db.collection('time_off').countDocuments({ _id: 'insufficient' }), 0);
   assert.deepEqual(await db.collection('synccounters').findOne({ _id: 'employee' }), beforeCounter);
-  assert.equal(await balance(), 18);
+  assert.equal(await balance(), legacyBalance + 2);
   assert.equal((await db.collection('employees').findOne({ _id: 'e-b' })).remainingLeave, 30);
   // Current account role overrides a stale manager claim in the token.
   await db.collection('adminusers').updateOne({ _id: 'manager-a' }, { $set: { role: 'VIEWER' } });

@@ -14,7 +14,14 @@ export default function SettingsPage() {
   return (
     <Box minH="100vh" bg="gray.50" p={{ base: 5, md: 10 }}>
       <HStack>
-        <Button fontSize="1rem" as={Link} to="/admin/administration" variant="outline" mb={6} aria-label="Retour à l’administration">
+        <Button
+          fontSize="1rem"
+          as={Link}
+          to="/admin/administration"
+          variant="outline"
+          mb={6}
+          aria-label="Retour à l’administration"
+        >
           <FaArrowLeftLong color="black" />
         </Button>
         <Heading fontSize="1rem" mb={5}>
@@ -23,11 +30,6 @@ export default function SettingsPage() {
       </HStack>
       <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={6} maxW="1200px">
         {[
-          [
-            "Paramètres de stocks",
-            "Catégories d’articles, unités de mesure et numérotation des références SKU.",
-            "/admin/settings/stock",
-          ],
           [
             "Paramètres de l'entreprise",
             "Identité, coordonnées et logo de l'entreprise.",
@@ -47,6 +49,11 @@ export default function SettingsPage() {
             "Paramètres de paie",
             "Rémunérations, déductions, paramètres généraux et annulation des paies.",
             "/admin/settings/payroll",
+          ],
+          [
+            "Paramètres de stocks",
+            "Catégories d’articles, unités de mesure et numérotation des références SKU.",
+            "/admin/settings/stock",
           ],
         ].map(([title, description, path]) => (
           <VStack
