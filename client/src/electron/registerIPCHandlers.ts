@@ -8,6 +8,7 @@ import { registerAuthIPC } from "./ipc/shared/auth.ipc.js";
 import { registerEmployeeIPC } from "./ipc/modules/hr/employees.ipc.js";
 import { registerEmployeeDocumentIPC } from "./ipc/modules/hr/employees_documents.ipc.js";
 import { registerLeaveIPC } from "./ipc/modules/hr/leaves.ipc.js";
+import { registerTimeOffIPC } from "./ipc/modules/hr/timeOff.ipc.js";
 import { registerNotificationIPC } from "./ipc/shared/notification.ipc.js";
 import { registerOfflineUsersIPC } from "./ipc/shared/offline_users.ipc.js";
 import { registerPayrollEmployeeProfileIPC } from "./ipc/modules/hr/payrollEmployeeProfile.ipc.js";
@@ -42,6 +43,7 @@ export function registerIPCHandlers() {
   registerAttendanceDailyCheckIPC();
   registerAttendanceReportIPC();
   registerLeaveIPC();
+  registerTimeOffIPC();
   registerTaskIPC();
   registerIncidentIPC();
   registerTaskCommentIPC();

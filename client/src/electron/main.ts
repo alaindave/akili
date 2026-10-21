@@ -5,7 +5,12 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 import { initializeCompanyDatabases } from "./services/shared/companyDatabase.service.js";
-import { initializeUserDataPath, findCompanyStorage, setActiveCompanyStorage, currentCompanyStorage } from "./storage/companyStorage.js";
+import {
+  initializeUserDataPath,
+  findCompanyStorage,
+  setActiveCompanyStorage,
+  currentCompanyStorage,
+} from "./storage/companyStorage.js";
 import { getActiveCompanyId } from "./auth.js";
 import { getPreloadPath } from "./pathResolver.js";
 import { registerIPCHandlers } from "./registerIPCHandlers.js";
@@ -47,7 +52,7 @@ const environment = DEV ? "Development" : "Production";
 initializeUserDataPath();
 
 const API_URL = app.isPackaged
-  ? "https://leather-works.onrender.com"
+  ? process.env.PRODUCTION_API_URL
   : process.env.VITE_API_URL;
 
 console.log("========================================");
@@ -301,7 +306,9 @@ async function initializeAppDatabase(): Promise<void> {
   console.log("INITIALIZING DATABASE...");
   await initializeCompanyDatabases();
   const savedCompanyId = await getActiveCompanyId();
-  setActiveCompanyStorage(savedCompanyId ? findCompanyStorage(savedCompanyId) ?? null : null);
+  setActiveCompanyStorage(
+    savedCompanyId ? findCompanyStorage(savedCompanyId) ?? null : null
+  );
   console.log("DATABASE INITIALIZED.");
 
   /*

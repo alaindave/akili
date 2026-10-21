@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import Company from "./models/shared/company.model.js";
 import Employee from "./models/modules/hr/employee.model.js";
 import Attendance from "./models/modules/hr/attendance.model.js";
-import Leave from "./models/modules/hr/leave.model.js";
+import TimeOff from "./models/modules/hr/timeOff.model.js";
 import AdminUser from "./models/shared/adminUser.model.js";
 import Task from "./models/shared/task.model.js";
 import { getNextSyncVersion } from "./utils/syncVersion.js";
@@ -165,15 +165,15 @@ export const updateEmployee = async (
 };
 
 export const deleteEmployee = async (id: string) => {
+  // Never cascade-delete migrated request/payroll history with an employee.
+  if (await TimeOff.exists({ employeeId: id })) {
+    throw new Error("Cet employé possède un historique TimeOff et ne peut pas être supprimé physiquement.");
+  }
   await Employee.deleteOne({
     _id: id,
   });
 
   await Attendance.deleteMany({
-    employee: id,
-  });
-
-  await Leave.deleteMany({
     employee: id,
   });
 
@@ -235,82 +235,6 @@ export const editAttendance = async (id: string, data: AttendanceUpdate) => {
 
 export const deleteAttendance = async (id: string) => {
   return await Attendance.findByIdAndDelete(id);
-};
-
-// ================= LEAVE =================
-
-export const addLeave = async (
-  employeeId: string,
-  startDate: Date,
-  endDate: Date,
-  subject: string,
-  notes: string
-) => {
-  const leave = new Leave({
-    employee: employeeId,
-    submittedAt: new Date(),
-    startDate,
-    endDate,
-    subject,
-    notes,
-  });
-
-  const savedLeave = await leave.save();
-
-  return Leave.findById(savedLeave._id).populate(
-    "employee",
-    "firstName lastName employeeID department role remainingLeave"
-  );
-};
-
-export const getLeavesByMonth = async (month: number, year: number) => {
-  const start = new Date(year, month - 1, 1);
-
-  const end = new Date(year, month, 1);
-
-  return await Leave.find({
-    submittedAt: {
-      $gte: start,
-      $lt: end,
-    },
-  }).sort({
-    submittedAt: 1,
-  });
-};
-
-export const getOnGoingLeaves = async () => {
-  const today = new Date();
-
-  return await Leave.find({
-    status: "APPROUVÉ",
-    startDate: {
-      $lte: today,
-    },
-    endDate: {
-      $gte: today,
-    },
-  });
-};
-
-export const getLeaveByID = async (id: string) => {
-  return await Leave.findById(id);
-};
-
-export const getPendingLeaves = async (employeeId: string) => {
-  return await Leave.find({
-    employee: employeeId,
-    status: "EN ATTENTE D'APPROBATION",
-  });
-};
-
-export const editLeave = async (id: string, data: Record<string, unknown>) => {
-  return Leave.findByIdAndUpdate(id, data, {
-    new: true,
-  });
-};
-
-export const deleteLeave = async (id: string) => {
-  return Leave.findByIdAndDelete(id);
 };
 
 // ================= TASK =================

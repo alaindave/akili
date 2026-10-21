@@ -27,7 +27,7 @@ import { FaRegEdit } from "react-icons/fa";
 import LeaveEdit from "./LeaveEdit";
 import LeaveDetailsDrawer from "./LeaveDetailsDrawer";
 
-import type { LeaveWithEmployee } from "../../../../../common/types/hr/leave/LeaveWithEmployee";
+import type { LeaveWithEmployee } from "../../../../../common/types/hr/time-off/TimeOffWithEmployee";
 
 import defaultAvatar from "../../../../assets/default-avatar.jpeg";
 
@@ -95,7 +95,7 @@ const EmployeeLeaveCard = ({ leave, onDelete, gridTemplate }: Props) => {
     employeeId,
     startDate,
     endDate,
-    subject,
+    motif,
     status,
   } = leave;
 
@@ -522,7 +522,7 @@ const EmployeeLeaveCard = ({ leave, onDelete, gridTemplate }: Props) => {
         maxW="7rem"
         noOfLines={2}
       >
-        {subject}
+        {motif}
       </Box>
 
       {/* ===================================================

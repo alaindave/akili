@@ -30,7 +30,7 @@ import { useEffect, useRef, useState } from "react";
 import { GoDotFill } from "react-icons/go";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { Link } from "react-router-dom";
-import Leave from "../../../../../common/types/hr/leave/Leave";
+import Leave from "../../../../../common/types/hr/time-off/TimeOff";
 import "../../../../styles/App.css";
 import AddClockInNotesPopover from "../../attendance/components/AddClockInNotesPopover";
 import AbsenceNotesPopover from "../../attendance/components/AbsenceNotesPopover";
@@ -384,7 +384,7 @@ const EmployeeCard = ({ employeeId }: Props) => {
           | "employeeId"
           | "startDate"
           | "endDate"
-          | "subject"
+          | "motif"
           | "notes"
           | "status"
         > = {
@@ -394,7 +394,7 @@ const EmployeeCard = ({ employeeId }: Props) => {
           employeeLastName: employee.lastName,
           startDate: leaveDate,
           endDate: leaveDate,
-          subject: "Billet de sortie",
+          motif: "billet de sortie",
           notes: exitPassNotes.trim(),
           status: "APPROUVÉ",
         };

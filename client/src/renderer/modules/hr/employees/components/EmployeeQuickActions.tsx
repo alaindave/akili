@@ -5,28 +5,16 @@ import {
   Grid,
   HStack,
   Text,
-  useDisclosure,
 } from "@chakra-ui/react";
 import { CiCalendarDate } from "react-icons/ci";
 import { FaSearch } from "react-icons/fa";
 import { FaPlus } from "react-icons/fa6";
 import { IoStatsChart } from "react-icons/io5";
-import LeaveSubmissionModal from "../../leave/components/LeaveSubmissionModal";
-import Employee from "../../../../../common/types/hr/employees/Employee";
 import { useNavigate } from "react-router-dom";
 
-interface Props {
-  employees: Employee[];
-  onTaskCreate: () => void;
-}
+interface Props { onTaskCreate: () => void }
 
-const QuickActions = ({ onTaskCreate, employees }: Props) => {
-  const {
-    isOpen: isLeaveOpen,
-    onOpen: onLeaveOpen,
-    onClose: onLeaveClose,
-  } = useDisclosure();
-
+const QuickActions = ({ onTaskCreate }: Props) => {
   const navigate = useNavigate();
 
   return (
@@ -124,7 +112,7 @@ const QuickActions = ({ onTaskCreate, employees }: Props) => {
           overflow="hidden"
           textOverflow="ellipsis"
           bg="transparent"
-          onClick={() => onLeaveOpen()}
+          onClick={() => navigate("/hr/leaves")}
           cursor="pointer"
           _hover={{ bg: "blackAlpha.100", borderRadius: "md" }}
         >
@@ -173,11 +161,6 @@ const QuickActions = ({ onTaskCreate, employees }: Props) => {
           </Text>
         </HStack>
       </Grid>
-      <LeaveSubmissionModal
-        isOpen={isLeaveOpen}
-        onClose={onLeaveClose}
-        employees={employees}
-      />
     </Box>
   );
 };

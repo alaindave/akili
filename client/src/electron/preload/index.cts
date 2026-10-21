@@ -6,6 +6,7 @@ import { employeeApi } from "./hr/employees.preload.cjs";
 import { employeesDocumentsApi } from "./hr/employees_documents.preload.cjs";
 import { attendanceApi } from "./hr/attendances.preload.cjs";
 import { leaveApi } from "./hr/leaves.preload.cjs";
+import { timeOffApi } from "./hr/timeOff.preload.cjs";
 import { payrollSettingsApi } from "./hr/payroll_settings.preload.cjs";
 import { payrollComponentsApi } from "./hr/payroll_components.preload.cjs";
 import { payrollProfileApi } from "./hr/payroll_profile.preload.cjs";
@@ -37,6 +38,7 @@ const electronApi = {
     attendanceDailyCheck: attendanceDailyCheckApi,
     attendance_reports: attendanceReportsApi,
     leave: leaveApi,
+    timeOff: timeOffApi,
     payrollSettings: payrollSettingsApi,
     payrollComponents: payrollComponentsApi,
     payrollProfile: payrollProfileApi,

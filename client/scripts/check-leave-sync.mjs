@@ -30,7 +30,7 @@ const repo = load("../src/electron/database/repositories/modules/hr/leaves.repos
 const base = { companyId: "a", _id: "leave", employeeId: "employee", serverVersion: 4,
   submittedAt: "2026-10-01T00:00:00.000Z", createdAt: "2026-10-01T00:00:00.000Z",
   updatedAt: "2026-10-01T00:00:00.000Z", submittedMonth: "2026-10",
-  startDate: "2026-10-20", endDate: "2026-10-21", subject: "Leave", notes: "Reason",
+  startDate: "2026-10-20", endDate: "2026-10-21", motif: "Leave", notes: "Reason",
   additionalNotes: "", status: "ATTENTE_APPROBATION", isDeleted: 0 };
 const cancellation = { companyId: "a", _id: "leave", employeeId: "employee",
   serverVersion: 4, status: "ANNULÉ", updatedAt: "2026-10-02T00:00:00.000Z" };

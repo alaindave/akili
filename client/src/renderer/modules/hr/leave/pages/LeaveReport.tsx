@@ -1,10 +1,7 @@
 import { Box, Flex, HStack, Text } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
-import LeaveHistoryTable from "../components/LeaveHistoryTable";
-import LeaveDetailsDrawer from "../components/LeaveDetailsDrawer";
 import { Link, useLocation } from "react-router-dom";
 import Employee from "../../../../../common/types/hr/employees/Employee";
-import Leave from "../../../../../common/types/hr/leave/Leave";
 import { MdOutlineChevronRight } from "react-icons/md";
 import { FaArrowLeftLong } from "react-icons/fa6";
 import useAdminUser from "../../../../../store/auth.store";
@@ -12,6 +9,8 @@ import DateRangePicker, {
   DateRange,
 } from "../../../../components/common/DatePicker";
 import LeaveStatusFilter from "../components/LeaveStatusFilter";
+import { useTimeOffList } from "../hooks/useTimeOff";
+import type { LocalTimeOff } from "../../../../../electron/database/repositories/modules/hr/timeOff.repository";
 
 type EmployeeState = {
   employee?: Employee;
@@ -26,9 +25,9 @@ const EmployeeLeaveReport = () => {
   const { employee } = (location.state as EmployeeState) || {};
   const { photo_url } = (location.state as PhotoState) || "";
   const [statusFilter, setStatusFilter] = useState("");
-  const [leaves, setLeaves] = useState<Leave[]>([]);
-  const [selectedLeave, setSelectedLeave] = useState<Leave | null>(null);
+  const [leaves, setLeaves] = useState<LocalTimeOff[]>([]);
   const user = useAdminUser((store) => store.adminUser);
+  const { data: allTimeOff = [] } = useTimeOffList(user.companyId, employee?._id);
 
   const [dateRange, setDateRange] = useState<DateRange>({
     startDate: null,
@@ -36,29 +35,16 @@ const EmployeeLeaveReport = () => {
   });
 
   useEffect(() => {
-    getLeaveHistory();
-  }, [statusFilter, dateRange]);
-
-  const getLeaveHistory = async () => {
-    if (!employee?._id) return;
-    const leaves = await window.electron.hr.leave.getLeaveByEmployeeId(
-      user.companyId,
-      employee?._id
-    );
-    const filteredLeaves: Leave[] = leaves
+    const filteredLeaves = allTimeOff
       .filter(
         (a) =>
           (!dateRange.startDate && !dateRange.endDate) ||
-          (a.submittedAt >= dateRange.startDate! &&
-            a.submittedAt <= dateRange.endDate!)
+          (a.startDate >= dateRange.startDate! &&
+            a.startDate <= dateRange.endDate!)
       )
       .filter((l) => !statusFilter || l.status === statusFilter);
     setLeaves(filteredLeaves);
-  };
-
-  console.log("DAT RANGE", dateRange.endDate);
-  console.log("DAT RANGE", dateRange.startDate);
-  console.log("LEAVES", leaves);
+  }, [allTimeOff, statusFilter, dateRange]);
 
   return (
     <Flex
@@ -109,9 +95,9 @@ const EmployeeLeaveReport = () => {
             </HStack>
           </Box>
         </HStack>
-        {leaves.length != 0 ? (
-          <Box ml="2rem" mt="3rem">
-            <LeaveHistoryTable leaves={leaves} onSelectLeave={setSelectedLeave} />
+        {leaves.length !== 0 ? (
+          <Box as="table" ml="2rem" mt="3rem" overflowX="auto" bg="white" borderWidth="1px" borderRadius="md" width="calc(100% - 2rem)">
+            <Box as="thead"><Box as="tr"><Box as="th" textAlign="left" p={2}>Période</Box><Box as="th" textAlign="left" p={2}>Motif</Box><Box as="th" textAlign="left" p={2}>Statut</Box><Box as="th" textAlign="left" p={2}>Paie</Box></Box></Box><Box as="tbody">{leaves.map(row => <Box as="tr" key={row._id}><Box as="td" p={2}>{row.startDate} → {row.endDate}</Box><Box as="td" p={2}>{row.motifSnapshot?.label ?? (row.legacyNeedsReview ? "Ancien motif à vérifier" : row.motifId)}</Box><Box as="td" p={2}>{row.status}</Box><Box as="td" p={2}>{row.motifSnapshot?.payrollTreatment ?? "Historique conservé"}{row.balanceDaysDeducted ? ` · ${row.balanceDaysDeducted} j.` : ""}</Box></Box>)}</Box>
           </Box>
         ) : (
           <Flex
@@ -152,23 +138,6 @@ const EmployeeLeaveReport = () => {
           <LeaveStatusFilter onFilterClicked={setStatusFilter} />
         </Box>
       </Flex>
-      {selectedLeave && employee && (
-        <LeaveDetailsDrawer
-          key={selectedLeave._id}
-          leave={{
-            ...selectedLeave,
-            firstName: employee.firstName,
-            lastName: employee.lastName,
-            department: employee.department,
-            role: employee.role,
-            remainingLeave: employee.remainingLeave,
-          }}
-          photoUrl={photo_url || ""}
-          remainingLeave={employee.remainingLeave}
-          isOpen={true}
-          onClose={() => setSelectedLeave(null)}
-        />
-      )}
     </Flex>
   );
 };

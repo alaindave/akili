@@ -3,12 +3,14 @@ import sync from "../../services/shared/sync/sync.service.js";
 import { getUnsyncedItems } from "../../database/repositories/shared/sync.repository.js";
 import { app } from "electron";
 
-const PRODUCTION_API_URL = "https://leather-works.onrender.com";
+const PRODUCTION_API_URL = app.isPackaged
+  ? process.env.PRODUCTION_API_URL
+  : process.env.VITE_API_URL;
 
 export function registerSyncIPC() {
   ipcMain.handle("sync:get-api-url", (_, API_URL: string): string => {
     if (app.isPackaged) {
-      return PRODUCTION_API_URL;
+      return PRODUCTION_API_URL || "https://leather-works.onrender.com";
     }
     return API_URL;
   });

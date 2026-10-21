@@ -221,7 +221,7 @@ const AddAttendanceModal = ({
           managerEmail: await getCompanyEmail(user.companyId),
           startDate: date,
           endDate: date,
-          subject: "Billet de sortie",
+          motif: "billet de sortie",
           notes: "Billet de sortie approuvé.",
           status: "APPROUVÉ",
         });

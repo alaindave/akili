@@ -8,7 +8,7 @@ export interface LeaveDocument {
   submittedMonth: string;
   startDate: string;
   endDate: string;
-  subject: string;
+  motif: string;
   notes: string;
   additionalNotes?: string;
   status: "ATTENTE_APPROBATION" | "APPROUVÉ" | "REFUSÉ" | "ANNULÉ";
@@ -55,7 +55,7 @@ const leaveSchema = new Schema<LeaveDocument>(
       required: true,
     },
 
-    subject: {
+    motif: {
       type: String,
       required: true,
     },

@@ -1,3 +1,5 @@
+import LeaveMotifInput from "./LeaveMotifInput";
+import { LeaveMotif } from "../../../../../common/types/hr/time-off/TimeOff";
 import {
   Box,
   Button,
@@ -22,7 +24,7 @@ import { Controller, useForm } from "react-hook-form";
 import { FaSave } from "react-icons/fa";
 import { RxCrossCircled } from "react-icons/rx";
 import { z } from "zod";
-import { LeaveWithEmployee } from "../../../../../common/types/hr/leave/LeaveWithEmployee";
+import { LeaveWithEmployee } from "../../../../../common/types/hr/time-off/TimeOffWithEmployee";
 import useAdminUser from "../../../../../store/auth.store";
 import { useEffect } from "react";
 import { useUpdateLeave } from "../hooks/useLeave";
@@ -32,7 +34,7 @@ const errorMessage = "Ce champ est obligatoire";
 const schema = z.object({
   startDate: z.string().min(1, { message: errorMessage }),
   endDate: z.string().min(1, { message: errorMessage }),
-  subject: z.string().min(1, { message: errorMessage }),
+  motif: z.string().trim().min(1, { message: errorMessage }),
   notes: z.string().min(1, { message: errorMessage }),
 });
 
@@ -63,7 +65,7 @@ const LeaveEdit = ({ leave, onUpdated, isOpen, onClose }: Props) => {
     defaultValues: {
       startDate: leave?.startDate ?? "",
       endDate: leave?.endDate ?? "",
-      subject: leave?.subject ?? "",
+      motif: leave?.motif ?? LeaveMotif.BILLET_SORTIE,
       notes: leave?.notes ?? "",
     },
   });
@@ -79,7 +81,7 @@ const LeaveEdit = ({ leave, onUpdated, isOpen, onClose }: Props) => {
     reset({
       startDate: leave.startDate ?? "",
       endDate: leave.endDate ?? "",
-      subject: leave.subject ?? "",
+      motif: leave.motif ?? LeaveMotif.BILLET_SORTIE,
       notes: leave.notes ?? "",
     });
 
@@ -97,7 +99,7 @@ const LeaveEdit = ({ leave, onUpdated, isOpen, onClose }: Props) => {
     role,
     startDate,
     endDate,
-    subject,
+    motif,
     notes,
   } = leave;
 
@@ -139,7 +141,7 @@ const LeaveEdit = ({ leave, onUpdated, isOpen, onClose }: Props) => {
     reset({
       startDate,
       endDate,
-      subject,
+      motif,
       notes,
     });
 
@@ -375,12 +377,12 @@ const LeaveEdit = ({ leave, onUpdated, isOpen, onClose }: Props) => {
                   </Box>
                 </HStack>
 
-                {/* SUBJECT + NOTES */}
+                {/* MOTIF + NOTES */}
                 <VStack>
                   <Box>
                     <HStack>
                       <FormLabel color="#C7D2FE" marginBottom="10px">
-                        Sujet
+                        Motif
                         <span
                           style={{
                             color: "#F2B705",
@@ -392,16 +394,20 @@ const LeaveEdit = ({ leave, onUpdated, isOpen, onClose }: Props) => {
                       </FormLabel>
                     </HStack>
 
-                    <Input
-                      color="#e6ebfe"
-                      width="300px"
-                      height="40px"
-                      {...register("subject")}
+                    <Controller
+                      control={control}
+                      name="motif"
+                      render={({ field }) => (
+                        <LeaveMotifInput
+                          key={`${leave._id}-${isOpen}`}
+                          {...field}
+                        />
+                      )}
                     />
 
-                    {errors.subject && (
+                    {errors.motif && (
                       <Text className="text-danger">
-                        {errors.subject.message}
+                        {errors.motif.message}
                       </Text>
                     )}
                   </Box>
@@ -409,7 +415,7 @@ const LeaveEdit = ({ leave, onUpdated, isOpen, onClose }: Props) => {
                   <Box>
                     <HStack>
                       <FormLabel color="#C7D2FE" marginBottom="10px">
-                        Motif
+                        Explications
                         <span
                           style={{
                             color: "#F2B705",

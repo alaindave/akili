@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import type Leave from "../../../../../common/types/hr/leave/Leave";
+import type Leave from "../../../../../common/types/hr/time-off/TimeOff";
 
 /* =========================================================
    QUERY KEYS
@@ -152,7 +152,7 @@ export const useCreateLeave = (companyId: string) => {
         | "startDate"
         | "endDate"
         | "notes"
-        | "subject"
+        | "motif"
         | "status"
       >
     ) => {

@@ -12,7 +12,7 @@ import {
 import Task from "../../../common/types/task/Task.js";
 
 const API_URL = app.isPackaged
-  ? "https://leather-works.onrender.com"
+  ? process.env.PRODUCTION_API_URL
   : process.env.VITE_API_URL;
 
 function requireTaskModule(module: unknown) {

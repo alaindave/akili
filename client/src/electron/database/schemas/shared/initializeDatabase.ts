@@ -19,8 +19,10 @@ import { createInventoryItemsTable } from "../modules/inventory/inventory_items.
 import { createInventoryMovementsTables } from "../modules/inventory/inventory_movements.schema.js";
 import { initializeInventorySync } from "../modules/inventory/inventory_sync.schema.js";
 import { recoverUnqueuedHRChanges } from "../../repositories/shared/syncRecovery.repository.js";
+import { migrateTimeOff } from "../../migrations/timeOff.migration.js";
+import { all, get, run, transaction } from "../../db.js";
 
-export async function initializeDatabase() {
+export async function initializeDatabase(companyId: string) {
   // Shared tables
   await createCompanyTable();
   await createOfflineUsersTable();
@@ -35,6 +37,7 @@ export async function initializeDatabase() {
   await createEmployeesTable();
   await createEmployeesDocumentsTable();
   await createAttendancesTable();
+  await migrateTimeOff({ run, all, get, transaction }, companyId);
   await createLeavesTable();
   await migrateAttendanceClockInSettings();
   await createPayrollTables();

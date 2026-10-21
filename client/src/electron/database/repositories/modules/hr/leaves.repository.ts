@@ -1,65 +1,55 @@
 import { transaction } from "../../../db.js";
-import type Leave from "../../../../../common/types/hr/leave/Leave.js";
+import type Leave from "../../../../../common/types/hr/time-off/TimeOff.js";
 import type { SyncQueueItem } from "../../../../../common/types/shared/Sync.js";
 import { randomUUID } from "crypto";
 import { all, get, run } from "../../../db.js";
 import { getEmployeeById } from "./employees.repository.js";
 import { addToSyncQueue } from "../../shared/sync.repository.js";
+import { TimeOffStatus } from "../../../../../common/types/hr/time-off/TimeOff.js";
 
 export async function createLeave(
   companyId: string,
   leave: Pick<
     Leave,
-    | "managerEmail"
-    | "employeeId"
-    | "employeeFirstName"
-    | "employeeLastName"
-    | "startDate"
-    | "endDate"
-    | "notes"
-    | "subject"
-    | "status"
+    "employeeId" | "startDate" | "endDate" | "notes" | "status"
   >
 ) {
   return transaction(async () => {
-  if (!companyId) {
-    throw new Error("COMPANY ID IS REQUIRED");
-  }
-  if (!leave.managerEmail) {
-    throw new Error("MANAGER EMAIL IS REQUIRED");
-  }
-  if (!leave.employeeId) {
-    throw new Error("EMPLOYEE ID IS REQUIRED");
-  }
+    if (!companyId) {
+      throw new Error("COMPANY ID IS REQUIRED");
+    }
+    if (!leave.employeeId) {
+      throw new Error("EMPLOYEE ID IS REQUIRED");
+    }
 
-  const employee = await getEmployeeById(companyId, leave.employeeId);
+    const employee = await getEmployeeById(companyId, leave.employeeId);
 
-  if (!employee) {
-    throw new Error("No employee found with the given ID");
-  }
+    if (!employee) {
+      throw new Error("No employee found with the given ID");
+    }
 
-  console.log("LEAVE TO CREATE:", leave);
+    console.log("LEAVE TO CREATE:", leave);
 
-  const today = new Date();
-  const submittedAt = today.toISOString();
-  const time = today.toISOString();
+    const today = new Date();
+    const submittedAt = today.toISOString();
+    const time = today.toISOString();
 
-  const month = String(today.getMonth() + 1).padStart(2, "0");
-  const year = today.getFullYear();
-  const submittedMonth = `${year}-${month}`;
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const year = today.getFullYear();
+    const submittedMonth = `${year}-${month}`;
 
-  const _id = randomUUID();
+    const _id = randomUUID();
 
-  /*
-   * Local changes start at serverVersion 0.
-   *
-   * The server assigns the real serverVersion when the
-   * entity is pushed successfully.
-   */
-  const serverVersion = 0;
+    /*
+     * Local changes start at serverVersion 0.
+     *
+     * The server assigns the real serverVersion when the
+     * entity is pushed successfully.
+     */
+    const serverVersion = 0;
 
-  await run(
-    `
+    await run(
+      `
     INSERT INTO leaves (
       companyId,
       _id,
@@ -69,7 +59,7 @@ export async function createLeave(
       startDate,
       endDate,
       status,
-      subject,
+      motif,
       notes,
       serverVersion,
       synced,
@@ -79,48 +69,47 @@ export async function createLeave(
     )
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?)
     `,
-    [
+      [
+        companyId,
+        _id,
+        leave.employeeId,
+        submittedAt,
+        submittedMonth,
+        leave.startDate,
+        leave.endDate,
+        leave.status ?? "ATTENTE_APPROBATION",
+        leave.notes,
+        serverVersion,
+        time,
+        time,
+      ]
+    );
+
+    const savedLeave = {
       companyId,
       _id,
-      leave.employeeId,
+      ...leave,
+      employeeId: leave.employeeId,
+      status: leave.status ?? "ATTENTE_APPROBATION",
       submittedAt,
       submittedMonth,
-      leave.startDate,
-      leave.endDate,
-      leave.status ?? "ATTENTE_APPROBATION",
-      leave.subject,
-      leave.notes,
       serverVersion,
-      time,
-      time,
-    ]
-  );
+      createdAt: time,
+      updatedAt: time,
+      isDeleted: 0,
+    };
 
-  const savedLeave = {
-    companyId,
-    _id,
-    ...leave,
-    employeeId: leave.employeeId,
-    status: leave.status ?? "ATTENTE_APPROBATION",
-    submittedAt,
-    submittedMonth,
-    serverVersion,
-    createdAt: time,
-    updatedAt: time,
-    isDeleted: 0,
-  };
+    console.log("LEAVE TO SAVE TO SYNC QUEUE", savedLeave);
 
-  console.log("LEAVE TO SAVE TO SYNC QUEUE", savedLeave);
+    await addToSyncQueue({
+      companyId,
+      entity: "leave",
+      entityId: _id,
+      operation: "create",
+      payload: JSON.stringify(savedLeave),
+    });
 
-  await addToSyncQueue({
-    companyId,
-    entity: "leave",
-    entityId: _id,
-    operation: "create",
-    payload: JSON.stringify(savedLeave),
-  });
-
-  return getLeaveById(companyId, _id);
+    return getLeaveById(companyId, _id);
   });
 }
 
@@ -138,7 +127,7 @@ export async function getLeaveById(
       l.submittedMonth,
       l.startDate,
       l.endDate,
-      l.subject,
+      l.motif,
       l.notes,
       l.additionalNotes,
       l.status,
@@ -224,7 +213,7 @@ export async function getLeaveByMonth(companyId: string, month: string) {
       l.submittedMonth,
       l.startDate,
       l.endDate,
-      l.subject,
+      l.motif,
       l.notes,
       l.additionalNotes,
       l.status,
@@ -266,24 +255,24 @@ export async function getLeaveRecord(companyId: string, employeeId: string) {
 
 export async function cancelLeave(companyId: string, _id: string) {
   return transaction(async () => {
-  const leave = await getLeaveById(companyId, _id);
+    const leave = await getLeaveById(companyId, _id);
 
-  if (!leave) {
-    throw new Error("LEAVE NOT FOUND");
-  }
+    if (!leave) {
+      throw new Error("LEAVE NOT FOUND");
+    }
 
-  if (leave.status === "ANNULÉ") {
-    return leave;
-  }
+    if (leave.status === ("ANNULÉ" as TimeOffStatus)) {
+      return leave;
+    }
 
-  /*
-   * Cancel a leave that was not yet approved.
-   */
-  if (leave.status !== "APPROUVÉ") {
-    const updatedAt = new Date().toISOString();
+    /*
+     * Cancel a leave that was not yet approved.
+     */
+    if (leave.status !== ("APPROUVÉ" as TimeOffStatus)) {
+      const updatedAt = new Date().toISOString();
 
-    await run(
-      `
+      await run(
+        `
       UPDATE leaves
       SET
         status = 'ANNULÉ',
@@ -293,11 +282,96 @@ export async function cancelLeave(companyId: string, _id: string) {
         AND companyId = ?
         AND isDeleted = 0
       `,
+        [updatedAt, _id, companyId]
+      );
+
+      const updatedLeave = await getLeaveById(companyId, _id);
+
+      await addToSyncQueue({
+        companyId,
+        entity: "leave",
+        entityId: _id,
+        operation: "update",
+        payload: JSON.stringify({
+          companyId,
+          _id,
+          employeeId: leave.employeeId,
+          status: "ANNULÉ",
+          serverVersion: leave.serverVersion ?? 0,
+          updatedAt,
+        }),
+      });
+
+      return updatedLeave;
+    }
+
+    /*
+     * Calculate the number of approved leave days
+     * that need to be returned to the employee.
+     */
+    const startDate = new Date(leave.startDate);
+    const endDate = new Date(leave.endDate);
+
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+      throw new Error("INVALID LEAVE DATES");
+    }
+
+    const differenceInMs = endDate.getTime() - startDate.getTime();
+
+    const leaveDays = Math.floor(differenceInMs / (1000 * 60 * 60 * 24)) + 1;
+
+    if (leaveDays <= 0) {
+      throw new Error("INVALID LEAVE PERIOD");
+    }
+
+    const employee = await getEmployeeById(companyId, leave.employeeId);
+
+    if (!employee) {
+      throw new Error("EMPLOYEE NOT FOUND");
+    }
+
+    const updatedAt = new Date().toISOString();
+
+    /*
+     * Restore deducted leave days.
+     */
+    await run(
+      `
+    UPDATE employees
+    SET
+      remainingLeave = remainingLeave + ?,
+      updatedAt = ?,
+      synced = 0
+    WHERE _id = ?
+      AND companyId = ?
+      AND isDeleted = 0
+    `,
+      [leaveDays, updatedAt, leave.employeeId, companyId]
+    );
+
+    /*
+     * Cancel the leave.
+     */
+    await run(
+      `
+    UPDATE leaves
+    SET
+      status = 'ANNULÉ',
+      synced = 0,
+      updatedAt = ?
+    WHERE _id = ?
+      AND companyId = ?
+      AND isDeleted = 0
+    `,
       [updatedAt, _id, companyId]
     );
 
-    const updatedLeave = await getLeaveById(companyId, _id);
-
+    /*
+     * Queue leave update.
+     *
+     * Keep the serverVersion currently known locally.
+     * The server will assign the next version when pushed.
+     */
     await addToSyncQueue({
       companyId,
       entity: "leave",
@@ -313,113 +387,28 @@ export async function cancelLeave(companyId: string, _id: string) {
       }),
     });
 
-    return updatedLeave;
-  }
+    /*
+     * Queue employee balance update separately.
+     */
+    const updatedEmployee = await getEmployeeById(companyId, leave.employeeId);
 
-  /*
-   * Calculate the number of approved leave days
-   * that need to be returned to the employee.
-   */
-  const startDate = new Date(leave.startDate);
-  const endDate = new Date(leave.endDate);
-
-  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
-    throw new Error("INVALID LEAVE DATES");
-  }
-
-  const differenceInMs = endDate.getTime() - startDate.getTime();
-
-  const leaveDays = Math.floor(differenceInMs / (1000 * 60 * 60 * 24)) + 1;
-
-  if (leaveDays <= 0) {
-    throw new Error("INVALID LEAVE PERIOD");
-  }
-
-  const employee = await getEmployeeById(companyId, leave.employeeId);
-
-  if (!employee) {
-    throw new Error("EMPLOYEE NOT FOUND");
-  }
-
-  const updatedAt = new Date().toISOString();
-
-  /*
-   * Restore deducted leave days.
-   */
-  await run(
-    `
-    UPDATE employees
-    SET
-      remainingLeave = remainingLeave + ?,
-      updatedAt = ?,
-      synced = 0
-    WHERE _id = ?
-      AND companyId = ?
-      AND isDeleted = 0
-    `,
-    [leaveDays, updatedAt, leave.employeeId, companyId]
-  );
-
-  /*
-   * Cancel the leave.
-   */
-  await run(
-    `
-    UPDATE leaves
-    SET
-      status = 'ANNULÉ',
-      synced = 0,
-      updatedAt = ?
-    WHERE _id = ?
-      AND companyId = ?
-      AND isDeleted = 0
-    `,
-    [updatedAt, _id, companyId]
-  );
-
-  /*
-   * Queue leave update.
-   *
-   * Keep the serverVersion currently known locally.
-   * The server will assign the next version when pushed.
-   */
-  await addToSyncQueue({
-    companyId,
-    entity: "leave",
-    entityId: _id,
-    operation: "update",
-    payload: JSON.stringify({
-      companyId,
-      _id,
-      employeeId: leave.employeeId,
-      status: "ANNULÉ",
-      serverVersion: leave.serverVersion ?? 0,
-      updatedAt,
-    }),
-  });
-
-  /*
-   * Queue employee balance update separately.
-   */
-  const updatedEmployee = await getEmployeeById(companyId, leave.employeeId);
-
-  if (updatedEmployee) {
-    await addToSyncQueue({
-      companyId,
-      entity: "employee",
-      entityId: leave.employeeId,
-      operation: "update",
-      payload: JSON.stringify({
+    if (updatedEmployee) {
+      await addToSyncQueue({
         companyId,
-        _id: leave.employeeId,
-        remainingLeave: updatedEmployee.remainingLeave,
-        updatedAt,
-        serverVersion: updatedEmployee.serverVersion ?? 0,
-      }),
-    });
-  }
+        entity: "employee",
+        entityId: leave.employeeId,
+        operation: "update",
+        payload: JSON.stringify({
+          companyId,
+          _id: leave.employeeId,
+          remainingLeave: updatedEmployee.remainingLeave,
+          updatedAt,
+          serverVersion: updatedEmployee.serverVersion ?? 0,
+        }),
+      });
+    }
 
-  return getLeaveById(companyId, _id);
+    return getLeaveById(companyId, _id);
   });
 }
 
@@ -427,7 +416,7 @@ export async function updateLeave(
   companyId: string,
   _id: string,
   updates: {
-    subject?: string;
+    motif?: string;
     notes?: string;
     additionalNotes?: string;
     startDate?: string;
@@ -436,110 +425,110 @@ export async function updateLeave(
   }
 ) {
   return transaction(async () => {
-  const existing = await getLeaveById(companyId, _id);
+    const existing = await getLeaveById(companyId, _id);
 
-  if (!existing) {
-    throw new Error("LEAVE NOT FOUND");
-  }
+    if (!existing) {
+      throw new Error("LEAVE NOT FOUND");
+    }
 
-  const fields: string[] = [];
-  const values: any[] = [];
+    const fields: string[] = [];
+    const values: any[] = [];
 
-  if (updates.subject !== undefined) {
-    fields.push("subject = ?");
-    values.push(updates.subject);
-  }
+    if (updates.motif !== undefined) {
+      fields.push("motif = ?");
+      values.push(updates.motif);
+    }
 
-  if (updates.notes !== undefined) {
-    fields.push("notes = ?");
-    values.push(updates.notes);
-  }
+    if (updates.notes !== undefined) {
+      fields.push("notes = ?");
+      values.push(updates.notes);
+    }
 
-  if (updates.additionalNotes !== undefined) {
-    fields.push("additionalNotes = ?");
-    values.push(updates.additionalNotes);
-  }
+    if (updates.additionalNotes !== undefined) {
+      fields.push("additionalNotes = ?");
+      values.push(updates.additionalNotes);
+    }
 
-  if (updates.startDate !== undefined) {
-    fields.push("startDate = ?");
-    values.push(updates.startDate);
-  }
+    if (updates.startDate !== undefined) {
+      fields.push("startDate = ?");
+      values.push(updates.startDate);
+    }
 
-  if (updates.endDate !== undefined) {
-    fields.push("endDate = ?");
-    values.push(updates.endDate);
-  }
+    if (updates.endDate !== undefined) {
+      fields.push("endDate = ?");
+      values.push(updates.endDate);
+    }
 
-  if (updates.status !== undefined) {
-    fields.push("status = ?");
-    values.push(updates.status);
-  }
+    if (updates.status !== undefined) {
+      fields.push("status = ?");
+      values.push(updates.status);
+    }
 
-  if (fields.length === 0) {
-    return existing;
-  }
+    if (fields.length === 0) {
+      return existing;
+    }
 
-  /*
-   * Local modification.
-   *
-   * Do NOT modify serverVersion here.
-   * serverVersion represents the version assigned by
-   * the server, not the number of local edits.
-   */
-  fields.push("synced = 0");
-  fields.push("updatedAt = datetime('now')");
+    /*
+     * Local modification.
+     *
+     * Do NOT modify serverVersion here.
+     * serverVersion represents the version assigned by
+     * the server, not the number of local edits.
+     */
+    fields.push("synced = 0");
+    fields.push("updatedAt = datetime('now')");
 
-  values.push(_id);
-  values.push(companyId);
+    values.push(_id);
+    values.push(companyId);
 
-  await run(
-    `
+    await run(
+      `
     UPDATE leaves
     SET ${fields.join(", ")}
     WHERE _id = ?
       AND companyId = ?
       AND isDeleted = 0
     `,
-    values
-  );
+      values
+    );
 
-  const updatedAt = new Date().toISOString();
+    const updatedAt = new Date().toISOString();
 
-  const savedUpdates = {
-    companyId,
-    _id,
-    employeeId: existing.employeeId,
-    ...updates,
-    serverVersion: existing.serverVersion ?? 0,
-    updatedAt,
-  };
+    const savedUpdates = {
+      companyId,
+      _id,
+      employeeId: existing.employeeId,
+      ...updates,
+      serverVersion: existing.serverVersion ?? 0,
+      updatedAt,
+    };
 
-  console.log("LEAVE TO SAVE TO SYNC QUEUE", savedUpdates);
+    console.log("LEAVE TO SAVE TO SYNC QUEUE", savedUpdates);
 
-  await addToSyncQueue({
-    companyId,
-    entity: "leave",
-    entityId: _id,
-    operation: "update",
-    payload: JSON.stringify(savedUpdates),
-  });
+    await addToSyncQueue({
+      companyId,
+      entity: "leave",
+      entityId: _id,
+      operation: "update",
+      payload: JSON.stringify(savedUpdates),
+    });
 
-  return getLeaveById(companyId, _id);
+    return getLeaveById(companyId, _id);
   });
 }
 
 export async function deleteLeave(companyId: string, _id: string) {
   return transaction(async () => {
-  const existing = await getLeaveById(companyId, _id);
+    const existing = await getLeaveById(companyId, _id);
 
-  if (!existing) {
-    throw new Error("LEAVE NOT FOUND");
-  }
+    if (!existing) {
+      throw new Error("LEAVE NOT FOUND");
+    }
 
-  const now = new Date().toISOString();
+    const now = new Date().toISOString();
 
-  await run(
-    `
+    await run(
+      `
     UPDATE leaves
     SET
       isDeleted = 1,
@@ -548,85 +537,88 @@ export async function deleteLeave(companyId: string, _id: string) {
     WHERE _id = ?
       AND companyId = ?
     `,
-    [now, _id, companyId]
-  );
+      [now, _id, companyId]
+    );
 
-  const deletedLeave = {
-    companyId,
-    _id,
-    employeeId: existing.employeeId,
-    serverVersion: existing.serverVersion ?? 0,
-    updatedAt: now,
-    deletedAt: now,
-    isDeleted: 1,
-  };
+    const deletedLeave = {
+      companyId,
+      _id,
+      employeeId: existing.employeeId,
+      serverVersion: existing.serverVersion ?? 0,
+      updatedAt: now,
+      deletedAt: now,
+      isDeleted: 1,
+    };
 
-  console.log("LEAVE TO DELETE FROM SYNC QUEUE", deletedLeave);
+    console.log("LEAVE TO DELETE FROM SYNC QUEUE", deletedLeave);
 
-  await addToSyncQueue({
-    companyId,
-    entity: "leave",
-    entityId: _id,
-    operation: "delete",
-    payload: JSON.stringify(deletedLeave),
-  });
+    await addToSyncQueue({
+      companyId,
+      entity: "leave",
+      entityId: _id,
+      operation: "delete",
+      payload: JSON.stringify(deletedLeave),
+    });
 
-  /*
-   * The record is now soft-deleted, so getLeaveById()
-   * intentionally won't return it.
-   */
-  return deletedLeave;
+    /*
+     * The record is now soft-deleted, so getLeaveById()
+     * intentionally won't return it.
+     */
+    return deletedLeave;
   });
 }
 
 export async function upsertLeave(leave: Leave) {
   return transaction(async () => {
-  if (!leave.companyId) {
-    throw new Error("COMPANY ID IS REQUIRED");
-  }
-
-  /*
-   * Find the local record by ID, including deleted records.
-   *
-   * This is important for sync because a deleted local record
-   * must not be treated as completely missing.
-   */
-  const local = await getLeaveByIdIncludingDeleted(leave.companyId, leave._id);
-
-  console.log("PULLED LEAVE TO SYNC:", leave);
-
-  /*
-   * SERVER VERSION IS NOW THE SOURCE OF TRUTH.
-   *
-   * Never compare updatedAt for synchronization.
-   *
-   * A remote record is newer when:
-   *
-   * remote.serverVersion > local.serverVersion
-   *
-   * If the versions are equal, the local record is already
-   * at the same server state.
-   */
-  if (local) {
-    const localVersion = Number(local.serverVersion ?? 0);
-
-    const remoteVersion = Number(leave.serverVersion ?? 0);
-
-    if (remoteVersion <= localVersion) {
-      console.log(
-        `SKIPPING LEAVE ${leave._id}: ` +
-          `LOCAL SERVER VERSION ${localVersion} >= REMOTE ${remoteVersion}`
-      );
-
-      return local;
+    if (!leave.companyId) {
+      throw new Error("COMPANY ID IS REQUIRED");
     }
-  }
 
-  /*
-   * Insert or update the complete server representation.
-   */
-  await run(
-    `
+    /*
+     * Find the local record by ID, including deleted records.
+     *
+     * This is important for sync because a deleted local record
+     * must not be treated as completely missing.
+     */
+    const local = await getLeaveByIdIncludingDeleted(
+      leave.companyId,
+      leave._id
+    );
+
+    console.log("PULLED LEAVE TO SYNC:", leave);
+
+    /*
+     * SERVER VERSION IS NOW THE SOURCE OF TRUTH.
+     *
+     * Never compare updatedAt for synchronization.
+     *
+     * A remote record is newer when:
+     *
+     * remote.serverVersion > local.serverVersion
+     *
+     * If the versions are equal, the local record is already
+     * at the same server state.
+     */
+    if (local) {
+      const localVersion = Number(local.serverVersion ?? 0);
+
+      const remoteVersion = Number(leave.serverVersion ?? 0);
+
+      if (remoteVersion <= localVersion) {
+        console.log(
+          `SKIPPING LEAVE ${leave._id}: ` +
+            `LOCAL SERVER VERSION ${localVersion} >= REMOTE ${remoteVersion}`
+        );
+
+        return local;
+      }
+    }
+
+    /*
+     * Insert or update the complete server representation.
+     */
+    await run(
+      `
     INSERT INTO leaves (
       companyId,
       _id,
@@ -635,7 +627,7 @@ export async function upsertLeave(leave: Leave) {
       submittedMonth,
       startDate,
       endDate,
-      subject,
+      motif,
       notes,
       additionalNotes,
       status,
@@ -653,7 +645,7 @@ export async function upsertLeave(leave: Leave) {
       submittedMonth = excluded.submittedMonth,
       startDate = excluded.startDate,
       endDate = excluded.endDate,
-      subject = excluded.subject,
+      motif = excluded.motif,
       notes = excluded.notes,
       additionalNotes = excluded.additionalNotes,
       status = excluded.status,
@@ -663,40 +655,42 @@ export async function upsertLeave(leave: Leave) {
       updatedAt = excluded.updatedAt,
       synced = 1
     `,
-    [
-      leave.companyId,
-      leave._id,
-      leave.employeeId,
-      leave.submittedAt,
-      leave.submittedMonth,
-      leave.startDate,
-      leave.endDate,
-      leave.subject,
-      leave.notes,
-      leave.additionalNotes ?? local?.additionalNotes ?? "",
-      leave.status,
-      leave.serverVersion ?? 0,
-      leave.isDeleted ?? 0,
-      leave.createdAt,
-      leave.updatedAt,
-    ]
-  );
+      [
+        leave.companyId,
+        leave._id,
+        leave.employeeId,
+        leave.submittedAt,
+        leave.submittedMonth,
+        leave.startDate,
+        leave.endDate,
+        leave.notes,
+        leave.additionalNotes ?? local?.additionalNotes ?? "",
+        leave.status,
+        leave.serverVersion ?? 0,
+        leave.isDeleted ?? 0,
+        leave.createdAt,
+        leave.updatedAt,
+      ]
+    );
 
-  return getLeaveByIdIncludingDeleted(leave.companyId, leave._id);
+    return getLeaveByIdIncludingDeleted(leave.companyId, leave._id);
   });
 }
 
 export async function markLeaveSynced(companyId: string, _id: string) {
   return transaction(async () => {
-    await run(
-      "UPDATE leaves SET synced = 1 WHERE _id = ? AND companyId = ?",
-      [_id, companyId]
-    );
+    await run("UPDATE leaves SET synced = 1 WHERE _id = ? AND companyId = ?", [
+      _id,
+      companyId,
+    ]);
     return true;
   });
 }
 
-type LeaveSnapshot = Pick<Leave, "companyId" | "_id" | "serverVersion" | "updatedAt">;
+type LeaveSnapshot = Pick<
+  Leave,
+  "companyId" | "_id" | "serverVersion" | "updatedAt"
+>;
 
 export async function acknowledgeLeave(
   companyId: string,
@@ -704,10 +698,15 @@ export async function acknowledgeLeave(
   queueId: string,
   serverVersion: number
 ): Promise<void> {
-  if (snapshot.companyId !== companyId ||
-      !Number.isSafeInteger(serverVersion) || serverVersion <= 0 ||
-      serverVersion < (snapshot.serverVersion ?? 0)) {
-    throw new Error("Leave acknowledgement has an invalid company or server version");
+  if (
+    snapshot.companyId !== companyId ||
+    !Number.isSafeInteger(serverVersion) ||
+    serverVersion <= 0 ||
+    serverVersion < (snapshot.serverVersion ?? 0)
+  ) {
+    throw new Error(
+      "Leave acknowledgement has an invalid company or server version"
+    );
   }
   await transaction(async () => {
     const pending = await all<SyncQueueItem>(
@@ -717,7 +716,8 @@ export async function acknowledgeLeave(
     );
     for (const item of pending) {
       const payload = JSON.parse(item.payload) as LeaveSnapshot;
-      if ((payload.serverVersion ?? 0) !== (snapshot.serverVersion ?? 0)) continue;
+      if ((payload.serverVersion ?? 0) !== (snapshot.serverVersion ?? 0))
+        continue;
       await run(
         "UPDATE sync_queue SET payload = ? WHERE companyId = ? AND _id = ? AND synced = 0",
         [JSON.stringify({ ...payload, serverVersion }), companyId, item._id]
@@ -727,8 +727,14 @@ export async function acknowledgeLeave(
       `UPDATE leaves SET serverVersion = ?,
        synced = CASE WHEN updatedAt = ? AND ? = 0 THEN 1 ELSE 0 END
        WHERE companyId = ? AND _id = ? AND serverVersion = ?`,
-      [serverVersion, snapshot.updatedAt, pending.length, companyId,
-        snapshot._id, snapshot.serverVersion ?? 0]
+      [
+        serverVersion,
+        snapshot.updatedAt,
+        pending.length,
+        companyId,
+        snapshot._id,
+        snapshot.serverVersion ?? 0,
+      ]
     );
     await run(
       `UPDATE sync_queue SET synced = 1 WHERE companyId = ? AND _id = ?
@@ -743,9 +749,14 @@ export async function recoverLeaveRevision(
   snapshot: LeaveSnapshot,
   remote: Leave
 ): Promise<boolean> {
-  if (snapshot.companyId !== companyId || remote.companyId !== companyId ||
-      remote._id !== snapshot._id || !Number.isSafeInteger(remote.serverVersion) ||
-      remote.serverVersion <= (snapshot.serverVersion ?? 0)) return false;
+  if (
+    snapshot.companyId !== companyId ||
+    remote.companyId !== companyId ||
+    remote._id !== snapshot._id ||
+    !Number.isSafeInteger(remote.serverVersion) ||
+    remote.serverVersion <= (snapshot.serverVersion ?? 0)
+  )
+    return false;
   return transaction(async () => {
     const history = await all<SyncQueueItem>(
       `SELECT * FROM sync_queue WHERE companyId = ? AND entity = 'leave'
@@ -763,12 +774,32 @@ export async function recoverLeaveRevision(
       }
       if (item.operation === "delete") accepted.isDeleted = 1;
     }
-    const fields = ["companyId", "_id", "employeeId", "submittedMonth",
-      "startDate", "endDate", "subject", "notes", "additionalNotes", "status", "isDeleted"] as const;
-    if (!fields.every((key) => accepted[key] !== undefined && accepted[key] === remote[key])) return false;
+    const fields = [
+      "companyId",
+      "_id",
+      "employeeId",
+      "submittedMonth",
+      "startDate",
+      "endDate",
+      "motifId",
+      "notes",
+      "additionalNotes",
+      "status",
+      "isDeleted",
+    ] as const;
+    if (
+      !fields.every(
+        (key) => accepted[key] !== undefined && accepted[key] === remote[key]
+      )
+    )
+      return false;
     for (const key of ["submittedAt", "createdAt", "updatedAt"] as const) {
-      if (typeof accepted[key] !== "string" || !remote[key] ||
-          Date.parse(accepted[key]) !== Date.parse(remote[key])) return false;
+      if (
+        typeof accepted[key] !== "string" ||
+        !remote[key] ||
+        Date.parse(accepted[key]) !== Date.parse(remote[key])
+      )
+        return false;
     }
     const pending = await all<SyncQueueItem>(
       `SELECT * FROM sync_queue WHERE companyId = ? AND entity = 'leave'
@@ -777,15 +808,25 @@ export async function recoverLeaveRevision(
     );
     for (const item of pending) {
       const payload = JSON.parse(item.payload) as LeaveSnapshot;
-      if ((payload.serverVersion ?? 0) !== (snapshot.serverVersion ?? 0)) continue;
+      if ((payload.serverVersion ?? 0) !== (snapshot.serverVersion ?? 0))
+        continue;
       await run(
         "UPDATE sync_queue SET payload = ? WHERE companyId = ? AND _id = ? AND synced = 0",
-        [JSON.stringify({ ...payload, serverVersion: remote.serverVersion }), companyId, item._id]
+        [
+          JSON.stringify({ ...payload, serverVersion: remote.serverVersion }),
+          companyId,
+          item._id,
+        ]
       );
     }
     await run(
       `UPDATE leaves SET serverVersion = ? WHERE companyId = ? AND _id = ? AND serverVersion = ?`,
-      [remote.serverVersion, companyId, snapshot._id, snapshot.serverVersion ?? 0]
+      [
+        remote.serverVersion,
+        companyId,
+        snapshot._id,
+        snapshot.serverVersion ?? 0,
+      ]
     );
     return true;
   });
@@ -813,7 +854,7 @@ async function getLeaveByIdIncludingDeleted(
       l.submittedMonth,
       l.startDate,
       l.endDate,
-      l.subject,
+      l.motif,
       l.notes,
       l.additionalNotes,
       l.status,

@@ -12,6 +12,8 @@ export type Entity =
   | "attendance"
   | "attendance_daily_check"
   | "leave"
+  | "time_off"
+  | "time_off_motif"
   | "incident"
   | "task"
   | "task_comment"

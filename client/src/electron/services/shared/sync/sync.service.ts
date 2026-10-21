@@ -1,3 +1,4 @@
+import { findCompanyStorage, withCompanyStorage } from "../../../storage/companyStorage.js";
 import { app, BrowserWindow } from "electron";
 import { pushPendingChanges } from "./push.service.js";
 import { pullLatestChanges } from "./pull.service.js";
@@ -10,7 +11,7 @@ import { SyncStatusEvent } from "../../../../common/types/shared/Sync.js";
 import { recoverPayrollProfileQueue } from "../../../database/repositories/modules/hr/payrollProfile.repository.js";
 
 const API_URL = app.isPackaged
-  ? "https://leather-works.onrender.com"
+  ? process.env.PRODUCTION_API_URL
   : process.env.VITE_API_URL;
 
 let syncing = false;
@@ -19,7 +20,33 @@ let syncingCompanyId: string | null = null;
 const MAX_SYNC_RETRIES = 10;
 const SYNC_RETRY_DELAY = 3000;
 
-export default async function sync(companyId: string) {
+// Requests survive an in-flight sync, but failed attempts return to the durable queue.
+const immediateAttendance = new Map<string, Set<string>>();
+
+export function requestLateAttendanceSync(companyId: string, attendanceId: string): void {
+  const ids = immediateAttendance.get(companyId) ?? new Set<string>();
+  ids.add(attendanceId);
+  immediateAttendance.set(companyId, ids);
+  drainImmediateAttendance();
+}
+
+function drainImmediateAttendance(): void {
+  if (syncing) return;
+  const next = immediateAttendance.entries().next().value;
+  if (!next) return;
+  const [companyId, ids] = next;
+  immediateAttendance.delete(companyId);
+  const storage = findCompanyStorage(companyId);
+  if (!storage) {
+    drainImmediateAttendance();
+    return;
+  }
+  void withCompanyStorage(storage, () => sync(companyId, ids)).catch(error => {
+    console.error("IMMEDIATE ATTENDANCE SYNC FAILED:", error);
+  });
+}
+
+export default async function sync(companyId: string, attendanceIds?: ReadonlySet<string>) {
   console.log("SYNC SERVICE API URL:", API_URL);
   console.log("SYNC SERVICE FOR COMPANY", companyId);
 
@@ -46,7 +73,7 @@ export default async function sync(companyId: string) {
    */
 
   notifyRenderer({
-      companyId,
+    companyId,
     status: "SYNCING",
     timestamp: new Date().toISOString(),
   });
@@ -66,7 +93,7 @@ export default async function sync(companyId: string) {
       const pendingChanges = await getPendingChangesCount(companyId);
 
       notifyRenderer({
-      companyId,
+        companyId,
         status: "OFFLINE",
         timestamp: new Date().toISOString(),
         pendingChanges,
@@ -80,6 +107,15 @@ export default async function sync(companyId: string) {
      * PUSH PENDING CHANGES WITH RETRIES
      * ---------------------------------------------------------
      */
+
+    if (attendanceIds) {
+      const result = await pushPendingChanges(companyId, attendanceIds);
+      if (result.failures?.length) throw new Error(result.failures.join("\n"));
+      notifyRenderer({ companyId, status: "IDLE", timestamp: new Date().toISOString(),
+        pendingChanges: await getPendingChangesCount(companyId) });
+      await notifyPendingChanges(companyId);
+      return;
+    }
 
     let pushSuccessful = false;
     await recoverPayrollProfileQueue(companyId);
@@ -97,6 +133,7 @@ export default async function sync(companyId: string) {
          * Check the queue after every push attempt.
          */
         const pendingAfterPush = await getPendingChangesCount(companyId);
+        const retryablePending = (await getUnsyncedItems(companyId)).filter(item => item.entity !== "leave");
 
         console.log(
           `PENDING CHANGES AFTER PUSH ATTEMPT ${attempt}:`,
@@ -106,10 +143,15 @@ export default async function sync(companyId: string) {
         /*
          * Nothing remains -> push is successful.
          */
-        if (pendingAfterPush === 0) {
+        if (pendingAfterPush === 0 || retryablePending.length === 0) {
           pushSuccessful = true;
+          if (pendingAfterPush > 0) {
+            lastPushError = new Error("Legacy Leave sync entries are preserved and await explicit TimeOff motif review.");
+          }
 
-          console.log("ALL PENDING CHANGES PUSHED SUCCESSFULLY.");
+          console.log(pendingAfterPush === 0
+            ? "ALL PENDING CHANGES PUSHED SUCCESSFULLY."
+            : "ONLY LEGACY LEAVE CHANGES AWAIT EXPLICIT TIMEOFF REVIEW.");
 
           break;
         }
@@ -121,7 +163,9 @@ export default async function sync(companyId: string) {
          */
         lastPushError = new Error(
           `PUSH INCOMPLETE: ${pendingAfterPush} item(s) remain` +
-          (pushResult.failures?.length ? `\n${pushResult.failures.join("\n")}` : "")
+            (pushResult.failures?.length
+              ? `\n${pushResult.failures.join("\n")}`
+              : "")
         );
 
         if (attempt < MAX_SYNC_RETRIES) {
@@ -130,7 +174,7 @@ export default async function sync(companyId: string) {
           );
 
           notifyRenderer({
-      companyId,
+            companyId,
             status: "SYNCING",
             timestamp: new Date().toISOString(),
             pendingChanges: pendingAfterPush,
@@ -155,7 +199,7 @@ export default async function sync(companyId: string) {
           );
 
           notifyRenderer({
-      companyId,
+            companyId,
             status: "SYNCING",
             timestamp: new Date().toISOString(),
             pendingChanges,
@@ -200,12 +244,18 @@ export default async function sync(companyId: string) {
       const pendingChanges = await getPendingChangesCount(companyId);
 
       notifyRenderer({
-      companyId,
+        companyId,
         status: "ERROR",
         timestamp: new Date().toISOString(),
         pendingChanges,
-        error: [!pushSuccessful && lastPushError ? getErrorMessage(lastPushError) : "", getErrorMessage(error)]
-          .filter(Boolean).join("\n"),
+        error: [
+          !pushSuccessful && lastPushError
+            ? getErrorMessage(lastPushError)
+            : "",
+          getErrorMessage(error),
+        ]
+          .filter(Boolean)
+          .join("\n"),
         pulledChanges: true,
       });
 
@@ -228,7 +278,7 @@ export default async function sync(companyId: string) {
       );
 
       notifyRenderer({
-      companyId,
+        companyId,
         status: "ERROR",
         timestamp: new Date().toISOString(),
         pendingChanges,
@@ -278,6 +328,7 @@ export default async function sync(companyId: string) {
   } finally {
     syncing = false;
     syncingCompanyId = null;
+    drainImmediateAttendance();
   }
 }
 

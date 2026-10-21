@@ -7,6 +7,7 @@ import AdministrationPage from "../../modules/auth/pages/AdministrationPage";
 import SettingsPage from "../../modules/auth/pages/SettingsPage";
 import PayrollAdminSettingsPage from "../../modules/auth/pages/PayrollAdminSettingsPage";
 import AttendanceSettingsPage from "../../modules/auth/pages/AttendanceSettingsPage";
+import TimeOffSettingsPage from "../../modules/hr/leave/pages/TimeOffSettingsPage";
 import CompanySettingsPage from "../../modules/auth/pages/CompanySettingsPage";
 import PageErrorFallback from "../../components/common/PageErrorFallback";
 import { hrRoutes } from "./hr.routes";
@@ -64,6 +65,12 @@ const router = createHashRouter([
   {
     path: "/admin/settings/attendance",
     element: <AttendanceSettingsPage />,
+    errorElement: <PageErrorFallback />,
+  },
+
+  {
+    path: "/admin/settings/time-off",
+    element: <TimeOffSettingsPage />,
     errorElement: <PageErrorFallback />,
   },
 

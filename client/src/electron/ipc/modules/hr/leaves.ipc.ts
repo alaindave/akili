@@ -11,7 +11,7 @@ import {
   cancelLeave,
 } from "../../../database/repositories/modules/hr/leaves.repository.js";
 
-import Leave from "../../../../common/types/hr/leave/Leave.js";
+import Leave from "../../../../common/types/hr/time-off/TimeOff.js";
 
 export function registerLeaveIPC() {
   console.log("REGISTERING LEAVES IPC");
@@ -23,18 +23,10 @@ export function registerLeaveIPC() {
       companyId: string,
       leave: Pick<
         Leave,
-        | "managerEmail"
-        | "employeeId"
-        | "employeeFirstName"
-        | "employeeLastName"
-        | "startDate"
-        | "endDate"
-        | "notes"
-        | "subject"
-        | "status"
+        "employeeId" | "startDate" | "endDate" | "notes" | "motifId" | "status"
       >
     ) => {
-      console.log("LEAVE IPC RECEIVED:", companyId, leave.managerEmail, leave);
+      console.log("LEAVE IPC RECEIVED:", companyId, leave);
 
       const createdLeave = await createLeave(companyId, leave);
       return createdLeave;
@@ -80,7 +72,7 @@ export function registerLeaveIPC() {
       companyId: string,
       _id: string,
       updates: {
-        subject?: string;
+        motif?: string;
         notes?: string;
         additionalNotes?: string;
         startDate?: string;

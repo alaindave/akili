@@ -15,7 +15,7 @@ import {
 import { SignUpCredentials } from "../../../common/types/shared/Credentials.js";
 
 const API_URL = app.isPackaged
-  ? "https://leather-works.onrender.com"
+  ? process.env.PRODUCTION_API_URL
   : process.env.VITE_API_URL;
 
 export function registerAuthIPC() {

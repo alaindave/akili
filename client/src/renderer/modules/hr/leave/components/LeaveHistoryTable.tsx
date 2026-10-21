@@ -9,7 +9,7 @@ import {
   Badge,
   Text,
 } from "@chakra-ui/react";
-import Leave from "../../../../../common/types/hr/leave/Leave";
+import Leave from "../../../../../common/types/hr/time-off/TimeOff";
 
 const statusColor = (status: string) => {
   switch (status) {
@@ -63,7 +63,7 @@ export default function LeaveHistoryTable({ leaves, onSelectLeave }: Props) {
               cursor="pointer"
               _hover={{ bg: "gray.50" }}
               _focusVisible={{ outline: "2px solid", outlineColor: "gray.500" }}
-              aria-label={`Voir les détails du congé : ${leave.subject}`}
+              aria-label={`Voir les détails du congé : ${leave.motif}`}
               onClick={() => onSelectLeave(leave)}
               onKeyDown={(event) => {
                 if (event.key === "Enter" || event.key === " ") {
@@ -85,7 +85,7 @@ export default function LeaveHistoryTable({ leaves, onSelectLeave }: Props) {
               </Td>
 
               <Td fontSize="1rem" fontWeight="medium">
-                {leave.subject}
+                {leave.motif}
               </Td>
 
               <Td fontSize="1rem" maxW="15rem" py="1rem">

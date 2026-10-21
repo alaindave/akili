@@ -14,7 +14,7 @@ export function ensureCompanyDatabase(company: CompanyStorage): Promise<void> {
   if (existing) return existing;
   const pending = withCompanyStorage(company, async () => {
     await ensureStorageDirectories();
-    await initializeDatabase();
+    await initializeDatabase(company.companyId);
     await migrateMediaLayout();
     await migrateEmployeePhotos();
     await migrateEmployeeDocuments();

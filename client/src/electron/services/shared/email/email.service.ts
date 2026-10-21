@@ -7,7 +7,7 @@ import {
 import { getToken } from "../../../auth.js";
 
 const API_URL = app.isPackaged
-  ? "https://leather-works.onrender.com"
+  ? process.env.PRODUCTION_API_URL
   : process.env.VITE_API_URL;
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

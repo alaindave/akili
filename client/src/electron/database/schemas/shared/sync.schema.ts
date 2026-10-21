@@ -51,5 +51,15 @@ export async function createSyncTable() {
     ON sync_queue(companyId, entity);
   `);
 
+  // Upgrade both pending payloads and acknowledged history used for conflict recovery.
+  await run(`
+    UPDATE sync_queue
+    SET payload = json_remove(
+      json_set(payload, '$.motif', COALESCE(json_extract(payload, '$.motif'),
+        json_extract(payload, '$.subject'))), '$.subject')
+    WHERE entity = 'leave' AND json_valid(payload)
+      AND json_type(payload, '$.subject') IS NOT NULL
+  `);
+
   console.log("SYNC TABLE INITIALIZED");
 }

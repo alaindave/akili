@@ -22,7 +22,7 @@ import {
   useToast,
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
-import type { LeaveWithEmployee } from "../../../../../common/types/hr/leave/LeaveWithEmployee";
+import type { LeaveWithEmployee } from "../../../../../common/types/hr/time-off/TimeOffWithEmployee";
 import useAdminUser from "../../../../../store/auth.store";
 import useSyncStore from "../../../../../store/sync.store";
 import { useLeave, useUpdateLeave } from "../hooks/useLeave";
@@ -207,7 +207,7 @@ export default function LeaveDetailsDrawer({
                 whiteSpace="pre-wrap"
                 overflowWrap="anywhere"
               >
-                {currentLeave.subject}
+                {currentLeave.motif}
               </Text>
             </Box>
             <Divider />

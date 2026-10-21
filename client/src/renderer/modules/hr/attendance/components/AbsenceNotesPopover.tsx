@@ -113,7 +113,7 @@ const AbsenceNotesPopover = ({
         employeeId,
         startDate: date,
         endDate: date,
-        subject: "Absence approuvée",
+        motif: "absence justifiée",
         notes: absenceNote ?? "",
         status: "APPROUVÉ" as const,
       };

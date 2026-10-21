@@ -23,7 +23,7 @@ const NotificationCenter = () => {
   return (
     <Box
       position="fixed"
-      top="1.25rem"
+      bottom="1.25rem"
       right="1.25rem"
       width="min(420px, calc(100vw - 2.5rem))"
       zIndex={9999}
@@ -58,21 +58,24 @@ const NotificationCenter = () => {
               key={notification._id}
               status={status}
               alignItems="flex-start"
-              borderRadius="10px"
-              bg="white"
+              borderRadius="12px"
+              bg="#03143B"
               border="1px solid"
-              borderColor="gray.200"
-              boxShadow="0 8px 30px rgba(0, 0, 0, 0.12)"
+              borderColor="whiteAlpha.200"
+              boxShadow="0 8px 30px rgba(3, 20, 59, 0.28)"
               py={4}
               px={4}
             >
-              <AlertIcon mt="2px" />
+              <AlertIcon
+                mt="2px"
+                color={{ info: "#93C5FD", success: "#86EFAC", warning: "#FCD34D", error: "#FCA5A5" }[status]}
+              />
 
-              <Box flex="1" pr={2}>
+              <Box flex="1" minW={0} pr={2} overflowWrap="anywhere">
                 <AlertTitle
                   fontSize="0.95rem"
                   fontWeight="700"
-                  color="red.600"
+                  color="#FFFFFF"
                   mb={1}
                 >
                   {notification.title}
@@ -81,7 +84,7 @@ const NotificationCenter = () => {
                 <AlertDescription
                   fontSize="0.98rem"
                   fontWeight="400"
-                  color="gray.700"
+                  color="#CBD5E1"
                   lineHeight="1.5"
                 >
                   {notification.message}
@@ -90,6 +93,10 @@ const NotificationCenter = () => {
 
               <CloseButton
                 size="sm"
+                flexShrink={0}
+                color="#CBD5E1"
+                _hover={{ bg: "whiteAlpha.200", color: "#FFFFFF" }}
+                _focusVisible={{ outline: "2px solid #93C5FD", outlineOffset: "2px" }}
                 onClick={() => removeNotification(notification._id)}
                 aria-label="Fermer la notification"
               />

@@ -39,6 +39,11 @@ export default function SettingsPage() {
             "/admin/settings/attendance",
           ],
           [
+            "Paramètres de congés et d’absences",
+            "Motifs, approbation et traitement en paie des absences.",
+            "/admin/settings/time-off",
+          ],
+          [
             "Paramètres de paie",
             "Rémunérations, déductions, paramètres généraux et annulation des paies.",
             "/admin/settings/payroll",

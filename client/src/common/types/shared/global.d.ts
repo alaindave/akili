@@ -4,6 +4,7 @@ import type { IncidentApi } from "../incident/Incident";
 import type { employeeApi } from "../../../electron/preload/hr/employees.preload.cjs";
 import type { attendanceApi } from "../../../electron/preload/hr/attendances.preload.cjs";
 import type { leaveApi } from "../../../electron/preload/hr/leaves.preload.cjs";
+import type { timeOffApi } from "../../../electron/preload/hr/timeOff.preload.cjs";
 import type { payrollSettingsApi } from "../../../electron/preload/hr/payroll_settings.preload.cjs";
 import type { payrollComponentsApi } from "../../../electron/preload/hr/payroll_components.preload.cjs";
 import type { payrollProfileApi } from "../../../electron/preload/hr/payroll_profile.preload.cjs";
@@ -33,6 +34,7 @@ declare global {
         attendanceDailyCheck: typeof attendanceDailyCheckApi;
         attendance_reports: typeof attendanceReportsApi;
         leave: typeof leaveApi;
+        timeOff: typeof timeOffApi;
         payrollSettings: typeof payrollSettingsApi;
         payrollComponents: typeof payrollComponentsApi;
         payrollProfile: typeof payrollProfileApi;

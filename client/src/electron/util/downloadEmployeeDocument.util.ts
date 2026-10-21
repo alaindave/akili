@@ -6,7 +6,7 @@ import { installDownloadedDocument } from "../services/shared/employeeDocumentSt
 import { validateStorageCompany } from "../storage/companyStorage.js";
 
 const API_URL = app.isPackaged
-  ? "https://leather-works.onrender.com"
+  ? process.env.PRODUCTION_API_URL
   : process.env.VITE_API_URL;
 
 export async function downloadEmployeeDocument(
@@ -22,8 +22,13 @@ export async function downloadEmployeeDocument(
   }
 
   validateStorageCompany(employee.companyId);
-  if (document.companyId !== employee.companyId || document.employeeId !== employee._id) {
-    throw new Error("Document does not belong to the selected employee/company");
+  if (
+    document.companyId !== employee.companyId ||
+    document.employeeId !== employee._id
+  ) {
+    throw new Error(
+      "Document does not belong to the selected employee/company"
+    );
   }
   const url = `${API_URL}/documents/${document._id}`;
 

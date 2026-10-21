@@ -5,7 +5,7 @@ import EmployeeListPage from "../../modules/hr/employees/pages/EmployeeListPage"
 import EmployeeDetailsPage from "../../modules/hr/employees/components/EmployeeDetailsPage";
 import EmployeeAdminLayout from "../../modules/hr/employees/components/EmployeeAdminLayout";
 
-import EmployeeLeavePage from "../../modules/hr/leave/pages/LeavePage";
+import TimeOffPage from "../../modules/hr/leave/pages/TimeOffPage";
 import EmployeeLeaveReport from "../../modules/hr/leave/pages/LeaveReport";
 
 import EmployeeAttendancePage from "../../modules/hr/attendance/pages/AttendancePage";
@@ -86,7 +86,7 @@ export const hrRoutes = {
     // Leave
     {
       path: "leaves",
-      element: <EmployeeLeavePage />,
+      element: <TimeOffPage />,
     },
 
     // Payroll

@@ -8,6 +8,7 @@ const { DatabaseSync } = require('node:sqlite');
 const database = new DatabaseSync(':memory:');
 const queued = [];
 const adapter = {
+  transaction: async (callback) => callback(),
   run: async (sql, params = []) => database.prepare(sql).run(...params),
   all: async (sql, params = []) => database.prepare(sql).all(...params),
   get: async (sql, params = []) => database.prepare(sql).get(...params) ?? null,
@@ -33,15 +34,17 @@ function load(relative) {
   const repo = load('repositories/modules/hr/leaves.repository.ts');
   await schema.createLeavesTable();
   database.exec('ALTER TABLE leaves DROP COLUMN additionalNotes');
+  database.exec('ALTER TABLE leaves RENAME COLUMN motif TO subject');
   const remote = { _id: 'l1', companyId: 'a', employeeId: 'e1', submittedAt: '2026-09-01',
     submittedMonth: '2026-09', startDate: '2026-10-01', endDate: '2026-10-02',
-    subject: 'Congé', notes: 'Raison familiale', status: 'ATTENTE_APPROBATION', serverVersion: 1,
+    motif: 'Congé', notes: 'Raison familiale', status: 'ATTENTE_APPROBATION', serverVersion: 1,
     createdAt: '2026-09-01', updatedAt: '2026-09-01' };
   database.prepare(`INSERT INTO leaves (_id, companyId, employeeId, submittedAt, submittedMonth,
     startDate, endDate, subject, notes) VALUES ('l1','a','e1','2026-09-01','2026-09',
     '2026-10-01','2026-10-02','Congé','Raison familiale')`).run();
   await schema.createLeavesTable();
   await schema.createLeavesTable();
+  assert.equal((await repo.getLeaveById('a', 'l1')).motif, remote.motif);
   assert.equal((await repo.getLeaveById('a', 'l1')).notes, remote.notes);
   assert.equal((await repo.getLeaveById('a', 'l1')).additionalNotes, '');
   const updated = await repo.updateLeave('a', 'l1', { additionalNotes: 'Manager — justificatif reçu' });
@@ -56,5 +59,22 @@ function load(relative) {
   assert.equal((await repo.getLeaveById('a', 'l1')).notes, remote.notes);
   await repo.upsertLeave({ ...remote, serverVersion: 4, additionalNotes: '' });
   assert.equal((await repo.getLeaveById('a', 'l1')).additionalNotes, '');
+  const syncSchema = load('schemas/shared/sync.schema.ts');
+  await syncSchema.createSyncTable();
+  database.prepare(`INSERT INTO sync_queue (companyId, entity, entityId, operation, payload)
+    VALUES ('a', ?, 'l1', 'create', ?)`).run('leave', JSON.stringify({ subject: 'Ancien motif' }));
+  database.prepare(`INSERT INTO sync_queue (companyId, entity, entityId, operation, payload)
+    VALUES ('a', ?, 't1', 'create', ?)`).run('task', JSON.stringify({ subject: 'Task subject' }));
+  await syncSchema.createSyncTable();
+  await syncSchema.createSyncTable();
+  const payload = JSON.parse(database.prepare("SELECT payload FROM sync_queue WHERE entity='leave'").get().payload);
+  assert.equal(payload.motif, 'Ancien motif');
+  assert.equal(payload.subject, undefined);
+  assert.equal(JSON.parse(database.prepare("SELECT payload FROM sync_queue WHERE entity='task'").get().payload).subject, 'Task subject');
+  await repo.updateLeave('a', 'l1', { motif: 'absence justifiée' });
+  assert.equal((await repo.getLeaveById('a', 'l1')).motif, 'absence justifiée');
+  await repo.updateLeave('a', 'l1', { motif: 'Motif personnalisé' });
+  assert.equal((await repo.getLeaveById('a', 'l1')).motif, 'Motif personnalisé');
+  assert.equal(queued.at(-1).motif, 'Motif personnalisé');
   console.log('Passed: leave migration, separate motif and notes, queued update, and compatible pull sync.');
 })().catch((error) => { console.error(error); process.exitCode = 1; }).finally(() => database.close());

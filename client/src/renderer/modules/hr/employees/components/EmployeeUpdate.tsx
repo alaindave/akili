@@ -368,16 +368,18 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
           borderRadius="10px"
           overflow="hidden"
           boxShadow="0 20px 50px rgba(15, 23, 42, 0.18)"
-          width="min(1100px, 92vw)"
-          maxH="90vh"
+          width={{ base: "calc(100vw - 1rem)", md: "min(1100px, 92vw)" }}
+          my={{ base: 2, md: "auto" }}
+          maxH="calc(100dvh - 2rem)"
         >
-          <form
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              minHeight: 0,
-              maxHeight: "90vh",
-            }}
+          <Box
+            as="form"
+            display="flex"
+            flexDirection="column"
+            flex="1"
+            minH={0}
+            maxH="inherit"
+            overflow="hidden"
             onSubmit={handleSubmit(
               (data) => {
                 console.log("VALID SUBMIT", data);
@@ -397,11 +399,11 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
               flexShrink={0}
               bg="#F8FAFC"
               borderBottom="1px solid #E2E8F0"
-              px={6}
+              px={{ base: 3, md: 6 }}
               py={4}
             >
-              <Flex justify="space-between">
-                <HStack spacing={3}>
+              <Flex justify="space-between" direction={{ base: "column", sm: "row" }} gap={3}>
+                <HStack spacing={3} minW={0}>
                   <Flex
                     height="44px"
                     width="44px"
@@ -468,7 +470,7 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
                 BODY
             ====================================================== */}
 
-            <ModalBody px={6} py={4} minH={0} overflowY="auto">
+            <ModalBody px={{ base: 3, md: 6 }} py={4} minH={0} flex="1" overflowY="auto" overscrollBehavior="contain">
               <VStack spacing={3} align="stretch">
                 {/* ==================================================
                     PERSONAL INFORMATION
@@ -486,7 +488,7 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
                     Informations personnelles
                   </Text>
 
-                  <Grid templateColumns="repeat(3, 1fr)" gap={3}>
+                  <Grid templateColumns={{ base: "minmax(0, 1fr)", sm: "repeat(2, minmax(0, 1fr))", lg: "repeat(3, minmax(0, 1fr))" }} gap={3}>
                     {/* NOM */}
 
                     <FormControl isInvalid={!!errors.lastName}>
@@ -600,7 +602,7 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
                     Informations professionnelles
                   </Text>
 
-                  <Grid templateColumns="repeat(3, 1fr)" gap={3}>
+                  <Grid templateColumns={{ base: "minmax(0, 1fr)", sm: "repeat(2, minmax(0, 1fr))", lg: "repeat(3, minmax(0, 1fr))" }} gap={3}>
                     {/* MATRICULE */}
 
                     <FormControl isInvalid={!!errors.matricule}>
@@ -810,7 +812,7 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
                     Contact d'urgence
                   </Text>
 
-                  <Grid templateColumns="repeat(3, 1fr)" gap={3}>
+                  <Grid templateColumns={{ base: "minmax(0, 1fr)", sm: "repeat(2, minmax(0, 1fr))", lg: "repeat(3, minmax(0, 1fr))" }} gap={3}>
                     {/* CONTACT */}
 
                     <FormControl isInvalid={!!errors.emergencyContact}>
@@ -923,7 +925,7 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
               flexShrink={0}
               bg="#F8FAFC"
               borderTop="1px solid #E2E8F0"
-              px={6}
+              px={{ base: 3, md: 6 }}
               py={3}
             >
               <Flex width="100%" align="center" justify="space-between">
@@ -932,7 +934,7 @@ const UpdateEmployee = ({ _id, employee }: Props) => {
                 </Text>
               </Flex>
             </ModalFooter>
-          </form>
+          </Box>
         </ModalContent>
       </Modal>
     </>

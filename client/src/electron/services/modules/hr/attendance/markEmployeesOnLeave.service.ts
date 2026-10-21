@@ -1,6 +1,5 @@
-import { getOngoingLeaves } from "../../../../database/repositories/modules/hr/leaves.repository.js";
+import { getOngoingApprovedLeaveTimeOff } from "../../../../database/repositories/modules/hr/timeOff.repository.js";
 
-import Leave from "../../../../../common/types/hr/leave/Leave.js";
 import {
   createAbsenceLeaveAttendance,
   getAttendanceRecord,
@@ -12,7 +11,7 @@ export async function markEmployeesOnLeave(
   date: string = new Date().toISOString().split("T")[0]
 ) {
   console.log("markEmployeesOnLeave SERVICE INITIATED... ");
-  const leaves: Leave[] = await getOngoingLeaves(companyId, date);
+  const leaves = await getOngoingApprovedLeaveTimeOff(companyId, date);
   const now = new Date().toISOString();
   console.log("ONGOING LEAVES:", leaves);
   console.log("Date:", date);

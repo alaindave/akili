@@ -1,4 +1,5 @@
-import { getCompanyEmail } from "../../../../services/companyEmail.service";
+import { useEffect } from "react";
+import { useTimeOffMotifs } from "../hooks/useTimeOff";
 import {
   Box,
   Button,
@@ -20,12 +21,15 @@ import {
   Text,
   Textarea,
   VStack,
+  Select,
+  Checkbox,
 } from "@chakra-ui/react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 import Employee from "../../../../../common/types/hr/employees/Employee";
+import type { EmployeeDocument } from "../../../../../common/types/hr/employees/EmployeeDocuments";
 import DatePicker from "react-datepicker";
 import { FaSave } from "react-icons/fa";
 import { RxCrossCircled } from "react-icons/rx";
@@ -39,6 +43,9 @@ interface Props {
   onClose: () => void;
   onRefresh?: () => void;
   employees: Employee[];
+  onCreate?: (
+    input: Parameters<typeof window.electron.hr.timeOff.create>[1]
+  ) => Promise<unknown>;
 }
 
 const errorMessage = "Ce champ est obligatoire";
@@ -46,8 +53,8 @@ const errorMessage = "Ce champ est obligatoire";
 const schema = z.object({
   startDate: z.string().min(1, { message: errorMessage }),
   endDate: z.string().min(1, { message: errorMessage }),
-  subject: z.string().min(1, { message: errorMessage }),
-  notes: z.string().min(1, { message: errorMessage }),
+  motifId: z.string().trim().min(1, { message: errorMessage }),
+  notes: z.string(),
 });
 
 type LeaveData = z.infer<typeof schema>;
@@ -57,19 +64,62 @@ const LeaveSubmissionModal = ({
   onClose,
   onRefresh,
   employees,
+  onCreate,
 }: Props) => {
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const user = useAdminUser((store) => store.adminUser);
+  const { data: motifs = [] } = useTimeOffMotifs(user.companyId);
+  const [documentOptions, setDocumentOptions] = useState<
+    Array<Pick<EmployeeDocument, "_id" | "originalName">>
+  >([]);
+  const [supportingDocumentIds, setSupportingDocumentIds] = useState<string[]>(
+    []
+  );
+  const [isPartialDay, setIsPartialDay] = useState(false);
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
 
   const {
     register,
     handleSubmit,
     reset,
     control,
+    watch,
     formState: { errors },
-  } = useForm<LeaveData>({ resolver: zodResolver(schema) });
+  } = useForm<LeaveData>({
+    resolver: zodResolver(schema),
+    defaultValues: { motifId: "", notes: "" },
+  });
+
+  const selectedMotif = motifs.find((motif) => motif._id === watch("motifId"));
+
+  useEffect(() => {
+    let active = true;
+    if (!employee?._id) {
+      setDocumentOptions([]);
+      setSupportingDocumentIds([]);
+      return;
+    }
+    void window.electron.hr.employees_documents
+      .getByEmployee(user.companyId, employee._id)
+      .then((documents: EmployeeDocument[]) => {
+        if (active)
+          setDocumentOptions(
+            documents
+              .filter((document) => !document.isDeleted)
+              .map(({ _id, originalName }) => ({ _id, originalName }))
+          );
+      })
+      .catch(() => {
+        if (active) setDocumentOptions([]);
+      });
+    setSupportingDocumentIds([]);
+    return () => {
+      active = false;
+    };
+  }, [employee?._id, user.companyId]);
 
   const handleMenuClick = (employee: Employee) => {
     console.log("EMPLOYEE SELECTED: ", employee);
@@ -78,7 +128,9 @@ const LeaveSubmissionModal = ({
 
   const handleFormClose = () => {
     setEmployee(null);
-    reset();
+    reset({ motifId: "", notes: "" });
+    setSupportingDocumentIds([]);
+    setIsPartialDay(false);
     onClose();
     setErrorMessage("");
   };
@@ -88,19 +140,35 @@ const LeaveSubmissionModal = ({
     setIsSubmitting(true);
     if (!employee?._id) {
       console.error("NO EMPLOYEE SELECTED");
+      setIsSubmitting(false);
       return;
     }
     try {
-      const leave = await window.electron.hr.leave.create(user.companyId, {
-        ...leaveData,
-        managerEmail: await getCompanyEmail(user.companyId),
+      const motif = motifs.find(
+        (item) => item._id === leaveData.motifId && item.isActive
+      );
+      if (!motif) throw new Error("Choisissez un motif actif.");
+      if (motif.requiresJustification && !leaveData.notes.trim())
+        throw new Error("Une justification est requise pour ce motif.");
+      if (motif.requiresSupportingDocument && !supportingDocumentIds.length)
+        throw new Error("Un document justificatif est requis pour ce motif.");
+      if (isPartialDay && (!startTime || !endTime || startTime >= endTime))
+        throw new Error("Les heures de la journée partielle sont invalides.");
+      const input = {
         employeeId: employee._id,
-        employeeFirstName: employee.firstName,
-        employeeLastName: employee.lastName,
-        status: "ATTENTE_APPROBATION",
-      });
-      console.log("LEAVE CREATION SUCCESS:", leave);
+        motifId: motif._id,
+        startDate: leaveData.startDate,
+        endDate: leaveData.endDate,
+        submittedMonth: new Date().toISOString().slice(0, 7),
+        isPartialDay,
+        ...(isPartialDay ? { startTime, endTime } : {}),
+        notes: leaveData.notes,
+        supportingDocumentIds,
+      };
+      if (onCreate) await onCreate(input);
+      else await window.electron.hr.timeOff.create(user.companyId, input);
       setEmployee(null);
+      setSupportingDocumentIds([]);
       setErrorMessage("");
       onRefresh?.();
       reset();
@@ -108,14 +176,11 @@ const LeaveSubmissionModal = ({
     } catch (error: any) {
       console.error("Unable to save leave:", error.message);
       console.error("Unable to save leave:error status", error.status);
-      if (error.status == "400")
-        setErrorMessage("Une demande de congé existe deja pour cet employé");
-      else
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : "Impossible d’enregistrer la demande de congé."
-        );
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Impossible d’enregistrer la demande TimeOff."
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -480,7 +545,7 @@ const LeaveSubmissionModal = ({
                       )}
                     </Box>
                     {/* End date */}
-                    <Box>
+                    <Box mt="0.5rem">
                       <FormLabel
                         fontSize="0.92rem"
                         fontWeight="600"
@@ -547,7 +612,7 @@ const LeaveSubmissionModal = ({
                     </Box>
                   </VStack>
                   {/* -------------------------------------------------
-                    SUBJECT + NOTES
+                    MOTIF + NOTES
                   ------------------------------------------------- */}
                   <Box>
                     <Text
@@ -561,7 +626,7 @@ const LeaveSubmissionModal = ({
                       Détails de la demande
                     </Text>
                     <Box>
-                      {/* Subject */}
+                      {/* Motif */}
                       <Box>
                         <FormLabel
                           fontSize="0.92rem"
@@ -571,31 +636,42 @@ const LeaveSubmissionModal = ({
                         >
                           <HStack spacing={1.5}>
                             <FaRegNoteSticky color="#F2B705" />
-                            <Text>Sujet</Text>
+                            <Text>Motif</Text>
                           </HStack>
                         </FormLabel>
-                        <Input
-                          size="sm"
-                          bg="white"
-                          borderColor="gray.300"
-                          color="gray.700"
-                          {...register("subject")}
-                          _hover={{
-                            borderColor: "gray.400",
-                          }}
-                          _focus={{
-                            borderColor: "#F2B705",
-                            boxShadow: "0 0 0 1px #F2B705",
-                          }}
-                        />
-                        {errors.subject && (
+                        <Select
+                          placeholder="Choisir un motif"
+                          {...register("motifId")}
+                        >
+                          {motifs
+                            .filter((motif) => motif.isActive)
+                            .map((motif) => (
+                              <option key={motif._id} value={motif._id}>
+                                {motif.label}
+                              </option>
+                            ))}
+                        </Select>
+                        {errors.motifId && (
                           <Text mt={1} fontSize="0.7rem" color="red.500">
-                            {errors.subject.message}
+                            {errors.motifId.message}
+                          </Text>
+                        )}
+                        {selectedMotif && (
+                          <Text mt={1} fontSize="xs" color="gray.600">
+                            {selectedMotif.requiresApproval
+                              ? "Approbation requise"
+                              : "Approbation non requise"}
+                            {selectedMotif.deductFromLeaveBalance
+                              ? " · Déduction du solde de congé"
+                              : ""}
+                            {selectedMotif.requiresSupportingDocument
+                              ? " · Justificatif obligatoire"
+                              : ""}
                           </Text>
                         )}
                       </Box>
                       {/* Notes */}
-                      <Box>
+                      <Box mt="1rem">
                         <FormLabel
                           fontSize="0.92rem"
                           fontWeight="600"
@@ -604,7 +680,12 @@ const LeaveSubmissionModal = ({
                         >
                           <HStack spacing={1.5}>
                             <FaRegNoteSticky color="#F2B705" />
-                            <Text>Explications</Text>
+                            <Text>
+                              Justification{" "}
+                              {selectedMotif?.requiresJustification
+                                ? "(obligatoire)"
+                                : ""}
+                            </Text>
                           </HStack>
                         </FormLabel>
                         <Textarea
@@ -633,6 +714,67 @@ const LeaveSubmissionModal = ({
                           </Text>
                         )}
                       </Box>
+                      <Checkbox
+                        mt={3}
+                        isChecked={isPartialDay}
+                        onChange={(event) =>
+                          setIsPartialDay(event.target.checked)
+                        }
+                      >
+                        Journée partielle
+                      </Checkbox>
+                      {isPartialDay && (
+                        <HStack mt={2}>
+                          <Input
+                            aria-label="Heure de début"
+                            type="time"
+                            value={startTime}
+                            onChange={(event) =>
+                              setStartTime(event.target.value)
+                            }
+                          />
+                          <Input
+                            aria-label="Heure de fin"
+                            type="time"
+                            value={endTime}
+                            onChange={(event) => setEndTime(event.target.value)}
+                          />
+                        </HStack>
+                      )}
+                      {selectedMotif?.requiresSupportingDocument && (
+                        <Box mt={3}>
+                          <Text fontSize="sm" fontWeight="600" mb={2}>
+                            Document justificatif obligatoire
+                          </Text>
+                          {documentOptions.length ? (
+                            documentOptions.map((document) => (
+                              <Checkbox
+                                key={document._id}
+                                display="block"
+                                isChecked={supportingDocumentIds.includes(
+                                  document._id
+                                )}
+                                onChange={(event) =>
+                                  setSupportingDocumentIds((current) =>
+                                    event.target.checked
+                                      ? [...current, document._id]
+                                      : current.filter(
+                                          (id) => id !== document._id
+                                        )
+                                  )
+                                }
+                              >
+                                {document.originalName}
+                              </Checkbox>
+                            ))
+                          ) : (
+                            <Text fontSize="sm" color="orange.600">
+                              Aucun document disponible dans le dossier de cet
+                              employé.
+                            </Text>
+                          )}
+                        </Box>
+                      )}
                     </Box>
                   </Box>
                 </Flex>

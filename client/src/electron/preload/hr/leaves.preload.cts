@@ -1,5 +1,5 @@
-type LeaveWithEmployee = import("../../../common/types/hr/leave/LeaveWithEmployee", { with: { "resolution-mode": "require" } }).LeaveWithEmployee;
-type Leave = import("../../../common/types/hr/leave/Leave", {
+type TimeOffWithEmployee = import("../../../common/types/hr/time-off/TimeOff", { with: { "resolution-mode": "require" } }).TimeOffWithEmployee;
+type Leave = import("../../../common/types/hr/time-off/TimeOff", {
   with: { "resolution-mode": "require" },
 }).default;
 import { invoke } from "../../ipc/ipc.cjs";
@@ -9,14 +9,11 @@ export const leaveApi = {
     companyId: string,
     leave: Pick<
       Leave,
-      | "managerEmail"
       | "employeeId"
-      | "employeeFirstName"
-      | "employeeLastName"
       | "startDate"
       | "endDate"
       | "notes"
-      | "subject"
+      | "motifId"
       | "status"
     >
   ) => invoke("leave:create", companyId, leave),
@@ -24,13 +21,13 @@ export const leaveApi = {
   getLeaveById: (companyId: string, _id: string) =>
     invoke("leave:getLeaveById", companyId, _id),
 
-  getLeaveByEmployeeId: (companyId: string, employeeId: string): Promise<LeaveWithEmployee[]> =>
+  getLeaveByEmployeeId: (companyId: string, employeeId: string): Promise<TimeOffWithEmployee[]> =>
     invoke("leave:getLeaveByEmployeeId", companyId, employeeId),
 
-  getOngoingLeaves: (companyId: string, date: string): Promise<LeaveWithEmployee[]> =>
+  getOngoingLeaves: (companyId: string, date: string): Promise<TimeOffWithEmployee[]> =>
     invoke("leave:getOnGoing", companyId, date),
 
-  getLeaveByMonth: (companyId: string, month: string): Promise<LeaveWithEmployee[]> =>
+  getLeaveByMonth: (companyId: string, month: string): Promise<TimeOffWithEmployee[]> =>
     invoke("leave:getLeaveByMonth", companyId, month),
 
   update: (companyId: string, _id: string, updates: Partial<Leave>) =>

@@ -21,9 +21,9 @@ import useSyncStore from "../../../../../store/sync.store";
 import EmployeeFilterMenu from "../../employees/components/EmployeeFilterMenu";
 import SearchBar from "../../../../components/common/SearchBar";
 import useAdminUser from "../../../../../store/auth.store";
-import type { LeaveWithEmployee } from "../../../../../common/types/hr/leave/LeaveWithEmployee";
 import LeaveStatusFilter from "../components/LeaveStatusFilter";
 import DeletionDialog from "../../../../components/common/DeletionDialog";
+import { TimeOffWithEmployee } from "../../../../../common/types/hr/time-off/TimeOff";
 
 const shimmerKeyframes = `
 @keyframes shimmer {
@@ -53,8 +53,6 @@ const gridTemplate = `
 1.8fr 1.6fr 1.6fr 1.5fr 1.5fr 1fr 1fr
 `;
 
-// All column headers occupy exactly two lines.
-// Explicit line breaks prevent wrapping from changing with screen size.
 const headerTextSx = {
   whiteSpace: "pre-line",
   overflowWrap: "anywhere",
@@ -84,12 +82,10 @@ const EmployeeLeavePage = () => {
     new Date().toISOString().slice(0, 7)
   );
 
-  const [selectedLeave, setSelectedLeave] = useState<any | null>(null);
+  const [selectedLeave, setSelectedLeave] =
+    useState<TimeOffWithEmployee | null>(null);
   const [statusFilter, setStatusFilter] = useState("");
 
-  /*
-   * REACT QUERY
-   */
   const {
     data: leaves = [],
     isLoading,
@@ -105,9 +101,6 @@ const EmployeeLeavePage = () => {
     refetch();
   }, [syncVersion, refetch, statusFilter]);
 
-  /*
-   * DELETE LEAVE
-   */
   const handleLeaveDelete = async () => {
     if (!selectedLeave?._id) return;
 
@@ -120,10 +113,7 @@ const EmployeeLeavePage = () => {
     }
   };
 
-  /*
-   * DELETE CONFIRMATION
-   */
-  const handleDeleteConfirmation = (leave: LeaveWithEmployee) => {
+  const handleDeleteConfirmation = (leave: TimeOffWithEmployee) => {
     setSelectedLeave(leave);
     onConfirmationOpen();
   };
@@ -149,15 +139,17 @@ const EmployeeLeavePage = () => {
       p="1rem"
       pb={{ base: "calc(46px + 1rem)", md: "calc(52px + 1rem)" }}
     >
+      {/* PAGE HEADER AND FILTERS */}
       <Grid
         templateColumns="repeat(2, minmax(0, 1fr))"
         templateAreas={'"heading submit" "department search"'}
         columnGap={{ base: 2, md: 3 }}
         rowGap={3}
         alignItems="start"
-        pr="2rem"
         mb={4}
         flexShrink={0}
+        w="100%"
+        minW={0}
       >
         <Box gridArea="heading" minW={0}>
           <HStack spacing={1}>
@@ -187,30 +179,39 @@ const EmployeeLeavePage = () => {
           </PageSubtitle>
         </Box>
 
-        <Button
-          gridArea="submit"
-          justifySelf="end"
-          w="100%"
-          maxW="22rem"
-          minW={0}
-          colorScheme="yellow"
-          onClick={onOpen}
-          leftIcon={<FaCirclePlus />}
-          minH={{ base: "36px", md: "40px" }}
-          h="auto"
-          py={2}
-          px={{ base: 2, md: 3 }}
-          fontSize={{ base: "0.75rem", md: "0.875rem" }}
-          whiteSpace="normal"
-        >
-          Soumettre une demande
-        </Button>
-
+        {/* Submit button: aligned to the right edge of the search bar */}
         <Box
-          mt="1.5rem"
+          gridArea="submit"
+          justifySelf="stretch"
+          minW={0}
+          display="flex"
+          justifyContent="flex-end"
+        >
+          <Button
+            w="100%"
+            maxW="22rem"
+            minW={0}
+            colorScheme="yellow"
+            onClick={onOpen}
+            leftIcon={<FaCirclePlus />}
+            minH={{ base: "36px", md: "40px" }}
+            h="auto"
+            py={2}
+            px={{ base: 2, md: 3 }}
+            fontSize={{ base: "0.75rem", md: "0.875rem" }}
+            whiteSpace="normal"
+          >
+            Soumettre une demande
+          </Button>
+        </Box>
+
+        {/* Department filter: left aligned */}
+        <Box
           gridArea="department"
+          mt="1.5rem"
           minW={0}
           maxW="22rem"
+          w="100%"
           sx={{
             ".chakra-menu__menu-button": {
               width: "100%",
@@ -235,13 +236,15 @@ const EmployeeLeavePage = () => {
           <EmployeeFilterMenu onFilterClicked={setFilter} />
         </Box>
 
+        {/* Search bar: same right edge and maximum width as submit button */}
         <Box
-          mt="1.5rem"
           gridArea="search"
-          justifySelf="end"
-          w="100%"
-          maxW="22rem"
+          mt="1.5rem"
+          justifySelf="stretch"
           minW={0}
+          w="100%"
+          display="flex"
+          justifyContent="flex-end"
           sx={{
             input: {
               minWidth: 0,
@@ -258,14 +261,16 @@ const EmployeeLeavePage = () => {
             },
           }}
         >
-          <SearchBar
-            placeholderText="Rechercher un employé"
-            onSearch={setSearchText}
-          />
+          <Box w="100%" maxW="22rem" minW={0}>
+            <SearchBar
+              placeholderText="Rechercher un employé"
+              onSearch={setSearchText}
+            />
+          </Box>
         </Box>
       </Grid>
 
-      {/* One scroll container keeps the column headings aligned with the rows. */}
+      {/* LEAVE TABLE */}
       <Box
         flex="1"
         minH={0}
@@ -273,7 +278,7 @@ const EmployeeLeavePage = () => {
         overflow="auto"
         overscrollBehavior="contain"
         borderRadius="md"
-        mt="2rem"
+        mt={{ base: "0.2rem", md: "0.4rem" }}
       >
         <Box minW={isLoading || leaves.length ? "1000px" : 0}>
           {(isLoading || leaves.length > 0) && (
@@ -349,7 +354,7 @@ const EmployeeLeavePage = () => {
               </Text>
             </Flex>
           ) : (
-            filteredLeaves.map((leave: LeaveWithEmployee) => (
+            filteredLeaves.map((leave: TimeOffWithEmployee) => (
               <EmployeeLeaveCard
                 key={leave._id}
                 leave={leave}
@@ -361,6 +366,7 @@ const EmployeeLeavePage = () => {
         </Box>
       </Box>
 
+      {/* BOTTOM FILTERS */}
       <Flex
         flexShrink={0}
         mt={4}

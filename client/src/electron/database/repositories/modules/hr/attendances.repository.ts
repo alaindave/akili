@@ -1,3 +1,4 @@
+import { requestLateAttendanceSync } from "../../../../services/shared/sync/sync.service.js";
 import { getAttendanceClockIn } from "./attendanceSettings.repository.js";
 import { randomUUID } from "crypto";
 import {
@@ -8,10 +9,19 @@ import {
 } from "../../../../../common/types/hr/attendance/Attendance.js";
 import { isAttendanceDateLocked } from "./attendanceDailyCheck.repository.js";
 import { getEmployeeById } from "./employees.repository.js";
-import { all, get, run, getDirect, runDirect, transaction } from "../../../db.js";
+import {
+  all,
+  get,
+  run,
+  getDirect,
+  runDirect,
+  transaction,
+  afterCommit,
+} from "../../../db.js";
 import { addToSyncQueue } from "../../shared/sync.repository.js";
 import Employee from "../../../../../common/types/hr/employees/Employee.js";
 import { getLeaveByEmployeeId } from "./leaves.repository.js";
+import { TimeOffStatus } from "../../../../../common/types/hr/time-off/TimeOff.js";
 
 /**
  * Create a normal/manual attendance record.
@@ -21,63 +31,63 @@ export async function createAttendance(
   input: CreateAttendanceDto
 ) {
   return transaction(async () => {
-  let { employeeId, date, clockIn, clockOut, status } = input;
+    let { employeeId, date, clockIn, clockOut, status } = input;
 
-  let lateMinutes = 0;
+    let lateMinutes = 0;
 
-  const _id = randomUUID();
-  const now = new Date().toISOString();
-  const serverVersion = 0;
+    const _id = randomUUID();
+    const now = new Date().toISOString();
+    const serverVersion = 0;
 
-  const locked = await isAttendanceDateLocked(date);
+    const locked = await isAttendanceDateLocked(date);
 
-  if (locked) {
-    throw new Error(
-      `La liste présence du  ${new Date(date).toLocaleDateString(
-        "fr-FR"
-      )} est vérouillée et ne peut pas être modifiée`
+    if (locked) {
+      throw new Error(
+        `La liste présence du  ${new Date(date).toLocaleDateString(
+          "fr-FR"
+        )} est vérouillée et ne peut pas être modifiée`
+      );
+    }
+
+    const employee = await getEmployeeById(companyId, employeeId);
+
+    if (!employee) {
+      throw new Error("Il n'y a pas d'employé avec cet identifiant");
+    }
+
+    const existingAttendance = await getAttendanceRecord(
+      companyId,
+      employeeId,
+      date
     );
-  }
 
-  const employee = await getEmployeeById(companyId, employeeId);
+    console.log("EXISTING ATTENDANCE:", existingAttendance);
 
-  if (!employee) {
-    throw new Error("Il n'y a pas d'employé avec cet identifiant");
-  }
+    if (existingAttendance) {
+      throw new Error("L'employé a déja pointé");
+    }
 
-  const existingAttendance = await getAttendanceRecord(
-    companyId,
-    employeeId,
-    date
-  );
+    if (clockIn) {
+      const clockInDate = new Date(clockIn);
 
-  console.log("EXISTING ATTENDANCE:", existingAttendance);
+      const [scheduledHour, scheduledMinute] = (
+        await getAttendanceClockIn(companyId)
+      )
+        .split(":")
+        .map(Number);
 
-  if (existingAttendance) {
-    throw new Error("L'employé a déja pointé");
-  }
+      const expectedMinutes = scheduledHour * 60 + scheduledMinute;
 
-  if (clockIn) {
-    const clockInDate = new Date(clockIn);
+      const actualMinutes =
+        clockInDate.getHours() * 60 + clockInDate.getMinutes();
 
-    const [scheduledHour, scheduledMinute] = (
-      await getAttendanceClockIn(companyId)
-    )
-      .split(":")
-      .map(Number);
+      lateMinutes = Math.max(0, actualMinutes - expectedMinutes);
 
-    const expectedMinutes = scheduledHour * 60 + scheduledMinute;
+      status = lateMinutes > 0 ? ("RETARD" as const) : ("PONCTUEL" as const);
+    }
 
-    const actualMinutes =
-      clockInDate.getHours() * 60 + clockInDate.getMinutes();
-
-    lateMinutes = Math.max(0, actualMinutes - expectedMinutes);
-
-    status = lateMinutes > 0 ? "RETARD" : "PONCTUEL";
-  }
-
-  await run(
-    `
+    await run(
+      `
     INSERT INTO attendances (
       companyId,
       _id,
@@ -96,50 +106,53 @@ export async function createAttendance(
     )
     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `,
-    [
+      [
+        companyId,
+        _id,
+        employeeId,
+        date,
+        clockIn ?? null,
+        clockOut ?? null,
+        status ?? null,
+        "MANUAL",
+        lateMinutes,
+        serverVersion,
+        0,
+        0,
+        now,
+        now,
+      ]
+    );
+
+    const savedAttendance: Attendance = {
       companyId,
       _id,
       employeeId,
       date,
-      clockIn ?? null,
-      clockOut ?? null,
-      status ?? null,
-      "MANUAL",
+      clockIn: clockIn ?? null,
+      clockOut: clockOut ?? null,
+      status: status ?? null,
+      source: "MANUAL",
       lateMinutes,
       serverVersion,
-      0,
-      0,
-      now,
-      now,
-    ]
-  );
+      createdAt: now,
+      updatedAt: now,
+    };
 
-  const savedAttendance: Attendance = {
-    companyId,
-    _id,
-    employeeId,
-    date,
-    clockIn: clockIn ?? null,
-    clockOut: clockOut ?? null,
-    status: status ?? null,
-    source: "MANUAL",
-    lateMinutes,
-    serverVersion,
-    createdAt: now,
-    updatedAt: now,
-  };
+    console.log("ATTENDANCE TO SAVE TO SYNC QUEUE", savedAttendance);
 
-  console.log("ATTENDANCE TO SAVE TO SYNC QUEUE", savedAttendance);
+    await addToSyncQueue({
+      companyId,
+      entity: "attendance",
+      entityId: _id,
+      operation: "create",
+      payload: JSON.stringify(savedAttendance),
+    });
 
-  await addToSyncQueue({
-    companyId,
-    entity: "attendance",
-    entityId: _id,
-    operation: "create",
-    payload: JSON.stringify(savedAttendance),
-  });
-
-  return getAttendanceById(companyId, _id);
+    if (savedAttendance.status === "RETARD") {
+      afterCommit(() => requestLateAttendanceSync(companyId, _id));
+    }
+    return getAttendanceById(companyId, _id);
   });
 }
 
@@ -153,46 +166,46 @@ export async function createAbsenceLeaveAttendance(
   date: string = new Date().toISOString().split("T")[0]
 ) {
   return transaction(async () => {
-  const locked = await isAttendanceDateLocked(date);
+    const locked = await isAttendanceDateLocked(date);
 
-  if (locked) {
-    throw new Error(
-      `La liste de présence du ${new Date(date).toLocaleDateString(
-        "fr-FR"
-      )} est vérouillée et ne peut pas être modifiée`
+    if (locked) {
+      throw new Error(
+        `La liste de présence du ${new Date(date).toLocaleDateString(
+          "fr-FR"
+        )} est vérouillée et ne peut pas être modifiée`
+      );
+    }
+
+    const existingAttendance = await getAttendanceRecord(
+      companyId,
+      employeeId,
+      date
     );
-  }
 
-  const existingAttendance = await getAttendanceRecord(
-    companyId,
-    employeeId,
-    date
-  );
+    if (existingAttendance) {
+      console.log("ATTENDANCE ALREADY EXISTS:", existingAttendance);
 
-  if (existingAttendance) {
-    console.log("ATTENDANCE ALREADY EXISTS:", existingAttendance);
+      return existingAttendance;
+    }
 
-    return existingAttendance;
-  }
+    const employee = await getEmployeeById(companyId, employeeId);
 
-  const employee = await getEmployeeById(companyId, employeeId);
+    if (!employee) {
+      throw new Error("EMPLOYEE NOT FOUND");
+    }
 
-  if (!employee) {
-    throw new Error("EMPLOYEE NOT FOUND");
-  }
+    const _id = randomUUID();
+    const now = new Date().toISOString();
+    const serverVersion = 0;
 
-  const _id = randomUUID();
-  const now = new Date().toISOString();
-  const serverVersion = 0;
-
-  await run(
-    `
+    await run(
+      `
     INSERT INTO attendances (
       companyId,
       _id,
       employeeId,
       date,
-      status,
+      status as AttendanceStatus,
       source,
       serverVersion,
       createdAt,
@@ -203,51 +216,51 @@ export async function createAbsenceLeaveAttendance(
     )
     VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
     `,
-    [
+      [
+        companyId,
+        _id,
+        employeeId,
+        date,
+        status,
+        "MANUAL",
+        serverVersion,
+        now,
+        now,
+        0,
+        null,
+        0,
+      ]
+    );
+
+    const savedAttendance: Attendance = {
       companyId,
       _id,
       employeeId,
       date,
       status,
-      "MANUAL",
+      source: "MANUAL",
       serverVersion,
-      now,
-      now,
-      0,
-      null,
-      0,
-    ]
-  );
+      createdAt: now,
+      updatedAt: now,
+    };
 
-  const savedAttendance: Attendance = {
-    companyId,
-    _id,
-    employeeId,
-    date,
-    status,
-    source: "MANUAL",
-    serverVersion,
-    createdAt: now,
-    updatedAt: now,
-  };
+    console.log("ATTENDANCE TO SAVE TO SYNC QUEUE", savedAttendance);
 
-  console.log("ATTENDANCE TO SAVE TO SYNC QUEUE", savedAttendance);
+    await addToSyncQueue({
+      companyId,
+      entity: "attendance",
+      entityId: _id,
+      operation: "create",
+      payload: JSON.stringify(savedAttendance),
+    });
 
-  await addToSyncQueue({
-    companyId,
-    entity: "attendance",
-    entityId: _id,
-    operation: "create",
-    payload: JSON.stringify(savedAttendance),
-  });
+    const createdAttendance = await getAttendanceById(companyId, _id);
 
-  const createdAttendance = await getAttendanceById(companyId, _id);
+    if (!createdAttendance) {
+      throw new Error("FAILED TO CREATE ATTENDANCE RECORD");
+    }
 
-  if (!createdAttendance) {
-    throw new Error("FAILED TO CREATE ATTENDANCE RECORD");
-  }
-
-  return createdAttendance;
+    return createdAttendance;
   });
 }
 
@@ -397,32 +410,32 @@ export async function createAbsentAttendance(
   attendance: Attendance
 ): Promise<Attendance> {
   return transaction(async () => {
-  const locked = await isAttendanceDateLocked(attendance.date);
+    const locked = await isAttendanceDateLocked(attendance.date);
 
-  if (locked) {
-    throw new Error(
-      `La liste présence du ${new Date(attendance.date).toLocaleDateString(
-        "fr-FR"
-      )} est vérouillée et ne peut pas être modifiée`
+    if (locked) {
+      throw new Error(
+        `La liste présence du ${new Date(attendance.date).toLocaleDateString(
+          "fr-FR"
+        )} est vérouillée et ne peut pas être modifiée`
+      );
+    }
+
+    const existingAttendance = await getAttendanceRecord(
+      attendance.companyId,
+      attendance.employeeId,
+      attendance.date
     );
-  }
 
-  const existingAttendance = await getAttendanceRecord(
-    attendance.companyId,
-    attendance.employeeId,
-    attendance.date
-  );
+    if (existingAttendance) {
+      console.log("ABSENT ATTENDANCE ALREADY EXISTS:", existingAttendance);
 
-  if (existingAttendance) {
-    console.log("ABSENT ATTENDANCE ALREADY EXISTS:", existingAttendance);
+      return existingAttendance;
+    }
 
-    return existingAttendance;
-  }
+    const serverVersion = attendance.serverVersion ?? 0;
 
-  const serverVersion = attendance.serverVersion ?? 0;
-
-  await run(
-    `
+    await run(
+      `
     INSERT OR IGNORE INTO attendances (
       companyId,
       _id,
@@ -439,44 +452,44 @@ export async function createAbsentAttendance(
     )
     VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
     `,
-    [
+      [
+        attendance.companyId,
+        attendance._id,
+        attendance.employeeId,
+        attendance.date,
+        attendance.status,
+        attendance.source ?? "AUTOMATIC",
+        serverVersion,
+        attendance.createdAt,
+        attendance.updatedAt,
+        0,
+        attendance.isDeleted ?? 0,
+        null,
+      ]
+    );
+
+    const absentAttendance = await getAttendanceRecord(
       attendance.companyId,
-      attendance._id,
       attendance.employeeId,
-      attendance.date,
-      attendance.status,
-      attendance.source ?? "AUTOMATIC",
-      serverVersion,
-      attendance.createdAt,
-      attendance.updatedAt,
-      0,
-      attendance.isDeleted ?? 0,
-      null,
-    ]
-  );
+      attendance.date
+    );
 
-  const absentAttendance = await getAttendanceRecord(
-    attendance.companyId,
-    attendance.employeeId,
-    attendance.date
-  );
+    if (!absentAttendance) {
+      throw new Error("FAILED TO CREATE ATTENDANCE RECORD");
+    }
 
-  if (!absentAttendance) {
-    throw new Error("FAILED TO CREATE ATTENDANCE RECORD");
-  }
+    await addToSyncQueue({
+      companyId: attendance.companyId,
+      entity: "attendance",
+      entityId: attendance._id,
+      operation: "create",
+      payload: JSON.stringify({
+        ...attendance,
+        serverVersion,
+      }),
+    });
 
-  await addToSyncQueue({
-    companyId: attendance.companyId,
-    entity: "attendance",
-    entityId: attendance._id,
-    operation: "create",
-    payload: JSON.stringify({
-      ...attendance,
-      serverVersion,
-    }),
-  });
-
-  return absentAttendance;
+    return absentAttendance;
   });
 }
 
@@ -718,176 +731,184 @@ export async function updateAttendance(
   updates: Partial<AttendanceWithEmployee>
 ) {
   return transaction(async () => {
-  const locked = await isAttendanceDateLocked(date);
+    const locked = await isAttendanceDateLocked(date);
 
-  if (locked) {
-    throw new Error(
-      `La liste de présence du ${new Date(date).toLocaleDateString(
-        "fr-FR"
-      )} est verouillée et ne peut pas être modifiée.`
-    );
-  }
+    if (locked) {
+      throw new Error(
+        `La liste de présence du ${new Date(date).toLocaleDateString(
+          "fr-FR"
+        )} est verouillée et ne peut pas être modifiée.`
+      );
+    }
 
-  const existing = await getAttendanceById(companyId, _id);
+    const existing = await getAttendanceById(companyId, _id);
 
-  console.log("EXISTING ATTENDANCE TO UPDATE", existing);
-  console.log("UPDATES", updates);
+    console.log("EXISTING ATTENDANCE TO UPDATE", existing);
+    console.log("UPDATES", updates);
 
-  if (!existing) {
-    throw new Error("ATTENDANCE RECORD NOT FOUND");
-  }
+    if (!existing) {
+      throw new Error("ATTENDANCE RECORD NOT FOUND");
+    }
 
-  const fields: string[] = [];
-  const values: unknown[] = [];
+    const fields: string[] = [];
+    const values: unknown[] = [];
 
-  let savedUpdates: Partial<Attendance> = {};
+    let savedUpdates: Partial<Attendance> = {};
 
-  const updatedAt = new Date().toISOString();
+    const updatedAt = new Date().toISOString();
 
-  if (updates.clockIn) {
-    const clockInDate = new Date(updates.clockIn);
+    if (updates.clockIn) {
+      const clockInDate = new Date(updates.clockIn);
 
-    const [scheduledHour, scheduledMinute] = (
-      await getAttendanceClockIn(companyId)
-    )
-      .split(":")
-      .map(Number);
+      const [scheduledHour, scheduledMinute] = (
+        await getAttendanceClockIn(companyId)
+      )
+        .split(":")
+        .map(Number);
 
-    const expectedMinutes = scheduledHour * 60 + scheduledMinute;
+      const expectedMinutes = scheduledHour * 60 + scheduledMinute;
 
-    const actualMinutes =
-      clockInDate.getHours() * 60 + clockInDate.getMinutes();
+      const actualMinutes =
+        clockInDate.getHours() * 60 + clockInDate.getMinutes();
 
-    const lateMinutes = Math.max(0, actualMinutes - expectedMinutes);
+      const lateMinutes = Math.max(0, actualMinutes - expectedMinutes);
 
-    const status = lateMinutes > 0 ? "RETARD" : "PONCTUEL";
+      const status = lateMinutes > 0 ? "RETARD" : "PONCTUEL";
 
-    fields.push("clockIn = ?");
-    values.push(updates.clockIn);
+      fields.push("clockIn = ?");
+      values.push(updates.clockIn);
 
-    fields.push("lateMinutes = ?");
-    values.push(lateMinutes);
+      fields.push("lateMinutes = ?");
+      values.push(lateMinutes);
 
-    fields.push("status = ?");
-    values.push(status);
+      fields.push("status = ?");
+      values.push(status);
 
-    savedUpdates = {
-      ...savedUpdates,
-      companyId,
-      _id,
-      employeeId: existing.employeeId,
-      date,
-      clockIn: updates.clockIn,
-      lateMinutes,
-      status,
-      createdAt: existing.createdAt,
-      updatedAt,
-      serverVersion: existing.serverVersion ?? 0,
-    };
-  }
+      savedUpdates = {
+        ...savedUpdates,
+        companyId,
+        _id,
+        employeeId: existing.employeeId,
+        date,
+        clockIn: updates.clockIn,
+        lateMinutes,
+        status,
+        createdAt: existing.createdAt,
+        updatedAt,
+        serverVersion: existing.serverVersion ?? 0,
+      };
+    }
 
-  if (updates.clockOut !== undefined) {
-    fields.push("clockOut = ?");
-    values.push(updates.clockOut);
+    if (updates.clockOut !== undefined) {
+      fields.push("clockOut = ?");
+      values.push(updates.clockOut);
 
-    savedUpdates = {
-      ...savedUpdates,
-      companyId,
-      _id,
-      date,
-      employeeId: existing.employeeId,
-      clockOut: updates.clockOut,
-      createdAt: existing.createdAt,
-      updatedAt,
-      serverVersion: existing.serverVersion ?? 0,
-    };
-  }
+      savedUpdates = {
+        ...savedUpdates,
+        companyId,
+        _id,
+        date,
+        employeeId: existing.employeeId,
+        clockOut: updates.clockOut,
+        createdAt: existing.createdAt,
+        updatedAt,
+        serverVersion: existing.serverVersion ?? 0,
+      };
+    }
 
-  if (updates.notes !== undefined) {
-    fields.push("notes = ?");
-    values.push(updates.notes);
+    if (updates.notes !== undefined) {
+      fields.push("notes = ?");
+      values.push(updates.notes);
 
-    savedUpdates = {
-      ...savedUpdates,
-      companyId,
-      _id,
-      date,
-      employeeId: existing.employeeId,
-      notes: updates.notes,
-      createdAt: existing.createdAt,
-      updatedAt,
-      serverVersion: existing.serverVersion ?? 0,
-    };
-  }
+      savedUpdates = {
+        ...savedUpdates,
+        companyId,
+        _id,
+        date,
+        employeeId: existing.employeeId,
+        notes: updates.notes,
+        createdAt: existing.createdAt,
+        updatedAt,
+        serverVersion: existing.serverVersion ?? 0,
+      };
+    }
 
-  if (updates.status === "CONGÉ") {
-    fields.push("status = ?");
-    values.push(updates.status);
+    if (updates.status === "CONGÉ") {
+      fields.push("status = ?");
+      values.push(updates.status);
 
-    savedUpdates = {
-      ...savedUpdates,
-      companyId,
-      _id,
-      date,
-      employeeId: existing.employeeId,
-      status: updates.status,
-      createdAt: existing.createdAt,
-      updatedAt,
-      serverVersion: existing.serverVersion ?? 0,
-    };
-  }
+      savedUpdates = {
+        ...savedUpdates,
+        companyId,
+        _id,
+        date,
+        employeeId: existing.employeeId,
+        status: updates.status,
+        createdAt: existing.createdAt,
+        updatedAt,
+        serverVersion: existing.serverVersion ?? 0,
+      };
+    }
 
-  if (updates.isDeleted !== undefined) {
-    fields.push("isDeleted = ?");
-    values.push(updates.isDeleted);
+    if (updates.isDeleted !== undefined) {
+      fields.push("isDeleted = ?");
+      values.push(updates.isDeleted);
 
-    savedUpdates = {
-      ...savedUpdates,
-      companyId,
-      _id,
-      date,
-      employeeId: existing.employeeId,
-      createdAt: existing.createdAt,
-      updatedAt,
-      isDeleted: updates.isDeleted,
-      serverVersion: existing.serverVersion ?? 0,
-    };
-  }
+      savedUpdates = {
+        ...savedUpdates,
+        companyId,
+        _id,
+        date,
+        employeeId: existing.employeeId,
+        createdAt: existing.createdAt,
+        updatedAt,
+        isDeleted: updates.isDeleted,
+        serverVersion: existing.serverVersion ?? 0,
+      };
+    }
 
-  if (fields.length === 0) {
-    return existing;
-  }
+    if (fields.length === 0) {
+      return existing;
+    }
 
-  fields.push("synced = ?");
-  values.push(0);
+    fields.push("synced = ?");
+    values.push(0);
 
-  fields.push("updatedAt = ?");
-  values.push(updatedAt);
+    fields.push("updatedAt = ?");
+    values.push(updatedAt);
 
-  values.push(_id);
-  values.push(companyId);
+    values.push(_id);
+    values.push(companyId);
 
-  await run(
-    `
+    await run(
+      `
     UPDATE attendances
     SET ${fields.join(", ")}
     WHERE _id = ?
       AND companyId = ?
     `,
-    values
-  );
+      values
+    );
 
-  console.log("ATTENDANCE TO SAVE TO SYNC QUEUE", savedUpdates);
+    console.log("ATTENDANCE TO SAVE TO SYNC QUEUE", savedUpdates);
 
-  await addToSyncQueue({
-    companyId,
-    entity: "attendance",
-    entityId: _id,
-    operation: "update",
-    payload: JSON.stringify(savedUpdates),
-  });
+    await addToSyncQueue({
+      companyId,
+      entity: "attendance",
+      entityId: _id,
+      operation: "update",
+      payload: JSON.stringify(savedUpdates),
+    });
 
-  return getAttendanceById(companyId, _id);
+    const updated = await getAttendanceById(companyId, _id);
+    if (
+      updated?.status === "RETARD" &&
+      !updated.isDeleted &&
+      existing.status !== "RETARD"
+    ) {
+      afterCommit(() => requestLateAttendanceSync(companyId, _id));
+    }
+    return updated;
   });
 }
 
@@ -899,56 +920,56 @@ export async function updateAttendance(
  */
 export async function deleteAttendance(companyId: string, _id: string) {
   return transaction(async () => {
-  const existing = await getAttendanceById(companyId, _id);
+    const existing = await getAttendanceById(companyId, _id);
 
-  if (!existing) {
-    throw new Error("ATTENDANCE RECORD NOT FOUND");
-  }
+    if (!existing) {
+      throw new Error("ATTENDANCE RECORD NOT FOUND");
+    }
 
-  const date = existing.date;
+    const date = existing.date;
 
-  const locked = await isAttendanceDateLocked(date);
+    const locked = await isAttendanceDateLocked(date);
 
-  if (locked) {
-    throw new Error(
-      `La liste de présence du ${new Date(date).toLocaleDateString(
-        "fr-FR"
-      )} est vérouillée et ne peut pas être modifiée`
-    );
-  }
+    if (locked) {
+      throw new Error(
+        `La liste de présence du ${new Date(date).toLocaleDateString(
+          "fr-FR"
+        )} est vérouillée et ne peut pas être modifiée`
+      );
+    }
 
-  /*
-   * ============================================================
-   * HANDLE LEAVE ATTENDANCE
-   * ============================================================
-   */
+    /*
+     * ============================================================
+     * HANDLE LEAVE ATTENDANCE
+     * ============================================================
+     */
 
-  if (existing.status === "CONGÉ") {
-    const leaves = await getLeaveByEmployeeId(
-      existing.companyId,
-      existing.employeeId
-    );
+    if (existing.status === "CONGÉ") {
+      const leaves = await getLeaveByEmployeeId(
+        existing.companyId,
+        existing.employeeId
+      );
 
-    const correspondingLeave = leaves.find(
-      (leave) =>
-        leave.startDate <= date &&
-        leave.endDate >= date &&
-        leave.status !== "ANNULÉ"
-    );
+      const correspondingLeave = leaves.find(
+        (leave) =>
+          leave.startDate <= date &&
+          leave.endDate >= date &&
+          leave.status !== TimeOffStatus.CANCELLED
+      );
 
-    if (correspondingLeave?._id) {
-      const leaveId = correspondingLeave._id;
-      const { startDate, endDate, status } = correspondingLeave;
+      if (correspondingLeave?._id) {
+        const leaveId = correspondingLeave._id;
+        const { startDate, endDate, status } = correspondingLeave;
 
-      /*
-       * ----------------------------------------------------------
-       * ONE-DAY LEAVE
-       * ----------------------------------------------------------
-       */
+        /*
+         * ----------------------------------------------------------
+         * ONE-DAY LEAVE
+         * ----------------------------------------------------------
+         */
 
-      if (startDate === date && endDate === date) {
-        await run(
-          `
+        if (startDate === date && endDate === date) {
+          await run(
+            `
           UPDATE leaves
           SET
             status = ?,
@@ -956,18 +977,18 @@ export async function deleteAttendance(companyId: string, _id: string) {
           WHERE _id = ?
             AND companyId = ?
           `,
-          ["ANNULÉ", new Date().toISOString(), leaveId, companyId]
-        );
-
-        if (status === "APPROUVÉ") {
-          const employee = await getEmployeeById(
-            existing.companyId,
-            existing.employeeId
+            ["ANNULÉ", new Date().toISOString(), leaveId, companyId]
           );
 
-          if (employee) {
-            await run(
-              `
+          if (status === TimeOffStatus.APPROVED) {
+            const employee = await getEmployeeById(
+              existing.companyId,
+              existing.employeeId
+            );
+
+            if (employee) {
+              await run(
+                `
               UPDATE employees
               SET
                 remainingLeave = COALESCE(remainingLeave, 0) + 1,
@@ -976,43 +997,43 @@ export async function deleteAttendance(companyId: string, _id: string) {
               WHERE _id = ?
                 AND companyId = ?
               `,
-              [new Date().toISOString(), existing.employeeId, companyId]
-            );
+                [new Date().toISOString(), existing.employeeId, companyId]
+              );
 
-            const updatedEmployee = await getEmployeeById(
-              existing.companyId,
-              existing.employeeId
-            );
+              const updatedEmployee = await getEmployeeById(
+                existing.companyId,
+                existing.employeeId
+              );
 
-            if (updatedEmployee) {
-              await addToSyncQueue({
-                companyId: updatedEmployee.companyId,
-                entity: "employee",
-                entityId: existing.employeeId,
-                operation: "update",
-                payload: JSON.stringify({
-                  ...updatedEmployee,
+              if (updatedEmployee) {
+                await addToSyncQueue({
                   companyId: updatedEmployee.companyId,
-                  _id: updatedEmployee._id,
-                  remainingLeave: updatedEmployee.remainingLeave,
-                  serverVersion: updatedEmployee.serverVersion ?? 0,
-                  updatedAt: updatedEmployee.updatedAt,
-                }),
-              });
+                  entity: "employee",
+                  entityId: existing.employeeId,
+                  operation: "update",
+                  payload: JSON.stringify({
+                    ...updatedEmployee,
+                    companyId: updatedEmployee.companyId,
+                    _id: updatedEmployee._id,
+                    remainingLeave: updatedEmployee.remainingLeave,
+                    serverVersion: updatedEmployee.serverVersion ?? 0,
+                    updatedAt: updatedEmployee.updatedAt,
+                  }),
+                });
+              }
             }
           }
-        }
-      } else if (startDate === date) {
-        /*
-         * ----------------------------------------------------------
-         * FIRST DAY OF MULTI-DAY LEAVE
-         * ----------------------------------------------------------
-         */
+        } else if (startDate === date) {
+          /*
+           * ----------------------------------------------------------
+           * FIRST DAY OF MULTI-DAY LEAVE
+           * ----------------------------------------------------------
+           */
 
-        const newStartDate = addDays(startDate, 1);
+          const newStartDate = addDays(startDate, 1);
 
-        await run(
-          `
+          await run(
+            `
           UPDATE leaves
           SET
             startDate = ?,
@@ -1020,23 +1041,23 @@ export async function deleteAttendance(companyId: string, _id: string) {
           WHERE _id = ?
             AND companyId = ?
           `,
-          [newStartDate, new Date().toISOString(), leaveId, companyId]
-        );
+            [newStartDate, new Date().toISOString(), leaveId, companyId]
+          );
 
-        if (status === "APPROUVÉ") {
-          await restoreOneLeaveDay(existing.companyId, existing.employeeId);
-        }
-      } else if (endDate === date) {
-        /*
-         * ----------------------------------------------------------
-         * LAST DAY OF MULTI-DAY LEAVE
-         * ----------------------------------------------------------
-         */
+          if (status === TimeOffStatus.APPROVED) {
+            await restoreOneLeaveDay(existing.companyId, existing.employeeId);
+          }
+        } else if (endDate === date) {
+          /*
+           * ----------------------------------------------------------
+           * LAST DAY OF MULTI-DAY LEAVE
+           * ----------------------------------------------------------
+           */
 
-        const newEndDate = addDays(endDate, -1);
+          const newEndDate = addDays(endDate, -1);
 
-        await run(
-          `
+          await run(
+            `
           UPDATE leaves
           SET
             endDate = ?,
@@ -1044,24 +1065,24 @@ export async function deleteAttendance(companyId: string, _id: string) {
           WHERE _id = ?
             AND companyId = ?
           `,
-          [newEndDate, new Date().toISOString(), leaveId, companyId]
-        );
+            [newEndDate, new Date().toISOString(), leaveId, companyId]
+          );
 
-        if (status === "APPROUVÉ") {
-          await restoreOneLeaveDay(existing.companyId, existing.employeeId);
-        }
-      } else {
-        /*
-         * ----------------------------------------------------------
-         * MIDDLE DAY
-         * ----------------------------------------------------------
-         */
+          if (status === TimeOffStatus.APPROVED) {
+            await restoreOneLeaveDay(existing.companyId, existing.employeeId);
+          }
+        } else {
+          /*
+           * ----------------------------------------------------------
+           * MIDDLE DAY
+           * ----------------------------------------------------------
+           */
 
-        const dayBefore = addDays(date, -1);
-        const dayAfter = addDays(date, 1);
+          const dayBefore = addDays(date, -1);
+          const dayAfter = addDays(date, 1);
 
-        await run(
-          `
+          await run(
+            `
           UPDATE leaves
           SET
             endDate = ?,
@@ -1069,28 +1090,28 @@ export async function deleteAttendance(companyId: string, _id: string) {
           WHERE _id = ?
             AND companyId = ?
           `,
-          [dayBefore, new Date().toISOString(), leaveId, companyId]
-        );
+            [dayBefore, new Date().toISOString(), leaveId, companyId]
+          );
 
-        const {
-          _id: _ignoredId,
-          createdAt: _ignoredCreatedAt,
-          updatedAt: _ignoredUpdatedAt,
-          ...leaveData
-        } = correspondingLeave;
+          const {
+            _id: _ignoredId,
+            createdAt: _ignoredCreatedAt,
+            updatedAt: _ignoredUpdatedAt,
+            ...leaveData
+          } = correspondingLeave;
 
-        const newLeaveId = randomUUID();
-        const now = new Date().toISOString();
+          const newLeaveId = randomUUID();
+          const now = new Date().toISOString();
 
-        await run(
-          `
+          await run(
+            `
           INSERT INTO leaves (
             companyId,
             _id,
             employeeId,
             startDate,
             endDate,
-            subject,
+            motif,
             notes,
             status,
             createdAt,
@@ -1101,61 +1122,61 @@ export async function deleteAttendance(companyId: string, _id: string) {
           )
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `,
-          [
+            [
+              companyId,
+              newLeaveId,
+              existing.employeeId,
+              dayAfter,
+              endDate,
+              leaveData.motifId ?? null,
+              leaveData.notes ?? null,
+              status,
+              now,
+              now,
+              0,
+              0,
+              0,
+            ]
+          );
+
+          await addToSyncQueue({
             companyId,
-            newLeaveId,
-            existing.employeeId,
-            dayAfter,
-            endDate,
-            leaveData.subject ?? null,
-            leaveData.notes ?? null,
-            status,
-            now,
-            now,
-            0,
-            0,
-            0,
-          ]
-        );
+            entity: "leave",
+            entityId: newLeaveId,
+            operation: "create",
+            payload: JSON.stringify({
+              ...existing,
+              _id: newLeaveId,
+              employeeId: existing.employeeId,
+              startDate: dayAfter,
+              endDate,
+              motif: leaveData.motifId ?? null,
+              notes: leaveData.notes ?? null,
+              status,
+              submittedAt: now,
+              createdAt: now,
+              updatedAt: now,
+              serverVersion: 0,
+            }),
+          });
 
-        await addToSyncQueue({
-          companyId,
-          entity: "leave",
-          entityId: newLeaveId,
-          operation: "create",
-          payload: JSON.stringify({
-            ...existing,
-            _id: newLeaveId,
-            employeeId: existing.employeeId,
-            startDate: dayAfter,
-            endDate,
-            subject: leaveData.subject ?? null,
-            notes: leaveData.notes ?? null,
-            status,
-            submittedAt: now,
-            createdAt: now,
-            updatedAt: now,
-            serverVersion: 0,
-          }),
-        });
-
-        if (status === "APPROUVÉ") {
-          await restoreOneLeaveDay(existing.companyId, existing.employeeId);
+          if (status === TimeOffStatus.APPROVED) {
+            await restoreOneLeaveDay(existing.companyId, existing.employeeId);
+          }
         }
       }
     }
-  }
 
-  /*
-   * ============================================================
-   * DELETE ATTENDANCE
-   * ============================================================
-   */
+    /*
+     * ============================================================
+     * DELETE ATTENDANCE
+     * ============================================================
+     */
 
-  const now = new Date().toISOString();
+    const now = new Date().toISOString();
 
-  await run(
-    `
+    await run(
+      `
     UPDATE attendances
     SET
       isDeleted = 1,
@@ -1164,27 +1185,27 @@ export async function deleteAttendance(companyId: string, _id: string) {
     WHERE _id = ?
       AND companyId = ?
     `,
-    [now, _id, companyId]
-  );
+      [now, _id, companyId]
+    );
 
-  const deletePayload: Partial<Attendance> = {
-    ...existing,
-    isDeleted: 1,
-    serverVersion: existing.serverVersion ?? 0,
-    updatedAt: now,
-  };
+    const deletePayload: Partial<Attendance> = {
+      ...existing,
+      isDeleted: 1,
+      serverVersion: existing.serverVersion ?? 0,
+      updatedAt: now,
+    };
 
-  console.log("ATTENDANCE TO DELETE FROM SYNC QUEUE", deletePayload);
+    console.log("ATTENDANCE TO DELETE FROM SYNC QUEUE", deletePayload);
 
-  await addToSyncQueue({
-    companyId,
-    entity: "attendance",
-    entityId: _id,
-    operation: "delete",
-    payload: JSON.stringify(deletePayload),
-  });
+    await addToSyncQueue({
+      companyId,
+      entity: "attendance",
+      entityId: _id,
+      operation: "delete",
+      payload: JSON.stringify(deletePayload),
+    });
 
-  return getAttendanceById(companyId, _id);
+    return getAttendanceById(companyId, _id);
   });
 }
 
@@ -1475,8 +1496,8 @@ async function reconcilePulledAttendance(attendance: Attendance) {
  */
 export async function markAttendanceSynced(companyId: string, _id: string) {
   return transaction(async () => {
-  await run(
-    `
+    await run(
+      `
     UPDATE attendances
     SET
       synced = 1,
@@ -1484,8 +1505,8 @@ export async function markAttendanceSynced(companyId: string, _id: string) {
     WHERE _id = ?
       AND companyId = ?
     `,
-    [_id, companyId]
-  );
+      [_id, companyId]
+    );
   });
 }
 

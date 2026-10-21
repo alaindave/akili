@@ -16,13 +16,15 @@ import { IoReloadOutline } from "react-icons/io5";
 
 import type AdminUser from "../../../../../common/types/shared/AdminUser";
 import type Employee from "../../../../../common/types/hr/employees/Employee";
-import type Leave from "../../../../../common/types/hr/leave/Leave";
+import type Leave from "../../../../../common/types/hr/time-off/TimeOff";
 import type Task from "../../../../../common/types/task/Task";
 
 import useAdminUser from "../../../../../store/auth.store";
 import useSyncStore from "../../../../../store/sync.store";
 import useTaskStore from "../../../../../store/task.store";
-import useDashboardTasksStore, { dashboardTaskScope } from "../../../../../store/dashboardTasks.store";
+import useDashboardTasksStore, {
+  dashboardTaskScope,
+} from "../../../../../store/dashboardTasks.store";
 
 import ReminderModal from "../../../../components/common/ReminderModal";
 import EmployeeDashboard from "../components/EmployeeDashboard";
@@ -53,11 +55,16 @@ const EmployeeAdminPage = () => {
   const saveNotes = useAdminUser((store) => store.saveNotes);
   const loadTopTasks = useTaskStore((store) => store.loadTopTasks);
   const scope = dashboardTaskScope(user.companyId, user._id, "HR");
-  const dismissed = useDashboardTasksStore(store => store.dismissed[scope]);
-  const dismiss = useDashboardTasksStore(store => store.dismiss);
-  const restore = useDashboardTasksStore(store => store.restore);
+  const dismissed = useDashboardTasksStore((store) => store.dismissed[scope]);
+  const dismiss = useDashboardTasksStore((store) => store.dismiss);
+  const restore = useDashboardTasksStore((store) => store.restore);
   const allTasks = useTaskStore((store) => store.tasks);
-  const tasks = allTasks.filter((task) => task.module === "HR" && task.companyId === user.companyId && !dismissed?.includes(task._id));
+  const tasks = allTasks.filter(
+    (task) =>
+      task.module === "HR" &&
+      task.companyId === user.companyId &&
+      !dismissed?.includes(task._id)
+  );
   const syncVersion = useSyncStore((store) => store.syncVersion);
   const previousSyncVersion = useRef(syncVersion);
 
@@ -276,7 +283,14 @@ const EmployeeAdminPage = () => {
             MANUAL TASK REFRESH
         ==================================================== */}
 
-        <Button mb="1rem" colorScheme="blue" onClick={() => { restore(scope); void loadTasks(); }}>
+        <Button
+          mb="1rem"
+          colorScheme="blue"
+          onClick={() => {
+            restore(scope);
+            void loadTasks();
+          }}
+        >
           <Box>
             <IoReloadOutline />
           </Box>
@@ -307,7 +321,9 @@ const EmployeeAdminPage = () => {
           <Grid
             templateColumns={{
               base: "minmax(0, 1fr)",
-              xl: tasks.length ? "minmax(0, 1.2fr) minmax(0, 1fr)" : "minmax(0, 1fr)",
+              xl: tasks.length
+                ? "minmax(0, 1.2fr) minmax(0, 1fr)"
+                : "minmax(0, 1fr)",
             }}
             templateAreas={{
               base: tasks.length ? '"tasks" "notes"' : '"notes"',
@@ -428,13 +444,12 @@ const EmployeeAdminPage = () => {
               ))}
             </Box>
           </Grid>
-
         </Flex>
       </Box>
 
       {/* Quick actions stay above the fixed lower application bar. */}
       <Box pt={4} px={2} flexShrink={0} minW={0}>
-        <QuickActions onTaskCreate={handleTaskCreate} employees={employees} />
+        <QuickActions onTaskCreate={handleTaskCreate} />
       </Box>
 
       <TaskSubmissionModal

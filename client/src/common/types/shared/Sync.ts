@@ -5,6 +5,8 @@ export const SYNC_ENTITIES = {
   EMPLOYEE: "employee",
   ATTENDANCE: "attendance",
   LEAVE: "leave",
+  TIME_OFF: "time_off",
+  TIME_OFF_MOTIF: "time_off_motif",
   PAYROLL_COMPONENT: "payroll_component",
   PAYROLL_PROFILE: "payroll_profile",
   PAYROLL_RUN: "payroll_run",
@@ -39,6 +41,8 @@ export interface SyncQueueItem {
     | "attendance"
     | "attendance_daily_check"
     | "leave"
+    | "time_off"
+    | "time_off_motif"
     | "incident"
     | "task"
     | "task_comment"

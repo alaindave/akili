@@ -1,6 +1,5 @@
 import { ipcRenderer } from "electron";
 
-// Legacy channels have heterogeneous responses; callers can specify a result type.
 //prettier-ignore
 export const invoke = <T = any,>(
   channel: string,

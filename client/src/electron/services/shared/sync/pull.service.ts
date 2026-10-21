@@ -15,18 +15,11 @@ import { getEmployeeById } from "../../../database/repositories/modules/hr/emplo
 import { setSetting } from "../../../database/repositories/shared/settings.repository.js";
 import { upsertAdminUser } from "../../../database/repositories/shared/admin_users.repository.js";
 
-import {
-  markEmployeeSynced,
-} from "../../../database/repositories/modules/hr/employees.repository.js";
-
-import {
-  markLeaveSynced,
-  upsertLeave,
-} from "../../../database/repositories/modules/hr/leaves.repository.js";
+import { markEmployeeSynced } from "../../../database/repositories/modules/hr/employees.repository.js";
 
 import Employee from "../../../../common/types/hr/employees/Employee.js";
 import { Attendance } from "../../../../common/types/hr/attendance/Attendance.js";
-import Leave from "../../../../common/types/hr/leave/Leave.js";
+import Leave from "../../../../common/types/hr/time-off/TimeOff.js";
 import AdminUser from "../../../../common/types/shared/AdminUser.js";
 
 import Task from "../../../../common/types/task/Task.js";
@@ -105,6 +98,7 @@ import { getToken } from "../../../auth.js";
 import { getPendingSyncItems } from "../../../database/repositories/shared/sync.repository.js";
 
 import { getEmployeePhotoDir } from "../../../storage/directories.js";
+import { pullTimeOffChanges } from "./timeOffSync.service.js";
 import { withEmployeeMedia } from "../../../storage/employeeMediaLock.js";
 import { downloadCompanyLogo } from "../../../util/downloadCompanyLogo.util.js";
 import { upsertAttendance } from "../../../database/repositories/modules/hr/attendances.repository.js";
@@ -114,7 +108,7 @@ import {
 } from "../../../database/repositories/modules/hr/attendanceDailyCheck.repository.js";
 
 const API_URL = app.isPackaged
-  ? "https://leather-works.onrender.com"
+  ? process.env.PRODUCTION_API_URL
   : process.env.VITE_API_URL;
 
 /* =========================================================
@@ -275,18 +269,23 @@ export async function pullLatestChanges(companyId: string) {
     const attendanceDailyCheck = attendanceDailyChecksResult.items;
 
     /* =====================================================
-       LEAVES
+       TIME OFF MOTIFS, THEN REQUESTS
     ===================================================== */
 
-    const leavesResult = await pullIndependently<Leave>(
-      companyId,
-      "leave",
-      syncLeaves
-    );
-
-    latestServerTime = leavesResult.serverTime ?? latestServerTime;
-
-    const leaves = leavesResult.items;
+    let timeOffMotifCount = 0;
+    let timeOffRequestCount = 0;
+    try {
+      const token = await getToken(companyId);
+      if (!token) throw new Error("PULL SYNC: authentication token is missing");
+      const result = await pullTimeOffChanges(companyId, API_URL ?? "", token);
+      timeOffMotifCount = result.motifs;
+      timeOffRequestCount = result.requests;
+    } catch (error) {
+      errors.push(`TimeOff pull failed: ${String(error)}`);
+    }
+    // Do not query the retired /sync entity "leave". Historical rows remain
+    // archived until explicitly mapped to a company policy.
+    const leaves: Leave[] = [];
 
     /* =====================================================
        TASKS
@@ -451,6 +450,8 @@ export async function pullLatestChanges(companyId: string) {
       attendanceDailyCheck: attendanceDailyCheck.length,
 
       leaves: leaves.length,
+      timeOffMotifs: timeOffMotifCount,
+      timeOffRequests: timeOffRequestCount,
 
       tasks: tasks.length,
 
@@ -547,7 +548,6 @@ async function syncCompanies(companies: Company[]): Promise<boolean> {
         `COMPANY SYNCED ${company.companyId} ` + `(v${company.serverVersion})`
       );
     } catch (error) {
-
       console.error("FAILED TO SYNC PULLED COMPANY:", {
         companyId: company.companyId,
 
@@ -701,7 +701,6 @@ async function syncCompanyLogos(companyLogos: CompanyLogo[]): Promise<boolean> {
 
       console.log("COMPANY LOGO SYNCED:", logo.companyId);
     } catch (error) {
-
       console.error("FAILED TO SYNC COMPANY LOGO:", {
         companyId: logo.companyId,
         serverVersion: logo.serverVersion,
@@ -729,7 +728,6 @@ async function syncAdminUsers(adminUsers: AdminUser[]): Promise<boolean> {
     try {
       await upsertAdminUser(adminUser);
     } catch (error) {
-
       console.error("FAILED TO SYNC PULLED ADMIN USER:", adminUser._id, error);
       throw error;
     }
@@ -770,7 +768,6 @@ async function syncEmployees(employees: Employee[]): Promise<boolean> {
         `EMPLOYEE SYNCED ${employee._id} ` + `(v${employee.serverVersion})`
       );
     } catch (error) {
-
       console.error("FAILED TO SYNC PULLED EMPLOYEE:", {
         employeeId: employee._id,
 
@@ -995,7 +992,6 @@ async function syncEmployeeDocuments(
           `(v${document.serverVersion})`
       );
     } catch (error) {
-
       console.error(`FAILED TO SYNC DOCUMENT ${document._id}`, error);
       throw error;
     }
@@ -1020,7 +1016,6 @@ async function syncAttendances(attendances: Attendance[]): Promise<boolean> {
       const applied = await upsertAttendance(attendance);
       if (!applied) succeeded = false;
     } catch (error) {
-
       console.error("FAILED TO SYNC PULLED ATTENDANCE:", attendance._id, error);
       throw error;
     }
@@ -1051,38 +1046,11 @@ async function syncAttendanceDailyChecks(
         attendanceDailyCheck._id
       );
     } catch (error) {
-
       console.error(
         "FAILED TO SYNC PULLED ATTENDANCE DAILY CHECK:",
         attendanceDailyCheck._id,
         error
       );
-      throw error;
-    }
-  }
-
-  return succeeded;
-}
-
-/* =========================================================
-   LEAVES
-========================================================= */
-
-async function syncLeaves(leaves: Leave[]): Promise<boolean> {
-  if (!leaves || leaves.length === 0) {
-    return true;
-  }
-
-  const succeeded = true;
-
-  for (const leave of leaves) {
-    try {
-      await upsertLeave(leave);
-
-      await markLeaveSynced(leave.companyId, leave._id);
-    } catch (error) {
-
-      console.error("FAILED TO SYNC PULLED LEAVE:", leave._id, error);
       throw error;
     }
   }
@@ -1111,7 +1079,6 @@ async function syncTasks(tasks: Task[]): Promise<boolean> {
 
       await markTaskSynced(task.companyId, task._id, task.module ?? "HR");
     } catch (error) {
-
       console.error("FAILED TO SYNC PULLED TASK:", task._id, error);
       throw error;
     }
@@ -1139,7 +1106,6 @@ async function syncPayrollSettings(
 
       await markPayrollSettingsSynced(settings.companyId, settings._id);
     } catch (error) {
-
       console.error(
         "FAILED TO SYNC PULLED PAYROLL SETTINGS:",
         settings._id,
@@ -1171,7 +1137,6 @@ async function syncPayrollComponents(
 
       await markPayrollComponentSynced(component.companyId, component._id);
     } catch (error) {
-
       console.error(
         "FAILED TO SYNC PULLED PAYROLL COMPONENT:",
         component._id,
@@ -1205,7 +1170,6 @@ async function syncPayrollEmployeeProfiles(
     try {
       await upsertEmployeePayrollProfile(profile);
     } catch (error) {
-
       console.error(
         "FAILED TO SYNC PULLED PAYROLL EMPLOYEE PROFILE:",
         profile._id,
@@ -1244,7 +1208,6 @@ async function syncPayrollRuns(payrollRuns: PayrollRun[]): Promise<boolean> {
 
       console.log("PAYROLL RUN SYNCED:", payrollRun._id);
     } catch (error) {
-
       console.error(
         "FAILED TO SYNC PULLED PAYROLL RUN:",
         payrollRun._id,
@@ -1333,7 +1296,6 @@ async function syncPayrollResults(
 
       console.log("PAYROLL RESULT SYNCED:", result._id);
     } catch (error) {
-
       console.error("FAILED TO SYNC PULLED PAYROLL RESULT:", {
         resultId: result._id,
 
@@ -1372,7 +1334,6 @@ async function syncPayrollItems(payrollItems: PayrollItem[]): Promise<boolean> {
         continue;
       }
     } catch (error) {
-
       console.error("FAILED TO SYNC PULLED PAYROLL ITEM:", item._id, error);
       throw error;
     }
@@ -1496,9 +1457,13 @@ export async function pullEntityByVersion<T>(
 
     // A failed push must not let a pull overwrite the remaining local edits or
     // mark them synced. Retain this page until those edits are acknowledged.
-    for (const row of batch as Array<T & { _id?: string; companyId?: string }>) {
-      const recordId = entity === "company" || entity === "company_logo"
-        ? row.companyId : row._id;
+    for (const row of batch as Array<
+      T & { _id?: string; companyId?: string }
+    >) {
+      const recordId =
+        entity === "company" || entity === "company_logo"
+          ? row.companyId
+          : row._id;
       try {
         if (!recordId) throw new Error("Pull record is missing its ID");
         const blockers = await transaction(async () => {
@@ -1511,36 +1476,54 @@ export async function pullEntityByVersion<T>(
           if (entity === "company") targets.push({ entity: "company_logo" });
           // Aggregate stock operations replace individual queue entries for
           // these four groups. Catalog rows are not part of the snapshot.
-          if (["inventory_document", "inventory_document_line",
-            "inventory_movement", "inventory_balance"].includes(entity))
+          if (
+            [
+              "inventory_document",
+              "inventory_document_line",
+              "inventory_movement",
+              "inventory_balance",
+            ].includes(entity)
+          )
             targets.push({ entity: "inventory_transaction" });
           const pending = await getPendingSyncItems(companyId, targets);
           const blocked = pending.filter((item) => {
             if (item.entity !== "task_comment") return true;
             try {
               const payload: unknown = JSON.parse(item.payload);
-              if (typeof payload !== "object" || payload === null || !("taskId" in payload))
+              if (
+                typeof payload !== "object" ||
+                payload === null ||
+                !("taskId" in payload)
+              )
                 throw new Error("Missing taskId");
               return payload.taskId === row._id;
             } catch {
-              throw new Error(`Invalid task comment payload in queue ${item._id}`);
+              throw new Error(
+                `Invalid task comment payload in queue ${item._id}`
+              );
             }
           });
           if (blocked.length) return blocked;
           // A resolved false must roll back writes too, not commit a partial import.
           if (!(await syncBatch([row])))
-            throw new Error("Record import was refused; local data may require reconciliation");
+            throw new Error(
+              "Record import was refused; local data may require reconciliation"
+            );
           return [];
         });
         if (blockers.length) {
           blockedCount++;
-          recordIssue(`${cursorEntity} ${recordId}: waiting for local changes in queue ` +
-            blockers.map((item) => `${item._id} (${item.entity})`).join(", "));
+          recordIssue(
+            `${cursorEntity} ${recordId}: waiting for local changes in queue ` +
+              blockers.map((item) => `${item._id} (${item.entity})`).join(", ")
+          );
         }
       } catch (error) {
         failedCount++;
-        recordIssue(`${cursorEntity} ${recordId ?? "<missing ID>"}: import failed: ` +
-          (error instanceof Error ? error.message : String(error)));
+        recordIssue(
+          `${cursorEntity} ${recordId ?? "<missing ID>"}: import failed: ` +
+            (error instanceof Error ? error.message : String(error))
+        );
       }
     }
 
@@ -1574,9 +1557,11 @@ export async function pullEntityByVersion<T>(
   if (blockedCount || failedCount)
     throw new Error(
       `${cursorEntity.toUpperCase()}: ${blockedCount} record(s) waiting for local changes, ` +
-      `${failedCount} import failure(s). SYNC CURSOR WAS NOT ADVANCED past unapplied records.\n` +
-      issueDetails.join("\n") +
-      (blockedCount + failedCount > issueDetails.length ? "\nAdditional details are in the sync log." : "")
+        `${failedCount} import failure(s). SYNC CURSOR WAS NOT ADVANCED past unapplied records.\n` +
+        issueDetails.join("\n") +
+        (blockedCount + failedCount > issueDetails.length
+          ? "\nAdditional details are in the sync log."
+          : "")
     );
 
   console.log(`${entity.toUpperCase()} VERSION SYNC COMPLETE:`, {

@@ -5,7 +5,7 @@ export interface Attendance {
   date: string;
   clockIn?: string | null;
   clockOut?: string | null;
-  status: "PONCTUEL" | "RETARD" | "ABSENT" | "CONGÉ" | null;
+  status?: "PONCTUEL" | "RETARD" | "ABSENT" | "CONGÉ" | null;
   source: "MANUAL" | "AUTO_CLIENT" | "AUTO_SERVER";
   lateMinutes?: number;
   notes?: string;

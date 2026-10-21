@@ -36,7 +36,7 @@ export default function AdministrationPage() {
           },
           {
             title: "Paramètres",
-            description: "Configuration de l’entreprise, des stocks, de la présence et de la paie.",
+            description: "Configuration de l’entreprise, des stocks, de la présence, des congés et de la paie.",
             path: "/admin/settings",
           },
         ].map(({ title, description, path }) => (

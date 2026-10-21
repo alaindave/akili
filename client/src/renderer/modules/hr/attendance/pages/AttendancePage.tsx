@@ -530,7 +530,7 @@ const EmployeeAttendancePage = () => {
           HEADER
       ===================================================== */}
       <Flex direction="column" flex="1" minW={0} minH={0}>
-        <Flex direction="column" gap={4} mb={4} flexShrink={0}>
+        <Flex direction="column" gap={4} mb={{ base: 0, md: 4 }} flexShrink={0}>
           <Flex justify="space-between" align="flex-start" gap={3}>
             <Box minW={0}>
               <HStack spacing={1}>
@@ -582,7 +582,7 @@ const EmployeeAttendancePage = () => {
           <Grid
             mt="1.5rem"
             templateColumns="repeat(auto-fit, minmax(min(100%, 220px), 1fr))"
-            gap={3}
+            gap={2}
             sx={{
               ".chakra-menu__menu-button": {
                 width: "100%",
@@ -618,7 +618,7 @@ const EmployeeAttendancePage = () => {
           </Grid>
         </Flex>
         <Box
-          mt="2rem"
+          mt={{ base: "0.4rem", md: "0.4rem" }}
           flex="1"
           minH={0}
           overflow="auto"

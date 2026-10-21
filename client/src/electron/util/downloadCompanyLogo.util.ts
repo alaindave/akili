@@ -11,8 +11,9 @@ export async function downloadCompanyLogo(
   mimeType?: string | null
 ) {
   validateStorageCompany(companyId);
+
   const API_URL = app.isPackaged
-    ? "https://leather-works.onrender.com"
+    ? process.env.PRODUCTION_API_URL
     : process.env.VITE_API_URL;
 
   if (!API_URL) {

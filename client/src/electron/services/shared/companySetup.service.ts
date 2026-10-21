@@ -58,12 +58,14 @@ export async function setupCompany(
       "Connexion au serveur requise pour configurer l’entreprise."
     );
   }
-  const apiUrl = app.isPackaged
-    ? "https://leather-works.onrender.com"
+  const API_URL = app.isPackaged
+    ? process.env.PRODUCTION_API_URL
     : process.env.VITE_API_URL;
+
   let response;
+
   try {
-    response = await axios.post(`${apiUrl}/auth/setup`, parsed);
+    response = await axios.post(`${API_URL}/auth/setup`, parsed);
   } catch (error) {
     if (
       axios.isAxiosError(error) &&

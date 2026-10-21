@@ -24,7 +24,10 @@ import {
 } from "../../../database/repositories/shared/sync.repository.js";
 
 import { markCompanySynced } from "../../../database/repositories/shared/companies.repository.js";
-import { markEmployeeSynced } from "../../../database/repositories/modules/hr/employees.repository.js";
+import {
+  acknowledgeEmployee,
+  recoverEmployeeRevision,
+} from "../../../database/repositories/modules/hr/employees.repository.js";
 import {
   acknowledgeLeave,
   recoverLeaveRevision,
@@ -60,11 +63,12 @@ import { notifyManagerOfAttendanceDailyCheck } from "../../modules/hr/attendance
 import { getMonthName } from "../../../util/monthFormatter.util.js";
 import { markAttendanceSynced } from "../../../database/repositories/modules/hr/attendances.repository.js";
 import { markAttendanceDailyCheckSynced } from "../../../database/repositories/modules/hr/attendanceDailyCheck.repository.js";
+import { pushTimeOffQueue } from "./timeOffSync.service.js";
 
 // Notification queue
 
 const API_URL = app.isPackaged
-  ? "https://leather-works.onrender.com"
+  ? process.env.PRODUCTION_API_URL
   : process.env.VITE_API_URL;
 
 interface PushPendingChangesResult {
@@ -74,7 +78,8 @@ interface PushPendingChangesResult {
 }
 
 export async function pushPendingChanges(
-  companyId: string
+  companyId: string,
+  attendanceIds?: ReadonlySet<string>
 ): Promise<PushPendingChangesResult> {
   if (!companyId) {
     throw new Error("PUSH SYNC: companyId is required");
@@ -102,6 +107,18 @@ export async function pushPendingChanges(
    */
 
   let pending = await getUnsyncedItems(companyId);
+  let timeOffFailures: string[] = [];
+  let timeOffSyncedCount = 0;
+  if (attendanceIds) {
+    pending = pending.filter(item => item.entity === "attendance" && attendanceIds.has(item.entityId));
+  }
+  if (!attendanceIds && pending.some(item => ["time_off_motif", "time_off", "leave"].includes(item.entity))) {
+    const result = await pushTimeOffQueue(companyId, API_URL ?? "", token, pending);
+    timeOffFailures = result.failures;
+    timeOffSyncedCount = result.synced.length;
+    const handledEntities = new Set(["time_off_motif", "time_off", "leave"]);
+    pending = (await getUnsyncedItems(companyId)).filter(item => !handledEntities.has(item.entity));
+  }
   if (
     pending.some((item) =>
       [
@@ -118,13 +135,15 @@ export async function pushPendingChanges(
   }
 
   if (!pending.length) {
+    const remaining = await getUnsyncedItems(companyId);
     console.log("NO PENDING CHANGES TO PUSH.", {
       companyId,
     });
 
     return {
-      pendingChanges: 0,
-      syncedCount: 0,
+      pendingChanges: remaining.length,
+      syncedCount: timeOffSyncedCount,
+      failures: timeOffFailures,
     };
   }
 
@@ -167,6 +186,7 @@ export async function pushPendingChanges(
   let legacyStockSnapshots = 0;
   const inventoryRecords = new Set<string>();
   const payrollProfiles = new Set<string>();
+  const employeeRecords = new Set<string>();
   const leaveRecords = new Set<string>();
   const latestPhotos = new Map<string, string>();
   const supersededPhotos = new Map<string, string[]>();
@@ -177,6 +197,10 @@ export async function pushPendingChanges(
 
   for (const item of pending) {
     const snapshot = JSON.parse(item.payload);
+    if (item.entity === "employee") {
+      if (employeeRecords.has(item.entityId)) continue;
+      employeeRecords.add(item.entityId);
+    }
     if (item.entity === "leave") {
       if (leaveRecords.has(item.entityId)) continue;
       leaveRecords.add(item.entityId);
@@ -281,6 +305,7 @@ export async function pushPendingChanges(
     return {
       pendingChanges: remainingPending.length,
       syncedCount: obsoleteQueueIds.length,
+      failures: timeOffFailures,
     };
   }
 
@@ -456,13 +481,33 @@ export async function pushPendingChanges(
 
   const syncedIds: string[] = response.data.synced ?? [];
   for (const item of validPending) {
+    if (item.entity !== "employee") continue;
+    const failure = (response.data.failed ?? []).find(
+      (entry: { queueId: string; code: string }) =>
+        String(entry.queueId) === String(item._id) &&
+        entry.code === "REVISION_CONFLICT"
+    );
+    if (failure?.details?.remote) {
+      await recoverEmployeeRevision(
+        companyId,
+        JSON.parse(item.payload),
+        failure.details.remote
+      );
+    }
+  }
+
+  for (const item of validPending) {
     if (item.entity !== "leave") continue;
     const failure = (response.data.failed ?? []).find(
       (entry: { queueId: string; code: string }) =>
         entry.queueId === item._id && entry.code === "REVISION_CONFLICT"
     );
     if (failure?.details?.remote) {
-      await recoverLeaveRevision(companyId, JSON.parse(item.payload), failure.details.remote);
+      await recoverLeaveRevision(
+        companyId,
+        JSON.parse(item.payload),
+        failure.details.remote
+      );
     }
   }
   for (const item of validPending) {
@@ -529,6 +574,16 @@ export async function pushPendingChanges(
 
     // An acknowledgement applies to the sent queue entry, not edits made
     // while the network request was in flight.
+    if (item.entity === "employee") {
+      await acknowledgeEmployee(
+        companyId,
+        data,
+        item._id,
+        response.data.versions?.[item._id]
+      );
+      successfullyProcessedQueueIds.push(item._id);
+      continue;
+    }
     if (item.entity === "payroll_profile") {
       await acknowledgePayrollProfile(
         companyId,
@@ -576,10 +631,6 @@ export async function pushPendingChanges(
         await markCompanySynced(companyId);
         break;
 
-      case "employee":
-        await markEmployeeSynced(companyId, data._id);
-        break;
-
       case "employee_photo":
         await markEmployeePhotoSynced(
           companyId,
@@ -617,7 +668,10 @@ export async function pushPendingChanges(
         if (
           item.operation === "create" &&
           data.status === "ATTENTE_APPROBATION" &&
-          !stillPending.some((entry) => entry.entity === "leave" && entry.entityId === item.entityId)
+          !stillPending.some(
+            (entry) =>
+              entry.entity === "leave" && entry.entityId === item.entityId
+          )
         ) {
           if (!data.managerEmail) {
             throw new Error(
@@ -657,7 +711,12 @@ export async function pushPendingChanges(
           });
         }
 
-        await acknowledgeLeave(companyId, data, item._id, response.data.versions?.[item._id]);
+        await acknowledgeLeave(
+          companyId,
+          data,
+          item._id,
+          response.data.versions?.[item._id]
+        );
 
         break;
       }
@@ -775,16 +834,23 @@ export async function pushPendingChanges(
   const remainingPending = await getUnsyncedItems(companyId);
 
   const pendingChanges = remainingPending.length;
-  const failures: string[] = [];
+  const failures: string[] = [...timeOffFailures];
   const rejected: unknown = response.data.failed;
   if (Array.isArray(rejected)) {
     for (const failure of rejected) {
       if (typeof failure !== "object" || failure === null) continue;
-      const item = remainingPending.find((entry) => String(entry._id) === String(failure.queueId));
+      const item = remainingPending.find(
+        (entry) => String(entry._id) === String(failure.queueId)
+      );
       if (!item) continue;
-      const message = `${item.entity} ${item.entityId}, queue ${item._id}: ` +
+      const message =
+        `${item.entity} ${item.entityId}, queue ${item._id}: ` +
         `${typeof failure.code === "string" ? failure.code + ": " : ""}` +
-        `${typeof failure.message === "string" ? failure.message : "Server rejected the change"}`;
+        `${
+          typeof failure.message === "string"
+            ? failure.message
+            : "Server rejected the change"
+        }`;
       console.error("SYNC PUSH REJECTED:", message);
       if (failures.length < 10) failures.push(message);
     }

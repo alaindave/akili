@@ -11,11 +11,11 @@ import {
 } from "@chakra-ui/react";
 
 interface Props {
-  subject: string;
+  motif: string;
   notes: string;
 }
 
-const LeaveNotesPopover = ({ subject, notes }: Props) => {
+const LeaveNotesPopover = ({ motif, notes }: Props) => {
   return (
     <Popover trigger="hover" placement="right">
       <PopoverTrigger>
@@ -31,7 +31,7 @@ const LeaveNotesPopover = ({ subject, notes }: Props) => {
           wordBreak="break-word"
           maxW="7.5rem"
         >
-          {subject}
+          {motif}
         </Text>
       </PopoverTrigger>
 

@@ -8,6 +8,7 @@ import {
   transaction,
 } from "../../../db.js";
 import { randomUUID } from "crypto";
+import { SyncQueueItem } from "../../../../../common/types/shared/Sync.js";
 import Employee from "../../../../../common/types/hr/employees/Employee.js";
 import {
   addToSyncQueue,
@@ -528,7 +529,7 @@ export async function upsertEmployee(employee: Employee) {
         incomingVersion,
         employee.createdAt,
         employee.updatedAt,
-        0,
+        1,
         new Date().toISOString(),
         employee.isDeleted ?? 0,
       ]
@@ -548,7 +549,29 @@ export async function upsertEmployee(employee: Employee) {
    * ==========================================================
    */
   if (local.synced === 0) {
-    throw new Error("Employee has unsynced local changes; pull deferred.");
+    const pending = await get<{ count: number }>(
+      `SELECT COUNT(*) AS count FROM sync_queue WHERE companyId = ?
+       AND entity = 'employee' AND entityId = ? AND synced = 0`,
+      [companyId, employee._id]
+    );
+    const acknowledged = await get<SyncQueueItem>(
+      `SELECT * FROM sync_queue WHERE companyId = ? AND entity = 'employee'
+       AND entityId = ? AND synced = 1 ORDER BY _id DESC LIMIT 1`,
+      [companyId, employee._id]
+    );
+    const accepted = acknowledged ? JSON.parse(acknowledged.payload) as Employee : undefined;
+    // A dirty flag alone is not proof of a pending edit. Repair it only when
+    // the complete local employee still matches the latest accepted snapshot.
+    const fields = ["companyId", "_id", "firstName", "lastName", "matricule",
+      "idNum", "accountNumber", "dateBirth", "dateHired", "role", "department",
+      "salary", "remainingLeave", "status", "telephone", "address",
+      "emergencyContact", "relationship", "contactPhone", "createdAt",
+      "updatedAt", "isDeleted"] as const;
+    if (pending?.count || !accepted ||
+        !fields.every(key => accepted[key] !== undefined && accepted[key] === local[key])) {
+      throw new Error("Employee has unsynced local changes; pull deferred.");
+    }
+    await markEmployeeSynced(companyId, employee._id);
   }
 
   /*
@@ -674,4 +697,104 @@ async function getEmployeeByIdIncludingDeleted(companyId: string, _id: string) {
     `,
     [companyId, _id]
   );
+}
+
+type EmployeeSnapshot = Pick<Employee, "companyId" | "_id" | "serverVersion" | "updatedAt">;
+
+export async function acknowledgeEmployee(
+  companyId: string,
+  snapshot: EmployeeSnapshot,
+  queueId: string,
+  serverVersion: number
+): Promise<void> {
+  if (snapshot.companyId !== companyId ||
+      !Number.isSafeInteger(serverVersion) || serverVersion <= 0 ||
+      serverVersion < (snapshot.serverVersion ?? 0)) {
+    throw new Error("Employee acknowledgement has an invalid company or server version");
+  }
+  await transaction(async () => {
+    const pending = await all<SyncQueueItem>(
+      `SELECT * FROM sync_queue WHERE companyId = ? AND entity = 'employee'
+       AND entityId = ? AND synced = 0 AND _id != ?`,
+      [companyId, snapshot._id, queueId]
+    );
+    for (const item of pending) {
+      const payload = JSON.parse(item.payload) as EmployeeSnapshot;
+      if ((payload.serverVersion ?? 0) !== (snapshot.serverVersion ?? 0)) continue;
+      await run(
+        "UPDATE sync_queue SET payload = ? WHERE companyId = ? AND _id = ? AND synced = 0",
+        [JSON.stringify({ ...payload, serverVersion }), companyId, item._id]
+      );
+    }
+    await run(
+      `UPDATE employees SET serverVersion = ?,
+       synced = CASE WHEN updatedAt = ? AND ? = 0 THEN 1 ELSE 0 END
+       WHERE companyId = ? AND _id = ? AND serverVersion = ?`,
+      [serverVersion, snapshot.updatedAt, pending.length, companyId,
+        snapshot._id, snapshot.serverVersion ?? 0]
+    );
+    await run(
+      `UPDATE sync_queue SET synced = 1 WHERE companyId = ? AND _id = ?
+       AND entity = 'employee' AND entityId = ?`,
+      [companyId, queueId, snapshot._id]
+    );
+  });
+}
+
+export async function recoverEmployeeRevision(
+  companyId: string,
+  snapshot: EmployeeSnapshot,
+  remote: Employee
+): Promise<boolean> {
+  if (snapshot.companyId !== companyId || remote.companyId !== companyId ||
+      remote._id !== snapshot._id || !Number.isSafeInteger(remote.serverVersion) ||
+      remote.serverVersion <= (snapshot.serverVersion ?? 0)) return false;
+  return transaction(async () => {
+    const history = await all<SyncQueueItem>(
+      `SELECT * FROM sync_queue WHERE companyId = ? AND entity = 'employee'
+       AND entityId = ? AND synced = 1 ORDER BY _id ASC`,
+      [companyId, snapshot._id]
+    );
+    // Only rebase when the latest acknowledged full snapshot proves that
+    // no employee fields changed remotely. Missing history stays conflicted.
+    const latest = history.at(-1);
+    if (!latest) return false;
+    const accepted = JSON.parse(latest.payload) as Record<string, unknown>;
+    if (latest.operation === "delete") accepted.isDeleted = 1;
+    const fields = ["companyId", "_id", "firstName", "lastName", "matricule",
+      "idNum", "role", "department", "salary", "remainingLeave", "status",
+      "telephone", "address", "emergencyContact", "relationship", "contactPhone",
+      "isDeleted"] as const;
+    const trimmed = new Set<string>(["firstName", "lastName", "matricule", "idNum",
+      "role", "telephone", "address", "emergencyContact", "relationship", "contactPhone"]);
+    if (!fields.every(key => {
+      const value = accepted[key];
+      return value !== undefined && (trimmed.has(key) && typeof value === "string"
+        ? value.trim() : value) === remote[key];
+    })) return false;
+    if (typeof accepted.accountNumber !== "string" ||
+        (accepted.accountNumber.trim() || "cash") !== remote.accountNumber) return false;
+    for (const key of ["dateBirth", "dateHired", "createdAt", "updatedAt"] as const) {
+      if (typeof accepted[key] !== "string" || !remote[key] ||
+          Date.parse(accepted[key]) !== Date.parse(remote[key])) return false;
+    }
+    const pending = await all<SyncQueueItem>(
+      `SELECT * FROM sync_queue WHERE companyId = ? AND entity = 'employee'
+       AND entityId = ? AND synced = 0`,
+      [companyId, snapshot._id]
+    );
+    for (const item of pending) {
+      const payload = JSON.parse(item.payload) as EmployeeSnapshot;
+      if ((payload.serverVersion ?? 0) !== (snapshot.serverVersion ?? 0)) continue;
+      await run(
+        "UPDATE sync_queue SET payload = ? WHERE companyId = ? AND _id = ? AND synced = 0",
+        [JSON.stringify({ ...payload, serverVersion: remote.serverVersion }), companyId, item._id]
+      );
+    }
+    await run(
+      `UPDATE employees SET serverVersion = ? WHERE companyId = ? AND _id = ? AND serverVersion = ?`,
+      [remote.serverVersion, companyId, snapshot._id, snapshot.serverVersion ?? 0]
+    );
+    return true;
+  });
 }
