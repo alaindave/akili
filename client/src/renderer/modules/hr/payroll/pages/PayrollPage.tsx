@@ -20,6 +20,7 @@ import {
   Tr,
   useToast,
   VStack,
+  Heading,
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { FaSyncAlt } from "react-icons/fa";
@@ -253,53 +254,47 @@ export default function PayrollPage() {
 
   const statusColor = {
     BROUILLON: "gray",
-    VERIFICATION: "#e6b800",
+    VERIFICATION: "blue",
     APPROUVÉ: "green",
     PAYÉ: "green",
-    ANNULÉ: "#ff3333",
+    ANNULÉ: "red",
   } as const;
 
   return (
-    <Box
+    <Flex
+      direction="column"
       bg="#F8F9FB"
-      position="relative"
-      height="93vh"
+      height="100%"
+      minH={0}
       width="100%"
       overflow="hidden"
     >
-      {/* Scrollable main content. Bottom controls have reserved space. */}
-      <Box height="100%" overflowY="auto" pb="5rem" boxSizing="border-box">
-        <Flex width="100%" justify="space-between" align="flex-start">
-          <Box minWidth={0}>
+      <Flex
+        direction="column"
+        flex="1"
+        minH={0}
+        overflow="hidden"
+        boxSizing="border-box"
+      >
+        <Flex
+          width="100%"
+          justify="space-between"
+          align="flex-start"
+          flexShrink={0}
+        >
+          <Box
+            position="relative"
+            top="1.5rem"
+            minWidth={0}
+            ml={{ base: "0.5rem", md: "2rem" }}
+          >
             <HStack>
-              <Text
-                color="#03143B"
-                fontSize="clamp(1.3rem, 1vw + 0.8rem, 1.4rem)"
-                fontWeight="700"
-                ml="1rem"
-                mt="1.3rem"
-              >
+              <Heading size="md" color="#03143B">
                 Fiches de paye
-              </Text>
-
-              <Button
-                bg="transparent"
-                isLoading={loading}
-                color="gray.800"
-                _hover={{ bg: "transparent" }}
-                fontSize="1rem"
-                position="relative"
-                top="0.8rem"
-                right="1rem"
-                onClick={handlePayrollSync}
-              >
-                <FaSyncAlt />
-              </Button>
+              </Heading>
             </HStack>
 
-            <PageSubtitle position="relative" left="1rem">
-              Gérez les fiches de payes
-            </PageSubtitle>
+            <PageSubtitle mt="0.2rem">Gérez les fiches de payes</PageSubtitle>
           </Box>
 
           <Button
@@ -313,13 +308,21 @@ export default function PayrollPage() {
           </Button>
         </Flex>
 
-        <Box mt="3rem" ml="1rem">
+        <Box
+          mt="1rem"
+          ml="1rem"
+          flex="1"
+          minH={0}
+          display="flex"
+          flexDirection="column"
+        >
           {payrollRuns.length === 0 ? (
             <Flex
               ml="0.5rem"
-              mt="8rem"
+              mt="4rem"
               width="min(78vw, 100%)"
-              minHeight={{ base: "180px", md: "220px" }}
+              height="100%"
+              minHeight={0}
               align="center"
               justify="center"
               bg="#ffffff"
@@ -340,17 +343,19 @@ export default function PayrollPage() {
               </VStack>
             </Flex>
           ) : (
-            <Box ml={{ base: "0.5rem", md: "2rem" }}>
+            <Box>
               <TableContainer
                 width="100%"
-                maxW="70vw"
-                maxH="60vh"
+                maxW="78vw"
+                maxH="70vh"
+                minH={0}
                 borderWidth="1px"
                 borderRadius="lg"
                 overflowY="auto"
-                mt="4rem"
+                mt={{ base: "1rem", md: "3rem" }}
+                ml={{ base: "1rem", md: "1.5rem" }}
               >
-                <Table mt="1rem" variant="simple" size="md">
+                <Table variant="simple" size="md">
                   <Thead position="sticky" top={0} zIndex={1} bg="gray.50">
                     <Tr>
                       <Th>Période</Th>
@@ -384,9 +389,8 @@ export default function PayrollPage() {
 
                           <Td>
                             <Badge
-                              bg={statusColor[run.status]}
-                              color="#ffffff"
-                              fontSize="14px"
+                              colorScheme={statusColor[run.status]}
+                              fontSize="0.77rem"
                             >
                               {run.status}
                             </Badge>
@@ -504,30 +508,34 @@ export default function PayrollPage() {
             </Box>
           )}
         </Box>
-      </Box>
+      </Flex>
 
-      {/* Bottom controls: anchored independently of screen height */}
       <Flex
-        position="absolute"
-        left={0}
+        position="fixed"
+        left={{ base: 0, md: "210px", lg: "225px", xl: "240px" }}
         right={0}
-        bottom="0.75rem"
-        width="100%"
+        bottom={{ base: "calc(46px + 0.3rem)", md: "calc(52px + 0.3rem)" }}
+        width={{
+          base: "100vw",
+          md: "calc(100vw - 210px)",
+          lg: "calc(100vw - 225px)",
+          xl: "calc(100vw - 240px)",
+        }}
         minHeight="3rem"
         align="center"
         justify="flex-start"
         px={{ base: "0.75rem", md: "1rem" }}
         bg="#F8F9FB"
-        zIndex={10}
         overflow="visible"
         pointerEvents="auto"
       >
         <Flex
           align="center"
           justify="flex-start"
-          flexWrap="nowrap"
           columnGap="1rem"
-          minWidth="max-content"
+          minWidth={0}
+          width="100%"
+          flexWrap={{ base: "wrap", sm: "nowrap" }}
           ml={{ base: 0, md: "2rem" }}
           overflow="visible"
         >
@@ -536,18 +544,15 @@ export default function PayrollPage() {
             fontFamily="monospace"
             fontWeight="600"
             width="250px"
-            flex="0 0 250px"
-            position="relative"
-            zIndex={11}
           >
             <MonthDropDown onChange={(month) => setSubmissionMonth(month)} />
           </Box>
 
-          <Box flex="0 0 auto" position="relative" zIndex={11}>
+          <Box>
             <PayrollStatusFilter onFilterClicked={setStatusFilter} />
           </Box>
         </Flex>
       </Flex>
-    </Box>
+    </Flex>
   );
 }

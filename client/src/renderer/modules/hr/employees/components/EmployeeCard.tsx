@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { getCompanyEmail } from "../../../../services/companyEmail.service";
 import {
   Badge,
@@ -26,7 +27,7 @@ import {
   useToast,
 } from "@chakra-ui/react";
 import { MdPunchClock } from "react-icons/md";
-import { useEffect, useRef, useState } from "react";
+import { memo, useRef, useState } from "react";
 import { GoDotFill } from "react-icons/go";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { Link } from "react-router-dom";
@@ -37,17 +38,20 @@ import AbsenceNotesPopover from "../../attendance/components/AbsenceNotesPopover
 import defaultAvatar from "../../../../assets/default-avatar.jpeg";
 import { useErrorToast } from "../../../../hooks/useErrorToast";
 import {
-  useAttendanceRecord,
   useCreateAttendance,
   useCreateAbsenceLeave,
   useUpdateAttendance,
 } from "../../attendance/hooks/useAttendance";
-import { useEmployee, useUpdateEmployee } from "../hooks/useEmployees";
+import { useUpdateEmployee } from "../hooks/useEmployees";
 import useAdminUser from "../../../../../store/auth.store";
 import useSyncStore from "../../../../../store/sync.store";
 
 interface Props {
-  employeeId: string;
+  employee: import("../../../../../common/types/hr/employees/Employee").default;
+  attendance: import("../../../../../common/types/hr/attendance/Attendance").AttendanceWithEmployee | null;
+  loadingAttendance: boolean;
+  refetchAttendance: () => Promise<unknown>;
+  formattedDate: string;
 }
 
 /* =========================================================
@@ -102,21 +106,7 @@ function formatClockInTime(input: string): string | null {
    CURRENT DATE
 ========================================================= */
 
-const date = new Date();
-
-const formatter = new Intl.DateTimeFormat("en-CA", {
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-});
-
-const formattedDate = formatter.format(date);
-
-/* =========================================================
-   COMPONENT
-========================================================= */
-
-const EmployeeCard = ({ employeeId }: Props) => {
+const EmployeeCard = ({ employee, attendance, loadingAttendance, refetchAttendance, formattedDate }: Props) => {
   const [isExitPassOpen, setExitPassOpen] = useState(false);
   const [exitPassNotes, setExitPassNotes] = useState("");
   const [isSavingExitPass, setSavingExitPass] = useState(false);
@@ -131,30 +121,9 @@ const EmployeeCard = ({ employeeId }: Props) => {
   const [isClockingIn, setIsClockingIn] = useState(false);
   const [displayClock, setDisplayClock] = useState(true);
   const [showEditable, setShowEditable] = useState(false);
-  const [photo_url, setPhotoUrl] = useState("");
 
   const user = useAdminUser((store) => store.adminUser);
   const syncVersion = useSyncStore((store) => store.syncVersion);
-
-  /* =======================================================
-     EMPLOYEE QUERY
-  ======================================================= */
-
-  const {
-    data: employee,
-    isLoading: loadingEmployee,
-    refetch: refetchEmployee,
-  } = useEmployee(employeeId);
-
-  /* =======================================================
-     ATTENDANCE QUERY
-  ======================================================= */
-
-  const {
-    data: attendance = null,
-    isLoading: loadingAttendance,
-    refetch: refetchAttendance,
-  } = useAttendanceRecord(user.companyId, employeeId, formattedDate);
 
   /* =======================================================
      ATTENDANCE MUTATIONS
@@ -192,36 +161,17 @@ const EmployeeCard = ({ employeeId }: Props) => {
   const isSubmittingLeave =
     isCreatingAbsenceLeave || isUpdatingEmployee || isSavingExitPass;
 
-  useEffect(() => {
-    if (syncVersion > 0) {
-      refetchEmployee();
-      refetchAttendance();
-    }
-  }, [syncVersion]);
-
-  useEffect(() => {
-    async function load() {
-      if (!employee?.photo_path) {
-        setPhotoUrl("");
-        return;
-      }
-
-      try {
-        const base64 = await window.electron.hr.employees.getPhotoUrl(
-          employee.photo_path
-        );
-
-        setPhotoUrl(
-          `data:${employee.photo_mime_type || "image/jpeg"};base64,${base64}`
-        );
-      } catch (error) {
-        console.error("FAILED TO LOAD EMPLOYEE PHOTO:", error);
-        setPhotoUrl("");
-      }
-    }
-
-    load();
-  }, [employee?.photo_path, employee?.photo_mime_type, syncVersion]);
+  const { data: photo_url = "" } = useQuery({
+    queryKey: ["employee-card-photo", employee.companyId, employee.photo_path, employee.photo_mime_type, syncVersion],
+    queryFn: async () => {
+      if (!employee.photo_path) return "";
+      const base64 = await window.electron.hr.employees.getPhotoUrl(employee.photo_path);
+      return base64 ? `data:${employee.photo_mime_type || "image/jpeg"};base64,${base64}` : "";
+    },
+    enabled: Boolean(employee.photo_path),
+    staleTime: Infinity,
+    retry: false,
+  });
 
   /* =======================================================
      CLOCK IN EDIT
@@ -486,34 +436,6 @@ const EmployeeCard = ({ employeeId }: Props) => {
   /* =======================================================
      EMPLOYEE LOADING / NOT FOUND
   ======================================================= */
-
-  if (loadingEmployee) {
-    return (
-      <Flex
-        width="100%"
-        minHeight="5.2rem"
-        bg="#ffffff"
-        px="1rem"
-        align="center"
-      >
-        <Text color="gray.500">Chargement de l'employé...</Text>
-      </Flex>
-    );
-  }
-
-  if (!employee) {
-    return (
-      <Flex
-        width="100%"
-        minHeight="5.2rem"
-        bg="#ffffff"
-        px="1rem"
-        align="center"
-      >
-        <Text color="red.500">Employé introuvable</Text>
-      </Flex>
-    );
-  }
 
   /* =======================================================
      RENDER
@@ -963,4 +885,4 @@ const EmployeeCard = ({ employeeId }: Props) => {
   );
 };
 
-export default EmployeeCard;
+export default memo(EmployeeCard);

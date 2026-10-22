@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -63,169 +64,141 @@ try {
   mongoose.set('autoIndex', false); mongoose.set('autoCreate', false);
   await mongoose.connect(`mongodb://127.0.0.1:${port}/timeoff_backend?replicaSet=timeoff_test`);
   process.env.JWT_PRIVATE_KEY = 'isolated-timeoff-test-key';
-  const { default: router } = await import('../dist/server/routes/modules/hr/timeOff.route.js');
-  const { default: retired } = await import('../dist/server/routes/modules/hr/leave.route.js');
-  const app = express(); app.use(express.json()); app.use('/time-off', router); app.use('/leaves', retired);
+  process.env.SUPABASE_URL = 'https://example.invalid';
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'isolated-test-key';
+  const { default: router } = await import('../dist/server/routes/shared/sync.route.js');
+  const app = express(); app.use(express.json()); app.use('/sync', router);
   server = app.listen(0, '127.0.0.1'); await new Promise(resolve => server.once('listening', resolve));
   const base = `http://127.0.0.1:${server.address().port}`;
-  async function call(method, route, body, actor = 'manager-a', expected = 200) {
+  async function http(route, body, actor = 'manager-a', expected = 200) {
     const companyId = actor.endsWith('-b') ? 'b' : 'a';
-    const token = jwt.sign({ _id: actor, companyId, role: 'MANAGER', email: 'test@example.invalid' }, process.env.JWT_PRIVATE_KEY);
-    const response = await fetch(`${base}${route}`, { method, headers: { 'content-type': 'application/json', ...(actor === 'anonymous' ? {} : { 'x-auth-token': token }) },
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
-    const result = response.headers.get("content-type")?.includes("application/json") ? await response.json() : await response.text();
-    assert.equal(response.status, expected, `${method} ${route}: ${JSON.stringify(result)}`);
+    const token = jwt.sign({ _id: actor, companyId, role: 'MANAGER' }, process.env.JWT_PRIVATE_KEY);
+    const response = await fetch(`${base}${route}`, { method: body ? 'POST' : 'GET',
+      headers: { 'content-type': 'application/json', ...(actor === 'anonymous' ? {} : { 'x-auth-token': token }) },
+      ...(body ? { body: JSON.stringify(body) } : {}) });
+    const result = response.headers.get('content-type')?.includes('application/json') ? await response.json() : await response.text();
+    assert.equal(response.status, expected, JSON.stringify(result));
     return result;
   }
+  function item(entity, operation, data, companyId = 'a') {
+    return { queueId: randomUUID(), companyId, entity, operation,
+      data: { companyId, serverVersion: 0, syncMutationId: randomUUID(), ...data } };
+  }
+  async function push(entry, actor = 'manager-a', error) {
+    const result = await http('/sync/push', { items: JSON.stringify([entry]) }, actor);
+    if (error) {
+      assert.equal(result.synced.length, 0);
+      assert.equal(result.failed[0]?.code, error, JSON.stringify(result));
+      return result.failed[0];
+    }
+    assert.deepEqual(result.synced, [entry.queueId], JSON.stringify(result));
+    assert.equal(result.versions[entry.queueId], result.records[entry.queueId].serverVersion);
+    return result.records[entry.queueId];
+  }
+  const pull = (entity, afterVersion = 0, limit = 500, actor = 'manager-a') =>
+    http(`/sync/pull?entity=${entity}&afterVersion=${afterVersion}&limit=${limit}`, undefined, actor);
   const balance = async () => (await db.collection('employees').findOne({ _id: 'e-a' })).remainingLeave;
-  await call('GET', '/time-off', undefined, 'anonymous', 401);
-  await call('GET', '/time-off', undefined, 'manager-a', 503);
+  await http('/sync/pull?entity=time_off', undefined, 'anonymous', 401);
+  await http('/sync/pull?entity=time_off', undefined, 'manager-a', 503);
   await migrateTimeOff(db);
-  await call('GET', '/leaves', undefined, 'manager-a', 410);
-  await call('POST', '/time-off', undefined, 'admin-a', 400);
-  await call('POST', '/time-off/motifs', undefined, 'manager-a', 400);
-  const motifBase = { code: 'ANNUAL', label: 'Annual leave', category: 'LEAVE', payrollTreatment: 'PAID', deductFromLeaveBalance: true,
-    requiresApproval: true, requiresJustification: true, requiresSupportingDocument: false, isActive: true };
-  let motif = await call('POST', '/time-off/motifs', { ...motifBase, _id: 'm-a' }, 'manager-a', 201);
-  const motifB = await call('POST', '/time-off/motifs', { ...motifBase, _id: 'm-b' }, 'manager-b', 201);
-  await call('POST', '/time-off/motifs', { ...motifBase, _id: 'duplicate' }, 'manager-a', 409);
-  await call('POST', '/time-off/motifs', { ...motifBase, code: 'BAD', companyId: 'b' }, 'manager-a', 400);
-  await call('POST', '/time-off/motifs', { ...motifBase, code: 'BAD', isSystemDefault: true }, 'manager-a', 400);
-  await call('POST', '/time-off/motifs', { ...motifBase, code: 'BAD', category: 'INVALID' }, 'manager-a', 400);
-  await call('POST', '/time-off/motifs', { ...motifBase, code: 'BAD' }, 'viewer-a', 403);
-  await call('POST', '/time-off/motifs', { ...motifBase, code: 'BAD' }, 'admin-a', 403);
-  await call('GET', '/time-off/motifs/m-b', undefined, 'manager-a', 404);
-  await call('PATCH', '/time-off/motifs/m-b', { serverVersion: motifB.serverVersion, label: 'Attack' }, 'manager-a', 404);
-  await call('DELETE', '/time-off/motifs/m-b', { serverVersion: motifB.serverVersion }, 'manager-a', 404);
-  assert((await call('GET', '/time-off/motifs', undefined, 'viewer-a')).every(row => row.companyId === 'a'));
-  await db.collection('time_off_motifs').insertOne({ ...motifBase, _id: 'system', companyId: 'a', code: 'SYSTEM',
-    isSystemDefault: true, isDeleted: 0, serverVersion: 999 });
-  await call('PATCH', '/time-off/motifs/system', { serverVersion: 999, label: 'Overwrite system' }, 'manager-a', 403);
-  await call('DELETE', '/time-off/motifs/system', { serverVersion: 999 }, 'manager-a', 403);
-  const input = { employeeId: 'e-a', motifId: 'm-a', startDate: '2026-11-01', endDate: '2026-11-02', notes: 'Family event', supportingDocumentIds: [] };
-  for (const patch of [{ companyId: 'b' }, { status: 'APPROVED' }, { motifSnapshot: {} }, { approvedBy: 'attacker' }, { serverVersion: 999 },
-    { balanceDaysDeducted: 9 }, { startDate: '2026-02-30' }, { endDate: '2026-01-01' }, { notes: '  ' },
-    { supportingDocumentIds: [''] }, { supportingDocumentIds: [null] }, { supportingDocumentIds: ['doc-a', 'doc-a'] }]) {
-    await call('POST', '/time-off', { ...input, ...patch }, 'admin-a', 400);
-  }
-  await call('POST', '/time-off', { ...input, employeeId: 'e-b' }, 'admin-a', 404);
-  await call('POST', '/time-off', { ...input, motifId: 'm-b' }, 'admin-a', 404);
-  await call('POST', '/time-off', input, 'viewer-a', 403);
-  await call('POST', '/time-off', { ...input, _id: String(legacyId) }, 'admin-a', 409);
-  let request = await call('POST', '/time-off', { ...input, _id: 'new-a' }, 'admin-a', 201);
-  assert(request.serverVersion > 60);
-  assert.equal(request.status, 'PENDING'); assert.equal(request.motifSnapshot, undefined); assert.equal(await balance(), 20);
-  await call('GET', `/time-off/${request._id}`, undefined, 'manager-b', 404);
-  await call('POST', `/time-off/${request._id}/approve`, { serverVersion: request.serverVersion }, 'manager-b', 404);
-  await call('POST', `/time-off/${request._id}/approve`, { serverVersion: request.serverVersion }, 'admin-a', 403);
-  const oldVersion = request.serverVersion;
-  request = await call('POST', `/time-off/${request._id}/approve`, { serverVersion: oldVersion });
-  assert(request.serverVersion > oldVersion);
-  assert.equal(request.status, 'APPROVED'); assert.equal(request.approvedBy, 'manager-a');
-  assert.equal(request.motifSnapshot.payrollTreatment, 'PAID'); assert.equal(request.balanceDaysDeducted, 1); assert.equal(await balance(), 19);
-  await call('POST', `/time-off/${request._id}/approve`, { serverVersion: oldVersion }, 'manager-a', 409);
-  await call('PATCH', `/time-off/${request._id}`, { serverVersion: request.serverVersion, notes: 'Rewrite' }, 'manager-a', 409);
-  await call('DELETE', `/time-off/${request._id}`, { serverVersion: request.serverVersion }, 'manager-a', 409);
-  const frozen = request.motifSnapshot;
-  motif = await call('PATCH', '/time-off/motifs/m-a', { serverVersion: motif.serverVersion, label: 'Updated policy', payrollTreatment: 'UNPAID', deductFromLeaveBalance: false });
-  request = await call('PATCH', `/time-off/${request._id}/notes`, { serverVersion: request.serverVersion, additionalNotes: 'Manager note' }, 'admin-a');
-  assert.deepEqual(request.motifSnapshot, frozen);
-  request = await call('POST', `/time-off/${request._id}/cancel`, { serverVersion: request.serverVersion });
-  assert.equal(await balance(), 20); assert.deepEqual(request.motifSnapshot, frozen);
-  await call('POST', `/time-off/${request._id}/cancel`, { serverVersion: request.serverVersion }, 'manager-a', 409);
-  request = await call('DELETE', `/time-off/${request._id}`, { serverVersion: request.serverVersion });
-  assert.equal(request.isDeleted, 1); assert.equal(await db.collection('time_off').countDocuments({ _id: 'new-a' }), 1);
-  assert(!(await call('GET', '/time-off')).some(row => row._id === 'new-a'));
-  assert((await call('GET', '/time-off?includeDeleted=true')).some(row => row._id === 'new-a'));
-  await call('GET', '/time-off?companyId=b', undefined, 'manager-a', 400);
-  assert.equal((await call('GET', '/time-off?month=2025-12')).length, 2);
-  await call('GET', '/time-off?month=2026-99', undefined, 'manager-a', 400);
-  // Concurrent approvals serialize and do not double-deduct.
-  motif = await call('PATCH', '/time-off/motifs/m-a', { serverVersion: motif.serverVersion, deductFromLeaveBalance: true });
-  const concurrent = await call('POST', '/time-off', input, 'admin-a', 201);
-  const token = jwt.sign({ _id: 'manager-a', companyId: 'a' }, process.env.JWT_PRIVATE_KEY);
-  const statuses = await Promise.all([1, 2].map(async () => {
-    const response = await fetch(`${base}/time-off/${concurrent._id}/approve`, { method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-auth-token': token }, body: JSON.stringify({ serverVersion: concurrent.serverVersion }) });
-    await response.json(); return response.status;
-  }));
-  assert.deepEqual(statuses.sort(), [200, 409]); assert.equal(await balance(), 19);
-  // Inclusive weekday counts: weekends, a full week, and a DST boundary.
-  for (const [startDate, endDate, expectedDays] of [
-    ['2026-11-07', '2026-11-08', 0],
-    ['2026-11-02', '2026-11-08', 5],
-    ['2026-10-23', '2026-10-26', 2],
-  ]) {
-    let weekdayRequest = await call('POST', '/time-off', { ...input, startDate, endDate }, 'admin-a', 201);
-    weekdayRequest = await call('POST', `/time-off/${weekdayRequest._id}/approve`, { serverVersion: weekdayRequest.serverVersion });
-    assert.equal(weekdayRequest.balanceDaysDeducted, expectedDays);
-    assert.equal(await balance(), 19 - expectedDays);
-    await call('POST', `/time-off/${weekdayRequest._id}/cancel`, { serverVersion: weekdayRequest.serverVersion });
-    assert.equal(await balance(), 19);
-  }
-  // Explicit deactivation preserves references; inactive policies reject new use.
-  motif = await call('DELETE', '/time-off/motifs/m-a', { serverVersion: motif.serverVersion });
-  assert.equal(motif.isActive, false);
-  await call('POST', '/time-off', input, 'admin-a', 404);
-  assert.equal(await db.collection('time_off_motifs').countDocuments({ _id: 'm-a' }), 1);
-  motif = await call('PATCH', '/time-off/motifs/m-a', { serverVersion: motif.serverVersion, isActive: true });
-  const automatic = await call('POST', '/time-off/motifs', { ...motifBase, _id: 'automatic', code: 'EXIT', category: 'EXIT_PERMISSION',
-    requiresApproval: false, deductFromLeaveBalance: false, requiresJustification: false }, 'manager-a', 201);
-  const partial = await call('POST', '/time-off', { ...input, motifId: automatic._id, endDate: input.startDate,
-    isPartialDay: true, startTime: '10:00', endTime: '11:00', notes: '' }, 'admin-a', 201);
-  assert.equal(partial.status, 'APPROVED'); assert.equal(partial.balanceDaysDeducted, 0); assert.equal(await balance(), 19);
-  await call('POST', '/time-off', { ...input, motifId: automatic._id, isPartialDay: true, startTime: '10:00', endTime: '11:00' }, 'admin-a', 400);
-  let partialPending = await call('POST', '/time-off', { ...input, endDate: input.startDate, isPartialDay: true, startTime: '10:00', endTime: '11:00' }, 'admin-a', 201);
-  await call('POST', `/time-off/${partialPending._id}/approve`, { serverVersion: partialPending.serverVersion }, 'manager-a', 409);
-  partialPending = await call('PATCH', `/time-off/${partialPending._id}`, { serverVersion: partialPending.serverVersion, isPartialDay: false }, 'admin-a');
-  assert.equal(partialPending.startTime, undefined); assert.equal(partialPending.endTime, undefined);
-  const docs = await call('POST', '/time-off/motifs', { ...motifBase, _id: 'docs', code: 'MEDICAL', requiresSupportingDocument: true }, 'manager-a', 201);
-  for (const supportingDocumentIds of [[], ['doc-b'], ['doc-deleted'], ['doc-pending']]) {
-    await call('POST', '/time-off', { ...input, motifId: docs._id, supportingDocumentIds }, 'admin-a', 400);
-  }
-  let documented = await call('POST', '/time-off', { ...input, motifId: docs._id, supportingDocumentIds: ['doc-a'] }, 'admin-a', 201);
+  const motifBase = { _id: 'm-a', code: 'ANNUAL', label: 'Annual leave', category: 'LEAVE', payrollTreatment: 'PAID',
+    deductFromLeaveBalance: true, requiresApproval: true, requiresJustification: true, requiresSupportingDocument: false, isActive: true };
+  const motifCreate = item('time_off_motif', 'create', motifBase);
+  let motif = await push(motifCreate);
+  assert.deepEqual(await push(motifCreate), motif, 'Lost creation response replays without another write');
+  await push({ ...motifCreate, data: { ...motifCreate.data, label: 'Different payload' } }, 'manager-a', 'MUTATION_CONFLICT');
+  await push(item('time_off_motif', 'create', { ...motifBase, _id: 'forbidden' }), 'admin-a', 'FORBIDDEN');
+  await push(item('time_off_motif', 'create', { ...motifBase, _id: 'viewer' }), 'viewer-a', 'FORBIDDEN');
+  await push(item('time_off_motif', 'create', { ...motifBase, _id: 'duplicate' }), 'manager-a', '11000');
+  await db.collection('time_off_motifs').insertOne({ ...motifBase, _id: 'system', code: 'SYSTEM', companyId: 'a', isSystemDefault: true,
+    serverVersion: 100, synced: 1, isDeleted: 0 });
+  await push(item('time_off_motif', 'update', { _id: 'system', label: 'Changed', serverVersion: 100 }), 'manager-a', 'PROTECTED_MOTIF');
+  const input = { _id: 'new-a', employeeId: 'e-a', motifId: motif._id, startDate: '2026-10-19', endDate: '2026-10-20',
+    notes: 'Family time', isPartialDay: false };
+  await push(item('time_off', 'create', { ...input, employeeId: 'e-b' }), 'manager-a', 'NOT_FOUND');
+  await push(item('time_off', 'create', { ...input, notes: '' }), 'manager-a', 'JUSTIFICATION_REQUIRED');
+  await push(item('time_off', 'create', input), 'viewer-a', 'FORBIDDEN');
+  const create = item('time_off', 'create', input);
+  let request = await push(create, 'admin-a');
+  assert.equal(request.status, 'PENDING');
+  assert.deepEqual(await push(create, 'admin-a'), request);
+  assert.deepEqual(await push(create, 'manager-a'), request, 'Another authorized user can resume the same queue');
+  await push(item('time_off', 'update', { _id: request._id, serverVersion: request.serverVersion, requestedAction: 'approve' }), 'admin-a', 'FORBIDDEN');
+  const approve = item('time_off', 'update', { _id: request._id, serverVersion: request.serverVersion, requestedAction: 'approve' });
+  request = await push(approve);
+  assert.equal(request.status, 'APPROVED'); assert.equal(request.balanceDaysDeducted, 2); assert.equal(await balance(), 18);
+  const employeeVersion = (await db.collection('employees').findOne({ _id: 'e-a' })).serverVersion;
+  assert.deepEqual(await push(approve), request); assert.equal(await balance(), 18);
+  assert.equal((await db.collection('employees').findOne({ _id: 'e-a' })).serverVersion, employeeVersion);
+  await push(item('time_off', 'update', { ...approve.data, syncMutationId: randomUUID() }), 'manager-a', 'VERSION_CONFLICT');
+  await push(item('time_off', 'delete', { _id: request._id, serverVersion: request.serverVersion }), 'manager-a', 'CANCELLATION_REQUIRED');
+  await push(item('time_off', 'update', { _id: request._id, requestedAction: 'edit', serverVersion: request.serverVersion, notes: 'Rewrite' }), 'manager-a', 'HISTORY_IMMUTABLE');
+  motif = await push(item('time_off_motif', 'update', { _id: motif._id, serverVersion: motif.serverVersion, label: 'Updated policy' }));
+  const note = item('time_off', 'update', { _id: request._id, serverVersion: request.serverVersion, requestedAction: 'notes', additionalNotes: 'Manager note' });
+  request = await push(note, 'admin-a');
+  assert.deepEqual(await push(note, 'admin-a'), request);
+  assert.equal(request.motifSnapshot.label, 'Annual leave');
+  const cancel = item('time_off', 'update', { _id: request._id, serverVersion: request.serverVersion, requestedAction: 'cancel' });
+  await push(cancel, 'admin-a', 'FORBIDDEN');
+  request = await push(cancel); assert.equal(await balance(), 20);
+  await push(cancel); assert.equal(await balance(), 20);
+  const deletion = item('time_off', 'delete', { _id: request._id, serverVersion: request.serverVersion });
+  request = await push(deletion); assert.equal(request.isDeleted, 1); await push(deletion);
+
+  const concurrent = await push(item('time_off', 'create', { ...input, _id: 'concurrent' }));
+  const approvals = [0, 1].map(() => item('time_off', 'update', { _id: concurrent._id, serverVersion: concurrent.serverVersion, requestedAction: 'approve' }));
+  const races = await Promise.all(approvals.map(entry => http('/sync/push', { items: JSON.stringify([entry]) })));
+  assert.equal(races.reduce((n, result) => n + result.synced.length, 0), 1); assert.equal(await balance(), 18);
+  const partial = await push(item('time_off', 'create', { ...input, _id: 'partial', endDate: input.startDate, isPartialDay: true, startTime: '10:00', endTime: '11:00' }));
+  await push(item('time_off', 'update', { _id: partial._id, serverVersion: partial.serverVersion, requestedAction: 'approve' }), 'manager-a', 'PARTIAL_BALANCE_RULE_UNDEFINED');
+  let rejected = await push(item('time_off', 'update', { _id: partial._id, serverVersion: partial.serverVersion, requestedAction: 'reject', rejectionReason: 'Unavailable' }));
+  assert.equal(rejected.status, 'REJECTED');
+  const auto = await push(item('time_off_motif', 'create', { ...motifBase, _id: 'auto', code: 'AUTO', requiresApproval: false }));
+  const automatic = item('time_off', 'create', { ...input, _id: 'automatic', motifId: auto._id });
+  assert.equal((await push(automatic)).status, 'APPROVED'); assert.equal(await balance(), 16);
+  await push(automatic); assert.equal(await balance(), 16);
+  const counterBefore = await db.collection('synccounters').findOne({ _id: 'employee' });
+  await push(item('time_off', 'create', { ...input, _id: 'insufficient', motifId: auto._id, endDate: '2026-12-30' }), 'manager-a', 'INSUFFICIENT_BALANCE');
+  assert.equal(await db.collection('time_off').countDocuments({ _id: 'insufficient' }), 0);
+  assert.deepEqual(await db.collection('synccounters').findOne({ _id: 'employee' }), counterBefore);
+
+  const docs = await push(item('time_off_motif', 'create', { ...motifBase, _id: 'docs', code: 'DOCS', requiresSupportingDocument: true }));
+  for (const documentId of ['doc-b', 'doc-deleted', 'doc-pending'])
+    await push(item('time_off', 'create', { ...input, _id: 'documented', motifId: docs._id, supportingDocumentIds: [documentId] }), 'manager-a', 'INVALID_DOCUMENT');
+  let documented = await push(item('time_off', 'create', { ...input, _id: 'documented', motifId: docs._id, supportingDocumentIds: ['doc-a'] }));
   await db.collection('employeesdocuments').updateOne({ _id: 'doc-a' }, { $set: { isDeleted: 1 } });
-  await call('POST', `/time-off/${documented._id}/approve`, { serverVersion: documented.serverVersion }, 'manager-a', 400);
-  documented = await call('POST', `/time-off/${documented._id}/reject`, { serverVersion: documented.serverVersion, rejectionReason: 'Document removed' });
-  assert.equal(documented.status, 'REJECTED');
-  // Legacy ObjectIds and immutable policy history survive API operations.
-  let old = await call('GET', `/time-off/${legacyId}`);
-  assert.equal(old.legacyNeedsReview, true); assert.equal(old.motifId, null);
-  await call('POST', `/time-off/${legacyId}/review-legacy`, { serverVersion: old.serverVersion, motifId: 'm-a' }, 'manager-a', 409);
-  await call('POST', `/time-off/${legacyId}/cancel`, { serverVersion: old.serverVersion }, 'admin-a', 403);
-  const legacyBalance = await balance();
-  const legacyVersion = old.serverVersion;
-  old = await call('POST', `/time-off/${legacyId}/cancel`, { serverVersion: legacyVersion });
-  assert.equal(old.status, 'CANCELLED');
-  assert.equal(old.balanceDaysDeducted, 2);
-  assert.equal(old.motifId, null);
-  assert.equal(await balance(), legacyBalance + 2);
-  await call('POST', `/time-off/${legacyId}/cancel`, { serverVersion: legacyVersion }, 'manager-a', 409);
-  await call('POST', `/time-off/${legacyId}/cancel`, { serverVersion: old.serverVersion }, 'manager-a', 409);
-  assert.equal(await balance(), legacyBalance + 2);
-  old = await call('PATCH', `/time-off/${legacyId}/notes`, { serverVersion: old.serverVersion, additionalNotes: 'Historical note' });
+  await push(item('time_off', 'update', { _id: documented._id, serverVersion: documented.serverVersion, requestedAction: 'approve' }), 'manager-a', 'INVALID_DOCUMENT');
+  motif = await push(item('time_off_motif', 'delete', { _id: motif._id, serverVersion: motif.serverVersion }));
+  assert.equal(motif.isActive, false);
+  await push(item('time_off', 'create', { ...input, _id: 'inactive' }), 'manager-a', 'MOTIF_UNAVAILABLE');
+  motif = await push(item('time_off_motif', 'update', { _id: motif._id, serverVersion: motif.serverVersion, isActive: true }));
+  const editedHistory = await push(item('time_off', 'update', { _id: 'legacy-pending', serverVersion: 51, requestedAction: 'edit', motifId: motif._id, notes: 'Updated normally' }));
+  assert.equal(editedHistory.motifId, motif._id);
+  assert.equal('legacyNeedsReview' in editedHistory, false);
+  assert.equal('legacyData' in editedHistory, false);
+  const legacyCancel = item('time_off', 'update', { _id: String(legacyId), serverVersion: 50, requestedAction: 'cancel' });
+  await push(legacyCancel); assert.equal(await balance(), 18); await push(legacyCancel); assert.equal(await balance(), 18);
   assert.equal((await db.collection('time_off').findOne({ _id: legacyId }))._id._bsontype, 'ObjectId');
-  assert.equal(old.legacyData.notes, 'Original history');
-  let pending = await call('GET', '/time-off/legacy-pending');
-  await call('POST', '/time-off/legacy-pending/approve', { serverVersion: pending.serverVersion }, 'manager-a', 409);
-  pending = await call('POST', '/time-off/legacy-pending/review-legacy', { serverVersion: pending.serverVersion, motifId: 'm-a', notes: 'Reviewed' });
-  assert.equal(pending.legacyNeedsReview, false); assert.equal(pending.status, 'PENDING'); assert.equal(pending.motifSnapshot, undefined);
   assert.deepEqual(await db.collection('leaves').findOne({ _id: legacyId }), legacy);
   assert.equal(BSON.EJSON.stringify(await db.collection('payrollresults').find({}).toArray()), historical);
-  // A rejected automatic approval rolls back request, counters and balance together.
-  await call('POST', '/time-off/motifs', { ...motifBase, _id: 'auto-balance', code: 'AUTO_BALANCE', requiresApproval: false }, 'manager-a', 201);
-  const beforeCounter = await db.collection('synccounters').findOne({ _id: 'employee' });
-  await call('POST', '/time-off', { ...input, _id: 'insufficient', motifId: 'auto-balance', endDate: '2026-12-30' }, 'admin-a', 409);
-  assert.equal(await db.collection('time_off').countDocuments({ _id: 'insufficient' }), 0);
-  assert.deepEqual(await db.collection('synccounters').findOne({ _id: 'employee' }), beforeCounter);
-  assert.equal(await balance(), legacyBalance + 2);
+
+  let cursor = 0; const ids = [];
+  for (;;) {
+    const page = await pull('time_off', cursor, 1);
+    assert(page.items.every(row => row.companyId === 'a'));
+    ids.push(...page.items.map(row => row._id));
+    if (!page.hasMore) break;
+    assert(page.nextVersion > cursor); cursor = page.nextVersion;
+  }
+  assert.equal(ids.length, new Set(ids).size); assert(ids.includes('new-a'), 'Soft deletions are pulled');
+  assert((await pull('time_off_motif')).items.some(row => row._id === 'm-a'));
+  assert((await pull('time_off', 0, 500, 'manager-b')).items.every(row => row.companyId === 'b'));
+  await push(item('time_off', 'update', { _id: 'new-a', companyId: 'b' }), 'manager-a', 'INVALID_COMPANY');
   assert.equal((await db.collection('employees').findOne({ _id: 'e-b' })).remainingLeave, 30);
-  // Current account role overrides a stale manager claim in the token.
   await db.collection('adminusers').updateOne({ _id: 'manager-a' }, { $set: { role: 'VIEWER' } });
-  await call('POST', '/time-off/motifs', { ...motifBase, code: 'STALE_TOKEN' }, 'manager-a', 403);
-  const collections = (await db.listCollections().toArray()).map(row => row.name);
-  assert(!collections.includes('timeoffs')); assert(!collections.includes('timeoffmotifs'));
-  console.log('PASS Stage 2: real migrated MongoDB replica set + HTTP/JWT, tenant isolation, current roles, motif lifecycle, validation, approval snapshots, atomic balances, concurrency, cancellation, documents, partial days, legacy ObjectIds/review, soft deletion and preserved finalized payroll.');
+  await push(item('time_off_motif', 'update', { _id: motif._id, serverVersion: motif.serverVersion, label: 'Stale role' }), 'manager-a', 'FORBIDDEN');
+  console.log('PASS: shared sync HTTP/JWT, CRUD, receipts/retries, concurrency, atomic balances, policy/roles/documents, historical editing/ObjectIds, pagination, tenant isolation, tombstones and finalized payroll preservation.');
+
 } finally {
   if (server) await new Promise(resolve => server.close(resolve));
   await mongoose.disconnect(); await client.close();

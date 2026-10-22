@@ -11,9 +11,6 @@ export type TimeOffRecord = Omit<TimeOff, "_id" | "motifId" | "submittedAt" | "a
   motifId: string | null;
   submittedAt: Date;
   approvedAt?: Date;
-  // Explicit Stage 1 persistence envelope; never accepted as a new request.
-  legacyNeedsReview?: boolean;
-  legacyData?: Record<string, unknown>;
   migrationVersion?: string;
   supportingDocumentIds?: string[];
   balanceDaysDeducted?: number;

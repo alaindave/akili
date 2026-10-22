@@ -1,3 +1,8 @@
+import { syncTimeOff, timeOffSyncActor } from "../../sync/timeOff.sync.js";
+import { assertTimeOffReady } from "../../repositories/timeOff.repository.js";
+import { TimeOffError } from "../../validation/timeOff.validation.js";
+import TimeOff from "../../models/modules/hr/timeOff.model.js";
+import TimeOffMotif from "../../models/modules/hr/timeOffMotif.model.js";
 import Incident from "../../models/shared/incident.model.js";
 import {
   postOpeningStock,
@@ -365,6 +370,7 @@ router.post(
 
       const synced: string[] = [];
       const versions: Record<string, number> = {};
+      const records: Record<string, unknown> = {};
       const failed: {
         queueId: string;
         entity: string;
@@ -385,7 +391,7 @@ router.post(
       for (const item of items) {
         const { queueId, entity, operation, data } = item ?? {};
 
-        let result: { serverVersion?: number } | undefined;
+        let result: { serverVersion?: number; record?: unknown } | undefined;
         try {
           /*
            * ------------------------------------------------------
@@ -409,6 +415,20 @@ router.post(
             );
 
           switch (entity) {
+            case "time_off":
+            case "time_off_motif": {
+              if (entity === "time_off") {
+                const dependencies = [
+                  `time_off_motif:${data.motifId}`, `employee:${data.employeeId}`,
+                  ...(Array.isArray(data.supportingDocumentIds) ? data.supportingDocumentIds.map((id: string) => `employee_document:${id}`) : []),
+                ];
+                if (dependencies.some(key => failedRecords.has(key)))
+                  throw new Error("A time-off dependency failed to sync; retry after resolving it.");
+              }
+              const actor = await timeOffSyncActor(companyId, req.user?._id ?? "");
+              result = await syncTimeOff(entity, operation, data, actor);
+              break;
+            }
             case "inventory_transaction": {
               result = await postSyncedInventory(companyId, data);
               break;
@@ -762,6 +782,7 @@ router.post(
 
           synced.push(queueId);
           if (result?.serverVersion !== undefined) versions[queueId] = result.serverVersion;
+          if (result?.record) records[queueId] = result.record;
         } catch (error) {
           failedRecords.add(
             `${entity}:${data?._id ?? data?.employeeId ?? data?.companyId}`
@@ -773,7 +794,7 @@ router.post(
             details?: unknown;
           };
           const permanent =
-            error instanceof SyncConflict || error instanceof StockSyncConflict ||
+            error instanceof SyncConflict || error instanceof StockSyncConflict || (error instanceof TimeOffError && error.status < 500) ||
             failure.code === 11000 ||
             ["ValidationError", "CastError"].includes(failure.name ?? "");
           failed.push({
@@ -809,6 +830,7 @@ router.post(
         companyId,
         synced,
         versions,
+        records,
         failed,
       });
     } catch (error) {
@@ -890,6 +912,14 @@ router.get(
        * COMPANY
        * ========================================================
        */
+
+      if (entity === "time_off" || entity === "time_off_motif") {
+        await timeOffSyncActor(companyId, req.user?._id ?? "");
+        await assertTimeOffReady();
+        const collection = entity === "time_off" ? TimeOff : TimeOffMotif;
+        const result = await pullVersionedCollection(collection, companyId, version, max);
+        return res.json({ success: true, companyId, entity, ...result, serverTime: new Date().toISOString() });
+      }
 
       if (isInventorySyncEntity(entity)) {
         const result = await pullVersionedCollection(
@@ -1566,6 +1596,8 @@ router.get(
       });
     } catch (error) {
       console.error("PULL SYNC FAILED:", error);
+      if (error instanceof TimeOffError)
+        return res.status(error.status).json({ code: error.code, message: error.message });
 
       return res.status(500).json({
         success: false,

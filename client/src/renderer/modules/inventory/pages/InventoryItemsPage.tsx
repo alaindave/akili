@@ -45,6 +45,7 @@ import InventoryItemForm, {
   trackingLabels,
   primaryButton,
 } from "../components/InventoryItemForm";
+import PageSubtitle from "../../../components/common/PageSubtitle";
 
 const PAGE_SIZE = 20;
 export default function InventoryItemsPage() {
@@ -146,25 +147,19 @@ function CompanyItems({ companyId }: { companyId: string }) {
         mb={8}
         flexShrink={0}
       >
-        <Box>
+        <Box position="relative" top="0.3rem">
           <Heading
             as="h1"
             color="#1F2937"
-            fontSize={{ base: "1.4rem", sm: "1.4rem", md: "1.5rem" }}
+            fontSize={{ base: "1.1rem", sm: "1.2rem", md: "1.3rem" }}
             fontWeight="700"
             lineHeight="1.1"
           >
             Articles
           </Heading>
-          <Text
-            fontSize={{ base: "0.7rem", sm: "0.8rem", md: "0.9rem" }}
-            lineHeight="1.3"
-            color="gray.600"
-            fontWeight="400"
-            mt={{ base: "1px", sm: "1px", md: "2px" }}
-          >
+          <PageSubtitle mt="0.2rem">
             Catalogues des produits de stock
-          </Text>
+          </PageSubtitle>
         </Box>
         <Button
           colorScheme="yellow"

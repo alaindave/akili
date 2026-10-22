@@ -8,7 +8,7 @@
   },
   "include": [
     "types/timeOff.ts", "types/express.d.ts", "validation/timeOff.validation.ts",
-    "repositories/timeOff.repository.ts", "services/timeOff.service.ts",
-    "models/modules/hr/timeOff*.ts", "routes/modules/hr/timeOff.route.ts"
+    "repositories/timeOff.repository.ts", "sync/timeOff.sync.ts",
+    "models/modules/hr/timeOff*.ts"
   ]
 }

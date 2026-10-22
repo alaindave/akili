@@ -92,19 +92,6 @@ const TaskPage = () => {
             >
               Taches
             </Text>
-            <Button
-              bg="transparent"
-              isLoading={loading}
-              color="gray.800"
-              _hover={{ bg: "transparent" }}
-              fontSize="1rem"
-              position="relative"
-              top="0.7rem"
-              right="1rem"
-              onClick={loadTasks}
-            >
-              <FaSyncAlt />
-            </Button>
           </HStack>
           <PageSubtitle position="relative" left="1rem">
             Gérez les taches

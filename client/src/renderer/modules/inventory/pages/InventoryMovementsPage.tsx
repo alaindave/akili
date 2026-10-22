@@ -5,11 +5,35 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import "react-datepicker/dist/react-datepicker.css";
 import {
-  Alert, Badge, Box, Button, Flex, Heading, HStack, Input, InputGroup,
-  InputLeftElement, Select, SimpleGrid, Skeleton, Stack, Table, Tbody,
-  Td, Text, Th, Thead, Tr,
+  Alert,
+  Badge,
+  Box,
+  Button,
+  Flex,
+  Heading,
+  HStack,
+  Input,
+  InputGroup,
+  InputLeftElement,
+  Select,
+  SimpleGrid,
+  Skeleton,
+  Stack,
+  Table,
+  Tbody,
+  Td,
+  Text,
+  Th,
+  Thead,
+  Tr,
 } from "@chakra-ui/react";
-import { FiArrowDownLeft, FiArrowUpRight, FiRepeat, FiSearch, FiSliders } from "react-icons/fi";
+import {
+  FiArrowDownLeft,
+  FiArrowUpRight,
+  FiRepeat,
+  FiSearch,
+  FiSliders,
+} from "react-icons/fi";
 import type { InventoryMovement } from "../../../../common/types/inventory/InventoryMovement";
 import type { InventoryItem } from "../../../../common/types/inventory/InventoryItem";
 import type { InventoryWarehouse } from "../../../../common/types/inventory/InventoryWarehouse";
@@ -19,13 +43,19 @@ import useSyncStore from "../../../../store/sync.store";
 import { itemTypeLabels } from "../components/InventoryItemForm";
 import InventoryTransactionModal from "../components/InventoryTransactionModal";
 import type { InventoryTransactionType } from "../../../../common/types/inventory/InventoryTransaction";
+import PageSubtitle from "../../../components/common/PageSubtitle";
 
 const PAGE_SIZE = 20;
 const movementLabels: Record<InventoryMovement["movementType"], string> = {
-  RECEIPT: "Entrée", ISSUE: "Sortie", TRANSFER_IN: "Transfert entrant",
-  TRANSFER_OUT: "Transfert sortant", ADJUSTMENT: "Ajustement",
-  RETURN_IN: "Retour entrant", RETURN_OUT: "Retour sortant",
-  PRODUCTION_CONSUMPTION: "Consommation de production", PRODUCTION_OUTPUT: "Sortie de production",
+  RECEIPT: "Entrée",
+  ISSUE: "Sortie",
+  TRANSFER_IN: "Transfert entrant",
+  TRANSFER_OUT: "Transfert sortant",
+  ADJUSTMENT: "Ajustement",
+  RETURN_IN: "Retour entrant",
+  RETURN_OUT: "Retour sortant",
+  PRODUCTION_CONSUMPTION: "Consommation de production",
+  PRODUCTION_OUTPUT: "Sortie de production",
 };
 const metrics = [
   { key: "in", label: "Entrées", icon: FiArrowDownLeft, color: "green" },
@@ -39,11 +69,16 @@ function category(movement: InventoryMovement) {
   return movement.direction === "IN" ? "in" : "out";
 }
 const formatNumber = (value: number | null | undefined) =>
-  value == null ? "—" : value.toLocaleString("fr-FR", { maximumFractionDigits: 4 });
+  value == null
+    ? "—"
+    : value.toLocaleString("fr-FR", { maximumFractionDigits: 4 });
 const formatDate = (value: string) => {
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "—" :
-    `${date.toLocaleDateString("fr-FR")}\n${date.toLocaleTimeString("fr-FR")}`;
+  return Number.isNaN(date.getTime())
+    ? "—"
+    : `${date.toLocaleDateString("fr-FR")}\n${date.toLocaleTimeString(
+        "fr-FR"
+      )}`;
 };
 interface MovementData {
   movements: InventoryMovement[];
@@ -51,7 +86,9 @@ interface MovementData {
   warehouses: InventoryWarehouse[];
   documents: InventoryDocument[];
 }
-async function loadAll<T>(list: (options: { limit: number; offset: number }) => Promise<T[]>) {
+async function loadAll<T>(
+  list: (options: { limit: number; offset: number }) => Promise<T[]>
+) {
   const rows: T[] = [];
   for (let offset = 0; ; offset += 100) {
     const page = await list({ limit: 100, offset });
@@ -62,13 +99,19 @@ async function loadAll<T>(list: (options: { limit: number; offset: number }) => 
 
 export default function InventoryMovementsPage() {
   const companyId = useAdminUser((store) => store.adminUser.companyId);
-  return companyId ? <CompanyMovements key={companyId} companyId={companyId} /> :
-    <Alert>Connectez-vous à une entreprise pour consulter les mouvements.</Alert>;
+  return companyId ? (
+    <CompanyMovements key={companyId} companyId={companyId} />
+  ) : (
+    <Alert>
+      Connectez-vous à une entreprise pour consulter les mouvements.
+    </Alert>
+  );
 }
 
 function CompanyMovements({ companyId }: { companyId: string }) {
   const navigate = useNavigate();
-  const [transactionType, setTransactionType] = useState<InventoryTransactionType | null>(null);
+  const [transactionType, setTransactionType] =
+    useState<InventoryTransactionType | null>(null);
   const role = useAdminUser((store) => store.adminUser.role);
   const [data, setData] = useState<MovementData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -90,52 +133,98 @@ function CompanyMovements({ companyId }: { companyId: string }) {
     const api = window.electron.inventory;
     void Promise.all([
       loadAll((options) => api.movements.list(companyId, options)),
-      loadAll((options) => api.items.list(companyId, { ...options, includeDeleted: true })),
-      loadAll((options) => api.warehouses.list(companyId, { ...options, includeDeleted: true })),
-      loadAll((options) => api.documents.list(companyId, { ...options, includeDeleted: true })),
-    ]).then(([movements, items, warehouses, documents]) => {
-      if (active) setData({ movements, items, warehouses, documents });
-    }).catch(() => {
-      if (active) setError("Impossible de charger les mouvements. Veuillez réessayer.");
-    }).finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
+      loadAll((options) =>
+        api.items.list(companyId, { ...options, includeDeleted: true })
+      ),
+      loadAll((options) =>
+        api.warehouses.list(companyId, { ...options, includeDeleted: true })
+      ),
+      loadAll((options) =>
+        api.documents.list(companyId, { ...options, includeDeleted: true })
+      ),
+    ])
+      .then(([movements, items, warehouses, documents]) => {
+        if (active) setData({ movements, items, warehouses, documents });
+      })
+      .catch(() => {
+        if (active)
+          setError("Impossible de charger les mouvements. Veuillez réessayer.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, [companyId, refresh, syncVersion]);
 
   const invalidDates = Boolean(fromDate && toDate && fromDate > toDate);
   const { filtered, totals } = useMemo(() => {
     const items = new Map(data?.items.map((item) => [item._id, item]));
-    const warehouses = new Map(data?.warehouses.map((entry) => [entry._id, entry]));
-    const documents = new Map(data?.documents.map((document) => [document._id, document]));
+    const warehouses = new Map(
+      data?.warehouses.map((entry) => [entry._id, entry])
+    );
+    const documents = new Map(
+      data?.documents.map((document) => [document._id, document])
+    );
     const query = search.trim().toLocaleLowerCase("fr");
-    const start = fromDate ? new Date(`${fromDate}T00:00:00`).getTime() : -Infinity;
+    const start = fromDate
+      ? new Date(`${fromDate}T00:00:00`).getTime()
+      : -Infinity;
     const endDate = toDate ? new Date(`${toDate}T00:00:00`) : null;
     if (endDate) endDate.setDate(endDate.getDate() + 1);
     const end = endDate?.getTime() ?? Infinity;
-    const filtered = (data?.movements ?? []).map((movement) => ({
-      movement, item: items.get(movement.itemId), warehouse: warehouses.get(movement.warehouseId),
-      document: documents.get(movement.documentId),
-    })).filter((row) => {
-      const occurredAt = new Date(row.movement.occurredAt).getTime();
-      return !invalidDates &&
-        (!query || `${row.item?.name ?? ""} ${row.item?.sku ?? ""}`.toLocaleLowerCase("fr").includes(query)) &&
-        (!fromDate || occurredAt >= start) && (!toDate || occurredAt < end) &&
-        (!type || row.movement.movementType === type) &&
-        (!warehouse || row.movement.warehouseId === warehouse) &&
-        (!itemType || row.item?.itemType === itemType);
-    }).sort((a, b) => new Date(b.movement.occurredAt).getTime() - new Date(a.movement.occurredAt).getTime());
+    const filtered = (data?.movements ?? [])
+      .map((movement) => ({
+        movement,
+        item: items.get(movement.itemId),
+        warehouse: warehouses.get(movement.warehouseId),
+        document: documents.get(movement.documentId),
+      }))
+      .filter((row) => {
+        const occurredAt = new Date(row.movement.occurredAt).getTime();
+        return (
+          !invalidDates &&
+          (!query ||
+            `${row.item?.name ?? ""} ${row.item?.sku ?? ""}`
+              .toLocaleLowerCase("fr")
+              .includes(query)) &&
+          (!fromDate || occurredAt >= start) &&
+          (!toDate || occurredAt < end) &&
+          (!type || row.movement.movementType === type) &&
+          (!warehouse || row.movement.warehouseId === warehouse) &&
+          (!itemType || row.item?.itemType === itemType)
+        );
+      })
+      .sort(
+        (a, b) =>
+          new Date(b.movement.occurredAt).getTime() -
+          new Date(a.movement.occurredAt).getTime()
+      );
     const totals = { in: 0, out: 0, transfer: 0, adjustment: 0 };
-    filtered.forEach(({ movement }) => { totals[category(movement)]++; });
+    filtered.forEach(({ movement }) => {
+      totals[category(movement)]++;
+    });
     return { filtered, totals };
   }, [data, search, fromDate, toDate, type, warehouse, itemType, invalidDates]);
-  const currentPage = Math.min(page, Math.max(0, Math.ceil(filtered.length / PAGE_SIZE) - 1));
-  const change = (setter: (value: string) => void) =>
+  const currentPage = Math.min(
+    page,
+    Math.max(0, Math.ceil(filtered.length / PAGE_SIZE) - 1)
+  );
+  const change =
+    (setter: (value: string) => void) =>
     (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
       setter(event.target.value);
       setPage(0);
     };
   const reset = () => {
-    setSearch(""); setFromDate(""); setToDate(""); setType("");
-    setWarehouse(""); setItemType(""); setPage(0);
+    setSearch("");
+    setFromDate("");
+    setToDate("");
+    setType("");
+    setWarehouse("");
+    setItemType("");
+    setPage(0);
   };
 
   return (
@@ -162,23 +251,25 @@ function CompanyMovements({ companyId }: { companyId: string }) {
           <Heading
             as="h1"
             color="#1F2937"
-            fontSize={{ base: "1.4rem", sm: "1.4rem", md: "1.5rem" }}
+            fontSize={{ base: "1.1rem", sm: "1.2rem", md: "1.3rem" }}
             fontWeight="700"
             lineHeight="1.1"
+            position="relative"
+            top="0.2rem"
           >
             Mouvements de stocks
           </Heading>
-          <Text
-            fontSize={{ base: "0.7rem", sm: "0.8rem", md: "0.9rem" }}
-            lineHeight="1.3"
-            color="gray.600"
-            fontWeight="400"
-            mt={{ base: "1px", sm: "1px", md: "2px" }}
-          >
-            Suivez les mouvements de stock sur vos entrepots.
-          </Text>
+          <PageSubtitle mt="0.3rem">
+            Suivez les mouvements de stock.
+          </PageSubtitle>
         </Box>
-        <Flex gap={{ base: 1, md: 2 }} wrap="nowrap" flexShrink={0} ml="auto" justify="flex-end">
+        <Flex
+          gap={{ base: 1, md: 1 }}
+          wrap="nowrap"
+          flexShrink={0}
+          ml="auto"
+          justify="flex-end"
+        >
           {(
             [
               {
@@ -238,427 +329,446 @@ function CompanyMovements({ companyId }: { companyId: string }) {
         overflowY="auto"
         overflowX="hidden"
       >
-      <SimpleGrid
-        minChildWidth={{
-          base: "min(14rem, calc((100% - 0.2rem) / 2))",
-          md: "min(14rem, calc((100% - 1rem) / 2))",
-        }}
-        spacing={{ base: "0.2rem", md: 4 }}
-        mt={{ base: 4, md: 6 }}
-        mb={0}
-        flexShrink={0}
-      >
-        {metrics.map(({ key, label, icon: Icon, color }) => (
-          <Box
-            key={key}
-            title="Nombre de mouvements correspondant aux filtres"
-            bg="linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))"
-            border="1px solid rgba(255,255,255,0.12)"
-            boxShadow="0 2px 8px rgba(0,0,0,0.5)"
-            borderRadius="0.4rem"
-            p={3}
-            py={{ base: 1, md: 3 }}
-            minH={{ base: "5rem", md: "6rem" }}
-            minW={0}
-            overflowWrap="anywhere"
-          >
-            <HStack spacing={{ base: 2, md: 3 }}>
-              <Flex
-                bg={`${color}.500`}
-                color="white"
-                borderRadius="15px"
-                boxSize="36px"
-                align="center"
-                justify="center"
-                flexShrink={0}
-              >
-                <Icon aria-hidden="true" />
-              </Flex>
-              <Text minW={0} flex="1" fontWeight="700" color="gray.700" fontSize="1.1rem">
-                {label}
-              </Text>
-            </HStack>
-            <Skeleton isLoaded={!loading} mt={3}>
-              <Text
-                color="black"
-                fontSize="1.5rem"
-                fontWeight="700"
-                textAlign="right"
-              >
-                {data && !error ? formatNumber(totals[key]) : "—"}
-              </Text>
-            </Skeleton>
-          </Box>
-        ))}
-      </SimpleGrid>
-      {transactionType && data && (
-        <InventoryTransactionModal
-          key={transactionType}
-          companyId={companyId}
-          type={transactionType}
-          items={data.items}
-          warehouses={data.warehouses}
-          onClose={() => setTransactionType(null)}
-          onSaved={() => {
-            setTransactionType(null);
-            setPage(0);
-            setRefresh((value) => value + 1);
+        <SimpleGrid
+          minChildWidth={{
+            base: "min(14rem, calc((100% - 0.2rem) / 2))",
+            md: "min(14rem, calc((100% - 1rem) / 2))",
           }}
-        />
-      )}
-      <Box
-        border="1px solid #E5E5E5"
-        borderRadius="12px"
-        bg="white"
-        overflow="hidden"
-        display="flex"
-        flexDirection="column"
-        flex="1 0 21rem"
-        minH="21rem"
-        mt="0.3rem"
-        mb="0.1rem"
-        boxShadow="0 2px 6px rgba(0,0,0,0.02)"
-      >
-        <Flex
-          p={3}
-          gap={2}
-          align="center"
-          wrap="nowrap"
-          overflowX="auto"
-          borderBottom="1px solid #EAEAEA"
+          spacing={{ base: "0.2rem", md: 4 }}
+          mt={{ base: 4, md: 6 }}
+          mb={0}
           flexShrink={0}
-          sx={{ ".react-datepicker-wrapper": { width: "100%" } }}
         >
-          <InputGroup size="sm" flex="1" minW="150px">
-            <InputLeftElement pointerEvents="none" color="#909090">
-              <FiSearch />
-            </InputLeftElement>
-            <Input
-              aria-label="Rechercher par SKU ou nom d’article"
-              placeholder="SKU ou article…"
-              value={search}
-              onChange={change(setSearch)}
-              maxLength={255}
-              fontSize="sm"
-            />
-          </InputGroup>
-          <Box flex="0 0 115px">
-            <DatePicker
-              selected={fromDate ? new Date(`${fromDate}T00:00:00`) : null}
-              maxDate={toDate ? new Date(`${toDate}T00:00:00`) : undefined}
-              onChange={(date: Date | null) => {
-                setFromDate(date ? format(date, "yyyy-MM-dd") : "");
-                setPage(0);
-              }}
-              dateFormat="dd-MM-yyyy"
-              placeholderText="dd-mm-yyyy"
-              locale={fr}
-              strictParsing
-              portalId="inventory-movement-date-picker"
-              popperPlacement="bottom-start"
-              customInput={
-                <Input
-                  size="sm"
-                  aria-label="Date de début"
-                  title="Date de début"
-                  isInvalid={invalidDates}
-                />
-              }
-            />
-          </Box>
-          <Box flex="0 0 115px">
-            <DatePicker
-              selected={toDate ? new Date(`${toDate}T00:00:00`) : null}
-              minDate={fromDate ? new Date(`${fromDate}T00:00:00`) : undefined}
-              onChange={(date: Date | null) => {
-                setToDate(date ? format(date, "yyyy-MM-dd") : "");
-                setPage(0);
-              }}
-              dateFormat="dd-MM-yyyy"
-              placeholderText="dd-mm-yyyy"
-              locale={fr}
-              strictParsing
-              portalId="inventory-movement-date-picker"
-              popperPlacement="bottom-start"
-              customInput={
-                <Input
-                  size="sm"
-                  aria-label="Date de fin"
-                  title="Date de fin"
-                  isInvalid={invalidDates}
-                />
-              }
-            />
-          </Box>
-          <Select
-            size="sm"
-            aria-label="Type de mouvement"
-            flex="1"
-            minW="155px"
-            value={type}
-            onChange={change(setType)}
-            fontSize="sm"
-          >
-            <option value="">Tous les mouvements</option>
-            {Object.entries(movementLabels).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </Select>
-          <Select
-            size="sm"
-            aria-label="Entrepôt"
-            flex="1"
-            minW="140px"
-            value={warehouse}
-            onChange={change(setWarehouse)}
-            fontSize="sm"
-          >
-            <option value="">Tous les entrepôts</option>
-            {data?.warehouses.map((entry) => (
-              <option key={entry._id} value={entry._id}>
-                {entry.name}
-              </option>
-            ))}
-          </Select>
-          <Select
-            size="sm"
-            aria-label="Type d’article"
-            flex="1"
-            minW="140px"
-            value={itemType}
-            onChange={change(setItemType)}
-            fontSize="sm"
-          >
-            <option value="">Types d’article</option>
-            {Object.entries(itemTypeLabels).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </Select>
-          {(search || fromDate || toDate || type || warehouse || itemType) && (
-            <Button size="sm" flexShrink={0} variant="ghost" onClick={reset}>
-              Réinitialiser
-            </Button>
-          )}
-        </Flex>
-        {invalidDates && (
-          <Alert status="warning">
-            La date de fin doit être postérieure ou égale à la date de début.
-          </Alert>
+          {metrics.map(({ key, label, icon: Icon, color }) => (
+            <Box
+              key={key}
+              title="Nombre de mouvements correspondant aux filtres"
+              bg="linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))"
+              border="1px solid rgba(255,255,255,0.12)"
+              boxShadow="0 2px 8px rgba(0,0,0,0.5)"
+              borderRadius="0.4rem"
+              ml="0.1rem"
+              mr="0.1rem"
+              p={3}
+              py={{ base: 1, md: 3 }}
+              minH={{ base: "5rem", md: "6rem" }}
+              minW={0}
+              overflowWrap="anywhere"
+            >
+              <HStack spacing={{ base: 2, md: 3 }}>
+                <Flex
+                  bg={`${color}.500`}
+                  color="white"
+                  borderRadius="15px"
+                  boxSize="36px"
+                  align="center"
+                  justify="center"
+                  flexShrink={0}
+                >
+                  <Icon aria-hidden="true" />
+                </Flex>
+                <Text
+                  minW={0}
+                  flex="1"
+                  fontWeight="700"
+                  color="gray.700"
+                  fontSize="1.1rem"
+                >
+                  {label}
+                </Text>
+              </HStack>
+              <Skeleton isLoaded={!loading} mt={3}>
+                <Text
+                  color="black"
+                  fontSize="1.5rem"
+                  fontWeight="700"
+                  textAlign="right"
+                >
+                  {data && !error ? formatNumber(totals[key]) : "—"}
+                </Text>
+              </Skeleton>
+            </Box>
+          ))}
+        </SimpleGrid>
+        {transactionType && data && (
+          <InventoryTransactionModal
+            key={transactionType}
+            companyId={companyId}
+            type={transactionType}
+            items={data.items}
+            warehouses={data.warehouses}
+            onClose={() => setTransactionType(null)}
+            onSaved={() => {
+              setTransactionType(null);
+              setPage(0);
+              setRefresh((value) => value + 1);
+            }}
+          />
         )}
-        <Box flex="1" minH="12rem" overflow="auto">
-          {error ? (
-            <Stack p={6} align="start">
-              <Text role="alert">{error}</Text>
-              <Button onClick={() => setRefresh((value) => value + 1)}>
-                Réessayer
-              </Button>
-            </Stack>
-          ) : loading ? (
-            <Stack
-              p={6}
-              spacing={5}
-              role="status"
-              aria-label="Chargement des mouvements"
-            >
-              {[0, 1, 2, 3, 4].map((key) => (
-                <Skeleton key={key} h="36px" />
-              ))}
-            </Stack>
-          ) : (
-            <Table
+        <Box
+          border="1px solid #E5E5E5"
+          borderRadius="12px"
+          bg="white"
+          overflow="hidden"
+          display="flex"
+          flexDirection="column"
+          flex="1 0 21rem"
+          minH="21rem"
+          mt="0.3rem"
+          mb="0.1rem"
+          boxShadow="0 2px 6px rgba(0,0,0,0.02)"
+        >
+          <Flex
+            p={3}
+            gap={2}
+            align="center"
+            wrap="nowrap"
+            overflowX="auto"
+            borderBottom="1px solid #EAEAEA"
+            flexShrink={0}
+            sx={{ ".react-datepicker-wrapper": { width: "100%" } }}
+          >
+            <InputGroup size="sm" flex="1" minW="150px">
+              <InputLeftElement pointerEvents="none" color="#909090">
+                <FiSearch />
+              </InputLeftElement>
+              <Input
+                aria-label="Rechercher par SKU ou nom d’article"
+                placeholder="SKU ou article…"
+                value={search}
+                onChange={change(setSearch)}
+                maxLength={255}
+                fontSize="sm"
+              />
+            </InputGroup>
+            <Box flex="0 0 115px">
+              <DatePicker
+                selected={fromDate ? new Date(`${fromDate}T00:00:00`) : null}
+                maxDate={toDate ? new Date(`${toDate}T00:00:00`) : undefined}
+                onChange={(date: Date | null) => {
+                  setFromDate(date ? format(date, "yyyy-MM-dd") : "");
+                  setPage(0);
+                }}
+                dateFormat="dd-MM-yyyy"
+                placeholderText="dd-mm-yyyy"
+                locale={fr}
+                strictParsing
+                portalId="inventory-movement-date-picker"
+                popperPlacement="bottom-start"
+                customInput={
+                  <Input
+                    size="sm"
+                    aria-label="Date de début"
+                    title="Date de début"
+                    isInvalid={invalidDates}
+                  />
+                }
+              />
+            </Box>
+            <Box flex="0 0 115px">
+              <DatePicker
+                selected={toDate ? new Date(`${toDate}T00:00:00`) : null}
+                minDate={
+                  fromDate ? new Date(`${fromDate}T00:00:00`) : undefined
+                }
+                onChange={(date: Date | null) => {
+                  setToDate(date ? format(date, "yyyy-MM-dd") : "");
+                  setPage(0);
+                }}
+                dateFormat="dd-MM-yyyy"
+                placeholderText="dd-mm-yyyy"
+                locale={fr}
+                strictParsing
+                portalId="inventory-movement-date-picker"
+                popperPlacement="bottom-start"
+                customInput={
+                  <Input
+                    size="sm"
+                    aria-label="Date de fin"
+                    title="Date de fin"
+                    isInvalid={invalidDates}
+                  />
+                }
+              />
+            </Box>
+            <Select
               size="sm"
-              w="100%"
-              minW="60rem"
-              whiteSpace="normal"
-              sx={{
-                tableLayout: "fixed",
-                "th, td": {
-                  px: 2,
-                  overflowWrap: "anywhere",
-                  lineHeight: "short",
-                },
-                th: {
-                  width: "12.5%",
-                  position: "sticky",
-                  top: 0,
-                  zIndex: 1,
-                  bg: "#FAFAFA",
-                  color: "#737373",
-                  fontSize: "xs",
-                  letterSpacing: "0.02em",
-                  py: 2,
-                },
-                "th:nth-of-type(3)": { width: "170px", textAlign: "center" },
-                td: { borderColor: "#F0F0F0", py: 2, fontSize: "sm" },
-              }}
+              aria-label="Type de mouvement"
+              flex="1"
+              minW="155px"
+              value={type}
+              onChange={change(setType)}
+              fontSize="sm"
             >
-              <Thead>
-                <Tr>
-                  <Th>Date et heure</Th>
-                  <Th>Article</Th>
-                  <Th>Mouvement</Th>
-                  <Th isNumeric>Quantité</Th>
-                  <Th isNumeric>Prix unitaire</Th>
-                  <Th isNumeric>Valeur totale</Th>
-                  <Th>Entrepôt</Th>
-                  <Th>Référence</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {filtered
-                  .slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
-                  .map(({ movement, item, warehouse: storage, document }) => (
-                    <Tr
-                      key={movement._id}
-                      _hover={{ bg: "#F1F5F9" }}
-                      cursor="pointer"
-                      tabIndex={0}
-                      aria-label={`Voir le document ${
-                        document?.documentNumber ?? movement.documentId
-                      }`}
-                      _focusVisible={{
-                        outline: "2px solid",
-                        outlineColor: "blue.500",
-                        outlineOffset: "-2px",
-                      }}
-                      onClick={() =>
-                        navigate(
-                          `/inventory/movements/${encodeURIComponent(
-                            movement.documentId
-                          )}`
-                        )
-                      }
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") {
-                          event.preventDefault();
+              <option value="">Tous les mouvements</option>
+              {Object.entries(movementLabels).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </Select>
+            <Select
+              size="sm"
+              aria-label="Entrepôt"
+              flex="1"
+              minW="140px"
+              value={warehouse}
+              onChange={change(setWarehouse)}
+              fontSize="sm"
+            >
+              <option value="">Tous les entrepôts</option>
+              {data?.warehouses.map((entry) => (
+                <option key={entry._id} value={entry._id}>
+                  {entry.name}
+                </option>
+              ))}
+            </Select>
+            <Select
+              size="sm"
+              aria-label="Type d’article"
+              flex="1"
+              minW="140px"
+              value={itemType}
+              onChange={change(setItemType)}
+              fontSize="sm"
+            >
+              <option value="">Types d’article</option>
+              {Object.entries(itemTypeLabels).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </Select>
+            {(search ||
+              fromDate ||
+              toDate ||
+              type ||
+              warehouse ||
+              itemType) && (
+              <Button size="sm" flexShrink={0} variant="ghost" onClick={reset}>
+                Réinitialiser
+              </Button>
+            )}
+          </Flex>
+          {invalidDates && (
+            <Alert status="warning">
+              La date de fin doit être postérieure ou égale à la date de début.
+            </Alert>
+          )}
+          <Box flex="1" minH="12rem" overflow="auto">
+            {error ? (
+              <Stack p={6} align="start">
+                <Text role="alert">{error}</Text>
+                <Button onClick={() => setRefresh((value) => value + 1)}>
+                  Réessayer
+                </Button>
+              </Stack>
+            ) : loading ? (
+              <Stack
+                p={6}
+                spacing={5}
+                role="status"
+                aria-label="Chargement des mouvements"
+              >
+                {[0, 1, 2, 3, 4].map((key) => (
+                  <Skeleton key={key} h="36px" />
+                ))}
+              </Stack>
+            ) : (
+              <Table
+                size="sm"
+                w="100%"
+                minW="60rem"
+                whiteSpace="normal"
+                sx={{
+                  tableLayout: "fixed",
+                  "th, td": {
+                    px: 2,
+                    overflowWrap: "anywhere",
+                    lineHeight: "short",
+                  },
+                  th: {
+                    width: "12.5%",
+                    position: "sticky",
+                    top: 0,
+                    zIndex: 1,
+                    bg: "#FAFAFA",
+                    color: "#737373",
+                    fontSize: "xs",
+                    letterSpacing: "0.02em",
+                    py: 2,
+                  },
+                  "th:nth-of-type(3)": { width: "170px", textAlign: "center" },
+                  td: { borderColor: "#F0F0F0", py: 2, fontSize: "sm" },
+                }}
+              >
+                <Thead>
+                  <Tr>
+                    <Th>Date et heure</Th>
+                    <Th>Article</Th>
+                    <Th>Mouvement</Th>
+                    <Th isNumeric>Quantité</Th>
+                    <Th isNumeric>Prix unitaire</Th>
+                    <Th isNumeric>Valeur totale</Th>
+                    <Th>Entrepôt</Th>
+                    <Th>Référence</Th>
+                  </Tr>
+                </Thead>
+                <Tbody>
+                  {filtered
+                    .slice(
+                      currentPage * PAGE_SIZE,
+                      (currentPage + 1) * PAGE_SIZE
+                    )
+                    .map(({ movement, item, warehouse: storage, document }) => (
+                      <Tr
+                        key={movement._id}
+                        _hover={{ bg: "#F1F5F9" }}
+                        cursor="pointer"
+                        tabIndex={0}
+                        aria-label={`Voir le document ${
+                          document?.documentNumber ?? movement.documentId
+                        }`}
+                        _focusVisible={{
+                          outline: "2px solid",
+                          outlineColor: "blue.500",
+                          outlineOffset: "-2px",
+                        }}
+                        onClick={() =>
                           navigate(
                             `/inventory/movements/${encodeURIComponent(
                               movement.documentId
                             )}`
-                          );
+                          )
                         }
-                      }}
-                    >
-                      <Td whiteSpace="pre-line">
-                        {formatDate(movement.occurredAt)}
-                      </Td>
-                      <Td>
-                        <Text fontWeight="600">
-                          {item?.name ?? "Article indisponible"}
-                        </Text>
-                        <Text
-                          color="#858585"
-                          fontFamily="mono"
-                          fontSize="xs"
-                          mt={0.5}
-                        >
-                          {item?.sku ?? "—"}
-                        </Text>
-                      </Td>
-                      <Td textAlign="center" verticalAlign="middle">
-                        <Badge
-                          colorScheme={
-                            metrics.find(
-                              (metric) => metric.key === category(movement)
-                            )?.color
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            navigate(
+                              `/inventory/movements/${encodeURIComponent(
+                                movement.documentId
+                              )}`
+                            );
                           }
-                          textTransform="none"
-                          borderRadius="full"
-                          maxW="100%"
-                          whiteSpace={
-                            category(movement) === "transfer"
-                              ? "nowrap"
-                              : "normal"
-                          }
-                          textAlign="center"
-                          fontSize="sm"
-                          px={1.5}
-                          py={0.5}
-                        >
-                          {movementLabels[movement.movementType] ??
-                            movement.movementType}
-                        </Badge>
-                      </Td>
-                      <Td isNumeric>
-                        {movement.direction === "IN" ? "+" : "−"}
-                        {formatNumber(Math.abs(movement.quantity))}
-                      </Td>
-                      <Td isNumeric>{formatNumber(movement.unitCost)}</Td>
-                      <Td isNumeric>
-                        {formatNumber(
-                          movement.totalCost ??
-                            (movement.unitCost == null
-                              ? undefined
-                              : Math.abs(movement.quantity) * movement.unitCost)
-                        )}
-                      </Td>
-                      <Td>{storage?.name ?? "Entrepôt indisponible"}</Td>
-                      <Td fontFamily="mono">
-                        {document?.documentNumber ?? "—"}
+                        }}
+                      >
+                        <Td whiteSpace="pre-line">
+                          {formatDate(movement.occurredAt)}
+                        </Td>
+                        <Td>
+                          <Text fontWeight="600">
+                            {item?.name ?? "Article indisponible"}
+                          </Text>
+                          <Text
+                            color="#858585"
+                            fontFamily="mono"
+                            fontSize="xs"
+                            mt={0.5}
+                          >
+                            {item?.sku ?? "—"}
+                          </Text>
+                        </Td>
+                        <Td textAlign="center" verticalAlign="middle">
+                          <Badge
+                            colorScheme={
+                              metrics.find(
+                                (metric) => metric.key === category(movement)
+                              )?.color
+                            }
+                            textTransform="none"
+                            borderRadius="full"
+                            maxW="100%"
+                            whiteSpace={
+                              category(movement) === "transfer"
+                                ? "nowrap"
+                                : "normal"
+                            }
+                            textAlign="center"
+                            fontSize="sm"
+                            px={1.5}
+                            py={0.5}
+                          >
+                            {movementLabels[movement.movementType] ??
+                              movement.movementType}
+                          </Badge>
+                        </Td>
+                        <Td isNumeric>
+                          {movement.direction === "IN" ? "+" : "−"}
+                          {formatNumber(Math.abs(movement.quantity))}
+                        </Td>
+                        <Td isNumeric>{formatNumber(movement.unitCost)}</Td>
+                        <Td isNumeric>
+                          {formatNumber(
+                            movement.totalCost ??
+                              (movement.unitCost == null
+                                ? undefined
+                                : Math.abs(movement.quantity) *
+                                  movement.unitCost)
+                          )}
+                        </Td>
+                        <Td>{storage?.name ?? "Entrepôt indisponible"}</Td>
+                        <Td fontFamily="mono">
+                          {document?.documentNumber ?? "—"}
+                        </Td>
+                      </Tr>
+                    ))}
+                  {!filtered.length && (
+                    <Tr>
+                      <Td colSpan={8} textAlign="center" py={8}>
+                        Aucun mouvement à afficher.
                       </Td>
                     </Tr>
-                  ))}
-                {!filtered.length && (
-                  <Tr>
-                    <Td colSpan={8} textAlign="center" py={8}>
-                      Aucun mouvement à afficher.
-                    </Td>
-                  </Tr>
-                )}
-              </Tbody>
-            </Table>
-          )}
+                  )}
+                </Tbody>
+              </Table>
+            )}
+          </Box>
+          <Flex
+            flexShrink={0}
+            px={5}
+            py={4}
+            borderTop="1px solid #EAEAEA"
+            justify="space-between"
+            align="center"
+            gap={3}
+            wrap="wrap"
+          >
+            <Text fontSize="xs" color="#737373" aria-live="polite">
+              {loading
+                ? "Chargement…"
+                : error
+                ? "Mouvements indisponibles"
+                : filtered.length
+                ? `${currentPage * PAGE_SIZE + 1}–${Math.min(
+                    (currentPage + 1) * PAGE_SIZE,
+                    filtered.length
+                  )} sur ${filtered.length} mouvements`
+                : "0 mouvement"}
+            </Text>
+            <HStack spacing={2}>
+              <Button
+                size="sm"
+                variant="outline"
+                isDisabled={loading || Boolean(error) || currentPage === 0}
+                onClick={() => setPage(currentPage - 1)}
+              >
+                Précédent
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                isDisabled={
+                  loading ||
+                  Boolean(error) ||
+                  (currentPage + 1) * PAGE_SIZE >= filtered.length
+                }
+                onClick={() => setPage(currentPage + 1)}
+              >
+                Suivant
+              </Button>
+            </HStack>
+          </Flex>
         </Box>
-        <Flex
-          flexShrink={0}
-          px={5}
-          py={4}
-          borderTop="1px solid #EAEAEA"
-          justify="space-between"
-          align="center"
-          gap={3}
-          wrap="wrap"
-        >
-          <Text fontSize="xs" color="#737373" aria-live="polite">
-            {loading
-              ? "Chargement…"
-              : error
-              ? "Mouvements indisponibles"
-              : filtered.length
-              ? `${currentPage * PAGE_SIZE + 1}–${Math.min(
-                  (currentPage + 1) * PAGE_SIZE,
-                  filtered.length
-                )} sur ${filtered.length} mouvements`
-              : "0 mouvement"}
-          </Text>
-          <HStack spacing={2}>
-            <Button
-              size="sm"
-              variant="outline"
-              isDisabled={loading || Boolean(error) || currentPage === 0}
-              onClick={() => setPage(currentPage - 1)}
-            >
-              Précédent
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              isDisabled={
-                loading ||
-                Boolean(error) ||
-                (currentPage + 1) * PAGE_SIZE >= filtered.length
-              }
-              onClick={() => setPage(currentPage + 1)}
-            >
-              Suivant
-            </Button>
-          </HStack>
-        </Flex>
-      </Box>
       </Flex>
     </Box>
   );

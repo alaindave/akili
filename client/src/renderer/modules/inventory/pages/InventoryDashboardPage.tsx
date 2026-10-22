@@ -39,6 +39,7 @@ import InventoryNavBar from "../components/InventoryNavBar";
 import InventoryDashboardNotes from "../components/InventoryDashboardNotes";
 import InventoryDashboardTasks from "../components/InventoryDashboardTasks";
 import InventoryQuickActions from "../components/InventoryQuickActions";
+import PageSubtitle from "../../../components/common/PageSubtitle";
 
 interface DashboardData {
   items: InventoryItem[];
@@ -167,12 +168,28 @@ export default function InventoryDashboardPage() {
     >
       {isMobile ? (
         <>
-          <Box flexShrink={0} px={4} py={2} borderBottom="1px solid" borderColor="gray.200">
-            <Button size="sm" variant="outline" onClick={navigation.onOpen} aria-label="Ouvrir la navigation du stock">
+          <Box
+            flexShrink={0}
+            px={4}
+            py={2}
+            borderBottom="1px solid"
+            borderColor="gray.200"
+          >
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={navigation.onOpen}
+              aria-label="Ouvrir la navigation du stock"
+            >
               Menu
             </Button>
           </Box>
-          <Drawer isOpen={navigation.isOpen} placement="left" onClose={navigation.onClose} size="xs">
+          <Drawer
+            isOpen={navigation.isOpen}
+            placement="left"
+            onClose={navigation.onClose}
+            size="xs"
+          >
             <DrawerOverlay />
             <DrawerContent>
               <DrawerCloseButton zIndex={1} />
@@ -184,7 +201,12 @@ export default function InventoryDashboardPage() {
           <InventoryNavBar showSidebar={false} />
         </>
       ) : (
-        <Box flexShrink={0} width={{ md: "210px", lg: "225px", xl: "240px" }} maxW="240px" overflow="hidden">
+        <Box
+          flexShrink={0}
+          width={{ md: "210px", lg: "225px", xl: "240px" }}
+          maxW="240px"
+          overflow="hidden"
+        >
           <InventoryNavBar />
         </Box>
       )}
@@ -199,26 +221,26 @@ export default function InventoryDashboardPage() {
         p={4}
         pb={{ base: "calc(46px + 1rem)", md: "calc(52px + 1rem)" }}
       >
-        <Flex justify="space-between" align={{ base: "flex-start", md: "center" }} flexDir={{ base: "column", md: "row" }} gap={3} flexShrink={0}>
-          <Box>
+        <Flex
+          justify="space-between"
+          align={{ base: "flex-start", md: "center" }}
+          flexDir={{ base: "column", md: "row" }}
+          gap={3}
+          flexShrink={0}
+        >
+          <Box position="relative" top="0.3rem">
             <Heading
               as="h1"
               color="#1F2937"
-              fontSize={{ base: "1.4rem", sm: "1.4rem", md: "1.5rem" }}
+              fontSize={{ base: "1.1rem", sm: "1.2rem", md: "1.3rem" }}
               fontWeight="700"
               lineHeight="1.1"
             >
               Tableau de bord
             </Heading>
-            <Text
-              fontSize={{ base: "0.7rem", sm: "0.8rem", md: "0.9rem" }}
-              lineHeight="1.3"
-              color="gray.600"
-              fontWeight="400"
-              mt={{ base: "1px", sm: "1px", md: "2px" }}
-            >
+            <PageSubtitle mt="0.2rem">
               Vue d’ensemble de votre gestion de stock
-            </Text>
+            </PageSubtitle>
           </Box>
           <Button
             mb="1rem"
@@ -236,113 +258,130 @@ export default function InventoryDashboardPage() {
 
         <Box flex="1" minH={0} minW={0} overflowY="auto" overflowX="hidden">
           <Flex direction="column" minH="100%" minW={0} px={2} pb={2}>
-        <SimpleGrid minChildWidth="min(14rem, calc((100% - 1rem) / 2))" spacing={4} mt="3rem" flexShrink={0}>
-          {metrics.map(({ label, value, icon: Icon, color }) => (
-            <Box
-              key={label}
-              bg="linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))"
-              border="1px solid rgba(255,255,255,0.12)"
-              boxShadow="0 2px 8px rgba(0,0,0,0.5)"
-              borderRadius="0.4rem"
-              p={3}
-              minH="6rem"
-              minW={0}
-              overflowWrap="anywhere"
+            <SimpleGrid
+              minChildWidth="min(14rem, calc((100% - 1rem) / 2))"
+              spacing={4}
+              mt="3rem"
+              flexShrink={0}
             >
-              <HStack spacing={{ base: 2, md: 3 }} align="center" flexWrap="nowrap">
-                <Flex
-                  bg={color}
-                  color="white"
-                  borderRadius="15px"
-                  boxSize="36px"
-                  align="center"
-                  justify="center"
-                  flexShrink={0}
+              {metrics.map(({ label, value, icon: Icon, color }) => (
+                <Box
+                  key={label}
+                  bg="linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))"
+                  border="1px solid rgba(255,255,255,0.12)"
+                  boxShadow="0 2px 8px rgba(0,0,0,0.5)"
+                  borderRadius="0.4rem"
+                  p={3}
+                  minH="6rem"
+                  minW={0}
+                  overflowWrap="anywhere"
                 >
-                  <Icon aria-hidden="true" />
-                </Flex>
-                <Text minW={0} flex="1" color="gray.700" fontWeight="700" fontSize="1.1rem">
-                  {label}
-                </Text>
-              </HStack>
-              <Text
-                color="black"
-                fontSize="1.5rem"
-                fontWeight="700"
-                textAlign="right"
-                mt={3}
-              >
-                {data ? formatNumber(value) : "—"}
-              </Text>
-            </Box>
-          ))}
-        </SimpleGrid>
+                  <HStack
+                    spacing={{ base: 2, md: 3 }}
+                    align="center"
+                    flexWrap="nowrap"
+                  >
+                    <Flex
+                      bg={color}
+                      color="white"
+                      borderRadius="15px"
+                      boxSize="36px"
+                      align="center"
+                      justify="center"
+                      flexShrink={0}
+                    >
+                      <Icon aria-hidden="true" />
+                    </Flex>
+                    <Text
+                      minW={0}
+                      flex="1"
+                      color="gray.700"
+                      fontWeight="700"
+                      fontSize="1.1rem"
+                    >
+                      {label}
+                    </Text>
+                  </HStack>
+                  <Text
+                    color="black"
+                    fontSize="1.5rem"
+                    fontWeight="700"
+                    textAlign="right"
+                    mt={3}
+                  >
+                    {data ? formatNumber(value) : "—"}
+                  </Text>
+                </Box>
+              ))}
+            </SimpleGrid>
 
-        {loading && (
-          <HStack role="status" justify="center" mt={8}>
-            <Spinner color="blue.500" />
-            <Text>Chargement du stock…</Text>
-          </HStack>
-        )}
-        {error && (
-          <Alert status="error" mt={8}>
-            <AlertIcon />
-            {error}
-          </Alert>
-        )}
-        {companyId && userId && (
-          <Grid
-            templateColumns={{
-              base: "minmax(0, 1fr)",
-              xl: tasksEmpty ? "minmax(0, 1fr)" : "minmax(0, 1.2fr) minmax(0, 1fr)",
-            }}
-            templateAreas={{
-              base: tasksEmpty ? '"notes"' : '"tasks" "notes"',
-              xl: tasksEmpty ? '"notes"' : '"notes tasks"',
-            }}
-            alignItems="start"
-            columnGap={6}
-            rowGap="3rem"
-            flexShrink={0}
-            pt={{ base: 6, xl: 12 }}
-          >
-            <Box
-              gridArea="notes"
-              w="100%"
-              maxW={tasksEmpty ? "42rem" : undefined}
-              justifySelf="center"
-              minW={0}
-              h="18rem"
-            >
-              <InventoryDashboardNotes
-                key={`notes-${companyId}-${userId}`}
-                companyId={companyId}
-                userId={userId}
-              />
-            </Box>
-            <Box
-              gridArea="tasks"
-              h="auto"
-              maxH="42vh"
-              overflowY="auto"
-              overflowX="hidden"
-              overscrollBehaviorY="contain"
-              minW={0}
-              minH={0}
-              pl={{ base: 0, xl: 8 }}
-              display={tasksEmpty ? "none" : "block"}
-            >
-              <InventoryDashboardTasks
-                key={`tasks-${companyId}-${userId}`}
-                companyId={companyId}
-                userId={userId}
-                version={`${syncVersion}-${refresh}`}
-                onEmptyChange={setTasksEmpty}
-              />
-            </Box>
-          </Grid>
-        )}
-        </Flex>
+            {loading && (
+              <HStack role="status" justify="center" mt={8}>
+                <Spinner color="blue.500" />
+                <Text>Chargement du stock…</Text>
+              </HStack>
+            )}
+            {error && (
+              <Alert status="error" mt={8}>
+                <AlertIcon />
+                {error}
+              </Alert>
+            )}
+            {companyId && userId && (
+              <Grid
+                templateColumns={{
+                  base: "minmax(0, 1fr)",
+                  xl: tasksEmpty
+                    ? "minmax(0, 1fr)"
+                    : "minmax(0, 1.2fr) minmax(0, 1fr)",
+                }}
+                templateAreas={{
+                  base: tasksEmpty ? '"notes"' : '"tasks" "notes"',
+                  xl: tasksEmpty ? '"notes"' : '"notes tasks"',
+                }}
+                alignItems="start"
+                columnGap={6}
+                rowGap="3rem"
+                flexShrink={0}
+                pt={{ base: 6, xl: 12 }}
+              >
+                <Box
+                  gridArea="notes"
+                  w="100%"
+                  maxW={tasksEmpty ? "42rem" : undefined}
+                  justifySelf="center"
+                  minW={0}
+                  h="18rem"
+                >
+                  <InventoryDashboardNotes
+                    key={`notes-${companyId}-${userId}`}
+                    companyId={companyId}
+                    userId={userId}
+                  />
+                </Box>
+                <Box
+                  gridArea="tasks"
+                  h="auto"
+                  maxH="42vh"
+                  overflowY="auto"
+                  overflowX="hidden"
+                  overscrollBehaviorY="contain"
+                  minW={0}
+                  minH={0}
+                  pl={{ base: 0, xl: 8 }}
+                  display={tasksEmpty ? "none" : "block"}
+                >
+                  <InventoryDashboardTasks
+                    key={`tasks-${companyId}-${userId}`}
+                    companyId={companyId}
+                    userId={userId}
+                    version={`${syncVersion}-${refresh}`}
+                    onEmptyChange={setTasksEmpty}
+                  />
+                </Box>
+              </Grid>
+            )}
+          </Flex>
         </Box>
         <Box pt={4} px={2} flexShrink={0} minW={0}>
           <InventoryQuickActions

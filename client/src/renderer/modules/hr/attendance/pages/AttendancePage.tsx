@@ -5,6 +5,7 @@ import {
   Button,
   Flex,
   Grid,
+  Heading,
   HStack,
   Switch,
   Text,
@@ -532,24 +533,20 @@ const EmployeeAttendancePage = () => {
       <Flex direction="column" flex="1" minW={0} minH={0}>
         <Flex direction="column" gap={4} mb={{ base: 0, md: 4 }} flexShrink={0}>
           <Flex justify="space-between" align="flex-start" gap={3}>
-            <Box minW={0}>
+            <Box minW={0} position="relative" top="0.5rem">
               <HStack spacing={1}>
-                <Text color="#03143B" fontSize="1.4rem" fontWeight="700">
-                  Présences
-                </Text>
-                <Button
-                  aria-label="Actualiser les présences"
-                  variant="ghost"
-                  size="sm"
-                  minW={8}
-                  px={2}
-                  onClick={loadData}
-                  isLoading={loading}
+                <Heading
+                  fontSize="clamp(1.3rem, 1vw + 0.8rem, 1.4rem)"
+                  fontWeight="700"
+                  color="#03143B"
                 >
-                  <FaSyncAlt />
-                </Button>
+                  {" "}
+                  Présences
+                </Heading>
               </HStack>
-              <PageSubtitle>Gérez la liste de présence</PageSubtitle>
+              <PageSubtitle mt="0.2rem">
+                Gérez la liste de présence
+              </PageSubtitle>
             </Box>
             <Box flexShrink={0}>
               {dailyCheck?.status === "LOCKED" ? (

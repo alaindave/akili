@@ -1,5 +1,5 @@
 import PageSubtitle from "../../../../components/common/PageSubtitle";
-import { Box, Flex, Grid, Text, VStack } from "@chakra-ui/react";
+import { Box, Flex, Grid, Heading, Text, VStack } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
 import { ReactNode } from "react";
 
@@ -172,16 +172,12 @@ export default function ReportsPage() {
         gap={4}
         mb={7}
       >
-        <Box mt="0.4rem">
-          <Text
-            fontSize="clamp(1.3rem, 1vw + 0.8rem, 1.4rem)"
-            fontWeight="750"
-            color={BLUE}
-          >
+        <Box mt="0.5rem">
+          <Heading size="md" color="#03143B">
             Rapports
-          </Text>
+          </Heading>
 
-          <PageSubtitle>
+          <PageSubtitle mt="0.2rem">
             Consultez les rapports de votre entreprise.
           </PageSubtitle>
         </Box>

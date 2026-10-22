@@ -48,6 +48,5 @@ export const editRequestSchema = Joi.object({ ...requestFields, serverVersion: v
 export const actionSchema = Joi.object({ serverVersion: version }).unknown(false);
 export const rejectSchema = Joi.object({ serverVersion: version, rejectionReason: Joi.string().trim().min(1).max(2000).required() }).unknown(false);
 export const notesSchema = Joi.object({ serverVersion: version, additionalNotes: Joi.string().max(10000).allow("").required() }).unknown(false);
-export const reviewSchema = Joi.object({ serverVersion: version, motifId: identifier.required(), notes: requestFields.notes, supportingDocumentIds: requestFields.supportingDocumentIds }).unknown(false);
 export const listSchema = Joi.object({ employeeId: identifier, status: Joi.string().valid(...Object.values(TimeOffStatus)),
   month: Joi.string().pattern(/^\d{4}-(0[1-9]|1[0-2])$/), includeDeleted: Joi.string().valid("true", "false") }).unknown(false);

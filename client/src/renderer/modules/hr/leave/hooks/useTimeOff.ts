@@ -10,6 +10,16 @@ export const timeOffKeys = {
 export function useTimeOffList(companyId: string, employeeId?: string) {
   return useQuery({ queryKey: timeOffKeys.list(companyId, employeeId), queryFn: () => window.electron.hr.timeOff.list(companyId, employeeId), enabled: Boolean(companyId) });
 }
+export function useTimeOff(companyId: string, id: string) {
+  return useQuery({ queryKey: [...timeOffKeys.all(companyId), "detail", id], queryFn: () => window.electron.hr.timeOff.get(companyId, id), enabled: Boolean(companyId && id) });
+}
+export function useUpdateTimeOff(companyId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ _id, updates }: { _id: string; updates: Parameters<typeof window.electron.hr.timeOff.update>[2] }) => window.electron.hr.timeOff.update(companyId, _id, updates),
+    onSuccess: () => client.invalidateQueries({ queryKey: timeOffKeys.all(companyId) }),
+  });
+}
 export function useTimeOffMotifs(companyId: string) {
   return useQuery({ queryKey: timeOffKeys.motifs(companyId), queryFn: () => window.electron.hr.timeOff.motifs.list(companyId), enabled: Boolean(companyId) });
 }
@@ -20,10 +30,6 @@ export function useCreateTimeOff(companyId: string) {
 export function useTransitionTimeOff(companyId: string) {
   const client = useQueryClient();
   return useMutation({ mutationFn: ({ id, action, reason }: { id: string; action: "approve" | "reject" | "cancel" | "delete"; reason?: string }) => window.electron.hr.timeOff.transition(companyId, id, action, reason), onSuccess: () => client.invalidateQueries({ queryKey: timeOffKeys.all(companyId) }) });
-}
-export function useReviewLegacyTimeOff(companyId: string) {
-  const client = useQueryClient();
-  return useMutation({ mutationFn: ({ id, motifId, notes }: { id: string; motifId: string; notes?: string }) => window.electron.hr.timeOff.reviewLegacy(companyId, id, motifId, notes), onSuccess: () => client.invalidateQueries({ queryKey: timeOffKeys.all(companyId) }) });
 }
 export function useSaveTimeOffMotif(companyId: string) {
   const client = useQueryClient();

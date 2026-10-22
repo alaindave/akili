@@ -63,7 +63,7 @@ export default function LeaveHistoryTable({ leaves, onSelectLeave }: Props) {
               cursor="pointer"
               _hover={{ bg: "gray.50" }}
               _focusVisible={{ outline: "2px solid", outlineColor: "gray.500" }}
-              aria-label={`Voir les détails du congé : ${leave.motif}`}
+              aria-label={`Voir les détails du congé : ${leave.motifId}`}
               onClick={() => onSelectLeave(leave)}
               onKeyDown={(event) => {
                 if (event.key === "Enter" || event.key === " ") {
@@ -85,7 +85,7 @@ export default function LeaveHistoryTable({ leaves, onSelectLeave }: Props) {
               </Td>
 
               <Td fontSize="1rem" fontWeight="medium">
-                {leave.motif}
+                {leave.motifId ? leave.motifId : "Congé"}
               </Td>
 
               <Td fontSize="1rem" maxW="15rem" py="1rem">

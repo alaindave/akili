@@ -130,10 +130,10 @@ function CompanyIncidents({
       <Stack spacing={6}>
         <Flex justify="space-between" align="center" gap={4} wrap="wrap">
           <Box>
-            <Heading fontSize="clamp(1.3rem, 1vw + 0.8rem, 1.4rem)">
+            <Heading size="md" color="#03143B">
               Incidents
             </Heading>
-            <PageSubtitle>
+            <PageSubtitle mt="0.3rem">
               Déclarez un incident et consultez les rapports précédents.
             </PageSubtitle>
           </Box>

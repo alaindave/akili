@@ -35,6 +35,19 @@ const emptyMotif = {
   requiresJustification: false,
   requiresSupportingDocument: false,
 };
+
+function createMotifCode(label: string) {
+  const code = label
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9_-]+/g, "_")
+    .replace(/^[_-]+/, "")
+    .slice(0, 64);
+
+  return code || "MOTIF";
+}
+
 type MotifDraft = Pick<
   TimeOffMotif,
   | "label"
@@ -70,8 +83,8 @@ export default function TimeOffSettingsPage() {
     try {
       await saveMotif.mutateAsync({
         _id: crypto.randomUUID(),
-        code: motifDraft.label.trim().toUpperCase().replace(/\s+/g, "_"),
         ...motifDraft,
+        code: createMotifCode(motifDraft.label),
         isSystemDefault: false,
         isActive: true,
       });

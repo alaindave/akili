@@ -1,3 +1,4 @@
+import { removeTimeOffReviewFields } from "./migrations/timeOffFields.js";
 import { migratePayrollResultStatus } from "./utils/migratePayrollResultStatus.js";
 import "dotenv/config";
 import { migrateTaskIncidentModules } from "./utils/migrateTaskIncidentModules.js";
@@ -12,8 +13,6 @@ import { Server } from "socket.io";
 
 import employees from "./routes/modules/hr/employee.route.js";
 import attendances from "./routes/modules/hr/attendance.route.js";
-import leaves from "./routes/modules/hr/leave.route.js";
-import timeOff from "./routes/modules/hr/timeOff.route.js";
 import adminUser from "./routes/shared/admin_user.route.js";
 import sync from "./routes/shared/sync.route.js";
 import auth from "./routes/shared/authenticate.route.js";
@@ -94,8 +93,6 @@ app.use("/documents", employee_documents);
 app.use("/company-logo", logo);
 app.use("/photos", employee_photos);
 app.use("/attendances", attendances);
-app.use("/leaves", leaves);
-app.use("/time-off", timeOff);
 app.use("/adminUsers", adminUser);
 app.use("/tasks", tasks);
 app.use("/auth", auth);
@@ -165,6 +162,7 @@ async function startServer() {
     console.log("CONNECTING TO AFRITAN DATABASE...");
 
     await mongoose.connect(mongoUri);
+    await removeTimeOffReviewFields(mongoose.connection.db);
     await migratePayrollIndex();
     await migratePayrollProfileIndex();
     await migrateTaskIncidentModules();

@@ -1,4 +1,5 @@
-import { TIME_OFF_MIGRATION, legacyTimeOffStatus, validateLegacyTimeOff } from "../../../common/migrations/timeOffLegacy.js";
+import { removeTimeOffReviewFields } from "./removeTimeOffReview.migration.js";
+import { TIME_OFF_MIGRATION, historicalTimeOffBalance, legacyTimeOffStatus, validateLegacyTimeOff } from "../../../common/migrations/timeOffLegacy.js";
 import { PayrollTreatment, TimeOffCategory, TimeOffStatus } from "../../../common/types/hr/time-off/TimeOff.js";
 
 type Value = string | number | null;
@@ -10,11 +11,12 @@ export interface TimeOffMigrationDatabase {
 }
 const enumSql = (values: string[]) => values.map((value) => `'${value.replaceAll("'", "''")}'`).join(",");
 
-/** Explicit maintenance operation; never called by ordinary database startup. */
+/** Initialize or upgrade the company TimeOff schema before normal database use. */
 export async function migrateTimeOff(db: TimeOffMigrationDatabase, companyId: string) {
   if (!companyId.trim()) throw new Error("An explicit companyId is required");
   const foreignKeys = await db.get<{ foreign_keys: number }>("PRAGMA foreign_keys");
   if (foreignKeys?.foreign_keys !== 1) throw new Error("Enable SQLite foreign_keys before migration");
+  await removeTimeOffReviewFields(db, companyId);
   return db.transaction(async () => {
     await db.run(`CREATE TABLE IF NOT EXISTS migrations (
       id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, runAt TEXT DEFAULT CURRENT_TIMESTAMP)`);
@@ -80,9 +82,6 @@ export async function migrateTimeOff(db: TimeOffMigrationDatabase, companyId: st
       balanceDaysDeducted REAL NOT NULL DEFAULT 0,
       serverVersion INTEGER NOT NULL DEFAULT 0, createdAt TEXT, updatedAt TEXT, lastSyncedAt TEXT,
       synced INTEGER, isDeleted INTEGER NOT NULL DEFAULT 0,
-      legacyNeedsReview INTEGER NOT NULL DEFAULT 0 CHECK(legacyNeedsReview IN (0,1)),
-      legacyData TEXT CHECK(legacyData IS NULL OR json_valid(legacyData)),
-      CHECK(motifId IS NOT NULL OR (legacyNeedsReview=1 AND legacyData IS NOT NULL)),
       UNIQUE(companyId,_id),
       FOREIGN KEY(companyId,employeeId) REFERENCES employees(companyId,_id),
       FOREIGN KEY(companyId,motifId) REFERENCES time_off_motifs(companyId,_id) ON DELETE RESTRICT
@@ -93,11 +92,11 @@ export async function migrateTimeOff(db: TimeOffMigrationDatabase, companyId: st
     for (const row of rows) {
       const fields = copied.filter((field) => Object.hasOwn(row, field));
       const values = fields.map((field) => row[field]);
-      await db.run(`INSERT INTO time_off (${fields.join(",")},status,legacyNeedsReview,legacyData)
-        VALUES (${fields.map(() => "?").join(",")},?,1,?)`,
-        [...values, legacyTimeOffStatus(row.status), JSON.stringify(row)]);
+      await db.run(`INSERT INTO time_off (${fields.join(",")},status,balanceDaysDeducted)
+        VALUES (${fields.map(() => "?").join(",")},?,?)`,
+        [...values, legacyTimeOffStatus(row.status), historicalTimeOffBalance(row)]);
       const saved = await db.get<Record<string, Value>>("SELECT * FROM time_off WHERE companyId=? AND _id=?", [companyId, row._id]);
-      if (!saved || fields.some((field) => saved[field] !== row[field]) || saved.legacyData !== JSON.stringify(row)) {
+      if (!saved || fields.some((field) => saved[field] !== row[field])) {
         throw new Error(`TimeOff integrity check failed for ${row._id}`);
       }
     }
@@ -105,8 +104,7 @@ export async function migrateTimeOff(db: TimeOffMigrationDatabase, companyId: st
     await db.run("CREATE INDEX idx_time_off_company_version ON time_off(companyId,serverVersion)");
     await db.run("CREATE INDEX idx_time_off_company_motif ON time_off(companyId,motifId)");
     await db.run("CREATE INDEX idx_time_off_motifs_company_version ON time_off_motifs(companyId,serverVersion)");
-    // Preserve the old cursor AND its canonical alias. Queued legacy operations
-    // remain byte-for-byte intact for the explicit Stage 3 compatibility adapter.
+    // Preserve cursor aliases and retired queue entries without changing pending payloads.
     if (has("sync_state")) {
       const conflicts = await db.all("SELECT * FROM sync_state WHERE entity='time_off'");
       if (conflicts.length) throw new Error("Existing time_off cursor requires review");
@@ -117,6 +115,6 @@ export async function migrateTimeOff(db: TimeOffMigrationDatabase, companyId: st
     const integrity = await db.get<{ integrity_check: string }>("PRAGMA integrity_check");
     if (integrity?.integrity_check !== "ok") throw new Error("SQLite integrity check failed");
     await db.run("INSERT INTO migrations(name) VALUES (?)", [TIME_OFF_MIGRATION]);
-    return { alreadyApplied: false, migrated: rows.length, unresolvedMotifs: rows.length };
+    return { alreadyApplied: false, migrated: rows.length, requestsWithoutMotif: rows.length };
   });
 }

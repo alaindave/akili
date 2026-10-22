@@ -64,9 +64,9 @@ const rows = (sql, table) => JSON.stringify(sql.prepare(`SELECT * FROM ${table} 
       for (const [table,before] of Object.entries(untouched)) assert.equal(rows(sql,table),before);
       assert.deepEqual(sql.prepare('SELECT status FROM time_off ORDER BY _id').all().map(r=>r.status),['PENDING','APPROVED','REJECTED','CANCELLED']);
       for (const row of sql.prepare('SELECT * FROM time_off').all()) {
-        const old=JSON.parse(row.legacyData);
+        const old=sql.prepare('SELECT * FROM leaves_legacy_time_off_v1 WHERE _id=?').get(row._id);
         assert.equal(row._id,old._id); assert.equal(row.motifId,null); assert.equal(row.motifSnapshot,null);
-        assert.equal(row.legacyNeedsReview,1); assert.equal(row.serverVersion,old.serverVersion);
+        assert.equal('legacyNeedsReview' in row,false); assert.equal('legacyData' in row,false); assert.equal(row.serverVersion,old.serverVersion);
         assert.equal(row.isDeleted,old.isDeleted); assert.equal(row.lastSyncedAt,old.lastSyncedAt);
       }
       assert.equal(sql.prepare("SELECT lastPulledVersion FROM sync_state WHERE entity='time_off' AND companyId='a'").get().lastPulledVersion,19);
@@ -84,7 +84,7 @@ const rows = (sql, table) => JSON.stringify(sql.prepare(`SELECT * FROM ${table} 
         VALUES ('m-b','b','CUSTOM','Custom','ABSENCE','UNPAID',0,1,1,0,0,1)`);
       assert.throws(()=>sql.exec("UPDATE time_off SET motifId='m-b' WHERE _id='l0'"),/FOREIGN KEY/);
       assert.throws(()=>sql.exec("UPDATE time_off SET employeeId='e-b' WHERE _id='l0'"),/FOREIGN KEY/);
-      assert.throws(()=>sql.exec("UPDATE time_off SET legacyNeedsReview=0 WHERE _id='l0'"),/CHECK/);
+      assert.equal(sql.prepare('SELECT balanceDaysDeducted FROM time_off WHERE _id=?').get('l1').balanceDaysDeducted,2);
       assert.throws(()=>sql.exec("UPDATE time_off SET status='INVALID' WHERE _id='l0'"),/CHECK/);
     } finally { sql.close(); }
   }

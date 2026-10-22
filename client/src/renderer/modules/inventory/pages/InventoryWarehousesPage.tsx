@@ -46,6 +46,7 @@ import useSyncStore from "../../../../store/sync.store";
 import InventoryWarehouseForm, {
   warehouseTypeLabels,
 } from "../components/InventoryWarehouseForm";
+import PageSubtitle from "../../../components/common/PageSubtitle";
 
 const PAGE_SIZE = 20;
 interface WarehouseData {
@@ -239,25 +240,19 @@ function CompanyWarehouses({ companyId }: { companyId: string }) {
         wrap="nowrap"
         flexShrink={0}
       >
-        <Box minW={0} flex="1">
+        <Box minW={0} flex="1" position="relative" top="0.2rem">
           <Heading
             as="h1"
             color="#1F2937"
-            fontSize={{ base: "1.4rem", sm: "1.4rem", md: "1.5rem" }}
+            fontSize={{ base: "1.1rem", sm: "1.2rem", md: "1.3rem" }}
             fontWeight="700"
             lineHeight="1.1"
           >
             Entrepôts
           </Heading>
-          <Text
-            fontSize={{ base: "0.7rem", sm: "0.8rem", md: "0.9rem" }}
-            lineHeight="1.3"
-            color="gray.600"
-            fontWeight="400"
-            mt={{ base: "1px", sm: "1px", md: "2px" }}
-          >
+          <PageSubtitle mt="0.2rem">
             Gérez vos entrepôts et leurs emplacements de stockage
-          </Text>
+          </PageSubtitle>
         </Box>
         <Button
           colorScheme="yellow"
@@ -285,342 +280,364 @@ function CompanyWarehouses({ companyId }: { companyId: string }) {
         overflowY="auto"
         overflowX="hidden"
       >
-      <SimpleGrid
-        minChildWidth={{
-          base: "min(14rem, calc((100% - 0.2rem) / 2))",
-          md: "min(14rem, calc((100% - 1rem) / 2))",
-        }}
-        spacing={{ base: "0.2rem", md: 4 }}
-        mt={{ base: 4, md: 6 }}
-        mb={0}
-        flexShrink={0}
-      >
-        {metrics.map(({ label, value, icon: Icon, color, help }) => (
-          <Box
-            key={label}
-            title={help}
-            bg="linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))"
-            border="1px solid rgba(255,255,255,0.12)"
-            boxShadow="0 2px 8px rgba(0,0,0,0.5)"
-            borderRadius="0.4rem"
-            p={3}
-            py={{ base: 1, md: 3 }}
-            minH={{ base: "5rem", md: "6rem" }}
-            minW={0}
-            overflowWrap="anywhere"
-          >
-            <HStack spacing={{ base: 2, md: 3 }}>
-              <Flex
-                bg={color}
-                color="white"
-                borderRadius="15px"
-                boxSize="36px"
-                align="center"
-                justify="center"
-                flexShrink={0}
-              >
-                <Icon aria-hidden="true" />
-              </Flex>
-              <Text minW={0} flex="1" fontWeight="700" color="gray.700" fontSize="1.1rem">
-                {label}
-              </Text>
-            </HStack>
-            <Skeleton isLoaded={!loading} mt={3}>
-              <Text
-                color="black"
-                fontSize="1.5rem"
-                fontWeight="700"
-                textAlign="right"
-              >
-                {data && !error ? value.toLocaleString("fr-FR") : "—"}
-              </Text>
-            </Skeleton>
-          </Box>
-        ))}
-      </SimpleGrid>
-
-      <Box
-        border="1px solid #E5E5E5"
-        borderRadius="12px"
-        bg="white"
-        overflow="hidden"
-        display="flex"
-        flexDirection="column"
-        flex="1 0 21rem"
-        minH="21rem"
-        mt="0.3rem"
-        mb="0.1rem"
-        boxShadow="0 2px 6px rgba(0,0,0,0.02)"
-      >
-        <Flex
-          p={3}
-          gap={2}
-          align="center"
-          wrap="nowrap"
-          overflowX="auto"
-          borderBottom="1px solid #EAEAEA"
+        <SimpleGrid
+          minChildWidth={{
+            base: "min(14rem, calc((100% - 0.2rem) / 2))",
+            md: "min(14rem, calc((100% - 1rem) / 2))",
+          }}
+          spacing={{ base: "0.2rem", md: 4 }}
+          mt={{ base: 4, md: 6 }}
+          mb={0}
           flexShrink={0}
         >
-          <InputGroup size="sm" flex="1" minW="150px">
-            <InputLeftElement pointerEvents="none" color="#909090">
-              <FiSearch />
-            </InputLeftElement>
-            <Input
-              aria-label="Rechercher un entrepôt"
-              placeholder="Rechercher par nom, code ou adresse…"
-              value={search}
-              maxLength={255}
+          {metrics.map(({ label, value, icon: Icon, color, help }) => (
+            <Box
+              key={label}
+              title={help}
+              bg="linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))"
+              border="1px solid rgba(255,255,255,0.12)"
+              boxShadow="0 2px 8px rgba(0,0,0,0.5)"
+              borderRadius="0.4rem"
+              ml="0.1rem"
+              mr="0.1rem"
+              p={3}
+              py={{ base: 1, md: 3 }}
+              minH={{ base: "5rem", md: "6rem" }}
+              minW={0}
+              overflowWrap="anywhere"
+            >
+              <HStack spacing={{ base: 2, md: 3 }}>
+                <Flex
+                  bg={color}
+                  color="white"
+                  borderRadius="15px"
+                  boxSize="36px"
+                  align="center"
+                  justify="center"
+                  flexShrink={0}
+                >
+                  <Icon aria-hidden="true" />
+                </Flex>
+                <Text
+                  minW={0}
+                  flex="1"
+                  fontWeight="700"
+                  color="gray.700"
+                  fontSize="1.1rem"
+                >
+                  {label}
+                </Text>
+              </HStack>
+              <Skeleton isLoaded={!loading} mt={3}>
+                <Text
+                  color="black"
+                  fontSize="1.5rem"
+                  fontWeight="700"
+                  textAlign="right"
+                >
+                  {data && !error ? value.toLocaleString("fr-FR") : "—"}
+                </Text>
+              </Skeleton>
+            </Box>
+          ))}
+        </SimpleGrid>
+
+        <Box
+          border="1px solid #E5E5E5"
+          borderRadius="12px"
+          bg="white"
+          overflow="hidden"
+          display="flex"
+          flexDirection="column"
+          flex="1 0 21rem"
+          minH="21rem"
+          mt="0.3rem"
+          mb="0.1rem"
+          boxShadow="0 2px 6px rgba(0,0,0,0.02)"
+        >
+          <Flex
+            p={3}
+            gap={2}
+            align="center"
+            wrap="nowrap"
+            overflowX="auto"
+            borderBottom="1px solid #EAEAEA"
+            flexShrink={0}
+          >
+            <InputGroup size="sm" flex="1" minW="150px">
+              <InputLeftElement pointerEvents="none" color="#909090">
+                <FiSearch />
+              </InputLeftElement>
+              <Input
+                aria-label="Rechercher un entrepôt"
+                placeholder="Rechercher par nom, code ou adresse…"
+                value={search}
+                maxLength={255}
+                fontSize="sm"
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(0);
+                }}
+              />
+            </InputGroup>
+            <Select
+              size="sm"
+              aria-label="Filtrer par type"
+              flex="1"
+              minW="155px"
               fontSize="sm"
+              value={type}
               onChange={(e) => {
-                setSearch(e.target.value);
+                setType(e.target.value);
                 setPage(0);
               }}
-            />
-          </InputGroup>
-          <Select
-            size="sm"
-            aria-label="Filtrer par type"
-            flex="1"
-            minW="155px"
-            fontSize="sm"
-            value={type}
-            onChange={(e) => {
-              setType(e.target.value);
-              setPage(0);
-            }}
-          >
-            <option value="">Tous les types</option>
-            {Object.entries(warehouseTypeLabels).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </Select>
-          <Select
-            size="sm"
-            aria-label="Filtrer par statut"
-            flex="1"
-            minW="140px"
-            fontSize="sm"
-            value={status}
-            onChange={(e) => {
-              setStatus(e.target.value);
-              setPage(0);
-            }}
-          >
-            <option value="">Tous les statuts</option>
-            <option value="active">Actifs</option>
-            <option value="inactive">Inactifs</option>
-          </Select>
-          {hasFilters && (
-            <Button size="sm" flexShrink={0} variant="ghost" fontSize="sm" onClick={reset}>
-              Réinitialiser
-            </Button>
-          )}
-        </Flex>
-
-        <Box flex="1" minH="12rem" overflow="auto">
-          {error ? (
-            <Stack p={8} align="start">
-              <Text role="alert">{error}</Text>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setRefresh((value) => value + 1)}
-              >
-                Réessayer
-              </Button>
-            </Stack>
-          ) : loading ? (
-            <Stack
-              p={6}
-              spacing={5}
-              role="status"
-              aria-label="Chargement des entrepôts"
             >
-              {[0, 1, 2, 3, 4].map((value) => (
-                <Skeleton key={value} height="36px" />
+              <option value="">Tous les types</option>
+              {Object.entries(warehouseTypeLabels).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
               ))}
-            </Stack>
-          ) : rows.length === 0 ? (
-            <Stack align="center" spacing={3} py={16} px={6} textAlign="center">
-              <Box bg="#F5F5F5" p={4} borderRadius="14px" color="#737373">
-                <FaWarehouse size={25} />
-              </Box>
-              <Text fontWeight="600">
-                {hasFilters
-                  ? "Aucun entrepôt trouvé"
-                  : "Aucun entrepôt enregistré"}
-              </Text>
-              <Text fontSize="sm" color="#737373">
-                {hasFilters
-                  ? "Modifiez votre recherche ou vos filtres."
-                  : "Créez votre premier entrepôt pour organiser votre stockage."}
-              </Text>
+            </Select>
+            <Select
+              size="sm"
+              aria-label="Filtrer par statut"
+              flex="1"
+              minW="140px"
+              fontSize="sm"
+              value={status}
+              onChange={(e) => {
+                setStatus(e.target.value);
+                setPage(0);
+              }}
+            >
+              <option value="">Tous les statuts</option>
+              <option value="active">Actifs</option>
+              <option value="inactive">Inactifs</option>
+            </Select>
+            {hasFilters && (
               <Button
-                variant="outline"
                 size="sm"
-                onClick={hasFilters ? reset : () => setCreating(true)}
+                flexShrink={0}
+                variant="ghost"
+                fontSize="sm"
+                onClick={reset}
               >
-                {hasFilters ? "Réinitialiser les filtres" : "Créer un entrepôt"}
+                Réinitialiser
               </Button>
-            </Stack>
-          ) : (
-            <Box whiteSpace="nowrap">
-              <Table
-                size="sm"
-                w="100%"
-                minW="60rem"
-                sx={{
-                  "th, td": { px: 2, lineHeight: "short" },
-                  th: {
-                    position: "sticky",
-                    top: 0,
-                    zIndex: 1,
-                    bg: "#FAFAFA",
-                    color: "#737373",
-                    fontSize: "10px",
-                    letterSpacing: "0.08em",
-                    py: 2,
-                  },
-                  td: { borderColor: "#F0F0F0", py: 2, fontSize: "sm" },
-                }}
+            )}
+          </Flex>
+
+          <Box flex="1" minH="12rem" overflow="auto">
+            {error ? (
+              <Stack p={8} align="start">
+                <Text role="alert">{error}</Text>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setRefresh((value) => value + 1)}
+                >
+                  Réessayer
+                </Button>
+              </Stack>
+            ) : loading ? (
+              <Stack
+                p={6}
+                spacing={5}
+                role="status"
+                aria-label="Chargement des entrepôts"
               >
-                <Thead>
-                  <Tr>
-                    <Th>Entrepôt</Th>
-                    <Th>Type</Th>
-                    <Th>Adresse</Th>
-                    <Th isNumeric>Emplacements</Th>
-                    <Th>Statut</Th>
-                  </Tr>
-                </Thead>
-                <Tbody>
-                  {rows.map((warehouse) => (
-                    <Tr
-                      key={warehouse._id}
-                      cursor="pointer"
-                      _hover={{ bg: "#F1F5F9" }}
-                      onClick={() =>
-                        navigate(`/inventory/warehouses/${warehouse._id}`)
-                      }
-                    >
-                      <Td minW="220px" maxW="340px">
-                        <Text
-                          fontWeight="600"
-                          isTruncated
-                          title={warehouse.name}
-                        >
-                          <Link
-                            to={`/inventory/warehouses/${warehouse._id}`}
-                            onClick={(event) => event.stopPropagation()}
-                          >
-                            {warehouse.name}
-                          </Link>
-                        </Text>
-                        <Text
-                          color="#858585"
-                          fontFamily="mono"
-                          fontSize="xs"
-                          mt={1}
-                        >
-                          {warehouse.code}
-                        </Text>
-                        {warehouse.description && (
+                {[0, 1, 2, 3, 4].map((value) => (
+                  <Skeleton key={value} height="36px" />
+                ))}
+              </Stack>
+            ) : rows.length === 0 ? (
+              <Stack
+                align="center"
+                spacing={3}
+                py={16}
+                px={6}
+                textAlign="center"
+              >
+                <Box bg="#F5F5F5" p={4} borderRadius="14px" color="#737373">
+                  <FaWarehouse size={25} />
+                </Box>
+                <Text fontWeight="600">
+                  {hasFilters
+                    ? "Aucun entrepôt trouvé"
+                    : "Aucun entrepôt enregistré"}
+                </Text>
+                <Text fontSize="sm" color="#737373">
+                  {hasFilters
+                    ? "Modifiez votre recherche ou vos filtres."
+                    : "Créez votre premier entrepôt pour organiser votre stockage."}
+                </Text>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={hasFilters ? reset : () => setCreating(true)}
+                >
+                  {hasFilters
+                    ? "Réinitialiser les filtres"
+                    : "Créer un entrepôt"}
+                </Button>
+              </Stack>
+            ) : (
+              <Box whiteSpace="nowrap">
+                <Table
+                  size="sm"
+                  w="100%"
+                  minW="60rem"
+                  sx={{
+                    "th, td": { px: 2, lineHeight: "short" },
+                    th: {
+                      position: "sticky",
+                      top: 0,
+                      zIndex: 1,
+                      bg: "#FAFAFA",
+                      color: "#737373",
+                      fontSize: "10px",
+                      letterSpacing: "0.08em",
+                      py: 2,
+                    },
+                    td: { borderColor: "#F0F0F0", py: 2, fontSize: "sm" },
+                  }}
+                >
+                  <Thead>
+                    <Tr>
+                      <Th>Entrepôt</Th>
+                      <Th>Type</Th>
+                      <Th>Adresse</Th>
+                      <Th isNumeric>Emplacements</Th>
+                      <Th>Statut</Th>
+                    </Tr>
+                  </Thead>
+                  <Tbody>
+                    {rows.map((warehouse) => (
+                      <Tr
+                        key={warehouse._id}
+                        cursor="pointer"
+                        _hover={{ bg: "#F1F5F9" }}
+                        onClick={() =>
+                          navigate(`/inventory/warehouses/${warehouse._id}`)
+                        }
+                      >
+                        <Td minW="220px" maxW="340px">
                           <Text
-                            color="#737373"
+                            fontWeight="600"
+                            isTruncated
+                            title={warehouse.name}
+                          >
+                            <Link
+                              to={`/inventory/warehouses/${warehouse._id}`}
+                              onClick={(event) => event.stopPropagation()}
+                            >
+                              {warehouse.name}
+                            </Link>
+                          </Text>
+                          <Text
+                            color="#858585"
+                            fontFamily="mono"
                             fontSize="xs"
                             mt={1}
-                            isTruncated
-                            title={warehouse.description}
                           >
-                            {warehouse.description}
+                            {warehouse.code}
                           </Text>
-                        )}
-                      </Td>
-                      <Td color="#525252">
-                        {warehouseTypeLabels[warehouse.type] ?? "—"}
-                      </Td>
-                      <Td maxW="300px">
-                        <Text
-                          color="#737373"
-                          isTruncated
-                          title={warehouse.address}
-                        >
-                          {warehouse.address || "—"}
-                        </Text>
-                      </Td>
-                      <Td isNumeric>
-                        {(
-                          summary.locationCounts.get(warehouse._id) ?? 0
-                        ).toLocaleString("fr-FR")}
-                      </Td>
-                      <Td>
-                        <Badge
-                          colorScheme={warehouse.isActive ? "green" : "gray"}
-                          textTransform="none"
-                          borderRadius="full"
-                          px={2.5}
-                          py={0.5}
-                        >
-                          {warehouse.isActive ? "Actif" : "Inactif"}
-                        </Badge>
-                      </Td>
-                    </Tr>
-                  ))}
-                </Tbody>
-              </Table>
-            </Box>
-          )}
+                          {warehouse.description && (
+                            <Text
+                              color="#737373"
+                              fontSize="xs"
+                              mt={1}
+                              isTruncated
+                              title={warehouse.description}
+                            >
+                              {warehouse.description}
+                            </Text>
+                          )}
+                        </Td>
+                        <Td color="#525252">
+                          {warehouseTypeLabels[warehouse.type] ?? "—"}
+                        </Td>
+                        <Td maxW="300px">
+                          <Text
+                            color="#737373"
+                            isTruncated
+                            title={warehouse.address}
+                          >
+                            {warehouse.address || "—"}
+                          </Text>
+                        </Td>
+                        <Td isNumeric>
+                          {(
+                            summary.locationCounts.get(warehouse._id) ?? 0
+                          ).toLocaleString("fr-FR")}
+                        </Td>
+                        <Td>
+                          <Badge
+                            colorScheme={warehouse.isActive ? "green" : "gray"}
+                            textTransform="none"
+                            borderRadius="full"
+                            px={2.5}
+                            py={0.5}
+                          >
+                            {warehouse.isActive ? "Actif" : "Inactif"}
+                          </Badge>
+                        </Td>
+                      </Tr>
+                    ))}
+                  </Tbody>
+                </Table>
+              </Box>
+            )}
+          </Box>
+          <Flex
+            flexShrink={0}
+            px={5}
+            py={4}
+            borderTop="1px solid #EAEAEA"
+            justify="space-between"
+            align="center"
+            gap={3}
+            wrap="wrap"
+          >
+            <Text fontSize="xs" color="#737373" aria-live="polite">
+              {loading
+                ? "Chargement…"
+                : error
+                ? "Entrepôts indisponibles"
+                : filtered.length
+                ? `${currentPage * PAGE_SIZE + 1}–${Math.min(
+                    (currentPage + 1) * PAGE_SIZE,
+                    filtered.length
+                  )} sur ${filtered.length} entrepôts`
+                : "0 entrepôt"}
+            </Text>
+            <HStack spacing={2}>
+              <Button
+                size="sm"
+                variant="outline"
+                leftIcon={<FiArrowLeft />}
+                isDisabled={loading || Boolean(error) || currentPage === 0}
+                onClick={() => setPage(currentPage - 1)}
+              >
+                Précédent
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                rightIcon={<FiArrowRight />}
+                isDisabled={
+                  loading ||
+                  Boolean(error) ||
+                  (currentPage + 1) * PAGE_SIZE >= filtered.length
+                }
+                onClick={() => setPage(currentPage + 1)}
+              >
+                Suivant
+              </Button>
+            </HStack>
+          </Flex>
         </Box>
-        <Flex
-          flexShrink={0}
-          px={5}
-          py={4}
-          borderTop="1px solid #EAEAEA"
-          justify="space-between"
-          align="center"
-          gap={3}
-          wrap="wrap"
-        >
-          <Text fontSize="xs" color="#737373" aria-live="polite">
-            {loading
-              ? "Chargement…"
-              : error
-              ? "Entrepôts indisponibles"
-              : filtered.length
-              ? `${currentPage * PAGE_SIZE + 1}–${Math.min(
-                  (currentPage + 1) * PAGE_SIZE,
-                  filtered.length
-                )} sur ${filtered.length} entrepôts`
-              : "0 entrepôt"}
-          </Text>
-          <HStack spacing={2}>
-            <Button
-              size="sm"
-              variant="outline"
-              leftIcon={<FiArrowLeft />}
-              isDisabled={loading || Boolean(error) || currentPage === 0}
-              onClick={() => setPage(currentPage - 1)}
-            >
-              Précédent
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              rightIcon={<FiArrowRight />}
-              isDisabled={
-                loading ||
-                Boolean(error) ||
-                (currentPage + 1) * PAGE_SIZE >= filtered.length
-              }
-              onClick={() => setPage(currentPage + 1)}
-            >
-              Suivant
-            </Button>
-          </HStack>
-        </Flex>
-      </Box>
       </Flex>
       {creating && (
         <InventoryWarehouseForm

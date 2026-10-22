@@ -146,12 +146,12 @@ export default async function sync(companyId: string, attendanceIds?: ReadonlySe
         if (pendingAfterPush === 0 || retryablePending.length === 0) {
           pushSuccessful = true;
           if (pendingAfterPush > 0) {
-            lastPushError = new Error("Legacy Leave sync entries are preserved and await explicit TimeOff motif review.");
+            lastPushError = new Error("Retired Leave entries are retained locally and are not sent to the server.");
           }
 
           console.log(pendingAfterPush === 0
             ? "ALL PENDING CHANGES PUSHED SUCCESSFULLY."
-            : "ONLY LEGACY LEAVE CHANGES AWAIT EXPLICIT TIMEOFF REVIEW.");
+            : "ONLY RETIRED LEAVE ENTRIES REMAIN IN THE LOCAL QUEUE.");
 
           break;
         }

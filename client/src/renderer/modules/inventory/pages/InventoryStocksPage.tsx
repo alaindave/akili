@@ -39,6 +39,7 @@ import type {
 } from "../../../../common/types/inventory/InventoryWarehouse";
 import useAdminUser from "../../../../store/auth.store";
 import useSyncStore from "../../../../store/sync.store";
+import PageSubtitle from "../../../components/common/PageSubtitle";
 
 interface StockData {
   items: InventoryItem[];
@@ -299,27 +300,20 @@ function CompanyStocks({ companyId }: { companyId: string }) {
       p={4}
       pb={{ base: 0, md: 4 }}
     >
-      <Box mt="0.rem">
+      <Box position="relative" top="0.6rem">
         <Heading
           as="h1"
           color="#1F2937"
-          fontSize={{ base: "1.4rem", sm: "1.4rem", md: "1.5rem" }}
+          fontSize={{ base: "1.1rem", sm: "1.2rem", md: "1.3rem" }}
           fontWeight="700"
           lineHeight="1.1"
           flexShrink={0}
         >
           Stocks
         </Heading>
-        <Text
-          fontSize={{ base: "0.7rem", sm: "0.8rem", md: "0.9rem" }}
-          lineHeight="1.3"
-          color="gray.600"
-          fontWeight="400"
-          mt={{ base: "1px", sm: "1px", md: "px" }}
-          flexShrink={0}
-        >
+        <PageSubtitle mt="0.2rem">
           Consultez les quantités disponibles.
-        </Text>
+        </PageSubtitle>
       </Box>
       <Flex
         direction="column"

@@ -4,6 +4,7 @@ import {
   Button,
   Flex,
   Grid,
+  Heading,
   HStack,
   Text,
   Textarea,
@@ -39,7 +40,7 @@ const attendanceDateFormatter = new Intl.DateTimeFormat("en-CA", {
   day: "2-digit",
 });
 
-const EmployeeAdminPage = () => {
+const EmployeeDashboardPage = () => {
   const navigate = useNavigate();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [leaves, setLeaves] = useState<Leave[]>([]);
@@ -265,16 +266,16 @@ const EmployeeAdminPage = () => {
       >
         <Box>
           <HStack>
-            <Text
+            <Heading
               fontSize="clamp(1.3rem, 1vw + 0.8rem, 1.4rem)"
               fontWeight="700"
               color="#03143B"
             >
               Tableau de bord
-            </Text>
+            </Heading>
           </HStack>
 
-          <PageSubtitle position="relative" bottom="0.3rem">
+          <PageSubtitle>
             Vue d'ensemble de votre gestion de personnel
           </PageSubtitle>
         </Box>
@@ -476,4 +477,4 @@ const EmployeeAdminPage = () => {
   );
 };
 
-export default EmployeeAdminPage;
+export default EmployeeDashboardPage;

@@ -76,6 +76,7 @@ const canonical = rows => BSON.EJSON.stringify(rows, { relaxed: false });
     assert.equal(await interrupted.collection('migrations').countDocuments({}),0);
     assert.equal((await migrateTimeOff(interrupted)).migrated,4);
     // Never overwrite an incompatible record, even when company IDs differ.
+    await interrupted.collection('migrations').deleteOne({_id:TIME_OFF_MIGRATION});
     await interrupted.collection('time_off').updateOne({_id:'l0'},{$set:{companyId:'other'}});
     await assert.rejects(()=>migrateTimeOff(interrupted),/Conflicting target/);
     assert.equal((await interrupted.collection('time_off').findOne({_id:'l0'})).companyId,'other');
@@ -86,7 +87,7 @@ const canonical = rows => BSON.EJSON.stringify(rows, { relaxed: false });
     const empty=client.db('migration_empty');
     assert.equal((await migrateTimeOff(empty)).migrated,0);
     assert.equal((await migrateTimeOff(empty)).alreadyApplied,true);
-    console.log('PASS real MongoDB: actual collection names, string/ObjectId IDs, BSON dates, companies, policies unresolved, payroll references, tombstones, indexes/validators, counters, idempotency, interruption recovery, conflict protection and empty database.');
+    console.log('PASS real MongoDB: actual collection names, string/ObjectId IDs, BSON dates, companies, nullable historical policies, payroll references, tombstones, indexes/validators, counters, idempotency, interruption recovery, conflict protection and empty database.');
   } finally {
     await client.close();
     child.kill('SIGTERM');

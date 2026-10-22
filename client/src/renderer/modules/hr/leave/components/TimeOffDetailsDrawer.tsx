@@ -16,19 +16,23 @@ import {
   FormLabel,
   HStack,
   SimpleGrid,
+  Spacer,
   Text,
   Textarea,
   VStack,
   useToast,
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
-import type { LeaveWithEmployee } from "../../../../../common/types/hr/time-off/TimeOffWithEmployee";
 import useAdminUser from "../../../../../store/auth.store";
 import useSyncStore from "../../../../../store/sync.store";
-import { useLeave, useUpdateLeave } from "../hooks/useLeave";
+import {
+  useTimeOff,
+  useUpdateTimeOff,
+  useTimeOffMotifs,
+} from "../hooks/useTimeOff";
 
 interface Props {
-  leave: LeaveWithEmployee;
+  timeOff: Awaited<ReturnType<typeof window.electron.hr.timeOff.list>>[number];
   photoUrl: string;
   remainingLeave: number;
   isOpen: boolean;
@@ -36,10 +40,16 @@ interface Props {
 }
 
 const statuses = {
-  ATTENTE_APPROBATION: { label: "Attente approbation", color: "yellow" },
-  APPROUVÉ: { label: "Approuvé", color: "green" },
-  REFUSÉ: { label: "Refusé", color: "red" },
-  ANNULÉ: { label: "Annulé", color: "blue" },
+  PENDING: { label: "En attente d'approbation", color: "yellow" },
+  APPROVED: { label: "Approuvé", color: "green" },
+  REJECTED: { label: "Refusé", color: "red" },
+  CANCELLED: { label: "Annulé", color: "blue" },
+};
+
+const payrollTreatmentLabels: Record<string, string> = {
+  PAID: "Payé",
+  UNPAID: "Non payé",
+  PARTIALLY_PAID: "Paie partielle",
 };
 
 function formatDate(value?: string) {
@@ -66,8 +76,8 @@ function parseNotes(value?: string) {
     });
 }
 
-export default function LeaveDetailsDrawer({
-  leave,
+export default function TimeOffDetailsDrawer({
+  timeOff,
   photoUrl,
   remainingLeave,
   isOpen,
@@ -75,17 +85,24 @@ export default function LeaveDetailsDrawer({
 }: Props) {
   const user = useAdminUser((store) => store.adminUser);
   const syncVersion = useSyncStore((store) => store.syncVersion);
-  const { data: savedLeave, refetch } = useLeave(user.companyId, leave._id);
-  const updateLeave = useUpdateLeave(user.companyId);
+  const { data: savedTimeOff, refetch } = useTimeOff(
+    user.companyId,
+    timeOff._id
+  );
+  const { data: motifs = [] } = useTimeOffMotifs(user.companyId);
+  const updateTimeOff = useUpdateTimeOff(user.companyId);
   const [note, setNote] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const toast = useToast();
-  const currentLeave = savedLeave ?? leave;
-  const notes = parseNotes(currentLeave.additionalNotes);
+  const currentTimeOff = savedTimeOff ?? timeOff;
+  const notes = parseNotes(currentTimeOff.additionalNotes);
+  const motif = motifs.find((item) => item._id === currentTimeOff.motifId);
+  const payrollTreatment =
+    currentTimeOff.motifSnapshot?.payrollTreatment ?? motif?.payrollTreatment;
   const canAddNotes = user.role === "ADMIN" || user.role === "MANAGER";
-  const status = statuses[currentLeave.status as keyof typeof statuses];
-  const start = Date.parse(currentLeave.startDate.slice(0, 10));
-  const end = Date.parse(currentLeave.endDate.slice(0, 10));
+  const status = statuses[currentTimeOff.status as keyof typeof statuses];
+  const start = Date.parse(currentTimeOff.startDate.slice(0, 10));
+  const end = Date.parse(currentTimeOff.endDate.slice(0, 10));
   const days =
     Number.isFinite(start) && Number.isFinite(end)
       ? Math.max(0, Math.round((end - start) / 86400000) + 1)
@@ -100,12 +117,12 @@ export default function LeaveDetailsDrawer({
     setIsSaving(true);
     try {
       // Read the latest saved notes before appending to preserve existing entries.
-      const latest = await window.electron.hr.leave.getLeaveById(
+      const latest = await window.electron.hr.timeOff.get(
         user.companyId,
-        leave._id
+        timeOff._id
       );
       if (!latest || latest.isDeleted)
-        throw new Error("Cette demande de congé n'est plus disponible.");
+        throw new Error("Cette demande n'est plus disponible.");
       const author =
         [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
       const entry = `${author} — ${new Date().toLocaleDateString(
@@ -114,8 +131,8 @@ export default function LeaveDetailsDrawer({
         hour: "2-digit",
         minute: "2-digit",
       })}\n${note.trim()}`;
-      await updateLeave.mutateAsync({
-        _id: leave._id,
+      await updateTimeOff.mutateAsync({
+        _id: timeOff._id,
         updates: {
           additionalNotes: [latest.additionalNotes?.trim(), entry]
             .filter(Boolean)
@@ -156,39 +173,59 @@ export default function LeaveDetailsDrawer({
       <DrawerContent>
         <DrawerCloseButton isDisabled={isSaving} />
         <DrawerHeader borderBottomWidth="1px" pr={12}>
-          <Text mb={4}>Détails du congé</Text>
+          <Text mb={4}>Détails de la demande</Text>
           <HStack spacing={4}>
             <Avatar
               src={photoUrl}
-              name={`${leave.firstName} ${leave.lastName}`}
+              name={`${timeOff.firstName} ${timeOff.lastName}`}
               size="lg"
             />
             <Box>
               <Text>
-                {leave.firstName} {leave.lastName}
+                {timeOff.firstName} {timeOff.lastName}
               </Text>
               <Text fontSize="sm" fontWeight="normal" color="gray.500">
-                {leave.department || "Sans département"}{" "}
-                {leave.role ? `· ${leave.role}` : ""}
+                {timeOff.department || "Sans département"}{" "}
+                {timeOff.role ? `· ${timeOff.role}` : ""}
               </Text>
               <Badge mt={2} colorScheme={status?.color ?? "gray"}>
-                {status?.label ?? currentLeave.status}
+                {status?.label ?? currentTimeOff.status}
               </Badge>
             </Box>
+            <Spacer />
+            <Text
+              fontWeight="semibold"
+              whiteSpace="pre-wrap"
+              overflowWrap="anywhere"
+            >
+              {currentTimeOff.motifId == null
+                ? "Congé"
+                : currentTimeOff.motifSnapshot?.label ??
+                  motifs.find((motif) => motif._id === currentTimeOff.motifId)
+                    ?.label ??
+                  "Motif non vérifié"}
+            </Text>
           </HStack>
         </DrawerHeader>
         <DrawerBody py={6}>
           <VStack align="stretch" spacing={6}>
             <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={5}>
               {[
-                ["Date de début", formatDate(currentLeave.startDate)],
-                ["Date de fin", formatDate(currentLeave.endDate)],
+                ["Date de début", formatDate(currentTimeOff.startDate)],
+                ["Date de fin", formatDate(currentTimeOff.endDate)],
                 ["Durée", `${days} jour${days !== 1 ? "s" : ""}`],
+                ["Demande soumise le", formatDate(currentTimeOff.submittedAt)],
                 [
                   "Solde de congé",
                   `${remainingLeave} jour${remainingLeave !== 1 ? "s" : ""}`,
                 ],
-                ["Demande soumise le", formatDate(currentLeave.submittedAt)],
+                [
+                  "Traitement de paie",
+                  payrollTreatment
+                    ? payrollTreatmentLabels[payrollTreatment] ??
+                      payrollTreatment
+                    : "-",
+                ],
               ].map(([label, value]) => (
                 <Box key={label}>
                   <Text fontSize="sm" color="gray.500" mb={1}>
@@ -198,94 +235,84 @@ export default function LeaveDetailsDrawer({
                 </Box>
               ))}
             </SimpleGrid>
-            <Box>
-              <Text fontSize="sm" color="gray.500" mb={2}>
-                Objet
-              </Text>
-              <Text
-                fontWeight="semibold"
-                whiteSpace="pre-wrap"
-                overflowWrap="anywhere"
-              >
-                {currentLeave.motif}
-              </Text>
-            </Box>
             <Divider />
             <Box>
               <Text fontWeight="bold" mb={3}>
-                Motif
+                Justification
               </Text>
               <Text
                 whiteSpace="pre-wrap"
                 overflowWrap="anywhere"
-                color={currentLeave.notes ? "gray.700" : "gray.500"}
+                color={currentTimeOff.notes ? "gray.700" : "gray.500"}
               >
-                {currentLeave.notes || "Aucun motif renseigné."}
+                {currentTimeOff.notes || "Aucun motif renseigné."}
               </Text>
             </Box>
-            <Divider />
-            <Box>
-              <Text fontWeight="bold" mb={3}>
-                Notes
-              </Text>
-              <VStack align="stretch" spacing={6}>
-                {notes.length ? (
-                  notes.map((entry, index) => (
-                    <HStack key={index} align="start" spacing={3}>
-                      <Avatar
-                        size="sm"
-                        bg="#f5f5f5"
-                        color="#525252"
-                        border="1px solid #dedede"
-                        name={entry.author}
-                      />
-                      <Box flex="1" minW={0}>
-                        <Flex
-                          justify="space-between"
-                          gap={2}
-                          wrap="wrap"
-                          mb={2}
-                        >
-                          <Text fontSize="sm" fontWeight="600" color="gray.700">
-                            {entry.author || "Utilisateur"}
-                          </Text>
-                          {entry.date && (
-                            <Text fontSize="xs" color="#737373">
-                              {entry.date}
-                            </Text>
-                          )}
-                        </Flex>
-                        <Text
-                          fontSize="sm"
-                          lineHeight="1.8"
-                          whiteSpace="pre-wrap"
-                          overflowWrap="anywhere"
-                          color="gray.700"
-                        >
-                          {entry.text}
-                        </Text>
-                      </Box>
-                    </HStack>
-                  ))
-                ) : (
-                  <Text fontSize="sm" color="#737373">
-                    Aucune note pour le moment.
+            {notes.length > 0 && (
+              <>
+                <Divider />
+                <Box>
+                  <Text fontWeight="bold" mb={3}>
+                    Commentaires
                   </Text>
-                )}
-              </VStack>
-            </Box>
+                  <VStack align="stretch" spacing={6}>
+                    {notes.map((entry, index) => (
+                      <HStack key={index} align="start" spacing={3}>
+                        <Avatar
+                          size="sm"
+                          bg="#f5f5f5"
+                          color="#525252"
+                          border="1px solid #dedede"
+                          name={entry.author}
+                        />
+                        <Box flex="1" minW={0}>
+                          <Flex
+                            justify="space-between"
+                            gap={2}
+                            wrap="wrap"
+                            mb={2}
+                          >
+                            <Text
+                              fontSize="sm"
+                              fontWeight="600"
+                              color="gray.700"
+                            >
+                              {entry.author || "Utilisateur"}
+                            </Text>
+                            {entry.date && (
+                              <Text fontSize="xs" color="#737373">
+                                {entry.date}
+                              </Text>
+                            )}
+                          </Flex>
+                          <Text
+                            fontSize="sm"
+                            lineHeight="1.8"
+                            whiteSpace="pre-wrap"
+                            overflowWrap="anywhere"
+                            color="gray.700"
+                          >
+                            {entry.text}
+                          </Text>
+                        </Box>
+                      </HStack>
+                    ))}
+                  </VStack>
+                </Box>
+              </>
+            )}
           </VStack>
         </DrawerBody>
         {canAddNotes && (
           <DrawerFooter borderTopWidth="1px">
             <VStack align="stretch" width="100%" spacing={3}>
               <FormControl>
-                <FormLabel htmlFor={`leave-note-${leave._id}`}>
-                  Ajouter une note
+                <FormLabel htmlFor={`time-off-note-${timeOff._id}`}>
+                  Ajouter un commentaire
                 </FormLabel>
                 <Textarea
-                  id={`leave-note-${leave._id}`}
-                  placeholder="Écrivez votre note..."
+                  id={`time-off-note-${timeOff._id}`}
+                  placeholder="Écrivez votre commentaire..."
                   value={note}
                   onChange={(event) => setNote(event.target.value)}
                   isDisabled={isSaving}
@@ -300,7 +327,7 @@ export default function LeaveDetailsDrawer({
                 isLoading={isSaving}
                 loadingText="Enregistrement..."
               >
-                Ajouter la note
+                Ajouter
               </Button>
             </VStack>
           </DrawerFooter>

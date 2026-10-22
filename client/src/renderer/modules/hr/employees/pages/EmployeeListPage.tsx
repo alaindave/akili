@@ -3,6 +3,7 @@ import {
   Box,
   Button,
   Flex,
+  Heading,
   HStack,
   List,
   ListItem,
@@ -12,13 +13,15 @@ import {
   Text,
   VStack,
 } from "@chakra-ui/react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FaAddressBook } from "react-icons/fa6";
 import { FaSyncAlt } from "react-icons/fa";
 
 import useAdminUser from "../../../../../store/auth.store";
 import AddEmployee from "../components/EmployeeAdd";
 import EmployeeCard from "../components/EmployeeCard";
+import DeferredEmployeeCard from "../components/DeferredEmployeeCard";
+import { useAttendanceByDate } from "../../attendance/hooks/useAttendance";
 import EmployeeFilterMenu from "../components/EmployeeFilterMenu";
 import { useEmployees } from "../hooks/useEmployees";
 
@@ -40,11 +43,27 @@ const EmployeeListPage = () => {
     refetch,
   } = useEmployees();
 
+  const today = new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  const {
+    data: attendance = [],
+    isLoading: loadingAttendance,
+    refetch: refetchAttendance,
+  } = useAttendanceByDate(user.companyId, today);
+  const attendanceByEmployee = useMemo(
+    () => new Map(attendance.map((record) => [record.employeeId, record])),
+    [attendance]
+  );
+  const previousSync = useRef(syncVersion);
   useEffect(() => {
-    if (syncVersion > 0) {
-      refetch();
-    }
-  }, [syncVersion, refetch]);
+    if (previousSync.current === syncVersion) return;
+    previousSync.current = syncVersion;
+    void refetch();
+    void refetchAttendance();
+  }, [syncVersion, refetch, refetchAttendance]);
 
   const loading = isLoading || isFetching;
 
@@ -92,20 +111,9 @@ const EmployeeListPage = () => {
             {/* LEFT COLUMN */}
             <Box flex="1" minWidth={0}>
               <HStack mt="0.3rem" spacing="4px" align="center">
-                <Text
-                  color="#03143B"
-                  fontSize={{
-                    base: "1.2rem",
-                    sm: "1.3rem",
-                    md: "1.4rem",
-                    lg: "1.45rem",
-                  }}
-                  fontWeight="700"
-                  lineHeight="1.2"
-                  noOfLines={1}
-                >
+                <Heading size="md" color="#03143B">
                   Employés
-                </Text>
+                </Heading>
 
                 <Button
                   variant="ghost"
@@ -117,7 +125,10 @@ const EmployeeListPage = () => {
                   color="gray.600"
                   _hover={{ bg: "gray.200" }}
                   _active={{ bg: "gray.300" }}
-                  onClick={() => refetch()}
+                  onClick={() => {
+                    void refetch();
+                    void refetchAttendance();
+                  }}
                   aria-label="Actualiser les employés"
                 >
                   <FaSyncAlt />
@@ -284,7 +295,17 @@ const EmployeeListPage = () => {
                   }}
                   m="0"
                 >
-                  <EmployeeCard employeeId={employee._id} />
+                  <DeferredEmployeeCard>
+                    <EmployeeCard
+                      employee={employee}
+                      attendance={
+                        attendanceByEmployee.get(employee._id) ?? null
+                      }
+                      loadingAttendance={loadingAttendance}
+                      refetchAttendance={refetchAttendance}
+                      formattedDate={today}
+                    />
+                  </DeferredEmployeeCard>
                 </ListItem>
               ))}
 

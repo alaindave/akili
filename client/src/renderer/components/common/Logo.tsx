@@ -78,16 +78,7 @@ const Logo = ({
   }, [companyId, syncVersion]);
 
   return (
-    <Flex
-      align="center"
-      width="fit-content"
-      maxWidth="100%"
-      gap={{
-        base: "4px",
-        sm: "6px",
-        md: "8px",
-      }}
-    >
+    <Flex align="center" width="fit-content" maxWidth="100%" gap="4px">
       {/* Logo */}
       <Link
         to="/admin"
@@ -149,16 +140,19 @@ const Logo = ({
               sm: "1px",
               md: "2px",
             }}
-            mr="0.8rem"
             fontSize={{
               base: "0.7rem",
-              sm: "0.8rem",
-              md: "0.9rem",
+              sm: "0.74rem",
+              md: "0.78rem",
+              lg: "0.82rem",
             }}
+            letterSpacing="-0.01em"
             lineHeight="1.3"
             color="gray.600"
             fontWeight="400"
             whiteSpace="nowrap"
+            wordBreak="normal"
+            overflowWrap="normal"
           >
             {text}
           </Text>

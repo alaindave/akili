@@ -63,7 +63,7 @@ import { notifyManagerOfAttendanceDailyCheck } from "../../modules/hr/attendance
 import { getMonthName } from "../../../util/monthFormatter.util.js";
 import { markAttendanceSynced } from "../../../database/repositories/modules/hr/attendances.repository.js";
 import { markAttendanceDailyCheckSynced } from "../../../database/repositories/modules/hr/attendanceDailyCheck.repository.js";
-import { pushTimeOffQueue } from "./timeOffSync.service.js";
+import { prepareTimeOffMutation, acknowledgeTimeOff } from "../../../database/repositories/modules/hr/timeOff.repository.js";
 
 // Notification queue
 
@@ -107,17 +107,8 @@ export async function pushPendingChanges(
    */
 
   let pending = await getUnsyncedItems(companyId);
-  let timeOffFailures: string[] = [];
-  let timeOffSyncedCount = 0;
   if (attendanceIds) {
     pending = pending.filter(item => item.entity === "attendance" && attendanceIds.has(item.entityId));
-  }
-  if (!attendanceIds && pending.some(item => ["time_off_motif", "time_off", "leave"].includes(item.entity))) {
-    const result = await pushTimeOffQueue(companyId, API_URL ?? "", token, pending);
-    timeOffFailures = result.failures;
-    timeOffSyncedCount = result.synced.length;
-    const handledEntities = new Set(["time_off_motif", "time_off", "leave"]);
-    pending = (await getUnsyncedItems(companyId)).filter(item => !handledEntities.has(item.entity));
   }
   if (
     pending.some((item) =>
@@ -142,8 +133,8 @@ export async function pushPendingChanges(
 
     return {
       pendingChanges: remaining.length,
-      syncedCount: timeOffSyncedCount,
-      failures: timeOffFailures,
+      syncedCount: 0,
+      failures: [],
     };
   }
 
@@ -162,6 +153,7 @@ export async function pushPendingChanges(
   // Old verification entries have entityId but no payload._id. Repair only that
   // unambiguous omission; a disagreement between two supplied IDs is a conflict.
   for (const item of pending) {
+    if (item.entity === "leave") continue;
     const data = JSON.parse(item.payload);
     if (item.companyId !== companyId || data.companyId !== companyId) {
       throw new Error("Sync company does not match the queued record.");
@@ -187,7 +179,7 @@ export async function pushPendingChanges(
   const inventoryRecords = new Set<string>();
   const payrollProfiles = new Set<string>();
   const employeeRecords = new Set<string>();
-  const leaveRecords = new Set<string>();
+  const timeOffRecords = new Set<string>();
   const latestPhotos = new Map<string, string>();
   const supersededPhotos = new Map<string, string[]>();
   for (const item of pending) {
@@ -196,14 +188,21 @@ export async function pushPendingChanges(
   }
 
   for (const item of pending) {
+    // Retired Leave entries are retained locally; only canonical TimeOff mutations are pushed.
+    if (item.entity === "leave") continue;
     const snapshot = JSON.parse(item.payload);
     if (item.entity === "employee") {
       if (employeeRecords.has(item.entityId)) continue;
       employeeRecords.add(item.entityId);
     }
-    if (item.entity === "leave") {
-      if (leaveRecords.has(item.entityId)) continue;
-      leaveRecords.add(item.entityId);
+    if (item.entity === "time_off" || item.entity === "time_off_motif") {
+      const key = `${item.entity}:${item.entityId}`;
+      if (timeOffRecords.has(key)) continue;
+      timeOffRecords.add(key);
+      // A request must not use the first revision of a policy with later edits still queued.
+      if (item.entity === "time_off" && snapshot.motifId && pending.filter(entry =>
+        entry.entity === "time_off_motif" && entry.entityId === snapshot.motifId).length > 1) continue;
+      Object.assign(item, await prepareTimeOffMutation(item));
     }
     // Later edits need the server revision acknowledged by this snapshot.
     if (item.entity === "payroll_profile") {
@@ -305,7 +304,7 @@ export async function pushPendingChanges(
     return {
       pendingChanges: remainingPending.length,
       syncedCount: obsoleteQueueIds.length,
-      failures: timeOffFailures,
+      failures: [],
     };
   }
 
@@ -315,6 +314,9 @@ export async function pushPendingChanges(
    * ---------------------------------------------------------
    */
 
+  // Preserve order within each group. Documents and employees precede policies and requests.
+  const priority = (entity: string) => entity === "time_off" ? 2 : entity === "time_off_motif" ? 1 : 0;
+  validPending.sort((a, b) => priority(a.entity) - priority(b.entity));
   const form = new FormData();
 
   const items = validPending.map((item) => {
@@ -571,6 +573,12 @@ export async function pushPendingChanges(
     }
 
     const data = JSON.parse(item.payload);
+
+    if (item.entity === "time_off" || item.entity === "time_off_motif") {
+      await acknowledgeTimeOff(companyId, item.entity, item, response.data.records?.[item._id]);
+      successfullyProcessedQueueIds.push(item._id);
+      continue;
+    }
 
     // An acknowledgement applies to the sent queue entry, not edits made
     // while the network request was in flight.
@@ -834,7 +842,7 @@ export async function pushPendingChanges(
   const remainingPending = await getUnsyncedItems(companyId);
 
   const pendingChanges = remainingPending.length;
-  const failures: string[] = [...timeOffFailures];
+  const failures: string[] = [];
   const rejected: unknown = response.data.failed;
   if (Array.isArray(rejected)) {
     for (const failure of rejected) {

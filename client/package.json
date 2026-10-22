@@ -46,6 +46,7 @@
     "dev:electron": "wait-on http://localhost:5173 && cross-env NODE_ENV=development electron .",
     "build:renderer": "vite build",
     "test:ipc": "node scripts/check-electron-ipc.cjs",
+    "test:time-off-sync": "node scripts/check-time-off-sync.mjs",
     "test:company-selection": "node scripts/check-company-selection.mjs",
     "test:react-query-offline": "node scripts/check-react-query-offline.mjs",
     "test:inventory-transactions": "node scripts/check-inventory-transactions.cjs",

@@ -14,7 +14,7 @@ interface Props {
   onFilterClicked: (filter: string) => void;
 }
 
-const LeaveStatusFilter = ({ onFilterClicked }: Props) => {
+const TimeOffStatusFilter = ({ onFilterClicked }: Props) => {
   const [filter, setFilter] = useState("");
 
   return (
@@ -65,7 +65,7 @@ const LeaveStatusFilter = ({ onFilterClicked }: Props) => {
             backgroundColor: "rgba(255,196,0,0.14)",
           }}
           onClick={() => {
-            onFilterClicked("ATTENTE_APPROBATION");
+            onFilterClicked("PENDING");
             setFilter("Attente d'approbation");
           }}
         >
@@ -83,7 +83,7 @@ const LeaveStatusFilter = ({ onFilterClicked }: Props) => {
             backgroundColor: "rgba(255,196,0,0.14)",
           }}
           onClick={() => {
-            onFilterClicked("APPROUVÉ");
+            onFilterClicked("APPROVED");
             setFilter("Approuvé");
           }}
         >
@@ -101,7 +101,7 @@ const LeaveStatusFilter = ({ onFilterClicked }: Props) => {
             backgroundColor: "rgba(255,196,0,0.14)",
           }}
           onClick={() => {
-            onFilterClicked("REFUSÉ");
+            onFilterClicked("REJECTED");
             setFilter("Refusé");
           }}
         >
@@ -119,7 +119,7 @@ const LeaveStatusFilter = ({ onFilterClicked }: Props) => {
             backgroundColor: "rgba(255,196,0,0.14)",
           }}
           onClick={() => {
-            onFilterClicked("ANNULÉ");
+            onFilterClicked("CANCELLED");
             setFilter("Annulé");
           }}
         >
@@ -133,4 +133,4 @@ const LeaveStatusFilter = ({ onFilterClicked }: Props) => {
   );
 };
 
-export default LeaveStatusFilter;
+export default TimeOffStatusFilter;

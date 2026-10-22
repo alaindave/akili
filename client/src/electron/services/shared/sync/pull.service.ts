@@ -98,7 +98,7 @@ import { getToken } from "../../../auth.js";
 import { getPendingSyncItems } from "../../../database/repositories/shared/sync.repository.js";
 
 import { getEmployeePhotoDir } from "../../../storage/directories.js";
-import { pullTimeOffChanges } from "./timeOffSync.service.js";
+import { upsertPulledTimeOff } from "../../../database/repositories/modules/hr/timeOff.repository.js";
 import { withEmployeeMedia } from "../../../storage/employeeMediaLock.js";
 import { downloadCompanyLogo } from "../../../util/downloadCompanyLogo.util.js";
 import { upsertAttendance } from "../../../database/repositories/modules/hr/attendances.repository.js";
@@ -272,17 +272,19 @@ export async function pullLatestChanges(companyId: string) {
        TIME OFF MOTIFS, THEN REQUESTS
     ===================================================== */
 
-    let timeOffMotifCount = 0;
-    let timeOffRequestCount = 0;
-    try {
-      const token = await getToken(companyId);
-      if (!token) throw new Error("PULL SYNC: authentication token is missing");
-      const result = await pullTimeOffChanges(companyId, API_URL ?? "", token);
-      timeOffMotifCount = result.motifs;
-      timeOffRequestCount = result.requests;
-    } catch (error) {
-      errors.push(`TimeOff pull failed: ${String(error)}`);
-    }
+    const motifsResult = await pullIndependently<Parameters<typeof upsertPulledTimeOff>[2]>(
+      companyId, "time_off_motif", async items => {
+        for (const row of items) await upsertPulledTimeOff(companyId, "time_off_motif", row);
+        return true;
+      });
+    const requestsResult = await pullIndependently<Parameters<typeof upsertPulledTimeOff>[2]>(
+      companyId, "time_off", async items => {
+        for (const row of items) await upsertPulledTimeOff(companyId, "time_off", row);
+        return true;
+      });
+    const timeOffMotifCount = motifsResult.items.length;
+    const timeOffRequestCount = requestsResult.items.length;
+    latestServerTime = requestsResult.serverTime ?? motifsResult.serverTime ?? latestServerTime;
     // Do not query the retired /sync entity "leave". Historical rows remain
     // archived until explicitly mapped to a company policy.
     const leaves: Leave[] = [];

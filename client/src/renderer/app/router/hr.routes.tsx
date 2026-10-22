@@ -1,12 +1,12 @@
 import { ModuleProvider } from "../../context/ModuleContext";
 
-import EmployeeAdminPage from "../../modules/hr/employees/pages/EmployeeAdminPage";
+import EmployeeDashboardPage from "../../modules/hr/employees/pages/EmployeeDashboardPage";
 import EmployeeListPage from "../../modules/hr/employees/pages/EmployeeListPage";
 import EmployeeDetailsPage from "../../modules/hr/employees/components/EmployeeDetailsPage";
 import EmployeeAdminLayout from "../../modules/hr/employees/components/EmployeeAdminLayout";
 
 import TimeOffPage from "../../modules/hr/leave/pages/TimeOffPage";
-import EmployeeLeaveReport from "../../modules/hr/leave/pages/LeaveReport";
+import TimeOffEmployeeReport from "../../modules/hr/leave/pages/TimeOffEmployeeReport";
 
 import EmployeeAttendancePage from "../../modules/hr/attendance/pages/AttendancePage";
 import EmployeeAttendanceReport from "../../modules/hr/attendance/pages/AttendanceReportPage";
@@ -44,7 +44,7 @@ export const hrRoutes = {
   children: [
     {
       index: true,
-      element: <EmployeeAdminPage />,
+      element: <EmployeeDashboardPage />,
     },
 
     // Employees
@@ -62,7 +62,7 @@ export const hrRoutes = {
     },
     {
       path: "employees_list/:_id/leaves",
-      element: <EmployeeLeaveReport />,
+      element: <TimeOffEmployeeReport />,
     },
     {
       path: "employees_list/:_id/payslips",
@@ -83,7 +83,7 @@ export const hrRoutes = {
       element: <EmployeeAttendancePage />,
     },
 
-    // Leave
+    // Time Off
     {
       path: "leaves",
       element: <TimeOffPage />,

@@ -21,6 +21,10 @@ interface Props {
   body?: string;
   employee?: Employee;
   attendance?: AttendanceWithEmployee;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  loadingText?: string;
+  confirmColorScheme?: string;
 }
 
 const DeletionDialog = ({
@@ -32,6 +36,10 @@ const DeletionDialog = ({
   body,
   employee,
   attendance,
+  confirmLabel = "Oui",
+  cancelLabel = "Non",
+  loadingText = "Patientez...",
+  confirmColorScheme = "red",
 }: Props) => {
   const cancelRef = useRef<HTMLButtonElement>(null);
 
@@ -134,15 +142,15 @@ const DeletionDialog = ({
                 bg: "#E2E8F0",
               }}
             >
-              Non
+              {cancelLabel}
             </Button>
 
             <Button
-              colorScheme="red"
+              colorScheme={confirmColorScheme}
               onClick={onConfirmation}
               ml={3}
               isLoading={isDeleting}
-              loadingText="Patientez..."
+              loadingText={loadingText}
               spinnerPlacement="start"
               isDisabled={isDeleting}
               borderRadius="6px"
@@ -153,7 +161,7 @@ const DeletionDialog = ({
                 bg: "#C53030",
               }}
             >
-              Oui
+              {confirmLabel}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

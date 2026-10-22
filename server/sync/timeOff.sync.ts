@@ -1,11 +1,13 @@
 import { randomUUID } from "node:crypto";
-import type { ClientSession } from "mongoose";
+import mongoose, { type ClientSession } from "mongoose";
+import { createHash } from "node:crypto";
+import AdminUser from "../models/shared/adminUser.model.js";
 import * as repo from "../repositories/timeOff.repository.js";
 import { getNextSyncVersion } from "../utils/syncVersion.js";
 import { TimeOffStatus, type TimeOffRecord, type TimeOffMotifRecord, type TimeOffMotifSnapshot,
   type CreateMotif, type EditMotif, type CreateTimeOff, type EditTimeOff, type RequestFields } from "../types/timeOff.js";
 import { TimeOffError, validate, createMotifSchema, editMotifSchema, createRequestSchema, editRequestSchema,
-  actionSchema, rejectSchema, notesSchema, reviewSchema, listSchema, periodSchema } from "../validation/timeOff.validation.js";
+  actionSchema, rejectSchema, notesSchema, identifier, periodSchema } from "../validation/timeOff.validation.js";
 export interface TimeOffActor { companyId: string; _id: string; role: string }
 function reader(actor: TimeOffActor) {
   if (typeof actor.companyId !== "string" || !actor.companyId.trim() || typeof actor._id !== "string" || !actor._id.trim() ||
@@ -24,7 +26,6 @@ function checkVersion(actual: number, expected: number) {
   if (actual !== expected) throw new TimeOffError(409, "VERSION_CONFLICT", "Cette fiche a été modifiée. Actualisez-la avant de continuer.");
 }
 function missing(): never { throw new TimeOffError(404, "NOT_FOUND", "Fiche introuvable dans cette entreprise."); }
-function unresolved(): never { throw new TimeOffError(409, "LEGACY_REVIEW_REQUIRED", "Cette demande historique nécessite un rapprochement explicite avant toute modification de sa politique."); }
 function dates(value: RequestFields) {
   validate(periodSchema, { startDate: value.startDate, endDate: value.endDate,
     isPartialDay: value.isPartialDay, startTime: value.startTime, endTime: value.endTime });
@@ -84,21 +85,19 @@ async function save(row: TimeOffRecord, changes: Partial<TimeOffRecord>, session
   if (!saved) throw new TimeOffError(409, "VERSION_CONFLICT", "La demande a été modifiée simultanément.");
   return saved;
 }
-export async function listMotifs(actor: TimeOffActor) { reader(actor); await repo.assertTimeOffReady(); return repo.listMotifs(actor.companyId); }
-export async function getMotif(actor: TimeOffActor, id: string) { reader(actor); await repo.assertTimeOffReady(); return await repo.getMotif(actor.companyId, id) ?? missing(); }
-export async function createMotif(actor: TimeOffActor, body: unknown) {
+async function createMotif(actor: TimeOffActor, body: unknown, session: ClientSession) {
   writer(actor, true);
   const input = validate<CreateMotif>(createMotifSchema, body);
-  return repo.transaction(async session => {
+  return inSession(session, async session => {
     const now = new Date();
     return repo.insertMotif({ ...input, _id: input._id ?? randomUUID(), companyId: actor.companyId, isSystemDefault: false,
       createdAt: now, updatedAt: now, serverVersion: await getNextSyncVersion("time_off_motif", session), synced: 1, isDeleted: 0 }, session);
   });
 }
-export async function editMotif(actor: TimeOffActor, id: string, body: unknown) {
+async function editMotif(actor: TimeOffActor, id: string, body: unknown, session: ClientSession) {
   writer(actor, true);
   const { serverVersion, ...changes } = validate<EditMotif>(editMotifSchema, body);
-  return repo.transaction(async session => {
+  return inSession(session, async session => {
     const motif = await repo.getMotif(actor.companyId, id, session);
     if (!motif) missing();
     checkVersion(motif.serverVersion, serverVersion);
@@ -107,25 +106,15 @@ export async function editMotif(actor: TimeOffActor, id: string, body: unknown) 
       serverVersion: await getNextSyncVersion("time_off_motif", session) }, session) ?? missing();
   });
 }
-export async function deactivateMotif(actor: TimeOffActor, id: string, body: unknown) {
+async function deactivateMotif(actor: TimeOffActor, id: string, body: unknown, session: ClientSession) {
   const input = validate<{ serverVersion: number }>(actionSchema, body);
   // Retain the record, code and all historical references; never physically delete.
-  return editMotif(actor, id, { ...input, isActive: false });
+  return editMotif(actor, id, { ...input, isActive: false }, session);
 }
-export async function listRequests(actor: TimeOffActor, query: unknown) {
-  reader(actor);
-  await repo.assertTimeOffReady();
-  return repo.listRequests(actor.companyId, validate<{employeeId?: string; status?: TimeOffStatus; month?: string; includeDeleted?: string}>(listSchema, query));
-}
-export async function getRequest(actor: TimeOffActor, id: string) {
-  reader(actor);
-  await repo.assertTimeOffReady();
-  return await repo.getRequest(actor.companyId, id) ?? missing();
-}
-export async function createRequest(actor: TimeOffActor, body: unknown) {
+async function createRequest(actor: TimeOffActor, body: unknown, session: ClientSession) {
   writer(actor);
   const input = validate<CreateTimeOff>(createRequestSchema, body);
-  return repo.transaction(async session => {
+  return inSession(session, async session => {
     if (input._id && await repo.getRequest(actor.companyId, input._id, session)) {
       throw new TimeOffError(409, "DUPLICATE_KEY", "Cet identifiant de demande existe déjà.");
     }
@@ -138,86 +127,160 @@ export async function createRequest(actor: TimeOffActor, body: unknown) {
       serverVersion: await getNextSyncVersion("time_off", session) }, session);
   });
 }
-export async function editRequest(actor: TimeOffActor, id: string, body: unknown) {
+async function editRequest(actor: TimeOffActor, id: string, body: unknown, session: ClientSession) {
   writer(actor);
   const { serverVersion, ...changes } = validate<EditTimeOff>(editRequestSchema, body);
-  return repo.transaction(async session => {
+  return inSession(session, async session => {
     const row = await current(actor, id, serverVersion, session);
-    if (row.legacyNeedsReview || !row.motifId) unresolved();
     if (row.status !== TimeOffStatus.PENDING) throw new TimeOffError(409, "HISTORY_IMMUTABLE", "Seule une demande en attente peut être modifiée.");
-    const fields: RequestFields = { ...row, motifId: row.motifId, ...(changes.isPartialDay === false ? { startTime: undefined, endTime: undefined } : {}), ...changes };
+    const fields: RequestFields = { ...row, motifId: row.motifId ?? "", ...(changes.isPartialDay === false ? { startTime: undefined, endTime: undefined } : {}), ...changes };
     const motif = await policy(actor, row.employeeId, fields, session);
     const decision = motif.requiresApproval ? {} : await approval(actor, { ...fields, employeeId: row.employeeId }, motif, session);
     return save(row, { ...changes, ...decision }, session);
   });
 }
-export async function approveRequest(actor: TimeOffActor, id: string, body: unknown) {
+async function approveRequest(actor: TimeOffActor, id: string, body: unknown, session: ClientSession) {
   writer(actor, true);
   const input = validate<{ serverVersion: number }>(actionSchema, body);
-  return repo.transaction(async session => {
+  return inSession(session, async session => {
     const row = await current(actor, id, input.serverVersion, session);
-    if (row.legacyNeedsReview || !row.motifId) unresolved();
     if (row.status !== TimeOffStatus.PENDING) throw new TimeOffError(409, "INVALID_TRANSITION", "La demande n’est pas en attente d’approbation.");
-    const fields = { ...row, motifId: row.motifId };
+    const fields = { ...row, motifId: row.motifId ?? "" };
     const motif = await policy(actor, row.employeeId, fields, session);
     return save(row, await approval(actor, fields, motif, session), session);
   });
 }
-export async function rejectRequest(actor: TimeOffActor, id: string, body: unknown) {
+async function rejectRequest(actor: TimeOffActor, id: string, body: unknown, session: ClientSession) {
   writer(actor, true);
   const input = validate<{ serverVersion: number; rejectionReason: string }>(rejectSchema, body);
-  return repo.transaction(async session => {
+  return inSession(session, async session => {
     const row = await current(actor, id, input.serverVersion, session);
     if (row.status !== TimeOffStatus.PENDING) throw new TimeOffError(409, "INVALID_TRANSITION", "Seule une demande en attente peut être refusée.");
     return save(row, { status: TimeOffStatus.REJECTED, rejectionReason: input.rejectionReason }, session);
   });
 }
-export async function cancelRequest(actor: TimeOffActor, id: string, body: unknown) {
+async function cancelRequest(actor: TimeOffActor, id: string, body: unknown, session: ClientSession) {
   writer(actor);
   const input = validate<{ serverVersion: number }>(actionSchema, body);
-  return repo.transaction(async session => {
+  return inSession(session, async session => {
     const row = await current(actor, id, input.serverVersion, session);
     if (![TimeOffStatus.PENDING, TimeOffStatus.APPROVED].includes(row.status)) throw new TimeOffError(409, "INVALID_TRANSITION", "Cette demande ne peut plus être annulée.");
     const changes: Partial<TimeOffRecord> = { status: TimeOffStatus.CANCELLED };
     if (row.status === TimeOffStatus.APPROVED) {
       writer(actor, true);
-      let days = row.balanceDaysDeducted;
-      if (row.legacyNeedsReview || !row.motifId) {
-        dates({ motifId: row.motifId ?? "", startDate: row.startDate, endDate: row.endDate });
-        days = balanceWeekdays(row.startDate, row.endDate);
-        changes.balanceDaysDeducted = days;
-      }
-      if (days === undefined) unresolved();
+      const days = row.balanceDaysDeducted;
+      if (days === undefined) throw new TimeOffError(409, "BALANCE_METADATA_MISSING", "Le montant de la déduction initiale est manquant.");
       if (days > 0) await repo.adjustBalance(actor.companyId, row.employeeId, days, session);
     }
     return save(row, changes, session);
   });
 }
-export async function deleteRequest(actor: TimeOffActor, id: string, body: unknown) {
+async function deleteRequest(actor: TimeOffActor, id: string, body: unknown, session: ClientSession) {
   writer(actor, true);
   const input = validate<{ serverVersion: number }>(actionSchema, body);
-  return repo.transaction(async session => {
+  return inSession(session, async session => {
     const row = await current(actor, id, input.serverVersion, session);
     if (row.status === TimeOffStatus.APPROVED) throw new TimeOffError(409, "CANCELLATION_REQUIRED", "Annulez la demande approuvée avant de l’archiver.");
     return save(row, { isDeleted: 1 }, session);
   });
 }
-export async function addNotes(actor: TimeOffActor, id: string, body: unknown) {
+async function addNotes(actor: TimeOffActor, id: string, body: unknown, session: ClientSession) {
   writer(actor);
   const input = validate<{ serverVersion: number; additionalNotes: string }>(notesSchema, body);
-  return repo.transaction(async session => save(await current(actor, id, input.serverVersion, session), { additionalNotes: input.additionalNotes }, session));
+  return inSession(session, async session => save(await current(actor, id, input.serverVersion, session), { additionalNotes: input.additionalNotes }, session));
 }
-export async function reviewLegacyRequest(actor: TimeOffActor, id: string, body: unknown) {
-  writer(actor, true);
-  const input = validate<{serverVersion: number; motifId: string; supportingDocumentIds?: string[]; notes?: string}>(reviewSchema, body);
+// Helpers run inside the encompassing sync transaction, never a second session.
+function inSession<T>(session: ClientSession, action: (session: ClientSession) => Promise<T>) {
+  return action(session);
+}
+
+export async function timeOffSyncActor(companyId: string, userId: string): Promise<TimeOffActor> {
+  const user = await AdminUser.findOne({ _id: userId, companyId, isDeleted: 0 }).lean();
+  if (!user) throw new TimeOffError(403, "FORBIDDEN", "Utilisateur non autorisé.");
+  const actor = { companyId, _id: userId, role: user.role };
+  reader(actor);
+  return actor;
+}
+
+const motifKeys = ["code", "label", "category", "payrollTreatment", "deductFromLeaveBalance",
+  "requiresApproval", "requiresJustification", "requiresSupportingDocument", "isActive"];
+const requestKeys = ["motifId", "startDate", "endDate", "isPartialDay", "startTime", "endTime",
+  "notes", "additionalNotes", "supportingDocumentIds"];
+const receiptCollections = new WeakMap<object, Promise<unknown>>();
+async function ensureReceipts() {
+  await repo.assertTimeOffReady();
+  const db = mongoose.connection.db;
+  let ready = receiptCollections.get(db);
+  if (!ready) {
+    // Older MongoDB versions cannot create a collection inside a transaction.
+    ready = db.createCollection("time_off_sync_receipts").catch((error: { code?: number }) => {
+      if (error.code !== 48) { receiptCollections.delete(db); throw error; }
+    });
+    receiptCollections.set(db, ready);
+  }
+  await ready;
+}
+function select(data: Record<string, unknown>, keys: string[]) {
+  return Object.fromEntries(keys.filter(key => data[key] != null).map(key => [key, data[key]]));
+}
+function canonical(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
+  if (value && typeof value === "object") return `{${Object.entries(value).sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, val]) => `${JSON.stringify(key)}:${canonical(val)}`).join(",")}}`;
+  return JSON.stringify(value ?? null);
+}
+
+/** Only called by /sync/push. A receipt makes a committed operation replay-safe. */
+export async function syncTimeOff(
+  entity: "time_off" | "time_off_motif",
+  operation: "create" | "update" | "delete",
+  data: Record<string, unknown>,
+  actor: TimeOffActor
+) {
+  const id = validate<string>(identifier.required(), data._id);
+  const mutationId = validate<string>(identifier.required(), data.syncMutationId);
+  if (data.companyId !== actor.companyId) throw new TimeOffError(403, "FORBIDDEN", "Entreprise invalide.");
+  const action = data.requestedAction ??
+    (operation === "delete" ? "delete" : operation === "create" ? "create" :
+      data.additionalNotes !== undefined && !data.motifId ? "notes" : "edit");
+  const managerOnly = entity === "time_off_motif" || ["approve", "reject", "delete"].includes(String(action));
+  writer(actor, managerOnly);
+  const fingerprint = createHash("sha256").update(canonical({ entity, operation, data })).digest("hex");
+  const receiptId = createHash("sha256").update(`${actor.companyId}:${entity}:${mutationId}`).digest("hex");
+  await ensureReceipts();
   return repo.transaction(async session => {
-    const row = await current(actor, id, input.serverVersion, session);
-    if (!row.legacyNeedsReview || row.status !== TimeOffStatus.PENDING) {
-      throw new TimeOffError(409, "LEGACY_HISTORY_IMMUTABLE", "Seules les demandes historiques encore en attente peuvent être rapprochées d’un motif.");
+    const receipts = mongoose.connection.db.collection<{
+      _id: string; fingerprint: string; actorId: string; record: TimeOffRecord | TimeOffMotifRecord;
+    }>("time_off_sync_receipts");
+    const receipt = await receipts.findOne({ _id: receiptId }, { session });
+    if (receipt) {
+      // Another authorized user may resume this device's queue after a lost response.
+      if (receipt.fingerprint !== fingerprint)
+        throw new TimeOffError(409, "MUTATION_CONFLICT", "Identifiant de synchronisation déjà utilisé.");
+      return { serverVersion: receipt.record.serverVersion, record: receipt.record };
     }
-    const fields = { ...row, motifId: input.motifId, notes: input.notes ?? row.notes, supportingDocumentIds: input.supportingDocumentIds ?? [] };
-    const motif = await policy(actor, row.employeeId, fields, session);
-    const decision = motif.requiresApproval ? {} : await approval(actor, fields, motif, session);
-    return save(row, { motifId: input.motifId, notes: fields.notes, supportingDocumentIds: fields.supportingDocumentIds, legacyNeedsReview: false, ...decision }, session);
+    const version = { serverVersion: data.serverVersion };
+    let record: TimeOffRecord | TimeOffMotifRecord;
+    if (entity === "time_off_motif") {
+      if (data.isSystemDefault) throw new TimeOffError(403, "PROTECTED_MOTIF", "Ce motif système est protégé.");
+      record = operation === "create" ? await createMotif(actor, { _id: id, ...select(data, motifKeys) }, session) :
+        operation === "delete" ? await deactivateMotif(actor, id, version, session) :
+          await editMotif(actor, id, { ...select(data, motifKeys), ...version }, session);
+    } else if (operation === "create") {
+      record = await createRequest(actor, { _id: id, ...select(data, ["employeeId", ...requestKeys]) }, session);
+    } else if (operation === "delete") {
+      record = await deleteRequest(actor, id, version, session);
+    } else {
+      switch (action) {
+        case "approve": record = await approveRequest(actor, id, version, session); break;
+        case "reject": record = await rejectRequest(actor, id, { ...version, rejectionReason: data.rejectionReason }, session); break;
+        case "cancel": record = await cancelRequest(actor, id, version, session); break;
+        case "notes": record = await addNotes(actor, id, { ...version, additionalNotes: data.additionalNotes }, session); break;
+        case "edit": record = await editRequest(actor, id, { ...select(data, requestKeys), ...version }, session); break;
+        default: throw new TimeOffError(400, "INVALID_ACTION", "Action TimeOff inconnue.");
+      }
+    }
+    await receipts.insertOne({ _id: receiptId, fingerprint, actorId: actor._id, record }, { session });
+    return { serverVersion: record.serverVersion, record };
   });
 }

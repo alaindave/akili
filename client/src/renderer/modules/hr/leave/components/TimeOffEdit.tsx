@@ -1,5 +1,4 @@
-import LeaveMotifInput from "./LeaveMotifInput";
-import { LeaveMotif } from "../../../../../common/types/hr/time-off/TimeOff";
+import { TimeOffWithEmployee } from "../../../../../common/types/hr/time-off/TimeOff";
 import {
   Box,
   Button,
@@ -14,6 +13,7 @@ import {
   ModalFooter,
   ModalHeader,
   ModalOverlay,
+  Select,
   Text,
   Textarea,
   VStack,
@@ -24,35 +24,36 @@ import { Controller, useForm } from "react-hook-form";
 import { FaSave } from "react-icons/fa";
 import { RxCrossCircled } from "react-icons/rx";
 import { z } from "zod";
-import { LeaveWithEmployee } from "../../../../../common/types/hr/time-off/TimeOffWithEmployee";
 import useAdminUser from "../../../../../store/auth.store";
 import { useEffect } from "react";
-import { useUpdateLeave } from "../hooks/useLeave";
+import { useTimeOffMotifs, useUpdateTimeOff } from "../hooks/useTimeOff";
 
 const errorMessage = "Ce champ est obligatoire";
 
 const schema = z.object({
   startDate: z.string().min(1, { message: errorMessage }),
   endDate: z.string().min(1, { message: errorMessage }),
-  motif: z.string().trim().min(1, { message: errorMessage }),
+  motifId: z.string().trim().min(1, { message: errorMessage }),
   notes: z.string().min(1, { message: errorMessage }),
 });
 
-type LeaveData = z.infer<typeof schema>;
+type TimeOffData = z.infer<typeof schema>;
 
 interface Props {
-  leave: LeaveWithEmployee;
+  timeOff: TimeOffWithEmployee;
   onUpdated?: () => void;
   isOpen: boolean;
   onClose: () => void;
 }
 
-const LeaveEdit = ({ leave, onUpdated, isOpen, onClose }: Props) => {
+const TimeOffEdit = ({ timeOff, onUpdated, isOpen, onClose }: Props) => {
   const user = useAdminUser((store) => store.adminUser);
 
   const companyId = user?.companyId ?? "";
 
-  const updateLeaveMutation = useUpdateLeave(companyId);
+  const updateTimeOffMutation = useUpdateTimeOff(companyId);
+  const { data: motifs = [], isLoading: motifsLoading, isError: motifsError } = useTimeOffMotifs(companyId);
+  const activeMotifs = motifs.filter((motif) => motif.isActive);
 
   const {
     register,
@@ -60,35 +61,35 @@ const LeaveEdit = ({ leave, onUpdated, isOpen, onClose }: Props) => {
     reset,
     control,
     formState: { errors },
-  } = useForm<LeaveData>({
+  } = useForm<TimeOffData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      startDate: leave?.startDate ?? "",
-      endDate: leave?.endDate ?? "",
-      motif: leave?.motif ?? LeaveMotif.BILLET_SORTIE,
-      notes: leave?.notes ?? "",
+      startDate: timeOff?.startDate ?? "",
+      endDate: timeOff?.endDate ?? "",
+      motifId: timeOff?.motifId ?? "",
+      notes: timeOff?.notes ?? "",
     },
   });
 
   /*
-   * Reset the form whenever a different leave is opened.
+   * Reset the form whenever a different time off request is opened.
    */
   useEffect(() => {
-    if (!leave) {
+    if (!timeOff) {
       return;
     }
 
     reset({
-      startDate: leave.startDate ?? "",
-      endDate: leave.endDate ?? "",
-      motif: leave.motif ?? LeaveMotif.BILLET_SORTIE,
-      notes: leave.notes ?? "",
+      startDate: timeOff.startDate ?? "",
+      endDate: timeOff.endDate ?? "",
+      motifId: timeOff.motifId,
+      notes: timeOff.notes ?? "",
     });
 
-    updateLeaveMutation.reset();
-  }, [leave, reset]);
+    updateTimeOffMutation.reset();
+  }, [timeOff, reset]);
 
-  if (!leave) {
+  if (!timeOff) {
     return null;
   }
 
@@ -99,34 +100,32 @@ const LeaveEdit = ({ leave, onUpdated, isOpen, onClose }: Props) => {
     role,
     startDate,
     endDate,
-    motif,
+    motifId,
     notes,
-  } = leave;
+  } = timeOff;
 
-  const onSubmit = (data: LeaveData) => {
+  const onSubmit = (data: TimeOffData) => {
     if (!companyId) {
       console.error("COMPANY ID IS MISSING");
       return;
     }
 
-    if (!leave._id) {
-      console.error("LEAVE ID IS MISSING");
+    if (!timeOff._id) {
+      console.error("TIME OFF ID IS MISSING");
       return;
     }
 
     console.log("INFO TO UPDATE:", data);
 
-    updateLeaveMutation.mutate(
+    updateTimeOffMutation.mutate(
       {
-        _id: leave._id,
+        _id: timeOff._id,
         updates: data,
       },
       {
-        onSuccess: (updatedLeave) => {
-          console.log("UPDATED LEAVE:", updatedLeave);
-
+        onSuccess: (updatedTimeOff) => {
+          console.log("UPDATED TIME OFF:", updatedTimeOff);
           onUpdated?.();
-
           onClose();
         },
       }
@@ -134,18 +133,18 @@ const LeaveEdit = ({ leave, onUpdated, isOpen, onClose }: Props) => {
   };
 
   const handleFormClose = () => {
-    if (updateLeaveMutation.isPending) {
+    if (updateTimeOffMutation.isPending) {
       return;
     }
 
     reset({
       startDate,
       endDate,
-      motif,
+      motifId,
       notes,
     });
 
-    updateLeaveMutation.reset();
+    updateTimeOffMutation.reset();
 
     onClose();
   };
@@ -396,19 +395,36 @@ const LeaveEdit = ({ leave, onUpdated, isOpen, onClose }: Props) => {
 
                     <Controller
                       control={control}
-                      name="motif"
+                      name="motifId"
                       render={({ field }) => (
-                        <LeaveMotifInput
-                          key={`${leave._id}-${isOpen}`}
+                        <Select
                           {...field}
-                        />
+                          aria-label="Motif"
+                          color="#e6ebfe"
+                          bg="#08162b"
+                          width="350px"
+                          placeholder={motifsLoading ? "Chargement des motifs..." : "Sélectionnez un motif"}
+                          isDisabled={motifsLoading || motifsError || updateTimeOffMutation.isPending}
+                          isInvalid={Boolean(errors.motifId)}
+                          sx={{ option: { color: "#e6ebfe", background: "#08162b" } }}
+                        >
+                          {activeMotifs.map((motif) => (
+                            <option key={motif._id} value={motif._id}>
+                              {motif.label}
+                            </option>
+                          ))}
+                        </Select>
                       )}
                     />
 
-                    {errors.motif && (
+                    {errors.motifId && (
                       <Text className="text-danger">
-                        {errors.motif.message}
+                        {errors.motifId.message}
                       </Text>
+                    )}
+                    {motifsError && <Text color="red.300">Impossible de charger les motifs.</Text>}
+                    {!motifsLoading && !motifsError && !activeMotifs.length && (
+                      <Text color="gray.400">Aucun motif actif disponible.</Text>
                     )}
                   </Box>
 
@@ -461,7 +477,7 @@ const LeaveEdit = ({ leave, onUpdated, isOpen, onClose }: Props) => {
                 right="20px"
                 color="red.300"
               >
-                {updateLeaveMutation.isError
+                {updateTimeOffMutation.isError
                   ? "Une erreur s'est produite. Veuillez contacter ADB Tech."
                   : ""}
               </Text>
@@ -474,10 +490,10 @@ const LeaveEdit = ({ leave, onUpdated, isOpen, onClose }: Props) => {
                 color="black"
                 mr={3}
                 type="submit"
-                isLoading={updateLeaveMutation.isPending}
+                isLoading={updateTimeOffMutation.isPending}
                 loadingText="Patientez..."
                 spinnerPlacement="start"
-                isDisabled={updateLeaveMutation.isPending}
+                isDisabled={updateTimeOffMutation.isPending}
               >
                 <HStack>
                   <Box>
@@ -496,7 +512,7 @@ const LeaveEdit = ({ leave, onUpdated, isOpen, onClose }: Props) => {
                 color="#ffffff"
                 mr={3}
                 onClick={handleFormClose}
-                isDisabled={updateLeaveMutation.isPending}
+                isDisabled={updateTimeOffMutation.isPending}
               >
                 <HStack>
                   <Box>
@@ -516,4 +532,4 @@ const LeaveEdit = ({ leave, onUpdated, isOpen, onClose }: Props) => {
   );
 };
 
-export default LeaveEdit;
+export default TimeOffEdit;

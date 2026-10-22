@@ -22,15 +22,10 @@ const schema = new Schema<TimeOffRecord>({
   serverVersion: { type: Number, required: true, min: 0 },
   createdAt: Date, updatedAt: Date, lastSyncedAt: Date,
   synced: { type: Number, enum: [0, 1], default: 1 }, isDeleted: { type: Number, enum: [0, 1], default: 0 },
-  legacyNeedsReview: Boolean, legacyData: Schema.Types.Mixed, migrationVersion: String,
+  migrationVersion: String,
   supportingDocumentIds: { type: [String], default: undefined },
   balanceDaysDeducted: { type: Number, min: 0 },
 }, { collection: "time_off", versionKey: false, strict: "throw", autoCreate: false, autoIndex: false });
-schema.pre("validate", function () {
-  if (!this.motifId && !(this.legacyNeedsReview && this.legacyData)) {
-    this.invalidate("motifId", "Le motif est obligatoire.");
-  }
-});
 schema.index({ companyId: 1, serverVersion: 1 }, { name: "time_off_company_version" });
 schema.index({ companyId: 1, employeeId: 1, startDate: 1, endDate: 1 }, { name: "time_off_employee_dates" });
 schema.index({ companyId: 1, motifId: 1 }, { name: "time_off_company_motif" });

@@ -3,7 +3,7 @@ import path from 'node:path';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 import { isDeepStrictEqual } from 'node:util';
 import load from '../../client/scripts/time-off-migration-loader.mjs';
-const { TIME_OFF_MIGRATION, legacyTimeOffStatus, validateLegacyTimeOff } = load(
+const { TIME_OFF_MIGRATION, historicalTimeOffBalance, timeOffRequestValidator, legacyTimeOffStatus, validateLegacyTimeOff } = load(
   path.resolve(__dirname, '../../client/src/common/migrations/timeOffLegacy.ts'));
 const { TimeOffCategory, PayrollTreatment, TimeOffStatus } = load(
   path.resolve(__dirname, '../../client/src/common/types/hr/time-off/TimeOff.ts'));
@@ -21,16 +21,8 @@ const motifValidator = { $jsonSchema: {
       'requiresSupportingDocument', 'isSystemDefault', 'isActive'].map(key => [key, { bsonType: 'bool' }])),
   },
 } };
-const requestValidator = { $and: [
-  { $jsonSchema: {
-    bsonType: 'object', required: ['_id', 'companyId', 'employeeId', 'startDate', 'endDate', 'submittedAt', 'status'],
-    properties: { _id: { bsonType: ['string', 'objectId'] }, companyId: { bsonType: 'string', minLength: 1 },
-      employeeId: { bsonType: 'string', minLength: 1 }, status: { enum: Object.values(TimeOffStatus) },
-      motifId: { bsonType: ['string', 'null'] }, motifSnapshot: { bsonType: ['object', 'null'] } },
-  } },
-  { $or: [{ motifId: { $type: 'string', $ne: '' } },
-    { motifId: null, legacyNeedsReview: true, legacyData: { $type: 'object' } }] },
-] };
+const requestValidator = timeOffRequestValidator;
+const { removeTimeOffReviewFields } = load(path.resolve(__dirname, './timeOffFields.ts'));
 
 function convert(row) {
   validateLegacyTimeOff(row);
@@ -38,7 +30,7 @@ function convert(row) {
     throw new Error('Unsupported legacy identifier: migration never converts identifier types');
   }
   return { ...row, status: legacyTimeOffStatus(row.status), motifId: null,
-    legacyNeedsReview: true, legacyData: row, migrationVersion: TIME_OFF_MIGRATION };
+    balanceDaysDeducted: historicalTimeOffBalance(row), migrationVersion: TIME_OFF_MIGRATION };
 }
 
 /** Run only under an explicit maintenance window, with all writers stopped.
@@ -59,6 +51,10 @@ async function migrateTimeOff(db) {
   const marker = await db.collection('migrations').findOne({ _id: TIME_OFF_MIGRATION });
   if (marker && (!names.has('time_off') || !names.has('time_off_motifs'))) {
     throw new Error('Migration marker exists but canonical collections are missing');
+  }
+  if (marker) {
+    await removeTimeOffReviewFields(db);
+    return { alreadyApplied: true, migrated: marker.migrated ?? await db.collection('time_off').countDocuments({}) };
   }
   for (const [name, validator] of [['time_off', requestValidator], ['time_off_motifs', motifValidator]]) {
     if (!names.has(name)) await db.createCollection(name, { validator });
@@ -103,6 +99,6 @@ async function migrateTimeOff(db) {
   // Existing legacy counter is retained; no record version or timestamp changes.
   await db.collection('migrations').updateOne({ _id: TIME_OFF_MIGRATION },
     { $setOnInsert: { completedAt: new Date(), source: 'leaves', target: 'time_off', migrated } }, { upsert: true });
-  return { alreadyApplied: !!marker, migrated, unresolvedMotifs: migrated };
+  return { alreadyApplied: !!marker, migrated, requestsWithoutMotif: migrated };
 }
 export { migrateTimeOff, convert, requestValidator, motifValidator, TIME_OFF_MIGRATION };

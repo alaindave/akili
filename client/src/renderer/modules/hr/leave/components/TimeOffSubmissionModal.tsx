@@ -57,9 +57,9 @@ const schema = z.object({
   notes: z.string(),
 });
 
-type LeaveData = z.infer<typeof schema>;
+type TimeOffData = z.infer<typeof schema>;
 
-const LeaveSubmissionModal = ({
+const TimeOffSubmissionModal = ({
   isOpen,
   onClose,
   onRefresh,
@@ -88,7 +88,7 @@ const LeaveSubmissionModal = ({
     control,
     watch,
     formState: { errors },
-  } = useForm<LeaveData>({
+  } = useForm<TimeOffData>({
     resolver: zodResolver(schema),
     defaultValues: { motifId: "", notes: "" },
   });
@@ -135,8 +135,8 @@ const LeaveSubmissionModal = ({
     setErrorMessage("");
   };
 
-  //Handle leave submission
-  const onSubmit = async (leaveData: LeaveData) => {
+  //Handle time off submission
+  const onSubmit = async (timeOffData: TimeOffData) => {
     setIsSubmitting(true);
     if (!employee?._id) {
       console.error("NO EMPLOYEE SELECTED");
@@ -145,10 +145,10 @@ const LeaveSubmissionModal = ({
     }
     try {
       const motif = motifs.find(
-        (item) => item._id === leaveData.motifId && item.isActive
+        (item) => item._id === timeOffData.motifId && item.isActive
       );
       if (!motif) throw new Error("Choisissez un motif actif.");
-      if (motif.requiresJustification && !leaveData.notes.trim())
+      if (motif.requiresJustification && !timeOffData.notes.trim())
         throw new Error("Une justification est requise pour ce motif.");
       if (motif.requiresSupportingDocument && !supportingDocumentIds.length)
         throw new Error("Un document justificatif est requis pour ce motif.");
@@ -157,12 +157,12 @@ const LeaveSubmissionModal = ({
       const input = {
         employeeId: employee._id,
         motifId: motif._id,
-        startDate: leaveData.startDate,
-        endDate: leaveData.endDate,
+        startDate: timeOffData.startDate,
+        endDate: timeOffData.endDate,
         submittedMonth: new Date().toISOString().slice(0, 7),
         isPartialDay,
         ...(isPartialDay ? { startTime, endTime } : {}),
-        notes: leaveData.notes,
+        notes: timeOffData.notes,
         supportingDocumentIds,
       };
       if (onCreate) await onCreate(input);
@@ -174,8 +174,11 @@ const LeaveSubmissionModal = ({
       reset();
       onClose();
     } catch (error: any) {
-      console.error("Unable to save leave:", error.message);
-      console.error("Unable to save leave:error status", error.status);
+      console.error("Unable to save time off request:", error.message);
+      console.error(
+        "Unable to save time off request:error status",
+        error.status
+      );
       setErrorMessage(
         error instanceof Error
           ? error.message
@@ -462,7 +465,7 @@ const LeaveSubmissionModal = ({
                 </Box>
 
                 {/* -------------------------------------------------
-                  LEAVE DATES
+                  TIME OFF DATES
               ------------------------------------------------- */}
                 <Flex justify="space-evenly">
                   <VStack>
@@ -859,4 +862,4 @@ const LeaveSubmissionModal = ({
   );
 };
 
-export default LeaveSubmissionModal;
+export default TimeOffSubmissionModal;

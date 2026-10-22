@@ -60,62 +60,83 @@ const EmployeeAttendanceReport = () => {
     <Flex
       bg="#F8FAFC"
       width="100%"
-      height="93vh"
+      height="100%"
+      minH={0}
+      minW={0}
+      overflow="hidden"
+      px={{ base: 3, md: 6, lg: 8 }}
+      pb={{ base: "calc(46px + 0.3rem)", md: "calc(52px + 0.3rem)" }}
       direction="column"
-      alignItems="flex-start"
+      alignItems="center"
       justify="space-between"
     >
       {/* Header */}
-      <Box>
-        <HStack mt="1.5rem">
+      <Box
+        width="100%"
+        maxW="1200px"
+        minW={0}
+        minH={0}
+        flex={1}
+        overflowY="auto"
+      >
+        <HStack
+          mt={{ base: 2, md: 6 }}
+          mb={{ base: 2, md: 4 }}
+          spacing={{ base: 2, md: 4 }}
+        >
           <Link
             to={{
               pathname: `/hr/employees_list/${employee?._id}`,
             }}
             state={{ photo_url }}
           >
-            <Box
-              ml="1rem"
-              mb="2rem"
-              p={2}
-              border="1px solid #14376b"
-              borderRadius="10px"
-            >
+            <Box p={2} border="1px solid #14376b" borderRadius="10px">
               <FaArrowLeftLong color="black" />
             </Box>
           </Link>
-          <Box mt="0.3rem">
-            <HStack ml="1rem" position="relative" bottom="1rem">
-              <Text fontWeight="600" fontSize="1.1rem">
+          <Box minW={0}>
+            <HStack spacing={{ base: 1, md: 2 }} flexWrap="wrap">
+              <Text
+                fontWeight="600"
+                fontSize={{ base: "0.85rem", md: "1.1rem" }}
+              >
                 Employés
               </Text>
               <Box>
                 <MdOutlineChevronRight fontSize="1.1rem" />
               </Box>
-              <Text fontWeight="500" fontSize="1.03rem">
+              <Text
+                fontWeight="500"
+                fontSize={{ base: "0.85rem", md: "1.03rem" }}
+                overflowWrap="anywhere"
+              >
                 {" "}
                 {employee?.firstName} {employee?.lastName}
               </Text>
               <Box>
                 <MdOutlineChevronRight fontSize="1.1rem" />
               </Box>
-              <Text fontWeight="500" fontSize="1rem">
+              <Text fontWeight="500" fontSize={{ base: "0.85rem", md: "1rem" }}>
                 Présence
               </Text>
             </HStack>
           </Box>
         </HStack>
-        {attendances.length !== 0 ? (
-          <Box>
-            <Box mt="3rem" ml="4rem">
+        {attendances.length > 0 ? (
+          <Box width="100%">
+            <Box
+              mt={{ base: "2rem", md: "2rem", lg: "5rem" }}
+              mx="auto"
+              width="100%"
+            >
               <AttendanceTable records={attendances} />
             </Box>
           </Box>
         ) : (
           <Flex
-            ml="1rem"
-            mt="10rem"
-            width="80vw"
+            mx="auto"
+            mt={{ base: "0.3rem", md: "2rem" }}
+            width="100%"
             minHeight={{
               base: "180px",
               md: "220px",
@@ -142,11 +163,55 @@ const EmployeeAttendanceReport = () => {
           </Flex>
         )}
       </Box>
-      <Flex ml="6rem" mb="0.3rem">
-        <Box>
+      <Flex
+        width="100%"
+        maxW="1200px"
+        flexShrink={0}
+        mt={{ base: 2, md: 6 }}
+        gap={{ base: 2, md: 8 }}
+        align="center"
+        wrap="nowrap"
+      >
+        <Box
+          flex="2 1 0"
+          minW={0}
+          maxW="400px"
+          sx={{
+            "& > div > div": { flexWrap: "nowrap", gap: { base: 1, md: 2 } },
+            ".chakra-form-control": { minWidth: 0, flex: "1 1 0" },
+            ".react-datepicker-wrapper, .react-datepicker__input-container": {
+              width: "100%",
+              minWidth: 0,
+            },
+            ".date-range-picker-input": {
+              width: "100%",
+              minWidth: 0,
+              fontSize: { base: "11px", sm: "13px", md: "16px" },
+              paddingLeft: { base: "4px", md: "12px" },
+              paddingRight: "20px",
+            },
+          }}
+        >
           <DateRangePicker value={dateRange} onChange={setDateRange} />
         </Box>
-        <Box ml="3.5rem">
+        <Box
+          flex="1 1 0"
+          minW={0}
+          maxW="300px"
+          sx={{
+            ".chakra-menu__menu-button": {
+              width: "100%",
+              minWidth: 0,
+              paddingX: { base: 1, md: 4 },
+              fontSize: { base: "11px", sm: "13px", md: "16px" },
+            },
+            ".chakra-menu__menu-button p": {
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            },
+          }}
+        >
           <AttendanceStatusFilter onFilterClicked={setStatusFilter} />
         </Box>
       </Flex>
